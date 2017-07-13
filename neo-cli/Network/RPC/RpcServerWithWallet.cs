@@ -1,6 +1,7 @@
 ﻿using Neo.Core;
 using Neo.IO.Json;
 using Neo.Wallets;
+using Neo.Shell;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -27,6 +28,17 @@ namespace Neo.Network.RPC
                         JObject json = new JObject();
                         json["balance"] = coins.Sum(p => p.Output.Value).ToString();
                         json["confirmed"] = coins.Where(p => p.State.HasFlag(CoinState.Confirmed)).Sum(p => p.Output.Value).ToString();
+                        return json;
+                    }
+                case "getunclaimedgas":
+                    if (Program.Wallet == null)
+                        throw new RpcException(-400, "Access denied.");
+                    else
+                    {
+                        Coins coins = new Coins(Program.Wallet, LocalNode);
+                        JObject json = new JObject();
+                        json["unavailable"] = coins.UnavailableBonus().ToString();
+                        json["available"] = coins.AvailableBonus().ToString();
                         return json;
                     }
                 case "sendtoaddress":
@@ -78,6 +90,25 @@ namespace Neo.Network.RPC
                         Contract contract = Program.Wallet.GetContracts(key.PublicKeyHash).First(p => p.IsStandard);
                         return contract.Address;
                     }
+
+                case "claimgas":
+                    if (Program.Wallet == null)
+                        throw new RpcException(-400, "Access denied.");
+                    else
+                    {
+                        Coins coins = new Coins(Program.Wallet, LocalNode);
+
+                        ClaimTransaction tx = coins.Claim();
+                        if (tx == null)
+                        {
+                            throw new RpcException(-401, "Could not claim gas");
+                        }
+                        else
+                        {
+                            return tx.ToJson();
+                        }
+                    }
+
                 case "dumpprivkey":
                     if (Program.Wallet == null)
                         throw new RpcException(-400, "Access denied");
