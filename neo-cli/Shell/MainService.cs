@@ -23,7 +23,7 @@ namespace Neo.Shell
         private ConsensusWithPolicy consensus;
 
         protected LocalNode LocalNode { get; private set; }
-        protected override string Prompt => "ant";
+        protected override string Prompt => "neo";
         public override string ServiceName => "neo-cli";
 
         private void ImportBlocks(Stream stream)
