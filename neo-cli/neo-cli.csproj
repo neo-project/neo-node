@@ -5,7 +5,7 @@
     <AssemblyTitle>Neo.CLI</AssemblyTitle>
     <Version>2.0.1</Version>
     <Authors>The Neo Project</Authors>
-    <TargetFramework>netcoreapp1.0</TargetFramework>
+    <TargetFramework>netcoreapp1.6</TargetFramework>
     <AssemblyName>neo-cli</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>Neo.CLI</PackageId>
@@ -30,8 +30,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="1.0.2" />
+    <PackageReference Include="NuGet.Build.Tasks.Pack" Version="4.2.0" />
     <PackageReference Include="Neo" Version="2.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="1.1.2" />
   </ItemGroup>
 
 </Project>
