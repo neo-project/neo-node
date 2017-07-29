@@ -272,9 +272,11 @@ namespace Neo.Shell
                 "\tshow gas\n" +
                 "\tclaim gas\n" +
                 "\tcreate address [n=1]\n" +
-                "\timport key <wif|path>\n" +
-                "\texport key [address] [path]\n" +
-                "\tsend <id|alias> <address> <value> [fee=0]\n" +
+				"\timport blocks [path]\n" +
+				"\timport key <wif|path>\n" +
+				"\texport blocks [path]\n" +
+				"\texport key [address] [path]\n" +
+				"\tsend <id|alias> <address> <value> [fee=0]\n" +
                 "Node Commands:\n" +
                 "\tshow state\n" +
                 "\tshow node\n" +
