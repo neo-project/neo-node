@@ -273,7 +273,6 @@ namespace Neo.Shell
                 "\tshow gas\n" +
                 "\tclaim gas\n" +
                 "\tcreate address [n=1]\n" +
-                "\timport blocks [path]\n" +
                 "\timport key <wif|path>\n" +
                 "\texport blocks [path]\n" +
                 "\texport key [address] [path]\n" +
