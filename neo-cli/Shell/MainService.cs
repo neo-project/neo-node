@@ -1,6 +1,7 @@
 ﻿using Neo.Consensus;
 using Neo.Core;
 using Neo.Implementations.Blockchains.LevelDB;
+using Neo.Implementations.Blockchains.Utilities;
 using Neo.Implementations.Wallets.EntityFramework;
 using Neo.IO;
 using Neo.Network;
@@ -14,6 +15,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Security;
 using System.Threading.Tasks;
+using System.Net;
 
 namespace Neo.Shell
 {
@@ -28,7 +30,7 @@ namespace Neo.Shell
 
         private void ImportBlocks(Stream stream)
         {
-            LevelDBBlockchain blockchain = (LevelDBBlockchain)Blockchain.Default;
+            Blockchain blockchain = Blockchain.Default;
             blockchain.VerifyBlocks = false;
             using (BinaryReader r = new BinaryReader(stream))
             {
@@ -273,6 +275,7 @@ namespace Neo.Shell
                 "\tclaim gas\n" +
                 "\tcreate address [n=1]\n" +
                 "\timport key <wif|path>\n" +
+                "\texport blocks [path]\n" +
                 "\texport key [address] [path]\n" +
                 "\tsend <id|alias> <address> <value> [fee=0]\n" +
                 "Node Commands:\n" +
@@ -614,9 +617,21 @@ namespace Neo.Shell
             RemoteNode[] nodes = LocalNode.GetRemoteNodes();
             for (int i = 0; i < nodes.Length; i++)
             {
-                Console.WriteLine($"{nodes[i].RemoteEndpoint.Address} port:{nodes[i].RemoteEndpoint.Port} listen:{nodes[i].ListenerEndpoint?.Port ?? 0} [{i + 1}/{nodes.Length}]");
+                Console.WriteLine($"Remote {nodes[i].RemoteEndpoint.Address} port:{nodes[i].RemoteEndpoint.Port} listen:{nodes[i].ListenerEndpoint?.Port ?? 0} [{i + 1}/{nodes.Length}]");
             }
-            return true;
+			IPEndPoint[] unconnectedPeers = LocalNode.GetUnconnectedPeers();
+			for (int i = 0; i < unconnectedPeers.Length; i++)
+			{
+				Console.WriteLine($"Unconnected {unconnectedPeers[i].Address} port:{unconnectedPeers[i].Port} [{i + 1}/{unconnectedPeers.Length}]");
+			}
+
+			IPEndPoint[] badPeers = LocalNode.GetBadPeers();
+            for (int i = 0; i < badPeers.Length; i++)
+            {
+                Console.WriteLine($"Bad {badPeers[i].Address} port:{badPeers[i].Port} [{i + 1}/{badPeers.Length}]");
+            }
+
+			return true;
         }
 
         private bool OnShowPoolCommand(string[] args)
@@ -636,7 +651,7 @@ namespace Neo.Shell
 
         protected internal override void OnStart(string[] args)
         {
-            Blockchain.RegisterBlockchain(new LevelDBBlockchain(Settings.Default.DataDirectoryPath));
+            Blockchain.RegisterBlockchain(new AbstractBlockchain(Settings.Default.DataDirectoryPath, new EntityFactory()));
             LocalNode = new LocalNode();
             Task.Run(() =>
             {
