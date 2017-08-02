@@ -1,6 +1,7 @@
 ﻿using Neo.Consensus;
 using Neo.Core;
 using Neo.Implementations.Blockchains.LevelDB;
+using Neo.Implementations.Blockchains.Utilities;
 using Neo.Implementations.Wallets.EntityFramework;
 using Neo.IO;
 using Neo.Network;
@@ -29,7 +30,7 @@ namespace Neo.Shell
 
         private void ImportBlocks(Stream stream)
         {
-            LevelDBBlockchain blockchain = (LevelDBBlockchain)Blockchain.Default;
+            Blockchain blockchain = Blockchain.Default;
             blockchain.VerifyBlocks = false;
             using (BinaryReader r = new BinaryReader(stream))
             {
@@ -650,7 +651,7 @@ namespace Neo.Shell
 
         protected internal override void OnStart(string[] args)
         {
-            Blockchain.RegisterBlockchain(new LevelDBBlockchain(Settings.Default.DataDirectoryPath));
+            Blockchain.RegisterBlockchain(new AbstractBlockchain(Settings.Default.DataDirectoryPath, new EntityFactory()));
             LocalNode = new LocalNode();
             Task.Run(() =>
             {
