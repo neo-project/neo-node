@@ -19,6 +19,8 @@ namespace Neo.Shell
 {
     internal class MainService : ConsoleServiceBase
     {
+        private const string PeerStatePath = "peers.dat";
+
         private RpcServerWithWallet rpc;
         private ConsensusWithPolicy consensus;
 
@@ -265,10 +267,12 @@ namespace Neo.Shell
                 "Wallet Commands:\n" +
                 "\tcreate wallet <path>\n" +
                 "\topen wallet <path>\n" +
+                "\tupgrade wallet <path>\n" +
                 "\trebuild index\n" +
                 "\tlist address\n" +
                 "\tlist asset\n" +
                 "\tlist key\n" +
+                "\tshow utxo [id|alias]\n" +
                 "\tshow gas\n" +
                 "\tclaim gas\n" +
                 "\tcreate address [n=1]\n" +
@@ -279,8 +283,10 @@ namespace Neo.Shell
                 "\tshow state\n" +
                 "\tshow node\n" +
                 "\tshow pool\n" +
+                "\texport blocks [path=chain.acc]\n" +
                 "Advanced Commands:\n" +
-                "\tstart consensus\n");
+                "\tstart consensus\n" +
+                "\trefresh policy\n");
             return true;
         }
 
@@ -604,6 +610,8 @@ namespace Neo.Shell
                     return OnShowPoolCommand(args);
                 case "state":
                     return OnShowStateCommand(args);
+                case "utxo":
+                    return OnShowUtxoCommand(args);
                 default:
                     return base.OnCommand(args);
             }
@@ -634,9 +642,51 @@ namespace Neo.Shell
             return true;
         }
 
+        private bool OnShowUtxoCommand(string[] args)
+        {
+            if (Program.Wallet == null)
+            {
+                Console.WriteLine("You have to open the wallet first.");
+                return true;
+            }
+            IEnumerable<Coin> coins = Program.Wallet.FindUnspentCoins();
+            if (args.Length >= 3)
+            {
+                UInt256 assetId;
+                switch (args[2].ToLower())
+                {
+                    case "neo":
+                    case "ans":
+                        assetId = Blockchain.SystemShare.Hash;
+                        break;
+                    case "gas":
+                    case "anc":
+                        assetId = Blockchain.SystemCoin.Hash;
+                        break;
+                    default:
+                        assetId = UInt256.Parse(args[2]);
+                        break;
+                }
+                coins = coins.Where(p => p.Output.AssetId.Equals(assetId));
+            }
+            Coin[] coins_array = coins.ToArray();
+            const int MAX_SHOW = 100;
+            for (int i = 0; i < coins_array.Length && i < MAX_SHOW; i++)
+                Console.WriteLine($"{coins_array[i].Reference.PrevHash}:{coins_array[i].Reference.PrevIndex}");
+            if (coins_array.Length > MAX_SHOW)
+                Console.WriteLine($"({coins_array.Length - MAX_SHOW} more)");
+            Console.WriteLine($"total: {coins_array.Length} UTXOs");
+            return true;
+        }
+
         protected internal override void OnStart(string[] args)
         {
             Blockchain.RegisterBlockchain(new LevelDBBlockchain(Settings.Default.DataDirectoryPath));
+            if (File.Exists(PeerStatePath))
+                using (FileStream fs = new FileStream(PeerStatePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    LocalNode.LoadState(fs);
+                }
             LocalNode = new LocalNode();
             Task.Run(() =>
             {
@@ -700,6 +750,10 @@ namespace Neo.Shell
             if (consensus != null) consensus.Dispose();
             if (rpc != null) rpc.Dispose();
             LocalNode.Dispose();
+            using (FileStream fs = new FileStream(PeerStatePath, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                LocalNode.SaveState(fs);
+            }
             Blockchain.Default.Dispose();
         }
 

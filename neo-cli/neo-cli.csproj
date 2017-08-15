@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Copyright>2016-2017 The Neo Project</Copyright>
     <AssemblyTitle>Neo.CLI</AssemblyTitle>
-    <Version>2.0.2</Version>
+    <Version>2.1.0</Version>
     <Authors>The Neo Project</Authors>
     <TargetFramework>netcoreapp1.0</TargetFramework>
     <AssemblyName>neo-cli</AssemblyName>
@@ -31,7 +31,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="1.0.2" />
-    <PackageReference Include="Neo" Version="2.0.2" />
+    <PackageReference Include="Neo" Version="2.1.0" />
   </ItemGroup>
 
 </Project>
