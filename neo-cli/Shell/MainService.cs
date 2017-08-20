@@ -278,7 +278,7 @@ namespace Neo.Shell
                 "\tcreate address [n=1]\n" +
                 "\timport key <wif|path>\n" +
                 "\texport key [address] [path]\n" +
-                "\tsend <id|alias> <address> <value> [fee=0]\n" +
+                "\tsend <id|alias> <address> <value>|all [fee=0]\n" +
                 "Node Commands:\n" +
                 "\tshow state\n" +
                 "\tshow node\n" +
@@ -512,15 +512,28 @@ namespace Neo.Shell
 
         private bool OnSendCommand(string[] args)
         {
+            if (args.Length < 4 || args.Length > 5)
+            {
+                Console.WriteLine("error");
+                return true;
+            }
             if (Program.Wallet == null)
             {
                 Console.WriteLine("You have to open the wallet first.");
                 return true;
             }
-            if (args.Length < 4 || args.Length > 5)
+            using (SecureString password = ReadSecureString("password"))
             {
-                Console.WriteLine("error");
-                return true;
+                if (password.Length == 0)
+                {
+                    Console.WriteLine("cancelled");
+                    return true;
+                }
+                if (!Program.Wallet.VerifyPassword(password))
+                {
+                    Console.WriteLine("Incorrect password");
+                    return true;
+                }
             }
             UInt256 assetId;
             switch (args[1].ToLower())
@@ -538,46 +551,54 @@ namespace Neo.Shell
                     break;
             }
             UInt160 scriptHash = Wallet.ToScriptHash(args[2]);
-            Fixed8 amount;
-            if (!Fixed8.TryParse(args[3], out amount))
+            bool isSendAll = string.Equals(args[3], "all", StringComparison.OrdinalIgnoreCase);
+            ContractTransaction tx;
+            if (isSendAll)
             {
-                Console.WriteLine("Incorrect Amount Format");
-                return true;
-            }
-            if (amount.GetData() % (long)Math.Pow(10, 8 - Blockchain.Default.GetAssetState(assetId).Precision) != 0)
-            {
-                Console.WriteLine("Incorrect Amount Precision");
-                return true;
-            }
-
-            Fixed8 fee = args.Length >= 5 ? Fixed8.Parse(args[4]) : Fixed8.Zero;
-            ContractTransaction tx = Program.Wallet.MakeTransaction(new ContractTransaction
-            {
-                Outputs = new[]
+                Coin[] coins = Program.Wallet.FindUnspentCoins().Where(p => p.Output.AssetId.Equals(assetId)).ToArray();
+                tx = new ContractTransaction
                 {
-                    new TransactionOutput
+                    Attributes = new TransactionAttribute[0],
+                    Inputs = coins.Select(p => p.Reference).ToArray(),
+                    Outputs = new[]
                     {
-                        AssetId = assetId,
-                        Value = amount,
-                        ScriptHash = scriptHash
+                        new TransactionOutput
+                        {
+                            AssetId = assetId,
+                            Value = coins.Sum(p => p.Output.Value),
+                            ScriptHash = scriptHash
+                        }
                     }
-                }
-            }, fee: fee);
-            if (tx == null)
-            {
-                Console.WriteLine("Insufficient funds");
-                return true;
+                };
             }
-            using (SecureString password = ReadSecureString("password"))
+            else
             {
-                if (password.Length == 0)
+                if (!Fixed8.TryParse(args[3], out Fixed8 amount))
                 {
-                    Console.WriteLine("cancelled");
+                    Console.WriteLine("Incorrect Amount Format");
                     return true;
                 }
-                if (!Program.Wallet.VerifyPassword(password))
+                if (amount.GetData() % (long)Math.Pow(10, 8 - Blockchain.Default.GetAssetState(assetId).Precision) != 0)
                 {
-                    Console.WriteLine("Incorrect password");
+                    Console.WriteLine("Incorrect Amount Precision");
+                    return true;
+                }
+                Fixed8 fee = args.Length >= 5 ? Fixed8.Parse(args[4]) : Fixed8.Zero;
+                tx = Program.Wallet.MakeTransaction(new ContractTransaction
+                {
+                    Outputs = new[]
+                    {
+                        new TransactionOutput
+                        {
+                            AssetId = assetId,
+                            Value = amount,
+                            ScriptHash = scriptHash
+                        }
+                    }
+                }, fee: fee);
+                if (tx == null)
+                {
+                    Console.WriteLine("Insufficient funds");
                     return true;
                 }
             }
