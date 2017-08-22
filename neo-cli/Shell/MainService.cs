@@ -454,6 +454,11 @@ namespace Neo.Shell
                 Console.WriteLine("error");
                 return true;
             }
+            if (!File.Exists(args[2]))
+            {
+                Console.WriteLine($"File does not exist");
+                return true;
+            }
             using (SecureString password = ReadSecureString("password"))
             {
                 if (password.Length == 0)
@@ -799,7 +804,7 @@ namespace Neo.Shell
             string path = args[2];
             if (!File.Exists(path))
             {
-                Console.WriteLine("error");
+                Console.WriteLine("File does not exist");
                 return true;
             }
             string path_old = Path.ChangeExtension(path, ".old.db3");
