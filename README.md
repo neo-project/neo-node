@@ -39,4 +39,4 @@ Assuming you extracted .Net in the parent folder:
 
 ## Usage
 
-See [documentation](http://docs.neo.org/en-us/node/cli.html). E.g. try `show state`.
+See [documentation](http://docs.neo.org/en-us/node/cli.html). E.g. try `show state` or `create wallet wallet.db3`.
