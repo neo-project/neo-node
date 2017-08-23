@@ -26,7 +26,7 @@ Clone the neo-cli repository.
 
 ```sh
 cd neo-cli
-dotnet build
+dotnet restore
 dotnet publish -c Release
 ```
 In order to run, you need version 1.1.2 of .Net Core. Download the SDK [binary](https://www.microsoft.com/net/download/linux).
@@ -34,7 +34,7 @@ In order to run, you need version 1.1.2 of .Net Core. Download the SDK [binary](
 Assuming you extracted .Net in the parent folder:
 
 ```sh
-../dotnet bin/Debug/netcoreapp1.0/neo-cli.dll .
+../dotnet bin/Release/netcoreapp1.0/neo-cli.dll .
 ```
 
 ## Usage
