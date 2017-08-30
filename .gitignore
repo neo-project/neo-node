@@ -287,9 +287,4 @@ __pycache__/
 *.odx.cs
 *.xsd.cs
 *.ldb
-neo-cli/Chain/CURRENT
-neo-cli/Chain/LOCK
-neo-cli/Chain/MANIFEST-038636
-neo-cli/Chain/LOG
-neo-cli/libleveldb.dll
-neo-cli/Chain/LOG.old
+neo-cli/Chain/*
