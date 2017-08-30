@@ -17,6 +17,29 @@ namespace Neo.Network.RPC
         {
             switch (method)
             {
+                case "getaddressbalance":
+                    if (Program.Wallet == null)
+                        throw new RpcException(-400, "Access denied.");
+                    else
+                    {
+                        var address = _params[0].AsString();
+                        var received = Program.Wallet.GetCoins()
+                            .Where(c => c.Address == address)
+                            .GroupBy(r => r.Output.AssetId);
+
+                        JObject json = new JObject();
+                        json["balances"] = new JArray(received.Select(p =>
+                        {
+                            JObject balance = new JObject();
+                            balance["asset"] = p.Key.ToString();
+                            balance["unconfirmed"] = p.Where(o => !o.State.HasFlag(CoinState.Confirmed)).Sum(o => o.Output.Value).ToString();
+                            balance["confirmed"] = p.Where(o => o.State.HasFlag(CoinState.Confirmed)).Sum(o => o.Output.Value).ToString();
+                            balance["spendable"] = p.Where(o => o.State.HasFlag(CoinState.Confirmed) && !o.State.HasFlag(CoinState.Spent)).Sum(o => o.Output.Value).ToString();
+                            return balance;
+                        }));
+
+                        return json;
+                    }
                 case "getbalance":
                     if (Program.Wallet == null)
                         throw new RpcException(-400, "Access denied.");
