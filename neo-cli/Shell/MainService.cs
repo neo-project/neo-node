@@ -6,6 +6,7 @@ using Neo.IO;
 using Neo.Network;
 using Neo.Network.RPC;
 using Neo.Services;
+using Neo.SmartContract;
 using Neo.Wallets;
 using System;
 using System.Collections.Generic;
@@ -115,7 +116,7 @@ namespace Neo.Shell
             for (int i = 1; i <= count; i++)
             {
                 KeyPair key = Program.Wallet.CreateKey();
-                Contract contract = Program.Wallet.GetContracts(key.PublicKeyHash).First(p => p.IsStandard);
+                VerificationContract contract = Program.Wallet.GetContracts(key.PublicKeyHash).First(p => p.IsStandard);
                 addresses.Add(contract.Address);
                 Console.SetCursorPosition(0, Console.CursorTop);
                 Console.Write($"[{i}/{count}]");
@@ -144,7 +145,7 @@ namespace Neo.Shell
                 }
                 Program.Wallet = UserWallet.Create(args[2], password);
             }
-            Contract contract = Program.Wallet.GetContracts().First(p => p.IsStandard);
+            VerificationContract contract = Program.Wallet.GetContracts().First(p => p.IsStandard);
             KeyPair key = Program.Wallet.GetKey(contract.PublicKeyHash);
             Console.WriteLine($"address: {contract.Address}");
             Console.WriteLine($" pubkey: {key.PublicKey.EncodePoint(true).ToHexString()}");
@@ -334,7 +335,7 @@ namespace Neo.Shell
             {
                 KeyPair key = Program.Wallet.CreateKey(prikey);
                 Array.Clear(prikey, 0, prikey.Length);
-                Contract contract = Program.Wallet.GetContracts(key.PublicKeyHash).First(p => p.IsStandard);
+                VerificationContract contract = Program.Wallet.GetContracts(key.PublicKeyHash).First(p => p.IsStandard);
                 Console.WriteLine($"address: {contract.Address}");
                 Console.WriteLine($" pubkey: {key.PublicKey.EncodePoint(true).ToHexString()}");
             }
@@ -407,7 +408,7 @@ namespace Neo.Shell
         private bool OnListAddressCommand(string[] args)
         {
             if (Program.Wallet == null) return true;
-            foreach (Contract contract in Program.Wallet.GetContracts())
+            foreach (VerificationContract contract in Program.Wallet.GetContracts())
             {
                 Console.WriteLine($"{contract.Address}\t{(contract.IsStandard ? "Standard" : "Nonstandard")}");
             }
@@ -545,11 +546,11 @@ namespace Neo.Shell
             {
                 case "neo":
                 case "ans":
-                    assetId = Blockchain.SystemShare.Hash;
+                    assetId = Blockchain.GoverningToken.Hash;
                     break;
                 case "gas":
                 case "anc":
-                    assetId = Blockchain.SystemCoin.Hash;
+                    assetId = Blockchain.UtilityToken.Hash;
                     break;
                 default:
                     assetId = UInt256.Parse(args[1]);
@@ -607,7 +608,7 @@ namespace Neo.Shell
                     return true;
                 }
             }
-            SignatureContext context = new SignatureContext(tx);
+            ContractParametersContext context = new ContractParametersContext(tx);
             Program.Wallet.Sign(context);
             if (context.Completed)
             {
@@ -683,11 +684,11 @@ namespace Neo.Shell
                 {
                     case "neo":
                     case "ans":
-                        assetId = Blockchain.SystemShare.Hash;
+                        assetId = Blockchain.GoverningToken.Hash;
                         break;
                     case "gas":
                     case "anc":
-                        assetId = Blockchain.SystemCoin.Hash;
+                        assetId = Blockchain.UtilityToken.Hash;
                         break;
                     default:
                         assetId = UInt256.Parse(args[2]);

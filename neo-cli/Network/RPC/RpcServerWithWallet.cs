@@ -1,5 +1,6 @@
 ﻿using Neo.Core;
 using Neo.IO.Json;
+using Neo.SmartContract;
 using Neo.Wallets;
 using System.Collections.Generic;
 using System.Linq;
@@ -57,7 +58,7 @@ namespace Neo.Network.RPC
                         }, change_address: change_address, fee: fee);
                         if (tx == null)
                             throw new RpcException(-300, "Insufficient funds");
-                        SignatureContext context = new SignatureContext(tx);
+                        ContractParametersContext context = new ContractParametersContext(tx);
                         Program.Wallet.Sign(context);
                         if (context.Completed)
                         {
@@ -101,7 +102,7 @@ namespace Neo.Network.RPC
                         }, change_address: change_address, fee: fee);
                         if (tx == null)
                             throw new RpcException(-300, "Insufficient funds");
-                        SignatureContext context = new SignatureContext(tx);
+                        ContractParametersContext context = new ContractParametersContext(tx);
                         Program.Wallet.Sign(context);
                         if (context.Completed)
                         {
@@ -121,7 +122,7 @@ namespace Neo.Network.RPC
                     else
                     {
                         KeyPair key = Program.Wallet.CreateKey();
-                        Contract contract = Program.Wallet.GetContracts(key.PublicKeyHash).First(p => p.IsStandard);
+                        VerificationContract contract = Program.Wallet.GetContracts(key.PublicKeyHash).First(p => p.IsStandard);
                         return contract.Address;
                     }
                 case "dumpprivkey":

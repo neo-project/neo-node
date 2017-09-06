@@ -1,5 +1,6 @@
 using Neo.Core;
 using Neo.Network;
+using Neo.SmartContract;
 using Neo.Wallets;
 using System;
 using System.Linq;
@@ -25,7 +26,7 @@ namespace Neo.Shell
 
             try
             {
-                unavailable = Blockchain.CalculateBonus(current_wallet.FindUnspentCoins().Where(p => p.Output.AssetId.Equals(Blockchain.SystemShare.Hash)).Select(p => p.Reference), height);
+                unavailable = Blockchain.CalculateBonus(current_wallet.FindUnspentCoins().Where(p => p.Output.AssetId.Equals(Blockchain.GoverningToken.Hash)).Select(p => p.Reference), height);
             }
             catch (Exception)
             {
@@ -63,7 +64,7 @@ namespace Neo.Shell
                 {
                     new TransactionOutput
                     {
-                        AssetId = Blockchain.SystemCoin.Hash,
+                        AssetId = Blockchain.UtilityToken.Hash,
                         Value = Blockchain.CalculateBonus(claims),
                         ScriptHash = current_wallet.GetChangeAddress()
                     }
@@ -82,11 +83,11 @@ namespace Neo.Shell
                 Console.WriteLine($"no transaction specified");
                 return null;
             }
-            SignatureContext context;
+            ContractParametersContext context;
 
             try
             {
-                context = new SignatureContext(tx);
+                context = new ContractParametersContext(tx);
             }
             catch (InvalidOperationException)
             {
