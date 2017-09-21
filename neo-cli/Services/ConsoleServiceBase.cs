@@ -41,7 +41,10 @@ namespace Neo.Services
             SecureString securePwd = new SecureString();
             ConsoleKeyInfo key;
             Console.Write(prompt);
-            Console.Write(':');
+            Console.Write(": ");
+
+            Console.ForegroundColor = ConsoleColor.Yellow;
+
             do
             {
                 key = Console.ReadKey(true);
@@ -58,6 +61,8 @@ namespace Neo.Services
                     Console.Write(key.KeyChar);
                 }
             } while (key.Key != ConsoleKey.Enter);
+
+            Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine();
             securePwd.MakeReadOnly();
             return securePwd;
@@ -78,10 +83,24 @@ namespace Neo.Services
 #endif
             Console.OutputEncoding = Encoding.Unicode;
 
+            Console.ForegroundColor = ConsoleColor.DarkGreen;
+            AssemblyFileVersionAttribute ver = Assembly.GetEntryAssembly().GetCustomAttribute<AssemblyFileVersionAttribute>();
+            Console.WriteLine("Version: " + (ver == null ? "?" : ver.Version.TrimEnd(new char[] { '.', '0' })));
+            Console.WriteLine("   Data: " + (Settings.Default.DataDirectoryPath));
+            Console.WriteLine();
+
             while (running)
             {
-                if (ShowPrompt) Console.Write($"{Prompt}>");
+                if (ShowPrompt)
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.Write($"{Prompt}> ");
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                }
+
                 string line = Console.ReadLine().Trim();
+                Console.ForegroundColor = ConsoleColor.White;
+
                 string[] args = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 if (args.Length == 0)
                     continue;
