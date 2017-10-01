@@ -84,9 +84,8 @@ namespace Neo.Services
             Console.OutputEncoding = Encoding.Unicode;
 
             Console.ForegroundColor = ConsoleColor.DarkGreen;
-            AssemblyFileVersionAttribute ver = Assembly.GetEntryAssembly().GetCustomAttribute<AssemblyFileVersionAttribute>();
-            Console.WriteLine("Version: " + (ver == null ? "?" : ver.Version.TrimEnd(new char[] { '.', '0' })));
-            Console.WriteLine("   Data: " + (Settings.Default.DataDirectoryPath));
+            Version ver = Assembly.GetEntryAssembly().GetName().Version;
+            Console.WriteLine($"{ServiceName} Version: {ver}");
             Console.WriteLine();
 
             while (running)

@@ -27,7 +27,7 @@ namespace Neo.Shell
 
         protected LocalNode LocalNode { get; private set; }
         protected override string Prompt => "neo";
-        public override string ServiceName => "neo-cli";
+        public override string ServiceName => "NEO-CLI";
 
         private void ImportBlocks(Stream stream)
         {
