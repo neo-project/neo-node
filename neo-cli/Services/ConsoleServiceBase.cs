@@ -95,9 +95,9 @@ namespace Neo.Services
                 {
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.Write($"{Prompt}> ");
-                    Console.ForegroundColor = ConsoleColor.Yellow;
                 }
 
+                Console.ForegroundColor = ConsoleColor.Yellow;
                 string line = Console.ReadLine().Trim();
                 Console.ForegroundColor = ConsoleColor.White;
 
