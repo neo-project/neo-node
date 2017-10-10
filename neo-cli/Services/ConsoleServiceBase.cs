@@ -116,6 +116,8 @@ namespace Neo.Services
 #endif
                 }
             }
+
+			Console.ResetColor();
         }
     }
 }
