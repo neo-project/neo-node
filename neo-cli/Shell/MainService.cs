@@ -109,9 +109,11 @@ namespace Neo.Shell
                 Console.WriteLine("error");
                 return true;
             }
-            ushort count = 1;
-            if (args.Length >= 3)
-                count = ushort.Parse(args[2]);
+
+            byte count;
+            if (args.Length < 3 || !byte.TryParse(args[2], out count) || count == 0)
+                count = 1;
+
             List<string> addresses = new List<string>();
             for (int i = 1; i <= count; i++)
             {
@@ -121,6 +123,7 @@ namespace Neo.Shell
                 Console.SetCursorPosition(0, Console.CursorTop);
                 Console.Write($"[{i}/{count}]");
             }
+
             Console.WriteLine();
             string path = "address.txt";
             Console.WriteLine($"export addresses to {path}");
@@ -267,6 +270,7 @@ namespace Neo.Shell
                 "\texit\n" +
                 "Wallet Commands:\n" +
                 "\tcreate wallet <path>\n" +
+                "\tcreate address <count>\n" +
                 "\topen wallet <path>\n" +
                 "\tupgrade wallet <path>\n" +
                 "\trebuild index\n" +
