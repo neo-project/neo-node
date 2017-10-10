@@ -110,8 +110,8 @@ namespace Neo.Shell
                 return true;
             }
 
-            byte count;
-            if (args.Length < 3 || !byte.TryParse(args[2], out count) || count == 0)
+            ushort count;
+            if (args.Length < 3 || !ushort.TryParse(args[2], out count) || count == 0)
                 count = 1;
 
             List<string> addresses = new List<string>();
