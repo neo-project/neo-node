@@ -3,10 +3,12 @@ using Neo.Core;
 using Neo.Implementations.Blockchains.LevelDB;
 using Neo.Implementations.Wallets.EntityFramework;
 using Neo.IO;
+using Neo.IO.Json;
 using Neo.Network;
 using Neo.Network.RPC;
 using Neo.Services;
 using Neo.SmartContract;
+using Neo.VM;
 using Neo.Wallets;
 using System;
 using System.Collections.Generic;
@@ -738,11 +740,27 @@ namespace Neo.Shell
                     File.Delete(acc_zip_path);
                 }
                 LocalNode.Start(Settings.Default.NodePort, Settings.Default.WsPort);
-                if (args.Length >= 1 && args[0] == "/rpc")
+                bool recordNotifications = false;
+                for (int i = 0; i < args.Length; i++)
                 {
-                    rpc = new RpcServerWithWallet(LocalNode);
-                    rpc.Start(Settings.Default.UriPrefix.OfType<string>().ToArray(), Settings.Default.SslCert, Settings.Default.SslCertPassword);
+                    switch (args[i])
+                    {
+                        case "/rpc":
+                        case "--rpc":
+                        case "-r":
+                            if (rpc == null)
+                            {
+                                rpc = new RpcServerWithWallet(LocalNode);
+                                rpc.Start(Settings.Default.UriPrefix.OfType<string>().ToArray(), Settings.Default.SslCert, Settings.Default.SslCertPassword);
+                            }
+                            break;
+                        case "--record-notifications":
+                            recordNotifications = true;
+                            break;
+                    }
                 }
+                if (recordNotifications)
+                    Blockchain.Notify += Blockchain_Notify;
             });
         }
 
@@ -815,6 +833,22 @@ namespace Neo.Shell
             File.Move(path_new, path);
             Console.WriteLine($"Wallet file upgrade complete. Old file has been auto-saved at: {path_old}");
             return true;
+        }
+
+        private void Blockchain_Notify(object sender, BlockNotifyEventArgs e)
+        {
+            JArray jArray = new JArray(e.Notifications.Select(p =>
+            {
+                JObject json = new JObject();
+                json["txid"] = ((Transaction)p.ScriptContainer).Hash.ToString();
+                json["contract"] = p.ScriptHash.ToString();
+                json["state"] = p.State.ToParameter().ToJson();
+                return json;
+            }));
+            string path = Path.Combine(AppContext.BaseDirectory, "Notifications");
+            Directory.CreateDirectory(path);
+            path = Path.Combine(path, $"block-{e.Block.Index}.json");
+            File.WriteAllText(path, jArray.ToString());
         }
     }
 }
