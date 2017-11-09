@@ -703,7 +703,7 @@ namespace Neo.Shell
 
         protected internal override void OnStart(string[] args)
         {
-            Blockchain.RegisterBlockchain(new LevelDBBlockchain(Settings.Default.DataDirectoryPath));
+            Blockchain.RegisterBlockchain(new LevelDBBlockchain(Settings.Default.Paths.Chain));
             if (File.Exists(PeerStatePath))
                 using (FileStream fs = new FileStream(PeerStatePath, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
@@ -732,7 +732,7 @@ namespace Neo.Shell
                     }
                     File.Delete(acc_zip_path);
                 }
-                LocalNode.Start(Settings.Default.NodePort, Settings.Default.WsPort);
+                LocalNode.Start(Settings.Default.P2P.Port, Settings.Default.P2P.WsPort);
                 bool recordNotifications = false;
                 for (int i = 0; i < args.Length; i++)
                 {
@@ -744,7 +744,7 @@ namespace Neo.Shell
                             if (rpc == null)
                             {
                                 rpc = new RpcServerWithWallet(LocalNode);
-                                rpc.Start(Settings.Default.UriPrefix.OfType<string>().ToArray(), Settings.Default.SslCert, Settings.Default.SslCertPassword);
+                                rpc.Start(Settings.Default.RPC.Port, Settings.Default.RPC.SslCert, Settings.Default.RPC.SslCertPassword);
                             }
                             break;
                         case "--record-notifications":
@@ -838,7 +838,7 @@ namespace Neo.Shell
                 json["state"] = p.State.ToParameter().ToJson();
                 return json;
             }));
-            string path = Path.Combine(AppContext.BaseDirectory, "Notifications");
+            string path = Path.Combine(AppContext.BaseDirectory, Settings.Default.Paths.Notifications);
             Directory.CreateDirectory(path);
             path = Path.Combine(path, $"block-{e.Block.Index}.json");
             File.WriteAllText(path, jArray.ToString());
