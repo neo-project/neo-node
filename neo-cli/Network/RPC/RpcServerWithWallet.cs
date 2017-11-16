@@ -1,5 +1,6 @@
 ﻿using Neo.Core;
 using Neo.IO.Json;
+using Neo.SmartContract;
 using Neo.Wallets;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,30 +35,28 @@ namespace Neo.Network.RPC
                         throw new RpcException(-400, "Access denied");
                     else
                     {
-                        UInt256 assetId = UInt256.Parse(_params[0].AsString());
+                        UIntBase assetId = UIntBase.Parse(_params[0].AsString());
+                        AssetDescriptor descriptor = new AssetDescriptor(assetId);
                         UInt160 scriptHash = Wallet.ToScriptHash(_params[1].AsString());
-                        Fixed8 value = Fixed8.Parse(_params[2].AsString());
-                        if (value <= Fixed8.Zero)
+                        BigDecimal value = BigDecimal.Parse(_params[2].AsString(), descriptor.Decimals);
+                        if (value.Sign <= 0)
                             throw new RpcException(-32602, "Invalid params");
                         Fixed8 fee = _params.Count >= 4 ? Fixed8.Parse(_params[3].AsString()) : Fixed8.Zero;
-                        if (value < Fixed8.Zero)
+                        if (fee < Fixed8.Zero)
                             throw new RpcException(-32602, "Invalid params");
                         UInt160 change_address = _params.Count >= 5 ? Wallet.ToScriptHash(_params[4].AsString()) : null;
-                        ContractTransaction tx = Program.Wallet.MakeTransaction(new ContractTransaction
+                        Transaction tx = Program.Wallet.MakeTransaction(null, new[]
                         {
-                            Outputs = new[]
+                            new TransferOutput
                             {
-                                new TransactionOutput
-                                {
-                                    AssetId = assetId,
-                                    Value = value,
-                                    ScriptHash = scriptHash
-                                }
+                                AssetId = assetId,
+                                Value = value,
+                                ScriptHash = scriptHash
                             }
                         }, change_address: change_address, fee: fee);
                         if (tx == null)
                             throw new RpcException(-300, "Insufficient funds");
-                        SignatureContext context = new SignatureContext(tx);
+                        ContractParametersContext context = new ContractParametersContext(tx);
                         Program.Wallet.Sign(context);
                         if (context.Completed)
                         {
@@ -79,29 +78,28 @@ namespace Neo.Network.RPC
                         JArray to = (JArray)_params[0];
                         if (to.Count == 0)
                             throw new RpcException(-32602, "Invalid params");
-                        TransactionOutput[] outputs = new TransactionOutput[to.Count];
+                        TransferOutput[] outputs = new TransferOutput[to.Count];
                         for (int i = 0; i < to.Count; i++)
                         {
-                            outputs[i] = new TransactionOutput
+                            UIntBase asset_id = UIntBase.Parse(to[i]["asset"].AsString());
+                            AssetDescriptor descriptor = new AssetDescriptor(asset_id);
+                            outputs[i] = new TransferOutput
                             {
-                                AssetId = UInt256.Parse(to[i]["asset"].AsString()),
-                                Value = Fixed8.Parse(to[i]["value"].AsString()),
+                                AssetId = asset_id,
+                                Value = BigDecimal.Parse(to[i]["value"].AsString(), descriptor.Decimals),
                                 ScriptHash = Wallet.ToScriptHash(to[i]["address"].AsString())
                             };
-                            if (outputs[i].Value <= Fixed8.Zero)
+                            if (outputs[i].Value.Sign <= 0)
                                 throw new RpcException(-32602, "Invalid params");
                         }
                         Fixed8 fee = _params.Count >= 2 ? Fixed8.Parse(_params[1].AsString()) : Fixed8.Zero;
                         if (fee < Fixed8.Zero)
                             throw new RpcException(-32602, "Invalid params");
                         UInt160 change_address = _params.Count >= 3 ? Wallet.ToScriptHash(_params[2].AsString()) : null;
-                        ContractTransaction tx = Program.Wallet.MakeTransaction(new ContractTransaction
-                        {
-                            Outputs = outputs
-                        }, change_address: change_address, fee: fee);
+                        Transaction tx = Program.Wallet.MakeTransaction(null, outputs, change_address: change_address, fee: fee);
                         if (tx == null)
                             throw new RpcException(-300, "Insufficient funds");
-                        SignatureContext context = new SignatureContext(tx);
+                        ContractParametersContext context = new ContractParametersContext(tx);
                         Program.Wallet.Sign(context);
                         if (context.Completed)
                         {
@@ -121,7 +119,7 @@ namespace Neo.Network.RPC
                     else
                     {
                         KeyPair key = Program.Wallet.CreateKey();
-                        Contract contract = Program.Wallet.GetContracts(key.PublicKeyHash).First(p => p.IsStandard);
+                        VerificationContract contract = Program.Wallet.GetContracts(key.PublicKeyHash).First(p => p.IsStandard);
                         return contract.Address;
                     }
                 case "dumpprivkey":
