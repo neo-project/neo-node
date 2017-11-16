@@ -660,7 +660,7 @@ namespace Neo.Shell
 
         private bool OnShowStateCommand(string[] args)
         {
-            Console.WriteLine($"Height: {Blockchain.Default.Height}/{Blockchain.Default.HeaderHeight}, Nodes: {LocalNode.RemoteNodeCount}");
+            Console.WriteLine($"Height: {Program.Wallet.WalletHeight}/{Blockchain.Default.Height}/{Blockchain.Default.HeaderHeight}, Nodes: {LocalNode.RemoteNodeCount}");
             return true;
         }
 
