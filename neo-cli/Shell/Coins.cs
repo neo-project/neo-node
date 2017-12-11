@@ -101,7 +101,7 @@ namespace Neo.Shell
             if (context.Completed)
             {
                 context.Verifiable.Scripts = context.GetScripts();
-                current_wallet.SaveTransaction(tx);
+                current_wallet.ApplyTransaction(tx);
 
                 bool relay_result = local_node.Relay(tx);
 
