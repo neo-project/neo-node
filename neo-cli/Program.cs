@@ -1,5 +1,5 @@
-﻿using Neo.Implementations.Wallets.EntityFramework;
-using Neo.Shell;
+﻿using Neo.Shell;
+using Neo.Wallets;
 using System;
 using System.IO;
 
@@ -7,7 +7,7 @@ namespace Neo
 {
     static class Program
     {
-        internal static UserWallet Wallet;
+          internal static Wallet Wallet;
 
         private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {

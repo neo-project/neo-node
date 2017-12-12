@@ -61,7 +61,7 @@ namespace Neo.Network.RPC
                         if (context.Completed)
                         {
                             tx.Scripts = context.GetScripts();
-                            Program.Wallet.SaveTransaction(tx);
+                            Program.Wallet.ApplyTransaction(tx);
                             LocalNode.Relay(tx);
                             return tx.ToJson();
                         }
@@ -104,7 +104,7 @@ namespace Neo.Network.RPC
                         if (context.Completed)
                         {
                             tx.Scripts = context.GetScripts();
-                            Program.Wallet.SaveTransaction(tx);
+                            Program.Wallet.ApplyTransaction(tx);
                             LocalNode.Relay(tx);
                             return tx.ToJson();
                         }
@@ -118,9 +118,7 @@ namespace Neo.Network.RPC
                         throw new RpcException(-400, "Access denied");
                     else
                     {
-                        KeyPair key = Program.Wallet.CreateKey();
-                        VerificationContract contract = Program.Wallet.GetContracts(key.PublicKeyHash).First(p => p.IsStandard);
-                        return contract.Address;
+                        return Program.Wallet.CreateAccount().Address;
                     }
                 case "dumpprivkey":
                     if (Program.Wallet == null)
@@ -128,8 +126,8 @@ namespace Neo.Network.RPC
                     else
                     {
                         UInt160 scriptHash = Wallet.ToScriptHash(_params[0].AsString());
-                        KeyPair key = Program.Wallet.GetKeyByScriptHash(scriptHash);
-                        return key.Export();
+                        WalletAccount account = Program.Wallet.GetAccount(scriptHash);
+                        return account.GetKey().Export();
                     }
                 default:
                     return base.Process(method, _params);
