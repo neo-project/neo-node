@@ -123,6 +123,8 @@ namespace Neo.Shell
                 Console.SetCursorPosition(0, Console.CursorTop);
                 Console.Write($"[{i}/{count}]");
             }
+            if (Program.Wallet is NEP6Wallet wallet)
+                wallet.Save();
             Console.WriteLine();
             string path = "address.txt";
             Console.WriteLine($"export addresses to {path}");
@@ -344,6 +346,8 @@ namespace Neo.Shell
                 Console.WriteLine($"address: {account.Address}");
                 Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
             }
+            if (Program.Wallet is NEP6Wallet wallet)
+                wallet.Save();
             return true;
         }
 
@@ -852,7 +856,7 @@ namespace Neo.Shell
                 return true;
             }
             string path_new = Path.ChangeExtension(path, ".json");
-            NEP6Wallet.Migrate(path_new, path, password);
+            NEP6Wallet.Migrate(path_new, path, password).Save();
             Console.WriteLine($"Wallet file upgrade complete. New wallet file has been auto-saved at: {path_new}");
             return true;
         }
