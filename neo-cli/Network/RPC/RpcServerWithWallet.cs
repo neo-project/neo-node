@@ -148,6 +148,15 @@ namespace Neo.Network.RPC
                         if (tx.Gas < Fixed8.Zero) tx.Gas = Fixed8.Zero;
                         tx.Gas = tx.Gas.Ceiling();
                         tx = Program.Wallet.MakeTransaction(tx);
+                        if (tx != null)
+                        {
+                            ContractParametersContext context = new ContractParametersContext(tx);
+                            Program.Wallet.Sign(context);
+                            if (context.Completed)
+                                tx.Scripts = context.GetScripts();
+                            else
+                                tx = null;
+                        }
                         result["tx"] = tx?.ToArray().ToHexString();
                         return result;
                     }
