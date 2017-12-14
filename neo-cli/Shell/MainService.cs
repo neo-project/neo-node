@@ -867,6 +867,7 @@ namespace Neo.Shell
             {
                 JObject json = new JObject();
                 json["txid"] = ((Transaction)p.ScriptContainer).Hash.ToString();
+                json["time"] = e.Block.Timestamp;
                 json["contract"] = p.ScriptHash.ToString();
                 json["state"] = p.State.ToParameter().ToJson();
                 return json;
