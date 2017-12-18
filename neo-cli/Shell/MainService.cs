@@ -146,6 +146,11 @@ namespace Neo.Shell
                 return true;
             }
             string password = ReadPassword("password");
+            if (password.Length == 0)
+            {
+                Console.WriteLine("cancelled");
+                return true;
+            }
             string password2 = ReadPassword("password");
             if (password != password2)
             {
