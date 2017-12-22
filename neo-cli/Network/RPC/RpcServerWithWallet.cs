@@ -133,11 +133,9 @@ namespace Neo.Network.RPC
                 case "invoke":
                 case "invokefunction":
                 case "invokescript":
-                    if (Program.Wallet == null)
-                        throw new RpcException(-400, "Access denied");
-                    else
+                    JObject result = base.Process(method, _params);
+                    if (Program.Wallet != null)
                     {
-                        JObject result = base.Process(method, _params);
                         InvocationTransaction tx = new InvocationTransaction
                         {
                             Version = 1,
@@ -158,8 +156,8 @@ namespace Neo.Network.RPC
                                 tx = null;
                         }
                         result["tx"] = tx?.ToArray().ToHexString();
-                        return result;
                     }
+                    return result;
                 default:
                     return base.Process(method, _params);
             }
