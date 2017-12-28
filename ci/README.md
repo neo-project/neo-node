@@ -1,4 +1,4 @@
-This are files for the continuous integration with Travis CI.
+These are files for the continuous integration with Travis CI.
 
 On each code push, the following tasks are executed:
 

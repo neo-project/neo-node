@@ -2,7 +2,7 @@
 #
 # This script builds neo-cli with dotnet 2.0, and runs the tests.
 #
-CONTAINER_NAME="neo-cli-build"
+CONTAINER_NAME="neo-cli-ci"
 
 # Get absolute path of code and ci folder. This allows to run this script from
 # anywhere, whether from inside this directory or outside.
