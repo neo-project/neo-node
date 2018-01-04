@@ -1,4 +1,5 @@
 ﻿using Neo.Core;
+using Neo.Implementations.Wallets.NEP6;
 using Neo.IO;
 using Neo.IO.Json;
 using Neo.SmartContract;
@@ -160,7 +161,10 @@ namespace Neo.Network.RPC
                         throw new RpcException(-400, "Access denied");
                     else
                     {
-                        return Program.Wallet.CreateAccount().Address;
+                        WalletAccount account = Program.Wallet.CreateAccount();
+                        if (Program.Wallet is NEP6Wallet wallet)
+                            wallet.Save();
+                        return account.Address;
                     }
                 case "dumpprivkey":
                     if (Program.Wallet == null)
