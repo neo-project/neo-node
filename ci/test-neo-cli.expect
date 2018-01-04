@@ -59,7 +59,6 @@ expect {
 send "create address\n"
 
 expect {
-    "export addresses" { }
     "neo> " { }
     "error" { exit 2 }
     timeout { exit 1 }
