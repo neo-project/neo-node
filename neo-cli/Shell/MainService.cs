@@ -142,7 +142,7 @@ namespace Neo.Shell
             string path = args[2];
             if (Path.GetExtension(path) == ".db3")
             {
-                Console.WriteLine("The wallet file in the db3 format is not supported.");
+                Console.WriteLine("Wallet files in db3 format are not supported, please use a .json file extension.");
                 return true;
             }
             string password = ReadPassword("password");
