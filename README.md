@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/neo-project/neo-cli.svg?branch=master)](https://travis-ci.org/neo-project/neo-cli)
+
 ## Prerequisites
 
 You will need Window or Linux. Use a virtual machine if you have a Mac. Ubuntu 14 and 16 are supported. Ubuntu 17 is not supported.
