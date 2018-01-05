@@ -1,4 +1,5 @@
 ﻿using Neo.Core;
+using Neo.Implementations.Wallets.NEP6;
 using Neo.IO;
 using Neo.IO.Json;
 using Neo.SmartContract;
@@ -30,6 +31,47 @@ namespace Neo.Network.RPC
                         json["balance"] = coins.Sum(p => p.Output.Value).ToString();
                         json["confirmed"] = coins.Where(p => p.State.HasFlag(CoinState.Confirmed)).Sum(p => p.Output.Value).ToString();
                         return json;
+                    }
+                case "sendfrom":
+                    if (Program.Wallet == null)
+                        throw new RpcException(-400, "Access denied");
+                    else
+                    {
+                        UIntBase assetId = UIntBase.Parse(_params[0].AsString());
+                        AssetDescriptor descriptor = new AssetDescriptor(assetId);
+                        UInt160 from = Wallet.ToScriptHash(_params[1].AsString());
+                        UInt160 to = Wallet.ToScriptHash(_params[2].AsString());
+                        BigDecimal value = BigDecimal.Parse(_params[3].AsString(), descriptor.Decimals);
+                        if (value.Sign <= 0)
+                            throw new RpcException(-32602, "Invalid params");
+                        Fixed8 fee = _params.Count >= 5 ? Fixed8.Parse(_params[4].AsString()) : Fixed8.Zero;
+                        if (fee < Fixed8.Zero)
+                            throw new RpcException(-32602, "Invalid params");
+                        UInt160 change_address = _params.Count >= 6 ? Wallet.ToScriptHash(_params[5].AsString()) : null;
+                        Transaction tx = Program.Wallet.MakeTransaction(null, new[]
+                        {
+                            new TransferOutput
+                            {
+                                AssetId = assetId,
+                                Value = value,
+                                ScriptHash = to
+                            }
+                        }, from: from, change_address: change_address, fee: fee);
+                        if (tx == null)
+                            throw new RpcException(-300, "Insufficient funds");
+                        ContractParametersContext context = new ContractParametersContext(tx);
+                        Program.Wallet.Sign(context);
+                        if (context.Completed)
+                        {
+                            tx.Scripts = context.GetScripts();
+                            Program.Wallet.ApplyTransaction(tx);
+                            LocalNode.Relay(tx);
+                            return tx.ToJson();
+                        }
+                        else
+                        {
+                            return context.ToJson();
+                        }
                     }
                 case "sendtoaddress":
                     if (Program.Wallet == null)
@@ -119,7 +161,10 @@ namespace Neo.Network.RPC
                         throw new RpcException(-400, "Access denied");
                     else
                     {
-                        return Program.Wallet.CreateAccount().Address;
+                        WalletAccount account = Program.Wallet.CreateAccount();
+                        if (Program.Wallet is NEP6Wallet wallet)
+                            wallet.Save();
+                        return account.Address;
                     }
                 case "dumpprivkey":
                     if (Program.Wallet == null)
