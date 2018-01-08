@@ -42,7 +42,7 @@ expect {
 send "list address\n"
 
 expect {
-    -re "A.*" { }
+    "neo> " { }
     "error" { exit 2 }
     timeout { exit 1 }
 }
