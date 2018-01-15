@@ -2,7 +2,7 @@
 #
 # This script uses expect to test neo-cli
 #
-set timeout 2
+set timeout 10
 
 # Start neo-cli
 spawn dotnet neo-cli.dll --rpc
@@ -30,17 +30,11 @@ expect {
     timeout { exit 1 }
 }
 
-# Wallet creation requires a higher timeout
-set timeout 10
-
 expect {
     "address:" { }
     "error" { exit 2 }
     timeout { exit 1 }
 }
-
-# Set timeout back to default
-set timeout 2
 
 #
 # Test 'list address'
@@ -48,7 +42,7 @@ set timeout 2
 send "list address\n"
 
 expect {
-    -re "A.*" { }
+    "neo> " { }
     "error" { exit 2 }
     timeout { exit 1 }
 }
