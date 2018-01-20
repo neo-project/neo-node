@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/neo-project/neo-cli.svg?branch=master)](https://travis-ci.org/neo-project/neo-cli)
+
 ## Prerequisites
 
 You will need Window or Linux. Use a virtual machine if you have a Mac. Ubuntu 14 and 16 are supported. Ubuntu 17 is not supported.
@@ -7,7 +9,8 @@ Install [.NET Core](https://www.microsoft.com/net/download/core).
 On Linux, install the LevelDB and SQLite3 dev packages. E.g. on Ubuntu:
 
 ```sh
-sudo apt-get install libleveldb-dev sqlite3 libsqlite3-dev
+sudo apt-get install libleveldb-dev sqlite3 libsqlite3-dev libunwind8-dev
+
 ```
 
 On Windows, use the [Neo version of LevelDB](https://github.com/neo-project/leveldb).

@@ -1,31 +1,64 @@
 ﻿using Microsoft.Extensions.Configuration;
-using System.Linq;
 
 namespace Neo
 {
     internal class Settings
     {
-        public string DataDirectoryPath { get; private set; }
-        public ushort NodePort { get; private set; }
-        public ushort WsPort { get; private set; }
-        public string[] UriPrefix { get; private set; }
-        public string SslCert { get; private set; }
-        public string SslCertPassword { get; private set; }
+        public PathsSettings Paths { get; }
+        public P2PSettings P2P { get; }
+        public RPCSettings RPC { get; }
 
-        public static Settings Default { get; private set; }
+        public static Settings Default { get; }
 
         static Settings()
         {
             IConfigurationSection section = new ConfigurationBuilder().AddJsonFile("config.json").Build().GetSection("ApplicationConfiguration");
-            Default = new Settings
-            {
-                DataDirectoryPath = section.GetSection("DataDirectoryPath").Value,
-                NodePort = ushort.Parse(section.GetSection("NodePort").Value),
-                WsPort = ushort.Parse(section.GetSection("WsPort").Value),
-                UriPrefix = section.GetSection("UriPrefix").GetChildren().Select(p => p.Value).ToArray(),
-                SslCert = section.GetSection("SslCert").Value,
-                SslCertPassword = section.GetSection("SslCertPassword").Value
-            };
+            Default = new Settings(section);
+        }
+
+        public Settings(IConfigurationSection section)
+        {
+            this.Paths = new PathsSettings(section.GetSection("Paths"));
+            this.P2P = new P2PSettings(section.GetSection("P2P"));
+            this.RPC = new RPCSettings(section.GetSection("RPC"));
+        }
+    }
+
+    internal class PathsSettings
+    {
+        public string Chain { get; }
+        public string Notifications { get; }
+
+        public PathsSettings(IConfigurationSection section)
+        {
+            this.Chain = section.GetSection("Chain").Value;
+            this.Notifications = section.GetSection("Notifications").Value;
+        }
+    }
+
+    internal class P2PSettings
+    {
+        public ushort Port { get; }
+        public ushort WsPort { get; }
+
+        public P2PSettings(IConfigurationSection section)
+        {
+            this.Port = ushort.Parse(section.GetSection("Port").Value);
+            this.WsPort = ushort.Parse(section.GetSection("WsPort").Value);
+        }
+    }
+
+    internal class RPCSettings
+    {
+        public ushort Port { get; }
+        public string SslCert { get; }
+        public string SslCertPassword { get; }
+
+        public RPCSettings(IConfigurationSection section)
+        {
+            this.Port = ushort.Parse(section.GetSection("Port").Value);
+            this.SslCert = section.GetSection("SslCert").Value;
+            this.SslCertPassword = section.GetSection("SslCertPassword").Value;
         }
     }
 }

@@ -1,4 +1,6 @@
 ﻿using Neo.Core;
+using Neo.Implementations.Wallets.NEP6;
+using Neo.IO;
 using Neo.IO.Json;
 using Neo.SmartContract;
 using Neo.Wallets;
@@ -30,30 +32,69 @@ namespace Neo.Network.RPC
                         json["confirmed"] = coins.Where(p => p.State.HasFlag(CoinState.Confirmed)).Sum(p => p.Output.Value).ToString();
                         return json;
                     }
+                case "sendfrom":
+                    if (Program.Wallet == null)
+                        throw new RpcException(-400, "Access denied");
+                    else
+                    {
+                        UIntBase assetId = UIntBase.Parse(_params[0].AsString());
+                        AssetDescriptor descriptor = new AssetDescriptor(assetId);
+                        UInt160 from = Wallet.ToScriptHash(_params[1].AsString());
+                        UInt160 to = Wallet.ToScriptHash(_params[2].AsString());
+                        BigDecimal value = BigDecimal.Parse(_params[3].AsString(), descriptor.Decimals);
+                        if (value.Sign <= 0)
+                            throw new RpcException(-32602, "Invalid params");
+                        Fixed8 fee = _params.Count >= 5 ? Fixed8.Parse(_params[4].AsString()) : Fixed8.Zero;
+                        if (fee < Fixed8.Zero)
+                            throw new RpcException(-32602, "Invalid params");
+                        UInt160 change_address = _params.Count >= 6 ? Wallet.ToScriptHash(_params[5].AsString()) : null;
+                        Transaction tx = Program.Wallet.MakeTransaction(null, new[]
+                        {
+                            new TransferOutput
+                            {
+                                AssetId = assetId,
+                                Value = value,
+                                ScriptHash = to
+                            }
+                        }, from: from, change_address: change_address, fee: fee);
+                        if (tx == null)
+                            throw new RpcException(-300, "Insufficient funds");
+                        ContractParametersContext context = new ContractParametersContext(tx);
+                        Program.Wallet.Sign(context);
+                        if (context.Completed)
+                        {
+                            tx.Scripts = context.GetScripts();
+                            Program.Wallet.ApplyTransaction(tx);
+                            LocalNode.Relay(tx);
+                            return tx.ToJson();
+                        }
+                        else
+                        {
+                            return context.ToJson();
+                        }
+                    }
                 case "sendtoaddress":
                     if (Program.Wallet == null)
                         throw new RpcException(-400, "Access denied");
                     else
                     {
-                        UInt256 assetId = UInt256.Parse(_params[0].AsString());
+                        UIntBase assetId = UIntBase.Parse(_params[0].AsString());
+                        AssetDescriptor descriptor = new AssetDescriptor(assetId);
                         UInt160 scriptHash = Wallet.ToScriptHash(_params[1].AsString());
-                        Fixed8 value = Fixed8.Parse(_params[2].AsString());
-                        if (value <= Fixed8.Zero)
+                        BigDecimal value = BigDecimal.Parse(_params[2].AsString(), descriptor.Decimals);
+                        if (value.Sign <= 0)
                             throw new RpcException(-32602, "Invalid params");
                         Fixed8 fee = _params.Count >= 4 ? Fixed8.Parse(_params[3].AsString()) : Fixed8.Zero;
-                        if (value < Fixed8.Zero)
+                        if (fee < Fixed8.Zero)
                             throw new RpcException(-32602, "Invalid params");
                         UInt160 change_address = _params.Count >= 5 ? Wallet.ToScriptHash(_params[4].AsString()) : null;
-                        ContractTransaction tx = Program.Wallet.MakeTransaction(new ContractTransaction
+                        Transaction tx = Program.Wallet.MakeTransaction(null, new[]
                         {
-                            Outputs = new[]
+                            new TransferOutput
                             {
-                                new TransactionOutput
-                                {
-                                    AssetId = assetId,
-                                    Value = value,
-                                    ScriptHash = scriptHash
-                                }
+                                AssetId = assetId,
+                                Value = value,
+                                ScriptHash = scriptHash
                             }
                         }, change_address: change_address, fee: fee);
                         if (tx == null)
@@ -63,7 +104,7 @@ namespace Neo.Network.RPC
                         if (context.Completed)
                         {
                             tx.Scripts = context.GetScripts();
-                            Program.Wallet.SaveTransaction(tx);
+                            Program.Wallet.ApplyTransaction(tx);
                             LocalNode.Relay(tx);
                             return tx.ToJson();
                         }
@@ -80,26 +121,25 @@ namespace Neo.Network.RPC
                         JArray to = (JArray)_params[0];
                         if (to.Count == 0)
                             throw new RpcException(-32602, "Invalid params");
-                        TransactionOutput[] outputs = new TransactionOutput[to.Count];
+                        TransferOutput[] outputs = new TransferOutput[to.Count];
                         for (int i = 0; i < to.Count; i++)
                         {
-                            outputs[i] = new TransactionOutput
+                            UIntBase asset_id = UIntBase.Parse(to[i]["asset"].AsString());
+                            AssetDescriptor descriptor = new AssetDescriptor(asset_id);
+                            outputs[i] = new TransferOutput
                             {
-                                AssetId = UInt256.Parse(to[i]["asset"].AsString()),
-                                Value = Fixed8.Parse(to[i]["value"].AsString()),
+                                AssetId = asset_id,
+                                Value = BigDecimal.Parse(to[i]["value"].AsString(), descriptor.Decimals),
                                 ScriptHash = Wallet.ToScriptHash(to[i]["address"].AsString())
                             };
-                            if (outputs[i].Value <= Fixed8.Zero)
+                            if (outputs[i].Value.Sign <= 0)
                                 throw new RpcException(-32602, "Invalid params");
                         }
                         Fixed8 fee = _params.Count >= 2 ? Fixed8.Parse(_params[1].AsString()) : Fixed8.Zero;
                         if (fee < Fixed8.Zero)
                             throw new RpcException(-32602, "Invalid params");
                         UInt160 change_address = _params.Count >= 3 ? Wallet.ToScriptHash(_params[2].AsString()) : null;
-                        ContractTransaction tx = Program.Wallet.MakeTransaction(new ContractTransaction
-                        {
-                            Outputs = outputs
-                        }, change_address: change_address, fee: fee);
+                        Transaction tx = Program.Wallet.MakeTransaction(null, outputs, change_address: change_address, fee: fee);
                         if (tx == null)
                             throw new RpcException(-300, "Insufficient funds");
                         ContractParametersContext context = new ContractParametersContext(tx);
@@ -107,7 +147,7 @@ namespace Neo.Network.RPC
                         if (context.Completed)
                         {
                             tx.Scripts = context.GetScripts();
-                            Program.Wallet.SaveTransaction(tx);
+                            Program.Wallet.ApplyTransaction(tx);
                             LocalNode.Relay(tx);
                             return tx.ToJson();
                         }
@@ -121,9 +161,10 @@ namespace Neo.Network.RPC
                         throw new RpcException(-400, "Access denied");
                     else
                     {
-                        KeyPair key = Program.Wallet.CreateKey();
-                        VerificationContract contract = Program.Wallet.GetContracts(key.PublicKeyHash).First(p => p.IsStandard);
-                        return contract.Address;
+                        WalletAccount account = Program.Wallet.CreateAccount();
+                        if (Program.Wallet is NEP6Wallet wallet)
+                            wallet.Save();
+                        return account.Address;
                     }
                 case "dumpprivkey":
                     if (Program.Wallet == null)
@@ -131,9 +172,37 @@ namespace Neo.Network.RPC
                     else
                     {
                         UInt160 scriptHash = Wallet.ToScriptHash(_params[0].AsString());
-                        KeyPair key = Program.Wallet.GetKeyByScriptHash(scriptHash);
-                        return key.Export();
+                        WalletAccount account = Program.Wallet.GetAccount(scriptHash);
+                        return account.GetKey().Export();
                     }
+                case "invoke":
+                case "invokefunction":
+                case "invokescript":
+                    JObject result = base.Process(method, _params);
+                    if (Program.Wallet != null)
+                    {
+                        InvocationTransaction tx = new InvocationTransaction
+                        {
+                            Version = 1,
+                            Script = result["script"].AsString().HexToBytes(),
+                            Gas = Fixed8.Parse(result["gas_consumed"].AsString())
+                        };
+                        tx.Gas -= Fixed8.FromDecimal(10);
+                        if (tx.Gas < Fixed8.Zero) tx.Gas = Fixed8.Zero;
+                        tx.Gas = tx.Gas.Ceiling();
+                        tx = Program.Wallet.MakeTransaction(tx);
+                        if (tx != null)
+                        {
+                            ContractParametersContext context = new ContractParametersContext(tx);
+                            Program.Wallet.Sign(context);
+                            if (context.Completed)
+                                tx.Scripts = context.GetScripts();
+                            else
+                                tx = null;
+                        }
+                        result["tx"] = tx?.ToArray().ToHexString();
+                    }
+                    return result;
                 default:
                     return base.Process(method, _params);
             }
