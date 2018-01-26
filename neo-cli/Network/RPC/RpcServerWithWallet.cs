@@ -32,6 +32,19 @@ namespace Neo.Network.RPC
                         json["confirmed"] = coins.Where(p => p.State.HasFlag(CoinState.Confirmed)).Sum(p => p.Output.Value).ToString();
                         return json;
                     }
+                case "listaddress":
+                    if (Program.Wallet == null)
+                        throw new RpcException(-400, "Access denied.");
+                    else
+                        return Program.Wallet.GetAccounts().Select(p =>
+                        {
+                            JObject account = new JObject();
+                            account["address"] = p.Address;
+                            account["haskey"] = p.HasKey;
+                            account["label"] = p.Label;
+                            account["watchonly"] = p.WatchOnly;
+                            return account;
+                        }).ToArray();
                 case "sendfrom":
                     if (Program.Wallet == null)
                         throw new RpcException(-400, "Access denied");
