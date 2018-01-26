@@ -763,7 +763,7 @@ namespace Neo.Shell
                     File.Delete(acc_zip_path);
                 }
                 LocalNode.Start(Settings.Default.P2P.Port, Settings.Default.P2P.WsPort);
-                bool recordNotifications = false;
+                bool log = false;
                 for (int i = 0; i < args.Length; i++)
                 {
                     switch (args[i])
@@ -777,13 +777,14 @@ namespace Neo.Shell
                                 rpc.Start(Settings.Default.RPC.Port, Settings.Default.RPC.SslCert, Settings.Default.RPC.SslCertPassword);
                             }
                             break;
-                        case "--record-notifications":
-                            recordNotifications = true;
+                        case "-l":
+                        case "--log":
+                            log = true;
                             break;
                     }
                 }
-                if (recordNotifications)
-                    Blockchain.Notify += Blockchain_Notify;
+                if (log)
+                    LevelDBBlockchain.ApplicationExecuted += LevelDBBlockchain_ApplicationExecuted;
             });
         }
 
@@ -866,21 +867,23 @@ namespace Neo.Shell
             return true;
         }
 
-        private void Blockchain_Notify(object sender, BlockNotifyEventArgs e)
+        private void LevelDBBlockchain_ApplicationExecuted(object sender, ApplicationExecutedEventArgs e)
         {
-            JArray jArray = new JArray(e.Notifications.Select(p =>
+            JObject json = new JObject();
+            json["txid"] = e.Transaction.Hash.ToString();
+            json["vmstate"] = e.VMState;
+            json["gas_consumed"] = e.GasConsumed.ToString();
+            json["stack"] = e.Stack.Select(p => p.ToParameter().ToJson()).ToArray();
+            json["notifications"] = e.Notifications.Select(p =>
             {
-                JObject json = new JObject();
-                json["txid"] = ((Transaction)p.ScriptContainer).Hash.ToString();
-                json["time"] = e.Block.Timestamp;
-                json["contract"] = p.ScriptHash.ToString();
-                json["state"] = p.State.ToParameter().ToJson();
-                return json;
-            }));
-            string path = Path.Combine(AppContext.BaseDirectory, Settings.Default.Paths.Notifications);
-            Directory.CreateDirectory(path);
-            path = Path.Combine(path, $"block-{e.Block.Index}.json");
-            File.WriteAllText(path, jArray.ToString());
+                JObject notification = new JObject();
+                notification["contract"] = p.ScriptHash.ToString();
+                notification["state"] = p.State.ToParameter().ToJson();
+                return notification;
+            }).ToArray();
+            Directory.CreateDirectory(Settings.Default.Paths.ApplicationLogs);
+            string path = Path.Combine(Settings.Default.Paths.ApplicationLogs, $"{e.Transaction.Hash}.json");
+            File.WriteAllText(path, json.ToString());
         }
     }
 }
