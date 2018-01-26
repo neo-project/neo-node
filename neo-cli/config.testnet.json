@@ -1,8 +1,7 @@
 ﻿{
   "ApplicationConfiguration": {
     "Paths": {
-      "Chain": "ChainTestNet",
-      "Notifications": "NotificationsTestNet"
+      "Chain": "ChainTestNet"
     },
     "P2P": {
       "Port": 20333,
