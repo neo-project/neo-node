@@ -28,7 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Neo" Version="2.7.1-preview1" />
+    <PackageReference Include="Neo" Version="2.7.1" />
   </ItemGroup>
 
 </Project>
