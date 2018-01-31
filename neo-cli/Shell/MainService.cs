@@ -140,11 +140,6 @@ namespace Neo.Shell
                 return true;
             }
             string path = args[2];
-            if (Path.GetExtension(path) == ".db3")
-            {
-                Console.WriteLine("Wallet files in db3 format are not supported, please use a .json file extension.");
-                return true;
-            }
             string password = ReadPassword("password");
             if (password.Length == 0)
             {
@@ -157,13 +152,31 @@ namespace Neo.Shell
                 Console.WriteLine("error");
                 return true;
             }
-            NEP6Wallet wallet = new NEP6Wallet(path);
-            wallet.Unlock(password);
-            WalletAccount account = wallet.CreateAccount();
-            wallet.Save();
-            Program.Wallet = wallet;
-            Console.WriteLine($"address: {account.Address}");
-            Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+            switch (Path.GetExtension(path))
+            {
+                case ".db3":
+                    {
+                        Program.Wallet = UserWallet.Create(path, password);
+                        WalletAccount account = Program.Wallet.CreateAccount();
+                        Console.WriteLine($"address: {account.Address}");
+                        Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+                    }
+                    break;
+                case ".json":
+                    {
+                        NEP6Wallet wallet = new NEP6Wallet(path);
+                        wallet.Unlock(password);
+                        WalletAccount account = wallet.CreateAccount();
+                        wallet.Save();
+                        Program.Wallet = wallet;
+                        Console.WriteLine($"address: {account.Address}");
+                        Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+                    }
+                    break;
+                default:
+                    Console.WriteLine("Wallet files in that format are not supported, please use a .json or .db3 file extension.");
+                    break;
+            }
             return true;
         }
 
