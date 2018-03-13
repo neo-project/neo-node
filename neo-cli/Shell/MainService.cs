@@ -17,6 +17,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Neo.Shell
@@ -112,17 +113,28 @@ namespace Neo.Shell
                 Console.WriteLine("error");
                 return true;
             }
-            ushort count = 1;
+
+            ushort count;
             if (args.Length >= 3)
                 count = ushort.Parse(args[2]);
+            else
+                count = 1;
+
+            int x = 0;
             List<string> addresses = new List<string>();
-            for (int i = 1; i <= count; i++)
+
+            Parallel.For(0, count, (i) =>
             {
                 WalletAccount account = Program.Wallet.CreateAccount();
-                addresses.Add(account.Address);
-                Console.SetCursorPosition(0, Console.CursorTop);
-                Console.Write($"[{i}/{count}]");
-            }
+
+                lock (addresses)
+                {
+                    addresses.Add(account.Address);
+                    Console.SetCursorPosition(0, Console.CursorTop);
+                    Console.Write($"[{Interlocked.Increment(ref x)}/{count}]");
+                }
+            });
+
             if (Program.Wallet is NEP6Wallet wallet)
                 wallet.Save();
             Console.WriteLine();
