@@ -6,6 +6,7 @@ using Neo.Implementations.Wallets.NEP6;
 using Neo.IO;
 using Neo.IO.Json;
 using Neo.Network;
+using Neo.Network.Payloads;
 using Neo.Network.RPC;
 using Neo.Services;
 using Neo.SmartContract;
@@ -16,6 +17,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 
@@ -35,27 +37,27 @@ namespace Neo.Shell
         private void ImportBlocks(Stream stream)
         {
             LevelDBBlockchain blockchain = (LevelDBBlockchain)Blockchain.Default;
-            blockchain.VerifyBlocks = false;
             using (BinaryReader r = new BinaryReader(stream))
             {
                 uint count = r.ReadUInt32();
                 for (int height = 0; height < count; height++)
                 {
                     byte[] array = r.ReadBytes(r.ReadInt32());
-                    if (height > Blockchain.Default.Height)
+                    if (height > blockchain.Height)
                     {
                         Block block = array.AsSerializable<Block>();
-                        Blockchain.Default.AddBlock(block);
+                        blockchain.AddBlockDirectly(block);
                     }
                 }
             }
-            blockchain.VerifyBlocks = true;
         }
 
         protected override bool OnCommand(string[] args)
         {
             switch (args[0].ToLower())
             {
+                case "broadcast":
+                    return OnBroadcastCommand(args);
                 case "create":
                     return OnCreateCommand(args);
                 case "export":
@@ -85,6 +87,53 @@ namespace Neo.Shell
                 default:
                     return base.OnCommand(args);
             }
+        }
+
+        private bool OnBroadcastCommand(string[] args)
+        {
+            string command = args[1].ToLower();
+            ISerializable payload = null;
+            switch (command)
+            {
+                case "addr":
+                    payload = AddrPayload.Create(NetworkAddressWithTime.Create(new IPEndPoint(IPAddress.Parse(args[2]), ushort.Parse(args[3])), NetworkAddressWithTime.NODE_NETWORK, DateTime.UtcNow.ToTimestamp()));
+                    break;
+                case "block":
+                    if (args[2].Length == 64 || args[2].Length == 66)
+                        payload = Blockchain.Default.GetBlock(UInt256.Parse(args[2]));
+                    else
+                        payload = Blockchain.Default.GetBlock(uint.Parse(args[2]));
+                    break;
+                case "getblocks":
+                case "getheaders":
+                    payload = GetBlocksPayload.Create(UInt256.Parse(args[2]));
+                    break;
+                case "getdata":
+                case "inv":
+                    payload = InvPayload.Create(Enum.Parse<InventoryType>(args[2], true), args.Skip(3).Select(p => UInt256.Parse(p)).ToArray());
+                    break;
+                case "tx":
+                    payload = LocalNode.GetTransaction(UInt256.Parse(args[2]));
+                    if (payload == null)
+                        payload = Blockchain.Default.GetTransaction(UInt256.Parse(args[2]));
+                    break;
+                case "alert":
+                case "consensus":
+                case "filteradd":
+                case "filterload":
+                case "headers":
+                case "merkleblock":
+                case "ping":
+                case "pong":
+                case "reject":
+                case "verack":
+                case "version":
+                    Console.WriteLine($"Command \"{command}\" is not supported.");
+                    return true;
+            }
+            foreach (RemoteNode node in LocalNode.GetRemoteNodes())
+                node.EnqueueMessage(command, payload);
+            return true;
         }
 
         private bool OnCreateCommand(string[] args)
@@ -309,7 +358,7 @@ namespace Neo.Shell
                 "Node Commands:\n" +
                 "\tshow state\n" +
                 "\tshow node\n" +
-                "\tshow pool\n" +
+                "\tshow pool [verbose]\n" +
                 "\texport blocks [path=chain.acc]\n" +
                 "Advanced Commands:\n" +
                 "\tstart consensus\n" +
@@ -682,17 +731,19 @@ namespace Neo.Shell
             RemoteNode[] nodes = LocalNode.GetRemoteNodes();
             for (int i = 0; i < nodes.Length; i++)
             {
-                Console.WriteLine($"{nodes[i].RemoteEndpoint.Address} port:{nodes[i].RemoteEndpoint.Port} listen:{nodes[i].ListenerEndpoint?.Port ?? 0} [{i + 1}/{nodes.Length}]");
+                Console.WriteLine($"{nodes[i].RemoteEndpoint.Address} port:{nodes[i].RemoteEndpoint.Port} listen:{nodes[i].ListenerEndpoint?.Port ?? 0} height:{nodes[i].Version?.StartHeight ?? 0} [{i + 1}/{nodes.Length}]");
             }
             return true;
         }
 
         private bool OnShowPoolCommand(string[] args)
         {
-            foreach (Transaction tx in LocalNode.GetMemoryPool())
-            {
-                Console.WriteLine($"{tx.Hash} {tx.GetType().Name}");
-            }
+            bool verbose = args.Length >= 3 && args[2] == "verbose";
+            Transaction[] transactions = LocalNode.GetMemoryPool().ToArray();
+            if (verbose)
+                foreach (Transaction tx in transactions)
+                    Console.WriteLine($"{tx.Hash} {tx.GetType().Name}");
+            Console.WriteLine($"total: {transactions.Length}");
             return true;
         }
 
