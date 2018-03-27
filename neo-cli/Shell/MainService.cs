@@ -797,13 +797,32 @@ namespace Neo.Shell
 
         protected internal override void OnStart(string[] args)
         {
+            bool useRPC = false, nopeers = false, useLog = false;
+            for (int i = 0; i < args.Length; i++)
+                switch (args[i])
+                {
+                    case "/rpc":
+                    case "--rpc":
+                    case "-r":
+                        useRPC = true;
+                        break;
+                    case "--nopeers":
+                        nopeers = true;
+                        break;
+                    case "-l":
+                    case "--log":
+                        useLog = true;
+                        break;
+                }
             Blockchain.RegisterBlockchain(new LevelDBBlockchain(Settings.Default.Paths.Chain));
-            if (!args.Contains("--nopeers") && File.Exists(PeerStatePath))
+            if (!nopeers && File.Exists(PeerStatePath))
                 using (FileStream fs = new FileStream(PeerStatePath, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
                     LocalNode.LoadState(fs);
                 }
             LocalNode = new LocalNode();
+            if (useLog)
+                LevelDBBlockchain.ApplicationExecuted += LevelDBBlockchain_ApplicationExecuted;
             Task.Run(() =>
             {
                 const string acc_path = "chain.acc";
@@ -827,28 +846,11 @@ namespace Neo.Shell
                     File.Delete(acc_zip_path);
                 }
                 LocalNode.Start(Settings.Default.P2P.Port, Settings.Default.P2P.WsPort);
-                bool log = false;
-                for (int i = 0; i < args.Length; i++)
+                if (useRPC)
                 {
-                    switch (args[i])
-                    {
-                        case "/rpc":
-                        case "--rpc":
-                        case "-r":
-                            if (rpc == null)
-                            {
-                                rpc = new RpcServerWithWallet(LocalNode);
-                                rpc.Start(Settings.Default.RPC.Port, Settings.Default.RPC.SslCert, Settings.Default.RPC.SslCertPassword);
-                            }
-                            break;
-                        case "-l":
-                        case "--log":
-                            log = true;
-                            break;
-                    }
+                    rpc = new RpcServerWithWallet(LocalNode);
+                    rpc.Start(Settings.Default.RPC.Port, Settings.Default.RPC.SslCert, Settings.Default.RPC.SslCertPassword);
                 }
-                if (log)
-                    LevelDBBlockchain.ApplicationExecuted += LevelDBBlockchain_ApplicationExecuted;
             });
         }
 
