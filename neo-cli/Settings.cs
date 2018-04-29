@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Neo.Network;
+using System.Net;
 
 namespace Neo
 {
@@ -52,11 +53,17 @@ namespace Neo
     internal class RPCSettings
     {
         public ushort Port { get; }
+        public IPAddress BindAddress { get; }
+        public string RpcUser { get; }
+        public string RpcPassword { get; }
         public string SslCert { get; }
         public string SslCertPassword { get; }
 
         public RPCSettings(IConfigurationSection section)
         {
+            this.BindAddress = IPAddress.Parse(section.GetSection("BindAddress").Value ?? "127.0.0.1");
+            this.RpcUser = section.GetSection("RpcUser").Value;
+            this.RpcPassword = section.GetSection("RpcPassword").Value;
             this.Port = ushort.Parse(section.GetSection("Port").Value);
             this.SslCert = section.GetSection("SslCert").Value;
             this.SslCertPassword = section.GetSection("SslCertPassword").Value;
