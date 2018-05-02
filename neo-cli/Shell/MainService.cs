@@ -277,7 +277,7 @@ namespace Neo.Shell
                         fs.Write(BitConverter.GetBytes(start), 0, sizeof(uint));
                     }
                     if (start <= end)
-                        fs.Write(BitConverter.GetBytes(end - start + 1), 0, sizeof(uint));
+                        fs.Write(BitConverter.GetBytes(count), 0, sizeof(uint));
                     fs.Seek(0, SeekOrigin.End);
                     for (uint i = start; i <= end; i++)
                     {
@@ -294,6 +294,7 @@ namespace Neo.Shell
             {
                 start = 0;
                 uint end = Blockchain.Default.Height;
+                uint count = end - start + 1;
                 string path = args.Length >= 3 ? args[2] : "chain.acc";
                 using (FileStream fs = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
                 {
@@ -305,7 +306,7 @@ namespace Neo.Shell
                         fs.Seek(0, SeekOrigin.Begin);
                     }
                     if (start <= end)
-                        fs.Write(BitConverter.GetBytes(end - start + 1), 0, sizeof(uint));
+                        fs.Write(BitConverter.GetBytes(count), 0, sizeof(uint));
                     fs.Seek(0, SeekOrigin.End);
                     for (uint i = start; i <= end; i++)
                     {
