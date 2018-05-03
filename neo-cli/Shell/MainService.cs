@@ -919,7 +919,12 @@ namespace Neo.Shell
                 if (useRPC)
                 {
                     rpc = new RpcServerWithWallet(LocalNode);
-                    rpc.Start(Settings.Default.RPC.Port, Settings.Default.RPC.SslCert, Settings.Default.RPC.SslCertPassword);
+                    rpc.Start
+                        (
+                        Settings.Default.RPC.BindAddress, Settings.Default.RPC.Port,
+                        RpcAuth.AuthType.Basic, Settings.Default.RPC.RpcUser, Settings.Default.RPC.RpcPassword,
+                        Settings.Default.RPC.SslCert, Settings.Default.RPC.SslCertPassword
+                        );
                 }
             });
         }

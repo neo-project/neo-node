@@ -1,4 +1,5 @@
-﻿using Neo.Core;
+﻿using Microsoft.AspNetCore.Http;
+using Neo.Core;
 using Neo.Implementations.Wallets.NEP6;
 using Neo.IO;
 using Neo.IO.Json;
@@ -17,12 +18,14 @@ namespace Neo.Network.RPC
         {
         }
 
-        protected override JObject Process(string method, JArray _params)
+        protected override JObject Process(string method, JArray _params, HttpContext htcontext)
         {
             switch (method)
             {
                 case "getapplicationlog":
                     {
+                        if (!CheckAuthorized(htcontext))
+                            throw new RpcException(-400, "Access denied.");
                         UInt256 hash = UInt256.Parse(_params[0].AsString());
                         string path = Path.Combine(Settings.Default.Paths.ApplicationLogs, $"{hash}.json");
                         return File.Exists(path)
@@ -30,7 +33,7 @@ namespace Neo.Network.RPC
                             : throw new RpcException(-100, "Unknown transaction");
                     }
                 case "getbalance":
-                    if (Program.Wallet == null)
+                    if (Program.Wallet == null || !CheckAuthorized(htcontext))
                         throw new RpcException(-400, "Access denied.");
                     else
                     {
@@ -49,7 +52,7 @@ namespace Neo.Network.RPC
                         return json;
                     }
                 case "listaddress":
-                    if (Program.Wallet == null)
+                    if (Program.Wallet == null || !CheckAuthorized(htcontext))
                         throw new RpcException(-400, "Access denied.");
                     else
                         return Program.Wallet.GetAccounts().Select(p =>
@@ -62,7 +65,7 @@ namespace Neo.Network.RPC
                             return account;
                         }).ToArray();
                 case "sendfrom":
-                    if (Program.Wallet == null)
+                    if (Program.Wallet == null || !CheckAuthorized(htcontext))
                         throw new RpcException(-400, "Access denied");
                     else
                     {
@@ -103,7 +106,7 @@ namespace Neo.Network.RPC
                         }
                     }
                 case "sendtoaddress":
-                    if (Program.Wallet == null)
+                    if (Program.Wallet == null || !CheckAuthorized(htcontext))
                         throw new RpcException(-400, "Access denied");
                     else
                     {
@@ -143,7 +146,7 @@ namespace Neo.Network.RPC
                         }
                     }
                 case "sendmany":
-                    if (Program.Wallet == null)
+                    if (Program.Wallet == null || !CheckAuthorized(htcontext))
                         throw new RpcException(-400, "Access denied");
                     else
                     {
@@ -186,7 +189,7 @@ namespace Neo.Network.RPC
                         }
                     }
                 case "getnewaddress":
-                    if (Program.Wallet == null)
+                    if (Program.Wallet == null || !CheckAuthorized(htcontext))
                         throw new RpcException(-400, "Access denied");
                     else
                     {
@@ -196,7 +199,7 @@ namespace Neo.Network.RPC
                         return account.Address;
                     }
                 case "dumpprivkey":
-                    if (Program.Wallet == null)
+                    if (Program.Wallet == null || !CheckAuthorized(htcontext))
                         throw new RpcException(-400, "Access denied");
                     else
                     {
@@ -207,8 +210,8 @@ namespace Neo.Network.RPC
                 case "invoke":
                 case "invokefunction":
                 case "invokescript":
-                    JObject result = base.Process(method, _params);
-                    if (Program.Wallet != null)
+                    JObject result = base.Process(method, _params, htcontext);
+                    if (Program.Wallet != null && CheckAuthorized(htcontext))
                     {
                         InvocationTransaction tx = new InvocationTransaction
                         {
@@ -230,10 +233,12 @@ namespace Neo.Network.RPC
                                 tx = null;
                         }
                         result["tx"] = tx?.ToArray().ToHexString();
+                        return result;
                     }
-                    return result;
+                    // Allow explorer/neon/wallet to check balances without open wallet
+                    return base.Process(method, _params, htcontext);
                 default:
-                    return base.Process(method, _params);
+                    return base.Process(method, _params, htcontext);
             }
         }
     }
