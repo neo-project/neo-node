@@ -19,6 +19,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Neo.Shell
@@ -34,13 +35,16 @@ namespace Neo.Shell
         protected override string Prompt => "neo";
         public override string ServiceName => "NEO-CLI";
 
-        private void ImportBlocks(Stream stream)
+        private void ImportBlocks(Stream stream, bool read_start = false)
         {
             LevelDBBlockchain blockchain = (LevelDBBlockchain)Blockchain.Default;
             using (BinaryReader r = new BinaryReader(stream))
             {
+                uint start = read_start ? r.ReadUInt32() : 0;
                 uint count = r.ReadUInt32();
-                for (int height = 0; height < count; height++)
+                uint end = start + count - 1;
+                if (end <= blockchain.Height) return;
+                for (uint height = start; height <= end; height++)
                 {
                     byte[] array = r.ReadBytes(r.ReadInt32());
                     if (height > blockchain.Height)
@@ -233,6 +237,7 @@ namespace Neo.Shell
         {
             switch (args[1].ToLower())
             {
+                case "block":
                 case "blocks":
                     return OnExportBlocksCommand(args);
                 case "key":
@@ -244,34 +249,74 @@ namespace Neo.Shell
 
         private bool OnExportBlocksCommand(string[] args)
         {
-            if (args.Length > 3)
+            if (args.Length > 4)
             {
                 Console.WriteLine("error");
                 return true;
             }
-            string path = args.Length >= 3 ? args[2] : "chain.acc";
-            using (FileStream fs = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
+            if (args.Length >= 3 && uint.TryParse(args[2], out uint start))
             {
-                uint count = Blockchain.Default.Height + 1;
-                uint start = 0;
-                if (fs.Length > 0)
+                if (start > Blockchain.Default.Height)
+                    return true;
+                uint count = args.Length >= 4 ? uint.Parse(args[3]) : uint.MaxValue;
+                count = Math.Min(count, Blockchain.Default.Height - start + 1);
+                uint end = start + count - 1;
+                string path = $"chain.{start}.acc";
+                using (FileStream fs = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
                 {
-                    byte[] buffer = new byte[sizeof(uint)];
-                    fs.Read(buffer, 0, buffer.Length);
-                    start = BitConverter.ToUInt32(buffer, 0);
-                    fs.Seek(0, SeekOrigin.Begin);
+                    if (fs.Length > 0)
+                    {
+                        fs.Seek(sizeof(uint), SeekOrigin.Begin);
+                        byte[] buffer = new byte[sizeof(uint)];
+                        fs.Read(buffer, 0, buffer.Length);
+                        start += BitConverter.ToUInt32(buffer, 0);
+                        fs.Seek(sizeof(uint), SeekOrigin.Begin);
+                    }
+                    else
+                    {
+                        fs.Write(BitConverter.GetBytes(start), 0, sizeof(uint));
+                    }
+                    if (start <= end)
+                        fs.Write(BitConverter.GetBytes(count), 0, sizeof(uint));
+                    fs.Seek(0, SeekOrigin.End);
+                    for (uint i = start; i <= end; i++)
+                    {
+                        Block block = Blockchain.Default.GetBlock(i);
+                        byte[] array = block.ToArray();
+                        fs.Write(BitConverter.GetBytes(array.Length), 0, sizeof(int));
+                        fs.Write(array, 0, array.Length);
+                        Console.SetCursorPosition(0, Console.CursorTop);
+                        Console.Write($"[{i}/{end}]");
+                    }
                 }
-                if (start < count)
-                    fs.Write(BitConverter.GetBytes(count), 0, sizeof(uint));
-                fs.Seek(0, SeekOrigin.End);
-                for (uint i = start; i < count; i++)
+            }
+            else
+            {
+                start = 0;
+                uint end = Blockchain.Default.Height;
+                uint count = end - start + 1;
+                string path = args.Length >= 3 ? args[2] : "chain.acc";
+                using (FileStream fs = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
                 {
-                    Block block = Blockchain.Default.GetBlock(i);
-                    byte[] array = block.ToArray();
-                    fs.Write(BitConverter.GetBytes(array.Length), 0, sizeof(int));
-                    fs.Write(array, 0, array.Length);
-                    Console.SetCursorPosition(0, Console.CursorTop);
-                    Console.Write($"[{i + 1}/{count}]");
+                    if (fs.Length > 0)
+                    {
+                        byte[] buffer = new byte[sizeof(uint)];
+                        fs.Read(buffer, 0, buffer.Length);
+                        start = BitConverter.ToUInt32(buffer, 0);
+                        fs.Seek(0, SeekOrigin.Begin);
+                    }
+                    if (start <= end)
+                        fs.Write(BitConverter.GetBytes(count), 0, sizeof(uint));
+                    fs.Seek(0, SeekOrigin.End);
+                    for (uint i = start; i <= end; i++)
+                    {
+                        Block block = Blockchain.Default.GetBlock(i);
+                        byte[] array = block.ToArray();
+                        fs.Write(BitConverter.GetBytes(array.Length), 0, sizeof(int));
+                        fs.Write(array, 0, array.Length);
+                        Console.SetCursorPosition(0, Console.CursorTop);
+                        Console.Write($"[{i}/{end}]");
+                    }
                 }
             }
             Console.WriteLine();
@@ -359,7 +404,8 @@ namespace Neo.Shell
                 "\tshow state\n" +
                 "\tshow node\n" +
                 "\tshow pool [verbose]\n" +
-                "\texport blocks [path=chain.acc]\n" +
+                "\texport block[s] [path=chain.acc]\n" +
+                "\texport block[s] <start> [count]\n" +
                 "Advanced Commands:\n" +
                 "\tstart consensus\n" +
                 "\trefresh policy\n");
@@ -825,25 +871,49 @@ namespace Neo.Shell
                 LevelDBBlockchain.ApplicationExecuted += LevelDBBlockchain_ApplicationExecuted;
             Task.Run(() =>
             {
-                const string acc_path = "chain.acc";
-                const string acc_zip_path = acc_path + ".zip";
-                if (File.Exists(acc_path))
+                const string path_acc = "chain.acc";
+                if (File.Exists(path_acc))
                 {
-                    using (FileStream fs = new FileStream(acc_path, FileMode.Open, FileAccess.Read, FileShare.None))
+                    using (FileStream fs = new FileStream(path_acc, FileMode.Open, FileAccess.Read, FileShare.None))
                     {
                         ImportBlocks(fs);
                     }
-                    File.Delete(acc_path);
                 }
-                else if (File.Exists(acc_zip_path))
+                const string path_acc_zip = path_acc + ".zip";
+                if (File.Exists(path_acc_zip))
                 {
-                    using (FileStream fs = new FileStream(acc_zip_path, FileMode.Open, FileAccess.Read, FileShare.None))
+                    using (FileStream fs = new FileStream(path_acc_zip, FileMode.Open, FileAccess.Read, FileShare.None))
                     using (ZipArchive zip = new ZipArchive(fs, ZipArchiveMode.Read))
-                    using (Stream zs = zip.GetEntry(acc_path).Open())
+                    using (Stream zs = zip.GetEntry(path_acc).Open())
                     {
                         ImportBlocks(zs);
                     }
-                    File.Delete(acc_zip_path);
+                }
+                var paths = Directory.EnumerateFiles(".", "chain.*.acc", SearchOption.TopDirectoryOnly).Concat(Directory.EnumerateFiles(".", "chain.*.acc.zip", SearchOption.TopDirectoryOnly)).Select(p => new
+                {
+                    FileName = Path.GetFileName(p),
+                    Start = uint.Parse(Regex.Match(p, @"\d+").Value),
+                    IsCompressed = p.EndsWith(".zip")
+                }).OrderBy(p => p.Start);
+                foreach (var path in paths)
+                {
+                    if (path.Start > Blockchain.Default.Height + 1) break;
+                    if (path.IsCompressed)
+                    {
+                        using (FileStream fs = new FileStream(path.FileName, FileMode.Open, FileAccess.Read, FileShare.None))
+                        using (ZipArchive zip = new ZipArchive(fs, ZipArchiveMode.Read))
+                        using (Stream zs = zip.GetEntry(Path.GetFileNameWithoutExtension(path.FileName)).Open())
+                        {
+                            ImportBlocks(zs, true);
+                        }
+                    }
+                    else
+                    {
+                        using (FileStream fs = new FileStream(path.FileName, FileMode.Open, FileAccess.Read, FileShare.None))
+                        {
+                            ImportBlocks(fs, true);
+                        }
+                    }
                 }
                 LocalNode.Start(Settings.Default.P2P.Port, Settings.Default.P2P.WsPort);
                 if (useRPC)
