@@ -2,6 +2,7 @@
 using Neo.Wallets;
 using System;
 using System.IO;
+using Newtonsoft.Json;
 
 namespace Neo
 {
@@ -20,6 +21,8 @@ namespace Neo
 
         static void Main(string[] args)
         {
+            Console.WriteLine(JsonConvert.SerializeObject(args, Formatting.Indented));
+            Console.ReadLine();
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
             new MainService().Run(args);
         }
