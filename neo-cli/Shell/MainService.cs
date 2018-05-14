@@ -795,55 +795,43 @@ namespace Neo.Shell
                         case "-rpcw":
                             if (rpc == null)
                             {
-                                var path = args[i + 1];
-                                var passwordFile = args[i + 2];
-                                if (File.Exists(passwordFile))
+                                var checker = false;
+                                if (Path.GetExtension(Settings.Default.WalletUnlock.WalletPath) == ".db3")
                                 {
+                                    try
+                                    {
+                                        Program.Wallet = UserWallet.Open(Settings.Default.WalletUnlock.WalletPath, Settings.Default.WalletUnlock.WalletPassword);
+                                        checker = true;
+                                    }
+                                    catch (CryptographicException)
+                                    {
+                                        Console.WriteLine($"failed to open file \"{Settings.Default.WalletUnlock.WalletPath}\"");
+                                    }
+                                }
+                                else
+                                {
+                                    NEP6Wallet nep6wallet = new NEP6Wallet(Settings.Default.WalletUnlock.WalletPath);
+                                    try
+                                    {
+                                        nep6wallet.Unlock(Settings.Default.WalletUnlock.WalletPassword);
+                                        Program.Wallet = nep6wallet;
+                                        checker = true;
+                                    }
+                                    catch (CryptographicException)
+                                    {
+                                        Console.WriteLine($"failed to open file \"{Settings.Default.WalletUnlock.WalletPath}\"");
+                                    }
 
-                                    var password = File.ReadAllText(passwordFile);
-                                    var checker = false;
-                                    if (Path.GetExtension(path) == ".db3")
-                                    {
-                                        try
-                                        {
-                                            Program.Wallet = UserWallet.Open(path, password);
-                                            checker = true;
-                                        }
-                                        catch (CryptographicException)
-                                        {
-                                            Console.WriteLine($"failed to open file \"{path}\"");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        NEP6Wallet nep6wallet = new NEP6Wallet(path);
-                                        try
-                                        {
-                                            nep6wallet.Unlock(password);
-                                            Program.Wallet = nep6wallet;
-                                            checker = true;
-                                        }
-                                        catch (CryptographicException)
-                                        {
-                                            Console.WriteLine($"failed to open file \"{path}\"");
-                                        }
-
-                                    }
-                                    if (checker)
-                                    {
-                                        rpc = new RpcServerWithWallet(LocalNode);
-                                        rpc.Start(Settings.Default.RPC.Port, Settings.Default.RPC.SslCert, Settings.Default.RPC.SslCertPassword);
-                                    }
-                                    else
-                                    {
-                                        Console.WriteLine($"rpc with wallet unlock option cannot be started");
-                                    }
+                                }
+                                if (checker)
+                                {
+                                    rpc = new RpcServerWithWallet(LocalNode);
+                                    rpc.Start(Settings.Default.RPC.Port, Settings.Default.RPC.SslCert, Settings.Default.RPC.SslCertPassword);
                                 }
                                 else
                                 {
                                     Console.WriteLine($"rpc with wallet unlock option cannot be started");
                                 }
-
                             }
                             break;
                         case "-l":

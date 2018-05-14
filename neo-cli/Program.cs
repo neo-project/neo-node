@@ -3,7 +3,6 @@ using Neo.Wallets;
 using System;
 using System.IO;
 
-
 namespace Neo
 {
     static class Program
