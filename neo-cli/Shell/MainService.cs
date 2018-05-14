@@ -820,6 +820,11 @@ namespace Neo.Shell
                                 rpc.Start(Settings.Default.RPC.Port, Settings.Default.RPC.SslCert, Settings.Default.RPC.SslCertPassword);
                             }
                             break;
+                        case "/start-consensus":
+                        case "--start-consensus":
+                        case "-stcns":
+                            OnStartConsensusCommand(null);
+                            break;
                         case "-l":
                         case "--log":
                             log = true;
