@@ -12,9 +12,10 @@
       "SslCert": "",
       "SslCertPassword": ""
     },
-    "WalletUnlock": {
-      "WalletPath": "",
-      "WalletPassword": ""
+    "UnlockWallet": {
+      "WalletPath": "/home/user/walletpath/wallet.db3",
+      "WalletPassword": "SuP3r53cUr£W@l137P45Sw0rd!23!",
+      "IsActive": false 
     }
   }
 }

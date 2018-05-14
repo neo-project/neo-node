@@ -12,7 +12,7 @@ namespace Neo
         public RPCSettings RPC { get; }
 
         public static Settings Default { get; }
-        public WalletUnlockSettings WalletUnlock { get; set; }
+        public UnlockWalletSettings UnlockWallet { get; set; }
 
         static Settings()
         {
@@ -25,21 +25,22 @@ namespace Neo
             this.Paths = new PathsSettings(section.GetSection("Paths"));
             this.P2P = new P2PSettings(section.GetSection("P2P"));
             this.RPC = new RPCSettings(section.GetSection("RPC"));
-            this.WalletUnlock = new WalletUnlockSettings(section.GetSection("WalletUnlock"));
+            this.UnlockWallet = new UnlockWalletSettings(section.GetSection("UnlockWallet"));
         }
     }
 
-    public class WalletUnlockSettings
+    public class UnlockWalletSettings
     {
-        public string WalletPath { get; }
-       
-        public string WalletPassword { get; }
 
-        public WalletUnlockSettings(IConfigurationSection section)
+        public string WalletPath { get; }
+
+        public string WalletPassword { get; }
+        public bool IsActive { get; }
+        public UnlockWalletSettings(IConfigurationSection section)
         {
             this.WalletPath = section.GetSection("WalletPath").Value;
             this.WalletPassword = section.GetSection("WalletPassword").Value;
-            
+            this.IsActive = bool.Parse(section.GetSection("IsActive").Value);
         }
     }
 
