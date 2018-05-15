@@ -73,9 +73,12 @@ namespace Neo
 
         public UnlockWalletSettings(IConfigurationSection section)
         {
-            this.Path = section.GetSection("WalletPath").Value;
-            this.Password = section.GetSection("WalletPassword").Value;
-            this.IsActive = bool.Parse(section.GetSection("IsActive").Value);
+            if (section.Value != null)
+            {
+                this.Path = section.GetSection("WalletPath").Value;
+                this.Password = section.GetSection("WalletPassword").Value;
+                this.IsActive = bool.Parse(section.GetSection("IsActive").Value);
+            }
         }
     }
 }
