@@ -898,6 +898,17 @@ namespace Neo.Shell
                     }
                 }
                 LocalNode.Start(Settings.Default.P2P.Port, Settings.Default.P2P.WsPort);
+                if (Settings.Default.UnlockWallet.IsActive)
+                {
+                    try
+                    {
+                        Program.Wallet = OpenWallet(Settings.Default.UnlockWallet.Path, Settings.Default.UnlockWallet.Password);
+                    }
+                    catch (CryptographicException)
+                    {
+                        Console.WriteLine($"failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
+                    }
+                }
                 if (useRPC)
                 {
                     rpc = new RpcServerWithWallet(LocalNode);
