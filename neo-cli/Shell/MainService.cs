@@ -908,6 +908,10 @@ namespace Neo.Shell
                     {
                         Console.WriteLine($"failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
                     }
+                    if (Settings.Default.UnlockWallet.StartConsensus)
+                    {
+                        OnStartConsensusCommand(null);
+                    }
                 }
                 if (useRPC)
                 {

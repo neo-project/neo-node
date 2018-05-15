@@ -16,6 +16,7 @@
     "UnlockWallet": {
       "Path": "",
       "Password": "",
+      "StartConsensus": false,
       "IsActive": false
     }
   }
