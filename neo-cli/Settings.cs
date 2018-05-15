@@ -1,7 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Neo.Network;
-using System;
-using System.IO;
 
 namespace Neo
 {
@@ -36,8 +34,8 @@ namespace Neo
 
         public PathsSettings(IConfigurationSection section)
         {
-            this.Chain = section.GetSection("Chain").Value;
-            this.ApplicationLogs = Path.Combine(AppContext.BaseDirectory, $"ApplicationLogs_{Message.Magic:X8}");
+            this.Chain = string.Format(section.GetSection("Chain").Value, Message.Magic.ToString("X8"));
+            this.ApplicationLogs = string.Format(section.GetSection("ApplicationLogs").Value, Message.Magic.ToString("X8"));
         }
     }
 
