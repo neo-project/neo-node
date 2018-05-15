@@ -10,9 +10,9 @@ namespace Neo
         public PathsSettings Paths { get; }
         public P2PSettings P2P { get; }
         public RPCSettings RPC { get; }
+        public UnlockWalletSettings UnlockWallet { get; set; }
 
         public static Settings Default { get; }
-        public UnlockWalletSettings UnlockWallet { get; set; }
 
         static Settings()
         {
@@ -26,21 +26,6 @@ namespace Neo
             this.P2P = new P2PSettings(section.GetSection("P2P"));
             this.RPC = new RPCSettings(section.GetSection("RPC"));
             this.UnlockWallet = new UnlockWalletSettings(section.GetSection("UnlockWallet"));
-        }
-    }
-
-    public class UnlockWalletSettings
-    {
-
-        public string WalletPath { get; }
-
-        public string WalletPassword { get; }
-        public bool IsActive { get; }
-        public UnlockWalletSettings(IConfigurationSection section)
-        {
-            this.WalletPath = section.GetSection("WalletPath").Value;
-            this.WalletPassword = section.GetSection("WalletPassword").Value;
-            this.IsActive = bool.Parse(section.GetSection("IsActive").Value);
         }
     }
 
@@ -79,6 +64,20 @@ namespace Neo
             this.Port = ushort.Parse(section.GetSection("Port").Value);
             this.SslCert = section.GetSection("SslCert").Value;
             this.SslCertPassword = section.GetSection("SslCertPassword").Value;
+        }
+    }
+
+    public class UnlockWalletSettings
+    {
+        public string Path { get; }
+        public string Password { get; }
+        public bool IsActive { get; }
+
+        public UnlockWalletSettings(IConfigurationSection section)
+        {
+            this.Path = section.GetSection("WalletPath").Value;
+            this.Password = section.GetSection("WalletPassword").Value;
+            this.IsActive = bool.Parse(section.GetSection("IsActive").Value);
         }
     }
 }
