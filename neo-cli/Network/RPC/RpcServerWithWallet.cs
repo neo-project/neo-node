@@ -34,11 +34,18 @@ namespace Neo.Network.RPC
                         throw new RpcException(-400, "Access denied.");
                     else
                     {
-                        UInt256 assetId = UInt256.Parse(_params[0].AsString());
-                        IEnumerable<Coin> coins = Program.Wallet.GetCoins().Where(p => !p.State.HasFlag(CoinState.Spent) && p.Output.AssetId.Equals(assetId));
                         JObject json = new JObject();
-                        json["balance"] = coins.Sum(p => p.Output.Value).ToString();
-                        json["confirmed"] = coins.Where(p => p.State.HasFlag(CoinState.Confirmed)).Sum(p => p.Output.Value).ToString();
+                        switch (UIntBase.Parse(_params[0].AsString()))
+                        {
+                            case UInt160 asset_id_160: //NEP-5 balance
+                                json["balance"] = Program.Wallet.GetAvailable(asset_id_160).ToString();
+                                break;
+                            case UInt256 asset_id_256: //Global Assets balance
+                                IEnumerable<Coin> coins = Program.Wallet.GetCoins().Where(p => !p.State.HasFlag(CoinState.Spent) && p.Output.AssetId.Equals(asset_id_256));
+                                json["balance"] = coins.Sum(p => p.Output.Value).ToString();
+                                json["confirmed"] = coins.Where(p => p.State.HasFlag(CoinState.Confirmed)).Sum(p => p.Output.Value).ToString();
+                                break;
+                        }
                         return json;
                     }
                 case "listaddress":
