@@ -589,31 +589,13 @@ namespace Neo.Shell
                 Console.WriteLine("cancelled");
                 return true;
             }
-            if (Path.GetExtension(path) == ".db3")
+            try
             {
-                try
-                {
-                    Program.Wallet = UserWallet.Open(path, password);
-                }
-                catch (CryptographicException)
-                {
-                    Console.WriteLine($"failed to open file \"{path}\"");
-                    return true;
-                }
+                Program.Wallet = OpenWallet(path, password);
             }
-            else
+            catch (CryptographicException)
             {
-                NEP6Wallet nep6wallet = new NEP6Wallet(path);
-                try
-                {
-                    nep6wallet.Unlock(password);
-                }
-                catch (CryptographicException)
-                {
-                    Console.WriteLine($"failed to open file \"{path}\"");
-                    return true;
-                }
-                Program.Wallet = nep6wallet;
+                Console.WriteLine($"failed to open file \"{path}\"");
             }
             return true;
         }
@@ -916,6 +898,17 @@ namespace Neo.Shell
                     }
                 }
                 LocalNode.Start(Settings.Default.P2P.Port, Settings.Default.P2P.WsPort);
+                if (Settings.Default.UnlockWallet.IsActive)
+                {
+                    try
+                    {
+                        Program.Wallet = OpenWallet(Settings.Default.UnlockWallet.Path, Settings.Default.UnlockWallet.Password);
+                    }
+                    catch (CryptographicException)
+                    {
+                        Console.WriteLine($"failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
+                    }
+                }
                 if (useRPC)
                 {
                     rpc = new RpcServerWithWallet(LocalNode);
@@ -1001,6 +994,20 @@ namespace Neo.Shell
             NEP6Wallet.Migrate(path_new, path, password).Save();
             Console.WriteLine($"Wallet file upgrade complete. New wallet file has been auto-saved at: {path_new}");
             return true;
+        }
+
+        private static Wallet OpenWallet(string path, string password)
+        {
+            if (Path.GetExtension(path) == ".db3")
+            {
+                return UserWallet.Open(path, password);
+            }
+            else
+            {
+                NEP6Wallet nep6wallet = new NEP6Wallet(path);
+                nep6wallet.Unlock(password);
+                return nep6wallet;
+            }
         }
 
         private void LevelDBBlockchain_ApplicationExecuted(object sender, ApplicationExecutedEventArgs e)
