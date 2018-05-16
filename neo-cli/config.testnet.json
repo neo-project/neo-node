@@ -12,6 +12,12 @@
       "Port": 20332,
       "SslCert": "",
       "SslCertPassword": ""
+    },
+    "UnlockWallet": {
+      "Path": "",
+      "Password": "",
+      "StartConsensus": false,
+      "IsActive": false
     }
   }
 }
