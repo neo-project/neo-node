@@ -418,12 +418,55 @@ namespace Neo.Shell
             {
                 case "key":
                     return OnImportKeyCommand(args);
-                default:
+				case "multisig_addr":
+					return OnImportMultisignAddress(args);
+				default:
                     return base.OnCommand(args);
             }
         }
 
-        private bool OnImportKeyCommand(string[] args)
+		private bool OnImportMultisignAddress(string[] args)
+		{
+			if (Program.Wallet == null)
+			{
+				Console.WriteLine("You have to open the wallet first.");
+				return true;
+			}
+
+			if (args.Length < 3)
+			{
+				Console.WriteLine("Error. Use at least 2 addresses to create a Multisign Address.");
+				return true;
+			}
+
+			ushort requiredSignatures = ushort.Parse(args[2]);
+
+			if (args.Length < requiredSignatures - 1)
+			{
+				Console.WriteLine("Error. Invalid parameters.");
+			}
+
+			Neo.Cryptography.ECC.ECPoint[] publicKeys = new Neo.Cryptography.ECC.ECPoint[args.Length - 3];
+			for (int i = 3; i < args.Length; i++)
+			{
+				Neo.Cryptography.ECC.ECPoint publicKey = Neo.Cryptography.ECC.ECPoint.DecodePoint(args[i].HexToBytes(), Neo.Cryptography.ECC.ECCurve.Secp256r1);
+				publicKeys[i - 3] = publicKey;
+			}
+
+			Contract multiSignContract = Contract.CreateMultiSigContract(requiredSignatures, publicKeys);
+			KeyPair keyPair = Program.Wallet.GetAccounts().FirstOrDefault(p => p.HasKey && publicKeys.Contains(p.GetKey().PublicKey))?.GetKey();
+
+
+			WalletAccount account = Program.Wallet.CreateAccount(multiSignContract, keyPair);
+			if (Program.Wallet is NEP6Wallet wallet)
+				wallet.Save();
+
+			Console.WriteLine("Multisig. Addr.:" + multiSignContract.Address);
+
+			return true;
+		}
+
+		private bool OnImportKeyCommand(string[] args)
         {
             if (args.Length > 3)
             {
