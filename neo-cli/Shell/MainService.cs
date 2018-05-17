@@ -21,6 +21,8 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using ECCurve = Neo.Cryptography.ECC.ECCurve;
+using ECPoint = Neo.Cryptography.ECC.ECPoint;
 
 namespace Neo.Shell
 {
@@ -418,55 +420,50 @@ namespace Neo.Shell
             {
                 case "key":
                     return OnImportKeyCommand(args);
-				case "multisigaddress":
-					return OnImportMultisigAddress(args);
-				default:
+                case "multisigaddress":
+                    return OnImportMultisigAddress(args);
+                default:
                     return base.OnCommand(args);
             }
         }
 
-		private bool OnImportMultisigAddress(string[] args)
-		{
-			if (Program.Wallet == null)
-			{
-				Console.WriteLine("You have to open the wallet first.");
-				return true;
-			}
+        private bool OnImportMultisigAddress(string[] args)
+        {
+            if (Program.Wallet == null)
+            {
+                Console.WriteLine("You have to open the wallet first.");
+                return true;
+            }
 
-			if (args.Length < 3)
-			{
-				Console.WriteLine("Error. Use at least 2 addresses to create a Multisign Address.");
-				return true;
-			}
+            if (args.Length < 5)
+            {
+                Console.WriteLine("Error. Use at least 2 public keys to create a multisig address.");
+                return true;
+            }
 
-			ushort requiredSignatures = ushort.Parse(args[2]);
+            int m = int.Parse(args[2]);
+            int n = args.Length - 3;
 
-			if (args.Length < requiredSignatures - 1)
-			{
-				Console.WriteLine("Error. Invalid parameters.");
-			}
+            if (m < 1 || m > n || n > 1024)
+            {
+                Console.WriteLine("Error. Invalid parameters.");
+            }
 
-			Neo.Cryptography.ECC.ECPoint[] publicKeys = new Neo.Cryptography.ECC.ECPoint[args.Length - 3];
-			for (int i = 3; i < args.Length; i++)
-			{
-				Neo.Cryptography.ECC.ECPoint publicKey = Neo.Cryptography.ECC.ECPoint.DecodePoint(args[i].HexToBytes(), Neo.Cryptography.ECC.ECCurve.Secp256r1);
-				publicKeys[i - 3] = publicKey;
-			}
+            ECPoint[] publicKeys = args.Skip(3).Select(p => ECPoint.Parse(p, ECCurve.Secp256r1)).ToArray();
 
-			Contract multiSignContract = Contract.CreateMultiSigContract(requiredSignatures, publicKeys);
-			KeyPair keyPair = Program.Wallet.GetAccounts().FirstOrDefault(p => p.HasKey && publicKeys.Contains(p.GetKey().PublicKey))?.GetKey();
+            Contract multiSignContract = Contract.CreateMultiSigContract(m, publicKeys);
+            KeyPair keyPair = Program.Wallet.GetAccounts().FirstOrDefault(p => p.HasKey && publicKeys.Contains(p.GetKey().PublicKey))?.GetKey();
 
+            WalletAccount account = Program.Wallet.CreateAccount(multiSignContract, keyPair);
+            if (Program.Wallet is NEP6Wallet wallet)
+                wallet.Save();
 
-			WalletAccount account = Program.Wallet.CreateAccount(multiSignContract, keyPair);
-			if (Program.Wallet is NEP6Wallet wallet)
-				wallet.Save();
+            Console.WriteLine("Multisig. Addr.:" + multiSignContract.Address);
 
-			Console.WriteLine("Multisig. Addr.:" + multiSignContract.Address);
+            return true;
+        }
 
-			return true;
-		}
-
-		private bool OnImportKeyCommand(string[] args)
+        private bool OnImportKeyCommand(string[] args)
         {
             if (args.Length > 3)
             {
