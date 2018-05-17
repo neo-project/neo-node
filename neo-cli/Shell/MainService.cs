@@ -418,14 +418,14 @@ namespace Neo.Shell
             {
                 case "key":
                     return OnImportKeyCommand(args);
-				case "multisig_addr":
-					return OnImportMultisignAddress(args);
+				case "multisigaddress":
+					return OnImportMultisigAddress(args);
 				default:
                     return base.OnCommand(args);
             }
         }
 
-		private bool OnImportMultisignAddress(string[] args)
+		private bool OnImportMultisigAddress(string[] args)
 		{
 			if (Program.Wallet == null)
 			{
