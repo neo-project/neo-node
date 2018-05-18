@@ -32,7 +32,7 @@ namespace Neo.Shell
         private const string PeerStatePath = "peers.dat";
 
         private RpcServerWithWallet rpc;
-        private ConsensusWithPolicy consensus;
+        private ConsensusWithLog consensus;
 
         protected LocalNode LocalNode { get; private set; }
         protected override string Prompt => "neo";
@@ -81,8 +81,6 @@ namespace Neo.Shell
                     return OnOpenCommand(args);
                 case "rebuild":
                     return OnRebuildCommand(args);
-                case "refresh":
-                    return OnRefreshCommand(args);
                 case "send":
                     return OnSendCommand(args);
                 case "show":
@@ -457,8 +455,7 @@ namespace Neo.Shell
                 "\texport block[s] [path=chain.acc]\n" +
                 "\texport block[s] <start> [count]\n" +
                 "Advanced Commands:\n" +
-                "\tstart consensus\n" +
-                "\trefresh policy\n");
+                "\tstart consensus\n");
             return true;
         }
 
@@ -664,24 +661,6 @@ namespace Neo.Shell
         private bool OnRebuildIndexCommand(string[] args)
         {
             WalletIndexer.RebuildIndex();
-            return true;
-        }
-
-        private bool OnRefreshCommand(string[] args)
-        {
-            switch (args[1].ToLower())
-            {
-                case "policy":
-                    return OnRefreshPolicyCommand(args);
-                default:
-                    return base.OnCommand(args);
-            }
-        }
-
-        private bool OnRefreshPolicyCommand(string[] args)
-        {
-            if (consensus == null) return true;
-            consensus.RefreshPolicy();
             return true;
         }
 
@@ -992,7 +971,7 @@ namespace Neo.Shell
                 return true;
             }
             string log_dictionary = Path.Combine(AppContext.BaseDirectory, "Logs");
-            consensus = new ConsensusWithPolicy(LocalNode, Program.Wallet, log_dictionary);
+            consensus = new ConsensusWithLog(LocalNode, Program.Wallet, log_dictionary);
             ShowPrompt = false;
             consensus.Start();
             return true;
