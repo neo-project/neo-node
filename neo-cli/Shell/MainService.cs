@@ -21,6 +21,9 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using ECCurve = Neo.Cryptography.ECC.ECCurve;
+using ECPoint = Neo.Cryptography.ECC.ECPoint;
 
 namespace Neo.Shell
 {
@@ -148,6 +151,8 @@ namespace Neo.Shell
                     return OnCreateAddressCommand(args);
                 case "wallet":
                     return OnCreateWalletCommand(args);
+                case "multisig":
+                    return OnCreateMultisigCommand(args);
                 default:
                     return base.OnCommand(args);
             }
@@ -233,6 +238,51 @@ namespace Neo.Shell
             return true;
         }
 
+        private bool OnCreateMultisigCommand(string[] args)
+        {
+            if (Program.Wallet == null)
+            {
+                Console.WriteLine("You have to open the wallet first.");
+                return true;
+            }
+            ECPoint[] publicKeys;
+            int requiredSignatures;
+            try
+            {
+                var multiSigContractJsonString = string.Join(string.Empty, args.Skip(2));
+                var multiSigContractJsonObject = JsonConvert.DeserializeObject<Newtonsoft.Json.Linq.JObject>(multiSigContractJsonString);
+                publicKeys = multiSigContractJsonObject["owners"].Values<string>().Select(p => ECPoint.DecodePoint(p.HexToBytes(), ECCurve.Secp256r1)).ToArray();
+                requiredSignatures = multiSigContractJsonObject["required"].ToObject<int>();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Invalid JSON parameter!\r\nException: {e.Message}");
+                return true;
+            }
+
+            var multiSigContract = Contract.CreateMultiSigContract(requiredSignatures, publicKeys);
+            if (multiSigContract == null)
+            {
+                Console.WriteLine("Add Contract Failed!");
+                return true;
+            }
+            HashSet<ECPoint> hashSet = new HashSet<ECPoint>(publicKeys);
+            var accountKey = Program.Wallet.GetAccounts().FirstOrDefault(p => p.HasKey && hashSet.Contains(p.GetKey().PublicKey))?.GetKey();
+
+            WalletAccount account = Program.Wallet.CreateAccount(multiSigContract, accountKey);
+            if (Program.Wallet is NEP6Wallet wallet)
+                wallet.Save();
+
+            Console.WriteLine($"Multi-Signature Contract added to your account: {account.Address}\r\n" +
+                              $"Contract Info:\r\n" +
+                              $"Address:{multiSigContract.Address}\r\n" +
+                              $"ScriptHash:{multiSigContract.ScriptHash.ToArray()}\r\n" +
+                              $"Parameters:{multiSigContract.ParameterList.Cast<byte>().ToArray().ToHexString()}\r\n" +
+                              $"Redeem Script:{multiSigContract.Script.ToHexString()}");
+
+
+            return true;
+        }
         private bool OnExportCommand(string[] args)
         {
             switch (args[1].ToLower())
@@ -825,6 +875,7 @@ namespace Neo.Shell
 
         protected internal override void OnStart(string[] args)
         {
+            Console.SetIn(new StreamReader(Console.OpenStandardInput(8192)));
             bool useRPC = false, nopeers = false, useLog = false;
             for (int i = 0; i < args.Length; i++)
                 switch (args[i])
@@ -907,6 +958,10 @@ namespace Neo.Shell
                     catch (CryptographicException)
                     {
                         Console.WriteLine($"failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
+                    }
+                    if (Settings.Default.UnlockWallet.StartConsensus && Program.Wallet != null)
+                    {
+                        OnStartConsensusCommand(null);
                     }
                 }
                 if (useRPC)
