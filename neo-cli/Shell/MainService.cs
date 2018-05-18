@@ -37,7 +37,7 @@ namespace Neo.Shell
         protected override string Prompt => "neo";
         public override string ServiceName => "NEO-CLI";
 
-        private void ImportBlocks(Stream stream, bool read_start = false)
+		private void ImportBlocks(Stream stream, bool read_start = false)
         {
             LevelDBBlockchain blockchain = (LevelDBBlockchain)Blockchain.Default;
             using (BinaryReader r = new BinaryReader(stream))
@@ -447,6 +447,7 @@ namespace Neo.Shell
             if (m < 1 || m > n || n > 1024)
             {
                 Console.WriteLine("Error. Invalid parameters.");
+				return true;
             }
 
             ECPoint[] publicKeys = args.Skip(3).Select(p => ECPoint.Parse(p, ECCurve.Secp256r1)).ToArray();
@@ -458,7 +459,7 @@ namespace Neo.Shell
             if (Program.Wallet is NEP6Wallet wallet)
                 wallet.Save();
 
-            Console.WriteLine("Multisig. Addr.:" + multiSignContract.Address);
+            Console.WriteLine("Multisig. Addr.: " + multiSignContract.Address);
 
             return true;
         }

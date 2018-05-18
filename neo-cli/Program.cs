@@ -21,7 +21,11 @@ namespace Neo
         static void Main(string[] args)
         {
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
-            new MainService().Run(args);
+			byte[] inputBuffer = new byte[1024 * 66 + 128];
+			Stream inputStream = Console.OpenStandardInput(inputBuffer.Length);
+			Console.SetIn(new StreamReader(inputStream, Console.InputEncoding, false, inputBuffer.Length));
+			var mainService = new MainService();
+			mainService.Run(args);
         }
 
         private static void PrintErrorLogs(StreamWriter writer, Exception ex)
