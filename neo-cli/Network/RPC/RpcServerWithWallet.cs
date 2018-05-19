@@ -5,6 +5,7 @@ using Neo.IO.Json;
 using Neo.SmartContract;
 using Neo.Wallets;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace Neo.Network.RPC
@@ -20,18 +21,46 @@ namespace Neo.Network.RPC
         {
             switch (method)
             {
+                case "getapplicationlog":
+                    {
+                        UInt256 hash = UInt256.Parse(_params[0].AsString());
+                        string path = Path.Combine(Settings.Default.Paths.ApplicationLogs, $"{hash}.json");
+                        return File.Exists(path)
+                            ? JObject.Parse(File.ReadAllText(path))
+                            : throw new RpcException(-100, "Unknown transaction");
+                    }
                 case "getbalance":
                     if (Program.Wallet == null)
                         throw new RpcException(-400, "Access denied.");
                     else
                     {
-                        UInt256 assetId = UInt256.Parse(_params[0].AsString());
-                        IEnumerable<Coin> coins = Program.Wallet.GetCoins().Where(p => !p.State.HasFlag(CoinState.Spent) && p.Output.AssetId.Equals(assetId));
                         JObject json = new JObject();
-                        json["balance"] = coins.Sum(p => p.Output.Value).ToString();
-                        json["confirmed"] = coins.Where(p => p.State.HasFlag(CoinState.Confirmed)).Sum(p => p.Output.Value).ToString();
+                        switch (UIntBase.Parse(_params[0].AsString()))
+                        {
+                            case UInt160 asset_id_160: //NEP-5 balance
+                                json["balance"] = Program.Wallet.GetAvailable(asset_id_160).ToString();
+                                break;
+                            case UInt256 asset_id_256: //Global Assets balance
+                                IEnumerable<Coin> coins = Program.Wallet.GetCoins().Where(p => !p.State.HasFlag(CoinState.Spent) && p.Output.AssetId.Equals(asset_id_256));
+                                json["balance"] = coins.Sum(p => p.Output.Value).ToString();
+                                json["confirmed"] = coins.Where(p => p.State.HasFlag(CoinState.Confirmed)).Sum(p => p.Output.Value).ToString();
+                                break;
+                        }
                         return json;
                     }
+                case "listaddress":
+                    if (Program.Wallet == null)
+                        throw new RpcException(-400, "Access denied.");
+                    else
+                        return Program.Wallet.GetAccounts().Select(p =>
+                        {
+                            JObject account = new JObject();
+                            account["address"] = p.Address;
+                            account["haskey"] = p.HasKey;
+                            account["label"] = p.Label;
+                            account["watchonly"] = p.WatchOnly;
+                            return account;
+                        }).ToArray();
                 case "sendfrom":
                     if (Program.Wallet == null)
                         throw new RpcException(-400, "Access denied");

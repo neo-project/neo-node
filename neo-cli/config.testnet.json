@@ -1,8 +1,8 @@
 ﻿{
   "ApplicationConfiguration": {
     "Paths": {
-      "Chain": "ChainTestNet",
-      "Notifications": "NotificationsTestNet"
+      "Chain": "Chain_{0}",
+      "ApplicationLogs": "ApplicationLogs_{0}"
     },
     "P2P": {
       "Port": 20333,
@@ -12,6 +12,12 @@
       "Port": 20332,
       "SslCert": "",
       "SslCertPassword": ""
+    },
+    "UnlockWallet": {
+      "Path": "",
+      "Password": "",
+      "StartConsensus": false,
+      "IsActive": false
     }
   }
 }

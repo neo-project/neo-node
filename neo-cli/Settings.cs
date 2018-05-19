@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Neo.Network;
 
 namespace Neo
 {
@@ -7,6 +8,7 @@ namespace Neo
         public PathsSettings Paths { get; }
         public P2PSettings P2P { get; }
         public RPCSettings RPC { get; }
+        public UnlockWalletSettings UnlockWallet { get; set; }
 
         public static Settings Default { get; }
 
@@ -21,18 +23,19 @@ namespace Neo
             this.Paths = new PathsSettings(section.GetSection("Paths"));
             this.P2P = new P2PSettings(section.GetSection("P2P"));
             this.RPC = new RPCSettings(section.GetSection("RPC"));
+            this.UnlockWallet = new UnlockWalletSettings(section.GetSection("UnlockWallet"));
         }
     }
 
     internal class PathsSettings
     {
         public string Chain { get; }
-        public string Notifications { get; }
+        public string ApplicationLogs { get; }
 
         public PathsSettings(IConfigurationSection section)
         {
-            this.Chain = section.GetSection("Chain").Value;
-            this.Notifications = section.GetSection("Notifications").Value;
+            this.Chain = string.Format(section.GetSection("Chain").Value, Message.Magic.ToString("X8"));
+            this.ApplicationLogs = string.Format(section.GetSection("ApplicationLogs").Value, Message.Magic.ToString("X8"));
         }
     }
 
@@ -59,6 +62,25 @@ namespace Neo
             this.Port = ushort.Parse(section.GetSection("Port").Value);
             this.SslCert = section.GetSection("SslCert").Value;
             this.SslCertPassword = section.GetSection("SslCertPassword").Value;
+        }
+    }
+
+    public class UnlockWalletSettings
+    {
+        public string Path { get; }
+        public string Password { get; }
+        public bool StartConsensus { get; }
+        public bool IsActive { get; }
+
+        public UnlockWalletSettings(IConfigurationSection section)
+        {
+            if (section.Value != null)
+            {
+                this.Path = section.GetSection("WalletPath").Value;
+                this.Password = section.GetSection("WalletPassword").Value;
+                this.StartConsensus = bool.Parse(section.GetSection("StartConsensus").Value);
+                this.IsActive = bool.Parse(section.GetSection("IsActive").Value);
+            }
         }
     }
 }
