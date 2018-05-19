@@ -129,9 +129,10 @@ namespace Neo.Shell
 
                 lock (addresses)
                 {
+                    x++;
                     addresses.Add(account.Address);
                     Console.SetCursorPosition(0, Console.CursorTop);
-                    Console.Write($"[{Interlocked.Increment(ref x)}/{count}]");
+                    Console.Write($"[{x/{count}]");
                 }
             });
 
