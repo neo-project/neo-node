@@ -183,7 +183,7 @@ namespace Neo.Shell
                     x++;
                     addresses.Add(account.Address);
                     Console.SetCursorPosition(0, Console.CursorTop);
-                    Console.Write($"[{x/{count}]");
+                    Console.Write($"[{x}/{count}]");
                 }
             });
 
