@@ -401,6 +401,7 @@ namespace Neo.Shell
                 "\tcreate address [n=1]\n" +
                 "\timport key <wif|path>\n" +
                 "\texport key [address] [path]\n" +
+                "\timport multisigaddress m pubkeys...\n" +
                 "\tsend <id|alias> <address> <value>|all [fee=0]\n" +
                 "Node Commands:\n" +
                 "\tshow state\n" +
