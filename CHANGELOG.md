@@ -2,9 +2,19 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+
+## [2.7.5] - 2018-05-18
+### Added
+- Importing/exporting blocks with sharding.
+- Daemonizing the neo process.
+- Support for Neo Plugins System.
+- New smart contract API: `Neo.Contract.IsPayable`.
+
 ### Changed
 - Optimize RPC command `getbalance` for NEP-5.
 - Optimize config.json
+- Improve the performance of p2p network.
+- Improve the performance of block synchronization.
 
 ### Fixed
 - Prevents blocking when the second instance is started.
