@@ -14,6 +14,7 @@ using Neo.VM;
 using Neo.Wallets;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -65,6 +66,8 @@ namespace Neo.Shell
                     return OnBroadcastCommand(args);
                 case "sign":
                     return OnSignCommand(args);
+                case "lock":
+                    return OnLockCommand(args);
                 case "create":
                     return OnCreateCommand(args);
                 case "export":
@@ -118,19 +121,22 @@ namespace Neo.Shell
                     payload = InvPayload.Create(Enum.Parse<InventoryType>(args[2], true), args.Skip(3).Select(p => UInt256.Parse(p)).ToArray());
                     break;
                 case "signature":
-                    if (args.Length < 3 || string.IsNullOrWhiteSpace(args[2]))
+
+                    if (args.Length < 3)
                     {
                         Console.WriteLine("You must input JSON object to broadcast.");
                         return true;
                     }
-                    if (args.Length > 3)
+                    var jsonObjectToSign = string.Join(string.Empty, args.Skip(2));
+                    if (string.IsNullOrWhiteSpace(jsonObjectToSign))
                     {
-                        Console.WriteLine("Too many parameters.");
+                        Console.WriteLine("You must input JSON object to broadcast.");
                         return true;
                     }
                     try
                     {
-                        ContractParametersContext context = ContractParametersContext.Parse(args[2]);
+
+                        ContractParametersContext context = ContractParametersContext.Parse(jsonObjectToSign);
                         context.Verifiable.Scripts = context.GetScripts();
                         IInventory inventory = (IInventory)context.Verifiable;
                         LocalNode.Relay(inventory);
@@ -140,7 +146,7 @@ namespace Neo.Shell
                     {
                         Console.WriteLine($"One or more errors occurred:\r\n{e.Message}");
                     }
-                  
+
                     return true;
                 case "tx":
                     payload = LocalNode.GetTransaction(UInt256.Parse(args[2]));
@@ -173,19 +179,20 @@ namespace Neo.Shell
                 Console.WriteLine("You have to open the wallet first.");
                 return true;
             }
-            if (args.Length < 2 || string.IsNullOrWhiteSpace(args[1]))
+            if (args.Length < 2)
             {
                 Console.WriteLine("You must input JSON object pending signature data.");
                 return true;
             }
-            if (args.Length > 2)
+            var jsonObjectToSign = string.Join(string.Empty, args.Skip(1));
+            if (string.IsNullOrWhiteSpace(jsonObjectToSign))
             {
-                Console.WriteLine("Too many parameters.");
+                Console.WriteLine("You must input JSON object pending signature data.");
                 return true;
             }
             try
             {
-                ContractParametersContext context = ContractParametersContext.Parse(args[1]);
+                ContractParametersContext context = ContractParametersContext.Parse(jsonObjectToSign);
                 if (!Program.Wallet.Sign(context))
                 {
                     Console.WriteLine("The private key that can sign the data is not found.");
@@ -199,6 +206,77 @@ namespace Neo.Shell
             }
             return true;
         }
+
+        private bool OnLockCommand(string[] args)
+        {
+            if (Program.Wallet == null)
+            {
+                Console.WriteLine("You have to open the wallet first.");
+                return true;
+            }
+            if (args.Length < 2 || string.IsNullOrWhiteSpace(args[1]))
+            {
+                Console.WriteLine("You must input Address or Public Key to lock.");
+                return true;
+            }
+            if (args.Length < 3 || !DateTime.TryParseExact(args[2], "yyyy-MM-dd HH:mm:ss", new DateTimeFormatInfo(), DateTimeStyles.None, out var lockDate))
+            {
+                Console.WriteLine("You must input a lock date.");
+                return true;
+            }
+            if (args.Length > 3)
+            {
+                Console.WriteLine("Too many arguments.");
+                return true;
+            }
+            try
+            {
+                var addressOrPublicKey = args[1].ToLower();
+                var selectedAccount = Program.Wallet.GetAccounts().FirstOrDefault(p => !p.WatchOnly
+                                                                                       && p.Contract.IsStandard
+                                                                                       && (p.Address.ToLower() == addressOrPublicKey ||
+                                                                                           p.GetKey().ToString().ToLower() == addressOrPublicKey));
+
+                if (selectedAccount == null)
+                {
+                    Console.WriteLine(
+                        "Your input does not match either an address or a public key in the current wallet");
+                    return true;
+                }
+                Contract lockContract;
+                using (ScriptBuilder sb = new ScriptBuilder())
+                {
+                    sb.EmitPush(selectedAccount.GetKey().PublicKey);
+                    sb.EmitPush(lockDate.ToTimestamp());
+                    // Lock 2.0 in mainnet tx:4e84015258880ced0387f34842b1d96f605b9cc78b308e1f0d876933c2c9134b
+                    sb.EmitAppCall(UInt160.Parse("d3cce84d0800172d09c88ccad61130611bd047a4"));
+                    lockContract = Contract.Create(new[] {ContractParameterType.Signature}, sb.ToArray());
+                }
+                if (lockContract == null)
+                {
+                    Console.WriteLine("Lock contract creation fails.");
+                    return true;
+                }
+                WalletAccount account = Program.Wallet.CreateAccount(lockContract, selectedAccount.GetKey());
+
+                Console.WriteLine($"Lock Contract added to your account: {account.Address}\r\n" +
+                                  $"Contract Info:\r\n" +
+                                  $"Address:{lockContract.Address}\r\n" +
+                                  $"ScriptHash:{lockContract.ScriptHash.ToArray()}\r\n" +
+                                  $"Parameters:{lockContract.ParameterList.Cast<byte>().ToArray().ToHexString()}\r\n" +
+                                  $"Redeem Script:{lockContract.Script.ToHexString()}");
+
+                if (Program.Wallet is NEP6Wallet wallet)
+                    wallet.Save();
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"One or more errors occurred:\r\n{e.Message}");
+            }
+            return true;
+        }
+
         private bool OnCreateCommand(string[] args)
         {
             switch (args[1].ToLower())
