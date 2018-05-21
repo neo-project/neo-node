@@ -63,6 +63,8 @@ namespace Neo.Shell
             {
                 case "broadcast":
                     return OnBroadcastCommand(args);
+                case "sign":
+                    return OnSignCommand(args);
                 case "create":
                     return OnCreateCommand(args);
                 case "export":
@@ -115,6 +117,31 @@ namespace Neo.Shell
                 case "inv":
                     payload = InvPayload.Create(Enum.Parse<InventoryType>(args[2], true), args.Skip(3).Select(p => UInt256.Parse(p)).ToArray());
                     break;
+                case "signature":
+                    if (args.Length < 3 || string.IsNullOrWhiteSpace(args[2]))
+                    {
+                        Console.WriteLine("You must input JSON object to broadcast.");
+                        return true;
+                    }
+                    if (args.Length > 3)
+                    {
+                        Console.WriteLine("Too many parameters.");
+                        return true;
+                    }
+                    try
+                    {
+                        ContractParametersContext context = ContractParametersContext.Parse(args[2]);
+                        context.Verifiable.Scripts = context.GetScripts();
+                        IInventory inventory = (IInventory)context.Verifiable;
+                        LocalNode.Relay(inventory);
+                        Console.WriteLine($"Data broadcast success, the hash is shown as follows:\r\n{inventory.Hash}");
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"One or more errors occurred:\r\n{e.Message}");
+                    }
+                  
+                    return true;
                 case "tx":
                     payload = LocalNode.GetTransaction(UInt256.Parse(args[2]));
                     if (payload == null)
@@ -139,6 +166,39 @@ namespace Neo.Shell
             return true;
         }
 
+        private bool OnSignCommand(string[] args)
+        {
+            if (Program.Wallet == null)
+            {
+                Console.WriteLine("You have to open the wallet first.");
+                return true;
+            }
+            if (args.Length < 2 || string.IsNullOrWhiteSpace(args[1]))
+            {
+                Console.WriteLine("You must input JSON object pending signature data.");
+                return true;
+            }
+            if (args.Length > 2)
+            {
+                Console.WriteLine("Too many parameters.");
+                return true;
+            }
+            try
+            {
+                ContractParametersContext context = ContractParametersContext.Parse(args[1]);
+                if (!Program.Wallet.Sign(context))
+                {
+                    Console.WriteLine("The private key that can sign the data is not found.");
+                    return true;
+                }
+                Console.WriteLine($"Signed Output:\r\n{context}");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"One or more errors occurred:\r\n{e.Message}");
+            }
+            return true;
+        }
         private bool OnCreateCommand(string[] args)
         {
             switch (args[1].ToLower())
