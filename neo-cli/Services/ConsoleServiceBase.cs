@@ -2,6 +2,7 @@
 using System.Reflection;
 using System.Security;
 using System.Text;
+using Neo.Shell;
 
 namespace Neo.Services
 {
@@ -13,7 +14,7 @@ namespace Neo.Services
 
         protected bool ShowPrompt { get; set; } = true;
 
-        protected virtual bool OnCommand(string[] args)
+		protected virtual bool OnCommand(string[] args)
         {
             switch (args[0].ToLower())
             {
