@@ -20,6 +20,7 @@ using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using ECCurve = Neo.Cryptography.ECC.ECCurve;
 using ECPoint = Neo.Cryptography.ECC.ECPoint;
@@ -31,7 +32,7 @@ namespace Neo.Shell
         private const string PeerStatePath = "peers.dat";
 
         private RpcServerWithWallet rpc;
-        private ConsensusWithPolicy consensus;
+        private ConsensusWithLog consensus;
 
         protected LocalNode LocalNode { get; private set; }
         protected override string Prompt => "neo";
@@ -80,8 +81,6 @@ namespace Neo.Shell
                     return OnOpenCommand(args);
                 case "rebuild":
                     return OnRebuildCommand(args);
-                case "refresh":
-                    return OnRefreshCommand(args);
                 case "send":
                     return OnSendCommand(args);
                 case "show":
@@ -167,17 +166,29 @@ namespace Neo.Shell
                 Console.WriteLine("error");
                 return true;
             }
-            ushort count = 1;
+
+            ushort count;
             if (args.Length >= 3)
                 count = ushort.Parse(args[2]);
+            else
+                count = 1;
+
+            int x = 0;
             List<string> addresses = new List<string>();
-            for (int i = 1; i <= count; i++)
+
+            Parallel.For(0, count, (i) =>
             {
                 WalletAccount account = Program.Wallet.CreateAccount();
-                addresses.Add(account.Address);
-                Console.SetCursorPosition(0, Console.CursorTop);
-                Console.Write($"[{i}/{count}]");
-            }
+
+                lock (addresses)
+                {
+                    x++;
+                    addresses.Add(account.Address);
+                    Console.SetCursorPosition(0, Console.CursorTop);
+                    Console.Write($"[{x}/{count}]");
+                }
+            });
+
             if (Program.Wallet is NEP6Wallet wallet)
                 wallet.Save();
             Console.WriteLine();
@@ -410,8 +421,7 @@ namespace Neo.Shell
                 "\texport block[s] [path=chain.acc]\n" +
                 "\texport block[s] <start> [count]\n" +
                 "Advanced Commands:\n" +
-                "\tstart consensus\n" +
-                "\trefresh policy\n");
+                "\tstart consensus\n");
             return true;
         }
 
@@ -656,24 +666,6 @@ namespace Neo.Shell
         private bool OnRebuildIndexCommand(string[] args)
         {
             WalletIndexer.RebuildIndex();
-            return true;
-        }
-
-        private bool OnRefreshCommand(string[] args)
-        {
-            switch (args[1].ToLower())
-            {
-                case "policy":
-                    return OnRefreshPolicyCommand(args);
-                default:
-                    return base.OnCommand(args);
-            }
-        }
-
-        private bool OnRefreshPolicyCommand(string[] args)
-        {
-            if (consensus == null) return true;
-            consensus.RefreshPolicy();
             return true;
         }
 
@@ -983,7 +975,7 @@ namespace Neo.Shell
                 return true;
             }
             string log_dictionary = Path.Combine(AppContext.BaseDirectory, "Logs");
-            consensus = new ConsensusWithPolicy(LocalNode, Program.Wallet, log_dictionary);
+            consensus = new ConsensusWithLog(LocalNode, Program.Wallet, log_dictionary);
             ShowPrompt = false;
             consensus.Start();
             return true;
