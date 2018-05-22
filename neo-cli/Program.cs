@@ -21,7 +21,7 @@ namespace Neo
         static void Main(string[] args)
         {
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
-			var bufferSize = 1024 * 66 + 128;
+			var bufferSize = 1024 * 67 + 128;
 			Stream inputStream = Console.OpenStandardInput(bufferSize);
 			Console.SetIn(new StreamReader(inputStream, Console.InputEncoding, false, bufferSize));
 			var mainService = new MainService();
