@@ -64,6 +64,8 @@ namespace Neo.Shell
             {
                 case "broadcast":
                     return OnBroadcastCommand(args);
+                case "relay":
+                    return OnRelayCommand(args);
                 case "sign":
                     return OnSignCommand(args);
                 case "create":
@@ -116,12 +118,10 @@ namespace Neo.Shell
                     break;
                 case "getdata":
                 case "inv":
-                    payload = InvPayload.Create(Enum.Parse<InventoryType>(args[2], true), args.Skip(3).Select(p => UInt256.Parse(p)).ToArray());
+                    payload = InvPayload.Create(Enum.Parse<InventoryType>(args[2], true), args.Skip(3).Select(UInt256.Parse).ToArray());
                     break;
                 case "tx":
-                    payload = LocalNode.GetTransaction(UInt256.Parse(args[2]));
-                    if (payload == null)
-                        payload = Blockchain.Default.GetTransaction(UInt256.Parse(args[2]));
+                    payload = LocalNode.GetTransaction(UInt256.Parse(args[2])) ?? Blockchain.Default.GetTransaction(UInt256.Parse(args[2]));
                     break;
                 case "alert":
                 case "consensus":
@@ -142,6 +142,34 @@ namespace Neo.Shell
             return true;
         }
 
+        private bool OnRelayCommand(string [] args)
+        {
+            if (args.Length < 2)
+            {
+                Console.WriteLine("You must input JSON object to relay.");
+                return true;
+            }
+            var jsonObjectToRelay = string.Join(string.Empty, args.Skip(1));
+            if (string.IsNullOrWhiteSpace(jsonObjectToRelay))
+            {
+                Console.WriteLine("You must input JSON object to relay.");
+                return true;
+            }
+            try
+            {
+
+                ContractParametersContext context = ContractParametersContext.Parse(jsonObjectToRelay);
+                context.Verifiable.Scripts = context.GetScripts();
+                IInventory inventory = (IInventory)context.Verifiable;
+                LocalNode.Relay(inventory);
+                Console.WriteLine($"Data relay success, the hash is shown as follows:\r\n{inventory.Hash}");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"One or more errors occurred:\r\n{e.Message}");
+            }
+            return true;
+        }
         private bool OnSignCommand(string[] args)
         {
             if (NoWallet()) return true;
@@ -562,9 +590,9 @@ namespace Neo.Shell
             {
                 case "gas":
                     ClaimTransaction tx = coins.Claim();
-                    if (tx is ClaimTransaction)
+                    if (tx != null)
                     {
-                        Console.WriteLine($"Tranaction Suceeded: {tx.Hash.ToString()}");
+                        Console.WriteLine($"Tranaction Suceeded: {tx.Hash}");
                     }
                     return true;
                 default:
