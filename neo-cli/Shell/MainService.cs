@@ -472,12 +472,14 @@ namespace Neo.Shell
                 "\texport key [address] [path]\n" +
                 "\timport multisigaddress m pubkeys...\n" +
                 "\tsend <id|alias> <address> <value>|all [fee=0]\n" +
+                "\tsign <jsonObjectToSign>\n" +
                 "Node Commands:\n" +
                 "\tshow state\n" +
                 "\tshow node\n" +
                 "\tshow pool [verbose]\n" +
                 "\texport block[s] [path=chain.acc]\n" +
                 "\texport block[s] <start> [count]\n" +
+                "\trelay <jsonObjectToSign>\n" +
                 "Advanced Commands:\n" +
                 "\tstart consensus\n");
             return true;
