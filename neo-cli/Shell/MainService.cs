@@ -157,8 +157,12 @@ namespace Neo.Shell
             }
             try
             {
-
                 ContractParametersContext context = ContractParametersContext.Parse(jsonObjectToRelay);
+                if (!context.Completed)
+                {
+                    Console.WriteLine("The signature is incomplete.");
+                    return true;
+                }
                 context.Verifiable.Scripts = context.GetScripts();
                 IInventory inventory = (IInventory)context.Verifiable;
                 LocalNode.Relay(inventory);
@@ -170,6 +174,7 @@ namespace Neo.Shell
             }
             return true;
         }
+
         private bool OnSignCommand(string[] args)
         {
             if (NoWallet()) return true;
