@@ -2,6 +2,7 @@
 using System.Reflection;
 using System.Security;
 using System.Text;
+using Neo.Shell;
 
 namespace Neo.Services
 {
@@ -13,7 +14,7 @@ namespace Neo.Services
 
         protected bool ShowPrompt { get; set; } = true;
 
-        protected virtual bool OnCommand(string[] args)
+		protected virtual bool OnCommand(string[] args)
         {
             switch (args[0].ToLower())
             {
@@ -34,6 +35,38 @@ namespace Neo.Services
         protected internal abstract void OnStart(string[] args);
 
         protected internal abstract void OnStop();
+
+        public static string ReadPassword(string prompt)
+        {
+            const string t = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+            StringBuilder sb = new StringBuilder();
+            ConsoleKeyInfo key;
+            Console.Write(prompt);
+            Console.Write(": ");
+
+            Console.ForegroundColor = ConsoleColor.Yellow;
+
+            do
+            {
+                key = Console.ReadKey(true);
+                if (t.IndexOf(key.KeyChar) != -1)
+                {
+                    sb.Append(key.KeyChar);
+                    Console.Write('*');
+                }
+                else if (key.Key == ConsoleKey.Backspace && sb.Length > 0)
+                {
+                    sb.Length--;
+                    Console.Write(key.KeyChar);
+                    Console.Write(' ');
+                    Console.Write(key.KeyChar);
+                }
+            } while (key.Key != ConsoleKey.Enter);
+
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.WriteLine();
+            return sb.ToString();
+        }
 
         public static SecureString ReadSecureString(string prompt)
         {
@@ -117,7 +150,7 @@ namespace Neo.Services
                 }
             }
 
-			Console.ResetColor();
+            Console.ResetColor();
         }
     }
 }
