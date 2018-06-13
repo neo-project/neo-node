@@ -1094,11 +1094,11 @@ namespace Neo.Shell
         {
             JObject json = new JObject();
 
-	    jsonER["txid"] = e.Transaction.Hash.ToString();	
+	    json["txid"] = e.Transaction.Hash.ToString();	
 
 	    for (int i = 0; i < e.ExecutionResults.Length ; i++)
 	    {
-		    jsonER["executionresults"].Add(p =>
+		    json["executionresults"].Add(p =>
 		    {
 		        JObject jsonER = new JObject();
 		   	jsonER["vmstate"] = e.ExecutionResults[i].VMState;
