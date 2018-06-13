@@ -1095,17 +1095,19 @@ namespace Neo.Shell
             JObject json = new JObject();
             json["txid"] = e.Transaction.Hash.ToString();
 
-            json["vmstate"][0] = e.ExecutionResults[0].VMState;
-            json["gas_consumed"] = e.ExecutionResults[0].GasConsumed.ToString();
-            json["stack"] = e.ExecutionResults[0].Stack.Select(p => p.ToParameter().ToJson()).ToArray();
-            json["notifications"] = e.ExecutionResults[0].Notifications.Select(p =>
-            {
-                JObject notification = new JObject();
-                notification["contract"] = p.ScriptHash.ToString();
-                notification["state"] = p.State.ToParameter().ToJson();
-                return notification;
-            }).ToArray();
-
+	    for (int i = 0; i < e.ExecutionResults.Length ; i++)
+	    {
+		    json["vmstate"].i = e.ExecutionResults[i].VMState;
+		    json["gas_consumed"] = e.ExecutionResults[i].GasConsumed.ToString();
+		    json["stack"] = e.ExecutionResults[i].Stack.Select(p => p.ToParameter().ToJson()).ToArray();
+		    json["notifications"] = e.ExecutionResults[i].Notifications.Select(p =>
+		    {
+		        JObject notification = new JObject();
+		        notification["contract"] = p.ScriptHash.ToString();
+		        notification["state"] = p.State.ToParameter().ToJson();
+		        return notification;
+		    }).ToArray();
+	    }
 
             Directory.CreateDirectory(Settings.Default.Paths.ApplicationLogs);
             string path = Path.Combine(Settings.Default.Paths.ApplicationLogs, $"{e.Transaction.Hash}.json");
