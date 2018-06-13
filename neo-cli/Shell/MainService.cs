@@ -37,7 +37,7 @@ namespace Neo.Shell
         protected override string Prompt => "neo";
         public override string ServiceName => "NEO-CLI";
 
-		private void ImportBlocks(Stream stream, bool read_start = false)
+        private void ImportBlocks(Stream stream, bool read_start = false)
         {
             LevelDBBlockchain blockchain = (LevelDBBlockchain)Blockchain.Default;
             using (BinaryReader r = new BinaryReader(stream))
@@ -142,7 +142,7 @@ namespace Neo.Shell
             return true;
         }
 
-        private bool OnRelayCommand(string [] args)
+        private bool OnRelayCommand(string[] args)
         {
             if (args.Length < 2)
             {
@@ -514,7 +514,7 @@ namespace Neo.Shell
             if (m < 1 || m > n || n > 1024)
             {
                 Console.WriteLine("Error. Invalid parameters.");
-				return true;
+                return true;
             }
 
             ECPoint[] publicKeys = args.Skip(3).Select(p => ECPoint.Parse(p, ECCurve.Secp256r1)).ToArray();
@@ -1094,15 +1094,22 @@ namespace Neo.Shell
         {
             JObject json = new JObject();
             json["txid"] = e.Transaction.Hash.ToString();
-            json["vmstate"] = e.VMState;
-            json["gas_consumed"] = e.GasConsumed.ToString();
-            json["stack"] = e.Stack.Select(p => p.ToParameter().ToJson()).ToArray();
-            json["notifications"] = e.Notifications.Select(p =>
+            json["executions"] = e.ExecutionResults.Select(p =>
             {
-                JObject notification = new JObject();
-                notification["contract"] = p.ScriptHash.ToString();
-                notification["state"] = p.State.ToParameter().ToJson();
-                return notification;
+                JObject execution = new JObject();
+                execution["trigger"] = p.Trigger;
+                execution["contract"] = p.ScriptHash.ToString();
+                execution["vmstate"] = p.VMState;
+                execution["gas_consumed"] = p.GasConsumed.ToString();
+                execution["stack"] = p.Stack.Select(q => q.ToParameter().ToJson()).ToArray();
+                execution["notifications"] = p.Notifications.Select(q =>
+                {
+                    JObject notification = new JObject();
+                    notification["contract"] = q.ScriptHash.ToString();
+                    notification["state"] = q.State.ToParameter().ToJson();
+                    return notification;
+                }).ToArray();
+                return execution;
             }).ToArray();
             Directory.CreateDirectory(Settings.Default.Paths.ApplicationLogs);
             string path = Path.Combine(Settings.Default.Paths.ApplicationLogs, $"{e.Transaction.Hash}.json");
