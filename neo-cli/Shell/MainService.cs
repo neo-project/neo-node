@@ -1090,7 +1090,7 @@ namespace Neo.Shell
             return true;
         }
 
-        private void LevelDBBlockchain_ApplicationExecuted(object sender, ApplicationExecutedEventArgs e)
+        private void LevelDBBlockchain_ApplicationExecuted(object sender, ApplicationExecutionResult e)
         {
             JObject json = new JObject();
             json["txid"] = e.Transaction.Hash.ToString();
