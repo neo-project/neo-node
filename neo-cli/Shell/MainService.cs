@@ -1095,12 +1095,11 @@ namespace Neo.Shell
 
             JObject json = new JObject();
 
-    	    json["txid"] = e.Transaction.Hash.ToString();	
+    	    json["txid"] = e.Transaction.Hash.ToString();
+            json["executionresults"] = new JArray();
 
     	    for (int i = 0; i < e.ExecutionResults.Length ; i++)
     	    {
-                json.Add("executionresults", p =>
-                 {
                      JObject jsonER = new JObject();
                      jsonER["vmstate"] = e.ExecutionResults[i].VMState;
                      jsonER["gas_consumed"] = e.ExecutionResults[i].GasConsumed.ToString();
@@ -1112,8 +1111,7 @@ namespace Neo.Shell
                          notification["state"] = p.State.ToParameter().ToJson();
                          return notification;
                      }).ToArray();
-                     return jsonER;
-                 });
+                     json["executionresults"].Value<JArray>().Add(jsonER);
     	    }
 
                 Directory.CreateDirectory(Settings.Default.Paths.ApplicationLogs);
