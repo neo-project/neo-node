@@ -1105,7 +1105,7 @@ namespace Neo.Shell
                 return notification;
             }).ToArray();
             Directory.CreateDirectory(Settings.Default.Paths.ApplicationLogs);
-            string path = Path.Combine(Settings.Default.Paths.ApplicationLogs, $"{e.Transaction.Hash}.json");
+            string path = Path.Combine(Settings.Default.Paths.ApplicationLogs, $"{e.ExecutionResults.Transaction.Hash}.json");
             File.WriteAllText(path, json.ToString());
         }
     }
