@@ -1097,7 +1097,7 @@ namespace Neo.Shell
 
 	    for (int i = 0; i < e.ExecutionResults.Length ; i++)
 	    {
-		    json["vmstate"].i = e.ExecutionResults[i].VMState;
+		    json["vmstate"] = e.ExecutionResults[i].VMState;
 		    json["gas_consumed"] = e.ExecutionResults[i].GasConsumed.ToString();
 		    json["stack"] = e.ExecutionResults[i].Stack.Select(p => p.ToParameter().ToJson()).ToArray();
 		    json["notifications"] = e.ExecutionResults[i].Notifications.Select(p =>
