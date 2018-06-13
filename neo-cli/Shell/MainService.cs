@@ -1090,14 +1090,14 @@ namespace Neo.Shell
             return true;
         }
 
-        private void LevelDBBlockchain_ApplicationExecuted(object sender, ApplicationExecutionResult e)
+        private void LevelDBBlockchain_ApplicationExecuted(object sender, ApplicationExecutedEventArgs e)
         {
             JObject json = new JObject();
             json["txid"] = e.Transaction.Hash.ToString();
-            json["vmstate"] = e.VMState;
-            json["gas_consumed"] = e.GasConsumed.ToString();
-            json["stack"] = e.Stack.Select(p => p.ToParameter().ToJson()).ToArray();
-            json["notifications"] = e.Notifications.Select(p =>
+            json["vmstate"] = e.ExecutionResults.VMState;
+            json["gas_consumed"] = e.ExecutionResults.GasConsumed.ToString();
+            json["stack"] = e.ExecutionResults.Stack.Select(p => p.ToParameter().ToJson()).ToArray();
+            json["notifications"] = e.ExecutionResults.Notifications.Select(p =>
             {
                 JObject notification = new JObject();
                 notification["contract"] = p.ScriptHash.ToString();
