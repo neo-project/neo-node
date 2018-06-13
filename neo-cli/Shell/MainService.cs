@@ -1094,10 +1094,10 @@ namespace Neo.Shell
         {
             JObject json = new JObject();
             json["txid"] = e.Transaction.Hash.ToString();
-            json["vmstate"] = e.ExecutionResults.VMState;
-            json["gas_consumed"] = e.ExecutionResults.GasConsumed.ToString();
-            json["stack"] = e.ExecutionResults.Stack.Select(p => p.ToParameter().ToJson()).ToArray();
-            json["notifications"] = e.ExecutionResults.Notifications.Select(p =>
+            json["vmstate"] = e.ExecutionResults[0].VMState;
+            json["gas_consumed"] = e.ExecutionResults[0].GasConsumed.ToString();
+            json["stack"] = e.ExecutionResults[0].Stack.Select(p => p.ToParameter().ToJson()).ToArray();
+            json["notifications"] = e.ExecutionResults[0].Notifications.Select(p =>
             {
                 JObject notification = new JObject();
                 notification["contract"] = p.ScriptHash.ToString();
@@ -1105,7 +1105,7 @@ namespace Neo.Shell
                 return notification;
             }).ToArray();
             Directory.CreateDirectory(Settings.Default.Paths.ApplicationLogs);
-            string path = Path.Combine(Settings.Default.Paths.ApplicationLogs, $"{e.ExecutionResults.Transaction.Hash}.json");
+            string path = Path.Combine(Settings.Default.Paths.ApplicationLogs, $"{e.ExecutionResults[0].Transaction.Hash}.json");
             File.WriteAllText(path, json.ToString());
         }
     }
