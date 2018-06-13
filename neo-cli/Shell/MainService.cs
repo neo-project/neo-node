@@ -1094,22 +1094,25 @@ namespace Neo.Shell
         {
             JObject json = new JObject();
 
-	    	
+	    jsonER["txid"] = e.Transaction.Hash.ToString();	
+
 	    for (int i = 0; i < e.ExecutionResults.Length ; i++)
 	    {
-		    JObject jsonER = new JObject();
-		    jsonER["txid"] = e.Transaction.Hash.ToString();
-		    jsonER["vmstate"] = e.ExecutionResults[i].VMState;
-		    jsonER["gas_consumed"] = e.ExecutionResults[i].GasConsumed.ToString();
-		    jsonER["stack"] = e.ExecutionResults[i].Stack.Select(p => p.ToParameter().ToJson()).ToArray();
-		    jsonER["notifications"] = e.ExecutionResults[i].Notifications.Select(p =>
+		    jsonER["executionresults"].Add(p =>
 		    {
-		        JObject notification = new JObject();
-		        notification["contract"] = p.ScriptHash.ToString();
-		        notification["state"] = p.State.ToParameter().ToJson();
-		        return notification;
+		        JObject jsonER = new JObject();
+		   	jsonER["vmstate"] = e.ExecutionResults[i].VMState;
+			jsonER["gas_consumed"] = e.ExecutionResults[i].GasConsumed.ToString();
+			jsonER["stack"] = e.ExecutionResults[i].Stack.Select(p => p.ToParameter().ToJson()).ToArray();
+			jsonER["notifications"] = e.ExecutionResults[i].Notifications.Select(p =>
+			{
+				JObject notification = new JObject();
+				notification["contract"] = p.ScriptHash.ToString();
+				notification["state"] = p.State.ToParameter().ToJson();
+				return notification;
+			}).ToArray();
+			return jsonER;
 		    }).ToArray();
-		    json.Add(jsonER);
 	    }
 
             Directory.CreateDirectory(Settings.Default.Paths.ApplicationLogs);
