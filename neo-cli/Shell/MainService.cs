@@ -1092,28 +1092,25 @@ namespace Neo.Shell
 
         private void LevelDBBlockchain_ApplicationExecuted(object sender, ApplicationExecutedEventArgs e)
         {
-
             JObject json = new JObject();
-
     	    json["txid"] = e.Transaction.Hash.ToString();
             json["executionresults"] = new JArray();
-
+            JArray arrayToAdd = (JArray)json["executionresults"];
     	    for (int i = 0; i < e.ExecutionResults.Length ; i++)
     	    {
-                     JObject jsonER = new JObject();
-                     jsonER["vmstate"] = e.ExecutionResults[i].VMState;
-                     jsonER["gas_consumed"] = e.ExecutionResults[i].GasConsumed.ToString();
-                     jsonER["stack"] = e.ExecutionResults[i].Stack.Select(p => p.ToParameter().ToJson()).ToArray();
-                     jsonER["notifications"] = e.ExecutionResults[i].Notifications.Select(p =>
-                     {
+                JObject jsonER = new JObject();
+                jsonER["vmstate"] = e.ExecutionResults[i].VMState;
+                jsonER["gas_consumed"] = e.ExecutionResults[i].GasConsumed.ToString();
+                jsonER["stack"] = e.ExecutionResults[i].Stack.Select(p => p.ToParameter().ToJson()).ToArray();
+                jsonER["notifications"] = e.ExecutionResults[i].Notifications.Select(p =>
+                {
                          JObject notification = new JObject();
                          notification["contract"] = p.ScriptHash.ToString();
                          notification["state"] = p.State.ToParameter().ToJson();
                          return notification;
-                     }).ToArray();
-                     json["executionresults"].Value<JArray>().Add(jsonER);
+                }).ToArray();
+                arrayToAdd.Add(jsonER);
     	    }
-
                 Directory.CreateDirectory(Settings.Default.Paths.ApplicationLogs);
                 string path = Path.Combine(Settings.Default.Paths.ApplicationLogs, $"{e.Transaction.Hash}.json");
                 File.WriteAllText(path, json.ToString());
