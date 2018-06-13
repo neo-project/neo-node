@@ -1093,27 +1093,26 @@ namespace Neo.Shell
         private void LevelDBBlockchain_ApplicationExecuted(object sender, ApplicationExecutedEventArgs e)
         {
             JObject json = new JObject();
-    	    json["txid"] = e.Transaction.Hash.ToString();
-            json["executionresults"] = new JArray();
-            JArray arrayToAdd = (JArray)json["executionresults"];
-    	    for (int i = 0; i < e.ExecutionResults.Length ; i++)
-    	    {
-                JObject jsonER = new JObject();
-                jsonER["vmstate"] = e.ExecutionResults[i].VMState;
-                jsonER["gas_consumed"] = e.ExecutionResults[i].GasConsumed.ToString();
-                jsonER["stack"] = e.ExecutionResults[i].Stack.Select(p => p.ToParameter().ToJson()).ToArray();
-                jsonER["notifications"] = e.ExecutionResults[i].Notifications.Select(p =>
+            json["txid"] = e.Transaction.Hash.ToString();
+            json["executions"] = e.ExecutionResults.Select(p =>
+            {
+                JObject execution = new JObject();
+                execution["trigger"] = p.Trigger;
+                execution["contract"] = p.ScriptHash.ToString();
+                execution["vmstate"] = p.VMState;
+                execution["gas_consumed"] = p.GasConsumed.ToString();
+                execution["stack"] = p.Stack.Select(q => q.ToParameter().ToJson()).ToArray();
+                execution["notifications"] = p.Notifications.Select(q =>
                 {
-                         JObject notification = new JObject();
-                         notification["contract"] = p.ScriptHash.ToString();
-                         notification["state"] = p.State.ToParameter().ToJson();
-                         return notification;
+                    JObject notification = new JObject();
+                    notification["contract"] = q.ScriptHash.ToString();
+                    notification["state"] = q.State.ToParameter().ToJson();
+                    return notification;
                 }).ToArray();
-                arrayToAdd.Add(jsonER);
-    	    }
-                Directory.CreateDirectory(Settings.Default.Paths.ApplicationLogs);
-                string path = Path.Combine(Settings.Default.Paths.ApplicationLogs, $"{e.Transaction.Hash}.json");
-                File.WriteAllText(path, json.ToString());
-            }
-    }
+                return execution;
+            }).ToArray();
+            Directory.CreateDirectory(Settings.Default.Paths.ApplicationLogs);
+            string path = Path.Combine(Settings.Default.Paths.ApplicationLogs, $"{e.Transaction.Hash}.json");
+            File.WriteAllText(path, json.ToString());
+        }
 }
