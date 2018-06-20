@@ -19,6 +19,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using ECCurve = Neo.Cryptography.ECC.ECCurve;
@@ -163,7 +164,30 @@ namespace Neo.Shell
                         /* contractAuthor */ args[9], 
                         /* contractEmail */ args[10], 
                         /* contractDescription */ args[11]); 
+                    
+                    tx.Version = 1;
+                    if (tx.Attributes == null) tx.Attributes = new TransactionAttribute[0];
+                    if (tx.Inputs == null) tx.Inputs = new CoinReference[0];
+                    if (tx.Outputs == null) tx.Outputs = new TransactionOutput[0];
+                    if (tx.Scripts == null) tx.Scripts = new Witness[0];
+                    ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx);
+                    StringBuilder sb = new StringBuilder();
+                    sb.AppendLine($"VM State: {engine.State}");
+                    sb.AppendLine($"Gas Consumed: {engine.GasConsumed}");
+                    sb.AppendLine($"Evaluation Stack: {new JArray(engine.EvaluationStack.Select(p => p.ToParameter().ToJson()))}");
+                    Console.WriteLine(sb.ToString());
+                    if (engine.State.HasFlag(VMState.FAULT))
+                    {
+                        Console.WriteLine("Engine faulted.");
+                        return true;
+                    }
+                    
+                    tx.Gas = engine.GasConsumed - Fixed8.FromDecimal(10);
+                    if (tx.Gas < Fixed8.Zero) tx.Gas = Fixed8.Zero;
+                    tx.Gas = tx.Gas.Ceiling();
+                    
                     tx = DecorateScriptTransaction(tx);
+                        
                     return SignAndSendTx(tx);
                 
                 case "invoke":
