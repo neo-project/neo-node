@@ -645,7 +645,6 @@ namespace Neo.Shell
             try
             {
                 prikey = Wallet.GetPrivateKeyFromWIF(args[2]);
-                Console.WriteLine($"Got privkey: ${prikey}");
             }
             catch (FormatException) { }
             if (prikey == null)
@@ -666,7 +665,6 @@ namespace Neo.Shell
             }
             else
             {
-                Console.WriteLine($"Create account");
                 WalletAccount account = Program.Wallet.CreateAccount(prikey);
                 Array.Clear(prikey, 0, prikey.Length);
                 Console.WriteLine($"address: {account.Address}");
