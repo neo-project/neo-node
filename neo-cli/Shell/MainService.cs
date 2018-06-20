@@ -92,6 +92,8 @@ namespace Neo.Shell
                     return OnStartCommand(args);
                 case "upgrade":
                     return OnUpgradeCommand(args);
+                case "contract":
+                    return OnContractCommand(args);
                 default:
                     return base.OnCommand(args);
             }
@@ -139,6 +141,105 @@ namespace Neo.Shell
             }
             foreach (RemoteNode node in LocalNode.GetRemoteNodes())
                 node.EnqueueMessage(command, payload);
+            return true;
+        }
+
+        private bool OnContractCommand(string[] args)
+        {
+            string command = args[1].ToLower();
+
+            switch (command)
+            {
+                case "deploy":
+                    if (NoWallet()) return true;
+                    var tx = LoadScriptTransaction(
+                        /* filePath */ args[2], 
+                        /* paramTypes */ args[3], 
+                        /* returnType */ args[4],  
+                        /* hasStorage */ args[5] == "true",  
+                        /* hasDynamicInvoke */ args[6] == "true", 
+                        /* contractName */ args[7],  
+                        /* contractVersion */ args[8], 
+                        /* contractAuthor */ args[9], 
+                        /* contractEmail */ args[10], 
+                        /* contractDescription */ args[11]); 
+                    tx = DecorateScriptTransaction(tx);
+                    return SignAndSendTx(tx);
+                
+                case "invoke":
+                    // TODO: invoke the contract.
+                    return true;
+            }
+
+            return true;
+        }
+        
+        public InvocationTransaction LoadScriptTransaction(
+            string avmFilePath, string paramTypes, string returnTypeHexString, 
+            bool hasStorage, bool hasDynamicInvoke, 
+            string contractName, string contractVersion, string contractAuthor,
+            string contractEmail, string contractDescription)
+        {
+            byte[] script = File.ReadAllBytes(avmFilePath);
+            // See ContractParameterType Enum
+            byte[] parameterList = paramTypes.HexToBytes();
+            ContractParameterType returnType = returnTypeHexString.HexToBytes()
+                .Select(p => (ContractParameterType?)p).FirstOrDefault() ?? ContractParameterType.Void;
+            ContractPropertyState properties = ContractPropertyState.NoProperty;
+            if (hasStorage) properties |= ContractPropertyState.HasStorage;
+            if (hasDynamicInvoke) properties |= ContractPropertyState.HasDynamicInvoke;
+            using (ScriptBuilder sb = new ScriptBuilder())
+            {
+                sb.EmitSysCall("Neo.Contract.Create", script, parameterList, returnType, properties, 
+                    contractName, contractVersion, contractAuthor, contractEmail, contractDescription);
+                return new InvocationTransaction
+                {
+                    Script = sb.ToArray()
+                };
+            }
+        }
+
+        public InvocationTransaction DecorateScriptTransaction(InvocationTransaction tx)
+        {
+            Fixed8 fee = tx.Gas.Equals(Fixed8.Zero) ? Fixed8.FromDecimal(0.001m) : Fixed8.Zero;
+            return Program.Wallet.MakeTransaction(new InvocationTransaction
+            {
+                Version = tx.Version,
+                Script = tx.Script,
+                Gas = tx.Gas,
+                Attributes = tx.Attributes,
+                Inputs = tx.Inputs,
+                Outputs = tx.Outputs
+            }, fee: fee);
+        }
+
+        public bool SignAndSendTx(InvocationTransaction tx)
+        {
+            ContractParametersContext context;
+            try
+            {
+                context = new ContractParametersContext(tx);
+            }
+            catch (InvalidOperationException ex)
+            {
+                Console.WriteLine(ex);
+                throw;
+            }
+            Program.Wallet.Sign(context);
+            string msg;
+            if (context.Completed)
+            {
+                context.Verifiable.Scripts = context.GetScripts();
+                Program.Wallet.ApplyTransaction(tx);
+                LocalNode.Relay(tx);
+
+                msg = $"Signed and relayed transaction with hash={tx.Hash}"; 
+                Console.WriteLine(msg);
+                return true;
+            }
+
+            msg = $"Failed sending transaction with hash={tx.Hash}";
+            Console.WriteLine(msg);
             return true;
         }
 
@@ -473,6 +574,8 @@ namespace Neo.Shell
                 "\timport multisigaddress m pubkeys...\n" +
                 "\tsend <id|alias> <address> <value>|all [fee=0]\n" +
                 "\tsign <jsonObjectToSign>\n" +
+                "Contract Commands:\n" +
+                "\tcontract deploy <avmFilePath> <paramTypes> <returnTypeHexString> <hasStorage (true|false)> <hasDynamicInvoke (true|false)> <contractName> <contractVersion> <contractAuthor> <contractEmail> <contractDescription>\n" +
                 "Node Commands:\n" +
                 "\tshow state\n" +
                 "\tshow node\n" +
@@ -542,6 +645,7 @@ namespace Neo.Shell
             try
             {
                 prikey = Wallet.GetPrivateKeyFromWIF(args[2]);
+                Console.WriteLine($"Got privkey: ${prikey}");
             }
             catch (FormatException) { }
             if (prikey == null)
@@ -562,6 +666,7 @@ namespace Neo.Shell
             }
             else
             {
+                Console.WriteLine($"Create account");
                 WalletAccount account = Program.Wallet.CreateAccount(prikey);
                 Array.Clear(prikey, 0, prikey.Length);
                 Console.WriteLine($"address: {account.Address}");

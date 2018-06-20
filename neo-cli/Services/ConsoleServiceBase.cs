@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Security;
 using System.Text;
@@ -121,6 +122,55 @@ namespace Neo.Services
             Console.WriteLine($"{ServiceName} Version: {ver}");
             Console.WriteLine();
 
+            // Simple handling of quoted or non quoted arguments.
+            string[] SplitArgStrings(string line)
+            {
+                bool inQuote = false;
+                List<string> outputArgs = new List<String>(); 
+                StringBuilder builder = new StringBuilder();
+
+                void AddArgFromBuilder()
+                {
+                    string arg = builder.ToString();
+                    if (arg.Length > 0)
+                    {
+                        outputArgs.Add(arg);
+                        builder.Clear();
+                    }
+                }
+                
+                for (int index = 0; index < line.Length; index++)
+                {
+                    char c = line[index];
+                    if (c == '\\')
+                    {
+                        if (++index >= line.Length)
+                        {
+                            break;
+                        }
+                        
+                        builder.Append(line[index]);
+                        continue;
+                    }
+
+                    if (!inQuote && c == ' ')
+                    {
+                        AddArgFromBuilder();
+                        continue;
+                    }
+                    if (c == '"')
+                    {
+                        inQuote = !inQuote;
+                        continue;
+                    }
+
+                    builder.Append(c);
+                }
+                AddArgFromBuilder();
+
+                return outputArgs.ToArray();
+            }
+            
             while (running)
             {
                 if (ShowPrompt)
@@ -133,7 +183,7 @@ namespace Neo.Services
                 string line = Console.ReadLine().Trim();
                 Console.ForegroundColor = ConsoleColor.White;
 
-                string[] args = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                string[] args = SplitArgStrings(line);
                 if (args.Length == 0)
                     continue;
                 try
