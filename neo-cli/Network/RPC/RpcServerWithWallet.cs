@@ -1,10 +1,12 @@
 ﻿using Neo.Core;
 using Neo.Implementations.Wallets.NEP6;
 using Neo.IO;
+using Neo.Shell;
 using Neo.IO.Json;
 using Neo.SmartContract;
 using Neo.Wallets;
 using System.Collections.Generic;
+using System;
 using System.IO;
 using System.Linq;
 
@@ -232,6 +234,90 @@ namespace Neo.Network.RPC
                         result["tx"] = tx?.ToArray().ToHexString();
                     }
                     return result;
+                case "getunclaimedgas":
+                     if (Program.Wallet == null)
+                         throw new RpcException(-400, "Access denied.");
+                     else
+                     {
+                         JObject json = new JObject();
+                         uint height = Blockchain.Default.Height + 1;
+                         Fixed8 unavailable;
+                         try
+                         {
+                             unavailable = Blockchain.CalculateBonus(Program.Wallet.FindUnspentCoins().Where(p => p.Output.AssetId.Equals(Blockchain.GoverningToken.Hash)).Select(p => p.Reference), height);
+                         }
+                         catch (Exception)
+                         {
+                             unavailable = Fixed8.Zero;
+                         }
+                         json["unavailable"] = unavailable.ToString();
+                         Fixed8 available = Blockchain.CalculateBonus(Program.Wallet.GetUnclaimedCoins().Select(p => p.Reference));
+                         json["available"] = available.ToString();
+                         return json;
+                     }
+                case "claimgas":
+                    if (Program.Wallet == null)
+                        throw new RpcException(-400, "Access denied.");
+                    else
+                    {
+                        Fixed8 availableBonus = Blockchain.CalculateBonus(Program.Wallet.GetUnclaimedCoins().Select(p => p.Reference));
+                        if (availableBonus == Fixed8.Zero)
+                        {
+                            // no gas to claim
+                            return null;
+                        }
+
+                        CoinReference[] claims = Program.Wallet.GetUnclaimedCoins().Select(p => p.Reference).ToArray();
+                        if (claims.Length == 0) return null;
+
+                        ClaimTransaction tx = new ClaimTransaction
+                        {
+                            Claims = claims,
+                            Attributes = new TransactionAttribute[0],
+                            Inputs = new CoinReference[0],
+                            Outputs = new[]
+                            {
+                                new TransactionOutput
+                                {
+                                    AssetId = Blockchain.UtilityToken.Hash,
+                                    Value = Blockchain.CalculateBonus(claims),
+                                    ScriptHash = Program.Wallet.GetChangeAddress()
+                                }
+                            }
+
+                        };
+
+                        ContractParametersContext context;
+                        try
+                        {
+                            context = new ContractParametersContext(tx);
+                        }
+                        catch (InvalidOperationException)
+                        {
+                            // unsynchronized block
+                            return null;
+                        }
+                        Program.Wallet.Sign(context);
+                        if (context.Completed)
+                        {
+                            context.Verifiable.Scripts = context.GetScripts();
+                            Program.Wallet.ApplyTransaction(tx);
+                            bool relay_result = LocalNode.Relay(tx);
+
+                            if (relay_result)
+                            {
+                                return tx.ToJson();
+                            }
+                            else
+                            {
+                                throw new RpcException(-401, "Could not relay transaction");
+                            }
+                        }
+                        else
+                        {
+                            return context.ToJson();
+                        }
+                    }
                 default:
                     return base.Process(method, _params);
             }
