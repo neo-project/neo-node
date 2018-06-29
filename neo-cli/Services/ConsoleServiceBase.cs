@@ -130,10 +130,12 @@ namespace Neo.Services
                 }
 
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                string line = Console.ReadLine().Trim();
-                Console.ForegroundColor = ConsoleColor.White;
+                string line = Console.ReadLine();
+                if (line == null)
+                    break;
 
-                string[] args = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                Console.ForegroundColor = ConsoleColor.White;
+                string[] args = line.Trim().Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 if (args.Length == 0)
                     continue;
                 try
