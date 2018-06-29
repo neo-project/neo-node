@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
-using Neo.Network;
+using Neo.Network.P2P;
 
 namespace Neo
 {
@@ -30,12 +30,10 @@ namespace Neo
     internal class PathsSettings
     {
         public string Chain { get; }
-        public string ApplicationLogs { get; }
 
         public PathsSettings(IConfigurationSection section)
         {
             this.Chain = string.Format(section.GetSection("Chain").Value, Message.Magic.ToString("X8"));
-            this.ApplicationLogs = string.Format(section.GetSection("ApplicationLogs").Value, Message.Magic.ToString("X8"));
         }
     }
 

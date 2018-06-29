@@ -2,7 +2,6 @@
 using System.Reflection;
 using System.Security;
 using System.Text;
-using Neo.Shell;
 
 namespace Neo.Services
 {

@@ -1,5 +1,6 @@
-using Neo.Core;
-using Neo.Network;
+using Akka.Actor;
+using Neo.Ledger;
+using Neo.Network.P2P.Payloads;
 using Neo.SmartContract;
 using Neo.Wallets;
 using System;
@@ -11,22 +12,22 @@ namespace Neo.Shell
     public class Coins
     {
         private Wallet current_wallet;
-        private LocalNode local_node;
+        private NeoSystem system;
 
-        public Coins(Wallet wallet, LocalNode node)
+        public Coins(Wallet wallet, NeoSystem system)
         {
-            current_wallet = wallet;
-            local_node = node;
+            this.current_wallet = wallet;
+            this.system = system;
         }
 
         public Fixed8 UnavailableBonus()
         {
-            uint height = Blockchain.Default.Height + 1;
+            uint height = Blockchain.Singleton.Snapshot.Height + 1;
             Fixed8 unavailable;
 
             try
             {
-                unavailable = Blockchain.CalculateBonus(current_wallet.FindUnspentCoins().Where(p => p.Output.AssetId.Equals(Blockchain.GoverningToken.Hash)).Select(p => p.Reference), height);
+                unavailable = Blockchain.Singleton.Snapshot.CalculateBonus(current_wallet.FindUnspentCoins().Where(p => p.Output.AssetId.Equals(Blockchain.GoverningToken.Hash)).Select(p => p.Reference), height);
             }
             catch (Exception)
             {
@@ -39,7 +40,7 @@ namespace Neo.Shell
 
         public Fixed8 AvailableBonus()
         {
-            return Blockchain.CalculateBonus(current_wallet.GetUnclaimedCoins().Select(p => p.Reference));
+            return Blockchain.Singleton.Snapshot.CalculateBonus(current_wallet.GetUnclaimedCoins().Select(p => p.Reference));
         }
 
 
@@ -65,7 +66,7 @@ namespace Neo.Shell
                     new TransactionOutput
                     {
                         AssetId = Blockchain.UtilityToken.Hash,
-                        Value = Blockchain.CalculateBonus(claims),
+                        Value = Blockchain.Singleton.Snapshot.CalculateBonus(claims),
                         ScriptHash = current_wallet.GetChangeAddress()
                     }
                 }
@@ -100,10 +101,10 @@ namespace Neo.Shell
 
             if (context.Completed)
             {
-                context.Verifiable.Scripts = context.GetScripts();
+                context.Verifiable.Witnesses = context.GetWitnesses();
                 current_wallet.ApplyTransaction(tx);
 
-                bool relay_result = local_node.Relay(tx);
+                bool relay_result = system.Blockchain.Ask<Blockchain.RelayResult>(new Blockchain.NewTransaction { Transaction = tx }).Result.Reason == RelayResultReason.Succeed;
 
                 if (relay_result)
                 {
