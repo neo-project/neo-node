@@ -3,6 +3,7 @@ using Neo.IO;
 using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
+using Neo.Persistence;
 using Neo.Persistence.LevelDB;
 using Neo.Services;
 using Neo.SmartContract;
@@ -41,11 +42,11 @@ namespace Neo.Shell
                 uint start = read_start ? r.ReadUInt32() : 0;
                 uint count = r.ReadUInt32();
                 uint end = start + count - 1;
-                if (end <= Blockchain.Singleton.Snapshot.Height) yield break;
+                if (end <= Blockchain.Singleton.Height) yield break;
                 for (uint height = start; height <= end; height++)
                 {
                     byte[] array = r.ReadBytes(r.ReadInt32());
-                    if (height > Blockchain.Singleton.Snapshot.Height)
+                    if (height > Blockchain.Singleton.Height)
                     {
                         Block block = array.AsSerializable<Block>();
                         yield return block;
@@ -80,7 +81,7 @@ namespace Neo.Shell
             }).OrderBy(p => p.Start);
             foreach (var path in paths)
             {
-                if (path.Start > Blockchain.Singleton.Snapshot.Height + 1) break;
+                if (path.Start > Blockchain.Singleton.Height + 1) break;
                 if (path.IsCompressed)
                     using (FileStream fs = new FileStream(path.FileName, FileMode.Open, FileAccess.Read, FileShare.None))
                     using (ZipArchive zip = new ZipArchive(fs, ZipArchiveMode.Read))
@@ -157,7 +158,7 @@ namespace Neo.Shell
                     if (args[2].Length == 64 || args[2].Length == 66)
                         payload = Blockchain.Singleton.GetBlock(UInt256.Parse(args[2]));
                     else
-                        payload = Blockchain.Singleton.Snapshot.GetBlock(uint.Parse(args[2]));
+                        payload = Blockchain.Singleton.Store.GetBlock(uint.Parse(args[2]));
                     break;
                 case "getblocks":
                 case "getheaders":
@@ -184,10 +185,7 @@ namespace Neo.Shell
                     Console.WriteLine($"Command \"{command}\" is not supported.");
                     return true;
             }
-            system.LocalNode.Tell(new LocalNode.Broadcast
-            {
-                Message = Message.Create(command, payload)
-            });
+            system.LocalNode.Tell(Message.Create(command, payload));
             return true;
         }
 
@@ -380,10 +378,10 @@ namespace Neo.Shell
             }
             if (args.Length >= 3 && uint.TryParse(args[2], out uint start))
             {
-                if (start > Blockchain.Singleton.Snapshot.Height)
+                if (start > Blockchain.Singleton.Height)
                     return true;
                 uint count = args.Length >= 4 ? uint.Parse(args[3]) : uint.MaxValue;
-                count = Math.Min(count, Blockchain.Singleton.Snapshot.Height - start + 1);
+                count = Math.Min(count, Blockchain.Singleton.Height - start + 1);
                 uint end = start + count - 1;
                 string path = $"chain.{start}.acc";
                 using (FileStream fs = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
@@ -403,21 +401,22 @@ namespace Neo.Shell
                     if (start <= end)
                         fs.Write(BitConverter.GetBytes(count), 0, sizeof(uint));
                     fs.Seek(0, SeekOrigin.End);
-                    for (uint i = start; i <= end; i++)
-                    {
-                        Block block = Blockchain.Singleton.Snapshot.GetBlock(i);
-                        byte[] array = block.ToArray();
-                        fs.Write(BitConverter.GetBytes(array.Length), 0, sizeof(int));
-                        fs.Write(array, 0, array.Length);
-                        Console.SetCursorPosition(0, Console.CursorTop);
-                        Console.Write($"[{i}/{end}]");
-                    }
+                    using (Snapshot snapshot = Blockchain.Singleton.GetSnapshot())
+                        for (uint i = start; i <= end; i++)
+                        {
+                            Block block = snapshot.GetBlock(i);
+                            byte[] array = block.ToArray();
+                            fs.Write(BitConverter.GetBytes(array.Length), 0, sizeof(int));
+                            fs.Write(array, 0, array.Length);
+                            Console.SetCursorPosition(0, Console.CursorTop);
+                            Console.Write($"[{i}/{end}]");
+                        }
                 }
             }
             else
             {
                 start = 0;
-                uint end = Blockchain.Singleton.Snapshot.Height;
+                uint end = Blockchain.Singleton.Height;
                 uint count = end - start + 1;
                 string path = args.Length >= 3 ? args[2] : "chain.acc";
                 using (FileStream fs = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
@@ -432,15 +431,16 @@ namespace Neo.Shell
                     if (start <= end)
                         fs.Write(BitConverter.GetBytes(count), 0, sizeof(uint));
                     fs.Seek(0, SeekOrigin.End);
-                    for (uint i = start; i <= end; i++)
-                    {
-                        Block block = Blockchain.Singleton.Snapshot.GetBlock(i);
-                        byte[] array = block.ToArray();
-                        fs.Write(BitConverter.GetBytes(array.Length), 0, sizeof(int));
-                        fs.Write(array, 0, array.Length);
-                        Console.SetCursorPosition(0, Console.CursorTop);
-                        Console.Write($"[{i}/{end}]");
-                    }
+                    using (Snapshot snapshot = Blockchain.Singleton.GetSnapshot())
+                        for (uint i = start; i <= end; i++)
+                        {
+                            Block block = snapshot.GetBlock(i);
+                            byte[] array = block.ToArray();
+                            fs.Write(BitConverter.GetBytes(array.Length), 0, sizeof(int));
+                            fs.Write(array, 0, array.Length);
+                            Console.SetCursorPosition(0, Console.CursorTop);
+                            Console.Write($"[{i}/{end}]");
+                        }
                 }
             }
             Console.WriteLine();
@@ -691,7 +691,7 @@ namespace Neo.Shell
             if (NoWallet()) return true;
             foreach (var item in Program.Wallet.GetCoins().Where(p => !p.State.HasFlag(CoinState.Spent)).GroupBy(p => p.Output.AssetId, (k, g) => new
             {
-                Asset = Blockchain.Singleton.Snapshot.Assets.TryGet(k),
+                Asset = Blockchain.Singleton.Store.GetAssets().TryGet(k),
                 Balance = g.Sum(p => p.Output.Value),
                 Confirmed = g.Where(p => p.State.HasFlag(CoinState.Confirmed)).Sum(p => p.Output.Value)
             }))
@@ -901,7 +901,7 @@ namespace Neo.Shell
                     if (Program.Wallet != null)
                         wh = (Program.Wallet.WalletHeight > 0) ? Program.Wallet.WalletHeight - 1 : 0;
                     Console.Clear();
-                    Console.WriteLine($"block: {wh}/{Blockchain.Singleton.Snapshot.Height}/{Blockchain.Singleton.Snapshot.HeaderHeight}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}");
+                    Console.WriteLine($"block: {wh}/{Blockchain.Singleton.Height}/{Blockchain.Singleton.HeaderHeight}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}");
                     foreach (RemoteNode node in LocalNode.Singleton.GetRemoteNodes().Take(Console.WindowHeight - 2))
                         Console.WriteLine($"  ip: {node.Remote.Address}\tport: {node.Remote.Port}\tlisten: {node.ListenerPort}\theight: {node.Version?.StartHeight}");
                     Thread.Sleep(500);
