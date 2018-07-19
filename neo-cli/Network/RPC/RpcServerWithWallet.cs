@@ -48,6 +48,14 @@ namespace Neo.Network.RPC
                         }
                         return json;
                     }
+                case "getwalletheight":
+                    if (Program.Wallet == null)
+                        throw new RpcException(-400, "Access denied.");
+                    else
+                    {
+                        uint wh = (Program.Wallet.WalletHeight > 0) ? Program.Wallet.WalletHeight - 1 : 0;
+                        return wh.ToString();
+                    }
                 case "listaddress":
                     if (Program.Wallet == null)
                         throw new RpcException(-400, "Access denied.");
