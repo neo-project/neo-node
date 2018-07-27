@@ -980,7 +980,10 @@ namespace Neo.Shell
                 }
                 if (useRPC)
                 {
-                    system.StartRpc(Settings.Default.RPC.Port, Settings.Default.RPC.SslCert, Settings.Default.RPC.SslCertPassword);
+                    system.StartRpc(Settings.Default.RPC.Port,
+                        wallet: Program.Wallet,
+                        sslCert: Settings.Default.RPC.SslCert,
+                        password: Settings.Default.RPC.SslCertPassword);
                 }
             });
         }
