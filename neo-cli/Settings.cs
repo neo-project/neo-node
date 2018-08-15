@@ -72,12 +72,12 @@ namespace Neo
 
         public UnlockWalletSettings(IConfigurationSection section)
         {
-            if (section.Value != null)
+            if (section.Exists())
             {
-                this.Path = section.GetSection("WalletPath").Value;
-                this.Password = section.GetSection("WalletPassword").Value;
+                this.Path = section.GetSection("Path").Value;
+                this.Password = section.GetSection("Password").Value;
                 this.StartConsensus = bool.Parse(section.GetSection("StartConsensus").Value);
-                this.IsActive = bool.Parse(section.GetSection("IsActive").Value);
+                this.IsActive = bool.Parse(section.GetSection("IsActive").Value);     
             }
         }
     }
