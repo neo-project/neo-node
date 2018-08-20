@@ -52,10 +52,7 @@ namespace Neo.Network.RPC
                     if (Program.Wallet == null)
                         throw new RpcException(-400, "Access denied.");
                     else
-                    {
-                        uint wh = (Program.Wallet.WalletHeight > 0) ? Program.Wallet.WalletHeight - 1 : 0;
-                        return wh.ToString();
-                    }
+                        return (Program.Wallet.WalletHeight > 0) ? Program.Wallet.WalletHeight - 1 : 0;
                 case "listaddress":
                     if (Program.Wallet == null)
                         throw new RpcException(-400, "Access denied.");
