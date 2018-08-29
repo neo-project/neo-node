@@ -14,7 +14,7 @@ namespace Neo.Services
 
         protected bool ShowPrompt { get; set; } = true;
 
-		protected virtual bool OnCommand(string[] args)
+        protected virtual bool OnCommand(string[] args)
         {
             switch (args[0].ToLower())
             {
@@ -130,12 +130,10 @@ namespace Neo.Services
                 }
 
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                string line = Console.ReadLine();
-                if (line == null)
-                    break;
-
+                string line = Console.ReadLine()?.Trim();
+                if (line == null) break;
                 Console.ForegroundColor = ConsoleColor.White;
-                string[] args = line.Trim().Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                string[] args = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 if (args.Length == 0)
                     continue;
                 try
