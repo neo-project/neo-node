@@ -5,6 +5,7 @@ using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.Persistence.LevelDB;
+using Neo.Plugins;
 using Neo.Services;
 using Neo.SmartContract;
 using Neo.Wallets;
@@ -42,6 +43,10 @@ namespace Neo.Shell
                 uint start = read_start ? r.ReadUInt32() : 0;
                 uint count = r.ReadUInt32();
                 uint end = start + count - 1;
+
+                foreach (ILoadingPlugin plugin in Plugin.LoadingPlugins)
+			plugin.UpdateMaxHeight(ref end);
+
                 if (end <= Blockchain.Singleton.Height) yield break;
                 for (uint height = start; height <= end; height++)
                 {
