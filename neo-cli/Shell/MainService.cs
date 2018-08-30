@@ -59,14 +59,14 @@ namespace Neo.Shell
         {
             const string path_acc = "chain.acc";
             if (File.Exists(path_acc))
-                using (FileStream fs = new FileStream(path_acc, FileMode.Open, FileAccess.Read, FileShare.None))
+                using (FileStream fs = new FileStream(path_acc, FileMode.Open, FileAccess.Read, FileShare.Read))
                     blockchain.Ask<Blockchain.ImportCompleted>(new Blockchain.Import
                     {
                         Blocks = GetBlocks(fs)
                     }).Wait();
             const string path_acc_zip = path_acc + ".zip";
             if (File.Exists(path_acc_zip))
-                using (FileStream fs = new FileStream(path_acc_zip, FileMode.Open, FileAccess.Read, FileShare.None))
+                using (FileStream fs = new FileStream(path_acc_zip, FileMode.Open, FileAccess.Read, FileShare.Read))
                 using (ZipArchive zip = new ZipArchive(fs, ZipArchiveMode.Read))
                 using (Stream zs = zip.GetEntry(path_acc).Open())
                     blockchain.Ask<Blockchain.ImportCompleted>(new Blockchain.Import
@@ -83,7 +83,7 @@ namespace Neo.Shell
             {
                 if (path.Start > Blockchain.Singleton.Height + 1) break;
                 if (path.IsCompressed)
-                    using (FileStream fs = new FileStream(path.FileName, FileMode.Open, FileAccess.Read, FileShare.None))
+                    using (FileStream fs = new FileStream(path.FileName, FileMode.Open, FileAccess.Read, FileShare.Read))
                     using (ZipArchive zip = new ZipArchive(fs, ZipArchiveMode.Read))
                     using (Stream zs = zip.GetEntry(Path.GetFileNameWithoutExtension(path.FileName)).Open())
                         blockchain.Ask<Blockchain.ImportCompleted>(new Blockchain.Import
@@ -91,7 +91,7 @@ namespace Neo.Shell
                             Blocks = GetBlocks(zs, true)
                         }).Wait();
                 else
-                    using (FileStream fs = new FileStream(path.FileName, FileMode.Open, FileAccess.Read, FileShare.None))
+                    using (FileStream fs = new FileStream(path.FileName, FileMode.Open, FileAccess.Read, FileShare.Read))
                         blockchain.Ask<Blockchain.ImportCompleted>(new Blockchain.Import
                         {
                             Blocks = GetBlocks(fs, true)
