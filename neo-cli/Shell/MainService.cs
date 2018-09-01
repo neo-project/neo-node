@@ -5,6 +5,7 @@ using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.Persistence.LevelDB;
+using Neo.Plugins;
 using Neo.Services;
 using Neo.SmartContract;
 using Neo.Wallets;
@@ -108,6 +109,7 @@ namespace Neo.Shell
 
         protected override bool OnCommand(string[] args)
         {
+            if (Plugin.SendMessage(args)) return true;
             switch (args[0].ToLower())
             {
                 case "broadcast":
