@@ -30,10 +30,12 @@ namespace Neo
     internal class PathsSettings
     {
         public string Chain { get; }
+        public string Index { get; }
 
         public PathsSettings(IConfigurationSection section)
         {
             this.Chain = string.Format(section.GetSection("Chain").Value, Message.Magic.ToString("X8"));
+            this.Index = string.Format(section.GetSection("Index").Value, Message.Magic.ToString("X8"));
         }
     }
 
@@ -77,7 +79,7 @@ namespace Neo
                 this.Path = section.GetSection("Path").Value;
                 this.Password = section.GetSection("Password").Value;
                 this.StartConsensus = bool.Parse(section.GetSection("StartConsensus").Value);
-                this.IsActive = bool.Parse(section.GetSection("IsActive").Value);     
+                this.IsActive = bool.Parse(section.GetSection("IsActive").Value);
             }
         }
     }

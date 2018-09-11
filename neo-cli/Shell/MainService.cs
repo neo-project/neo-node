@@ -30,9 +30,17 @@ namespace Neo.Shell
 
         private LevelDBStore store;
         private NeoSystem system;
+        private WalletIndexer indexer;
 
         protected override string Prompt => "neo";
         public override string ServiceName => "NEO-CLI";
+
+        private WalletIndexer GetIndexer()
+        {
+            if (indexer is null)
+                indexer = new WalletIndexer(Settings.Default.Paths.Index);
+            return indexer;
+        }
 
         private static bool NoWallet()
         {
@@ -267,7 +275,7 @@ namespace Neo.Shell
             {
                 case ".db3":
                     {
-                        Program.Wallet = UserWallet.Create(path, password);
+                        Program.Wallet = UserWallet.Create(GetIndexer(), path, password);
                         WalletAccount account = Program.Wallet.CreateAccount();
                         Console.WriteLine($"address: {account.Address}");
                         Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
@@ -275,7 +283,7 @@ namespace Neo.Shell
                     break;
                 case ".json":
                     {
-                        NEP6Wallet wallet = new NEP6Wallet(path);
+                        NEP6Wallet wallet = new NEP6Wallet(GetIndexer(), path);
                         wallet.Unlock(password);
                         WalletAccount account = wallet.CreateAccount();
                         wallet.Save();
@@ -593,7 +601,7 @@ namespace Neo.Shell
             }
             try
             {
-                Program.Wallet = OpenWallet(path, password);
+                Program.Wallet = OpenWallet(GetIndexer(), path, password);
             }
             catch (CryptographicException)
             {
@@ -615,7 +623,7 @@ namespace Neo.Shell
 
         private bool OnRebuildIndexCommand(string[] args)
         {
-            WalletIndexer.RebuildIndex();
+            GetIndexer().RebuildIndex();
             return true;
         }
 
@@ -817,7 +825,7 @@ namespace Neo.Shell
             {
                 try
                 {
-                    Program.Wallet = OpenWallet(Settings.Default.UnlockWallet.Path, Settings.Default.UnlockWallet.Password);
+                    Program.Wallet = OpenWallet(GetIndexer(), Settings.Default.UnlockWallet.Path, Settings.Default.UnlockWallet.Password);
                 }
                 catch (CryptographicException)
                 {
@@ -898,20 +906,20 @@ namespace Neo.Shell
                 return true;
             }
             string path_new = Path.ChangeExtension(path, ".json");
-            NEP6Wallet.Migrate(path_new, path, password).Save();
+            NEP6Wallet.Migrate(GetIndexer(), path_new, path, password).Save();
             Console.WriteLine($"Wallet file upgrade complete. New wallet file has been auto-saved at: {path_new}");
             return true;
         }
 
-        private static Wallet OpenWallet(string path, string password)
+        private static Wallet OpenWallet(WalletIndexer indexer, string path, string password)
         {
             if (Path.GetExtension(path) == ".db3")
             {
-                return UserWallet.Open(path, password);
+                return UserWallet.Open(indexer, path, password);
             }
             else
             {
-                NEP6Wallet nep6wallet = new NEP6Wallet(path);
+                NEP6Wallet nep6wallet = new NEP6Wallet(indexer, path);
                 nep6wallet.Unlock(password);
                 return nep6wallet;
             }
