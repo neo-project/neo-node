@@ -14,11 +14,9 @@ using Neo.Wallets.SQLite;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using ECCurve = Neo.Cryptography.ECC.ECCurve;
@@ -37,75 +35,11 @@ namespace Neo.Shell
         protected override string Prompt => "neo";
         public override string ServiceName => "NEO-CLI";
 
-        private static IEnumerable<Block> GetBlocks(Stream stream, bool read_start = false)
-        {
-            using (BinaryReader r = new BinaryReader(stream))
-            {
-                uint start = read_start ? r.ReadUInt32() : 0;
-                uint count = r.ReadUInt32();
-                uint end = start + count - 1;
-                if (end <= Blockchain.Singleton.Height) yield break;
-                for (uint height = start; height <= end; height++)
-                {
-                    byte[] array = r.ReadBytes(r.ReadInt32());
-                    if (height > Blockchain.Singleton.Height)
-                    {
-                        Block block = array.AsSerializable<Block>();
-                        yield return block;
-                    }
-                }
-            }
-        }
-
         private WalletIndexer GetIndexer()
         {
             if (indexer is null)
                 indexer = new WalletIndexer(Settings.Default.Paths.Index);
             return indexer;
-        }
-
-        private static void ImportBlocks(IActorRef blockchain)
-        {
-            const string path_acc = "chain.acc";
-            if (File.Exists(path_acc))
-                using (FileStream fs = new FileStream(path_acc, FileMode.Open, FileAccess.Read, FileShare.Read))
-                    blockchain.Ask<Blockchain.ImportCompleted>(new Blockchain.Import
-                    {
-                        Blocks = GetBlocks(fs)
-                    }).Wait();
-            const string path_acc_zip = path_acc + ".zip";
-            if (File.Exists(path_acc_zip))
-                using (FileStream fs = new FileStream(path_acc_zip, FileMode.Open, FileAccess.Read, FileShare.Read))
-                using (ZipArchive zip = new ZipArchive(fs, ZipArchiveMode.Read))
-                using (Stream zs = zip.GetEntry(path_acc).Open())
-                    blockchain.Ask<Blockchain.ImportCompleted>(new Blockchain.Import
-                    {
-                        Blocks = GetBlocks(zs)
-                    }).Wait();
-            var paths = Directory.EnumerateFiles(".", "chain.*.acc", SearchOption.TopDirectoryOnly).Concat(Directory.EnumerateFiles(".", "chain.*.acc.zip", SearchOption.TopDirectoryOnly)).Select(p => new
-            {
-                FileName = Path.GetFileName(p),
-                Start = uint.Parse(Regex.Match(p, @"\d+").Value),
-                IsCompressed = p.EndsWith(".zip")
-            }).OrderBy(p => p.Start);
-            foreach (var path in paths)
-            {
-                if (path.Start > Blockchain.Singleton.Height + 1) break;
-                if (path.IsCompressed)
-                    using (FileStream fs = new FileStream(path.FileName, FileMode.Open, FileAccess.Read, FileShare.Read))
-                    using (ZipArchive zip = new ZipArchive(fs, ZipArchiveMode.Read))
-                    using (Stream zs = zip.GetEntry(Path.GetFileNameWithoutExtension(path.FileName)).Open())
-                        blockchain.Ask<Blockchain.ImportCompleted>(new Blockchain.Import
-                        {
-                            Blocks = GetBlocks(zs, true)
-                        }).Wait();
-                else
-                    using (FileStream fs = new FileStream(path.FileName, FileMode.Open, FileAccess.Read, FileShare.Read))
-                        blockchain.Ask<Blockchain.ImportCompleted>(new Blockchain.Import
-                        {
-                            Blocks = GetBlocks(fs, true)
-                        }).Wait();
-            }
         }
 
         private static bool NoWallet()
@@ -369,92 +303,11 @@ namespace Neo.Shell
         {
             switch (args[1].ToLower())
             {
-                case "block":
-                case "blocks":
-                    return OnExportBlocksCommand(args);
                 case "key":
                     return OnExportKeyCommand(args);
                 default:
                     return base.OnCommand(args);
             }
-        }
-
-        private bool OnExportBlocksCommand(string[] args)
-        {
-            if (args.Length > 4)
-            {
-                Console.WriteLine("error");
-                return true;
-            }
-            if (args.Length >= 3 && uint.TryParse(args[2], out uint start))
-            {
-                if (start > Blockchain.Singleton.Height)
-                    return true;
-                uint count = args.Length >= 4 ? uint.Parse(args[3]) : uint.MaxValue;
-                count = Math.Min(count, Blockchain.Singleton.Height - start + 1);
-                uint end = start + count - 1;
-                string path = $"chain.{start}.acc";
-                using (FileStream fs = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
-                {
-                    if (fs.Length > 0)
-                    {
-                        fs.Seek(sizeof(uint), SeekOrigin.Begin);
-                        byte[] buffer = new byte[sizeof(uint)];
-                        fs.Read(buffer, 0, buffer.Length);
-                        start += BitConverter.ToUInt32(buffer, 0);
-                        fs.Seek(sizeof(uint), SeekOrigin.Begin);
-                    }
-                    else
-                    {
-                        fs.Write(BitConverter.GetBytes(start), 0, sizeof(uint));
-                    }
-                    if (start <= end)
-                        fs.Write(BitConverter.GetBytes(count), 0, sizeof(uint));
-                    fs.Seek(0, SeekOrigin.End);
-                    using (Snapshot snapshot = Blockchain.Singleton.GetSnapshot())
-                        for (uint i = start; i <= end; i++)
-                        {
-                            Block block = snapshot.GetBlock(i);
-                            byte[] array = block.ToArray();
-                            fs.Write(BitConverter.GetBytes(array.Length), 0, sizeof(int));
-                            fs.Write(array, 0, array.Length);
-                            Console.SetCursorPosition(0, Console.CursorTop);
-                            Console.Write($"[{i}/{end}]");
-                        }
-                }
-            }
-            else
-            {
-                start = 0;
-                uint end = Blockchain.Singleton.Height;
-                uint count = end - start + 1;
-                string path = args.Length >= 3 ? args[2] : "chain.acc";
-                using (FileStream fs = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
-                {
-                    if (fs.Length > 0)
-                    {
-                        byte[] buffer = new byte[sizeof(uint)];
-                        fs.Read(buffer, 0, buffer.Length);
-                        start = BitConverter.ToUInt32(buffer, 0);
-                        fs.Seek(0, SeekOrigin.Begin);
-                    }
-                    if (start <= end)
-                        fs.Write(BitConverter.GetBytes(count), 0, sizeof(uint));
-                    fs.Seek(0, SeekOrigin.End);
-                    using (Snapshot snapshot = Blockchain.Singleton.GetSnapshot())
-                        for (uint i = start; i <= end; i++)
-                        {
-                            Block block = snapshot.GetBlock(i);
-                            byte[] array = block.ToArray();
-                            fs.Write(BitConverter.GetBytes(array.Length), 0, sizeof(int));
-                            fs.Write(array, 0, array.Length);
-                            Console.SetCursorPosition(0, Console.CursorTop);
-                            Console.Write($"[{i}/{end}]");
-                        }
-                }
-            }
-            Console.WriteLine();
-            return true;
         }
 
         private bool OnExportKeyCommand(string[] args)
@@ -536,8 +389,6 @@ namespace Neo.Shell
                 "\tshow state\n" +
                 "\tshow node\n" +
                 "\tshow pool [verbose]\n" +
-                "\texport block[s] [path=chain.acc]\n" +
-                "\texport block[s] <start> [count]\n" +
                 "\trelay <jsonObjectToSign>\n" +
                 "Advanced Commands:\n" +
                 "\tstart consensus\n");
@@ -969,33 +820,29 @@ namespace Neo.Shell
                 }
             store = new LevelDBStore(Path.GetFullPath(Settings.Default.Paths.Chain));
             system = new NeoSystem(store);
-            Task.Run(() =>
+            system.StartNode(Settings.Default.P2P.Port, Settings.Default.P2P.WsPort);
+            if (Settings.Default.UnlockWallet.IsActive)
             {
-                ImportBlocks(system.Blockchain);
-                system.StartNode(Settings.Default.P2P.Port, Settings.Default.P2P.WsPort);
-                if (Settings.Default.UnlockWallet.IsActive)
+                try
                 {
-                    try
-                    {
-                        Program.Wallet = OpenWallet(GetIndexer(), Settings.Default.UnlockWallet.Path, Settings.Default.UnlockWallet.Password);
-                    }
-                    catch (CryptographicException)
-                    {
-                        Console.WriteLine($"failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
-                    }
-                    if (Settings.Default.UnlockWallet.StartConsensus && Program.Wallet != null)
-                    {
-                        OnStartConsensusCommand(null);
-                    }
+                    Program.Wallet = OpenWallet(GetIndexer(), Settings.Default.UnlockWallet.Path, Settings.Default.UnlockWallet.Password);
                 }
-                if (useRPC)
+                catch (CryptographicException)
                 {
-                    system.StartRpc(Settings.Default.RPC.Port,
-                        wallet: Program.Wallet,
-                        sslCert: Settings.Default.RPC.SslCert,
-                        password: Settings.Default.RPC.SslCertPassword);
+                    Console.WriteLine($"failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
                 }
-            });
+                if (Settings.Default.UnlockWallet.StartConsensus && Program.Wallet != null)
+                {
+                    OnStartConsensusCommand(null);
+                }
+            }
+            if (useRPC)
+            {
+                system.StartRpc(Settings.Default.RPC.Port,
+                    wallet: Program.Wallet,
+                    sslCert: Settings.Default.RPC.SslCert,
+                    password: Settings.Default.RPC.SslCertPassword);
+            }
         }
 
         private bool OnStartCommand(string[] args)
