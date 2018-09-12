@@ -13,19 +13,25 @@ namespace Neo
         {
             using (FileStream fs = new FileStream("error.log", FileMode.Create, FileAccess.Write, FileShare.None))
             using (StreamWriter w = new StreamWriter(fs))
-            {
-                PrintErrorLogs(w, (Exception)e.ExceptionObject);
-            }
+                if (e.ExceptionObject is Exception ex)
+                {
+                    PrintErrorLogs(w, ex);
+                }
+                else
+                {
+                    w.WriteLine(e.ExceptionObject.GetType());
+                    w.WriteLine(e.ExceptionObject);
+                }
         }
 
         static void Main(string[] args)
         {
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
-			var bufferSize = 1024 * 67 + 128;
-			Stream inputStream = Console.OpenStandardInput(bufferSize);
-			Console.SetIn(new StreamReader(inputStream, Console.InputEncoding, false, bufferSize));
-			var mainService = new MainService();
-			mainService.Run(args);
+            var bufferSize = 1024 * 67 + 128;
+            Stream inputStream = Console.OpenStandardInput(bufferSize);
+            Console.SetIn(new StreamReader(inputStream, Console.InputEncoding, false, bufferSize));
+            var mainService = new MainService();
+            mainService.Run(args);
         }
 
         private static void PrintErrorLogs(StreamWriter writer, Exception ex)
