@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
-using Neo.Network;
+using Neo.Network.P2P;
 
 namespace Neo
 {
@@ -30,12 +30,12 @@ namespace Neo
     internal class PathsSettings
     {
         public string Chain { get; }
-        public string ApplicationLogs { get; }
+        public string Index { get; }
 
         public PathsSettings(IConfigurationSection section)
         {
             this.Chain = string.Format(section.GetSection("Chain").Value, Message.Magic.ToString("X8"));
-            this.ApplicationLogs = string.Format(section.GetSection("ApplicationLogs").Value, Message.Magic.ToString("X8"));
+            this.Index = string.Format(section.GetSection("Index").Value, Message.Magic.ToString("X8"));
         }
     }
 
@@ -79,7 +79,7 @@ namespace Neo
                 this.Path = section.GetSection("Path").Value;
                 this.Password = section.GetSection("Password").Value;
                 this.StartConsensus = bool.Parse(section.GetSection("StartConsensus").Value);
-                this.IsActive = bool.Parse(section.GetSection("IsActive").Value);     
+                this.IsActive = bool.Parse(section.GetSection("IsActive").Value);
             }
         }
     }
