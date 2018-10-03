@@ -506,10 +506,13 @@ namespace Neo.Shell
             switch (args[1].ToLower())
             {
                 case "gas":
-                    ClaimTransaction tx = coins.Claim();
-                    if (tx != null)
+                    ClaimTransaction[] txs = coins.Claim();
+                    if (txs.Length > 0)
                     {
-                        Console.WriteLine($"Tranaction Suceeded: {tx.Hash}");
+                        foreach (ClaimTransaction tx in txs)
+                        {
+                            Console.WriteLine($"Tranaction Suceeded: {tx.Hash}");
+                        }
                     }
                     return true;
                 default:

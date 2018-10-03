@@ -14,6 +14,7 @@ namespace Neo.Shell
     {
         private Wallet current_wallet;
         private NeoSystem system;
+        public static int MAX_CLAIMS_AMOUNT = 50;
 
         public Coins(Wallet wallet, NeoSystem system)
         {
@@ -51,7 +52,7 @@ namespace Neo.Shell
         }
 
 
-        public ClaimTransaction Claim()
+        public ClaimTransaction[] Claim()
         {
 
             if (this.AvailableBonus() == Fixed8.Zero)
@@ -65,24 +66,37 @@ namespace Neo.Shell
 
             using (Snapshot snapshot = Blockchain.Singleton.GetSnapshot())
             {
-                ClaimTransaction tx = new ClaimTransaction
+                int claim_count = claims.Length / MAX_CLAIMS_AMOUNT + 1;
+                ClaimTransaction[] txs = new ClaimTransaction[claim_count];
+                if (claim_count > 1)
                 {
-                    Claims = claims,
-                    Attributes = new TransactionAttribute[0],
-                    Inputs = new CoinReference[0],
-                    Outputs = new[]
+                    Console.WriteLine($"total claims: {claims.Length}, processing(0/{claim_count})...");
+                }
+                for (int i = 0; i < claim_count; i++)
+                {
+                    if (i > 0)
                     {
-                        new TransactionOutput
-                        {
-                            AssetId = Blockchain.UtilityToken.Hash,
-                            Value = snapshot.CalculateBonus(claims),
-                            ScriptHash = current_wallet.GetChangeAddress()
-                        }
+                        Console.WriteLine($"{i * MAX_CLAIMS_AMOUNT} claims processed({i}/{claim_count})...");
                     }
+                    ClaimTransaction tx = new ClaimTransaction
+                    {
+                        Claims = claims.Skip(i * MAX_CLAIMS_AMOUNT).Take(MAX_CLAIMS_AMOUNT).ToArray(),
+                        Attributes = new TransactionAttribute[0],
+                        Inputs = new CoinReference[0],
+                        Outputs = new[]
+                        {
+                            new TransactionOutput
+                            {
+                                AssetId = Blockchain.UtilityToken.Hash,
+                                Value = snapshot.CalculateBonus(claims.Skip(i * MAX_CLAIMS_AMOUNT).Take(MAX_CLAIMS_AMOUNT)),
+                                ScriptHash = current_wallet.GetChangeAddress()
+                            }
+                        }
+                    };
+                    txs.SetValue((ClaimTransaction)SignTransaction(tx), i);
+                }
 
-                };
-
-                return (ClaimTransaction)SignTransaction(tx);
+                return txs;
             }
         }
 
