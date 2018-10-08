@@ -51,8 +51,43 @@ namespace Neo.Shell
             }
         }
 
+        public ClaimTransaction Claim()
+        {
 
-        public ClaimTransaction[] Claim()
+            if (this.AvailableBonus() == Fixed8.Zero)
+            {
+                Console.WriteLine($"no gas to claim");
+                return null;
+            }
+
+            CoinReference[] claims = current_wallet.GetUnclaimedCoins().Select(p => p.Reference).ToArray();
+            if (claims.Length == 0) return null;
+
+            using (Snapshot snapshot = Blockchain.Singleton.GetSnapshot())
+            {
+                ClaimTransaction tx = new ClaimTransaction
+                {
+                    Claims = claims,
+                    Attributes = new TransactionAttribute[0],
+                    Inputs = new CoinReference[0],
+                    Outputs = new[]
+                    {
+                        new TransactionOutput
+                        {
+                            AssetId = Blockchain.UtilityToken.Hash,
+                            Value = snapshot.CalculateBonus(claims),
+                            ScriptHash = current_wallet.GetChangeAddress()
+                        }
+                    }
+
+                };
+
+                return (ClaimTransaction)SignTransaction(tx);
+            }
+        }
+
+
+        public ClaimTransaction[] ClaimAll()
         {
 
             if (this.AvailableBonus() == Fixed8.Zero)

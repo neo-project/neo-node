@@ -506,15 +506,33 @@ namespace Neo.Shell
             switch (args[1].ToLower())
             {
                 case "gas":
-                    ClaimTransaction[] txs = coins.Claim();
-                    if (txs.Length > 0)
+                    if (args.Length > 2)
                     {
-                        foreach (ClaimTransaction tx in txs)
+                        switch (args[2].ToLower())
+                        {
+                            case "all":
+                                ClaimTransaction[] txs = coins.ClaimAll();
+                                if (txs.Length > 0)
+                                {
+                                    foreach (ClaimTransaction tx in txs)
+                                    {
+                                        Console.WriteLine($"Tranaction Suceeded: {tx.Hash}");
+                                    }
+                                }
+                                return true;
+                            default:
+                                return base.OnCommand(args);
+                        }
+                    }
+                    else
+                    {
+                        ClaimTransaction tx = coins.Claim();
+                        if (tx != null)
                         {
                             Console.WriteLine($"Tranaction Suceeded: {tx.Hash}");
                         }
+                        return true;
                     }
-                    return true;
                 default:
                     return base.OnCommand(args);
             }
