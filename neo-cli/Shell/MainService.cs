@@ -512,7 +512,7 @@ namespace Neo.Shell
                         {
                             case "all":
                                 ClaimTransaction[] txs = coins.ClaimAll();
-                                if (txs.Length > 0)
+                                if (txs != null && txs.Length > 0)
                                 {
                                     foreach (ClaimTransaction tx in txs)
                                     {
