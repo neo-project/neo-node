@@ -67,7 +67,7 @@ namespace Neo.Shell
             {
                 ClaimTransaction tx = new ClaimTransaction
                 {
-                    Claims = claims,
+                    Claims = claims.Take(MAX_CLAIMS_AMOUNT).ToArray(),
                     Attributes = new TransactionAttribute[0],
                     Inputs = new CoinReference[0],
                     Outputs = new[]
@@ -75,7 +75,7 @@ namespace Neo.Shell
                         new TransactionOutput
                         {
                             AssetId = Blockchain.UtilityToken.Hash,
-                            Value = snapshot.CalculateBonus(claims),
+                            Value = snapshot.CalculateBonus(claims.Take(MAX_CLAIMS_AMOUNT)),
                             ScriptHash = current_wallet.GetChangeAddress()
                         }
                     }
