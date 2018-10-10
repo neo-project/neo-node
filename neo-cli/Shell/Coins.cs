@@ -101,7 +101,7 @@ namespace Neo.Shell
 
             using (Snapshot snapshot = Blockchain.Singleton.GetSnapshot())
             {
-                int claim_count = claims.Length / MAX_CLAIMS_AMOUNT + 1;
+                int claim_count = (claims.Length - 1) / MAX_CLAIMS_AMOUNT + 1;
                 ClaimTransaction[] txs = new ClaimTransaction[claim_count];
                 if (claim_count > 1)
                 {
