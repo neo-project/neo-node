@@ -129,9 +129,14 @@ namespace Neo.Shell
                             }
                         }
                     };
+
                     if ((tx = (ClaimTransaction)SignTransaction(tx)) != null)
                     {
-                        txs.Append(tx);
+                        txs.Add(tx);
+                    }
+                    else
+                    {
+                        break;
                     }
                 }
 
