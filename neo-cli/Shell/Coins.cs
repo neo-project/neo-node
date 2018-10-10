@@ -5,6 +5,7 @@ using Neo.Persistence;
 using Neo.SmartContract;
 using Neo.Wallets;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Neo.Shell
@@ -102,7 +103,7 @@ namespace Neo.Shell
             using (Snapshot snapshot = Blockchain.Singleton.GetSnapshot())
             {
                 int claim_count = (claims.Length - 1) / MAX_CLAIMS_AMOUNT + 1;
-                ClaimTransaction[] txs = new ClaimTransaction[claim_count];
+                List<ClaimTransaction> txs = new List<ClaimTransaction>();
                 if (claim_count > 1)
                 {
                     Console.WriteLine($"total claims: {claims.Length}, processing(0/{claim_count})...");
@@ -128,10 +129,13 @@ namespace Neo.Shell
                             }
                         }
                     };
-                    txs.SetValue((ClaimTransaction)SignTransaction(tx), i);
+                    if ((tx = (ClaimTransaction)SignTransaction(tx)) != null)
+                    {
+                        txs.Append(tx);
+                    }
                 }
 
-                return txs;
+                return txs.ToArray();
             }
         }
 
