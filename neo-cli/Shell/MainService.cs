@@ -378,7 +378,7 @@ namespace Neo.Shell
                 "\tlist key\n" +
                 "\tshow utxo [id|alias]\n" +
                 "\tshow gas\n" +
-                "\tclaim gas\n" +
+                "\tclaim gas [all]\n" +
                 "\tcreate address [n=1]\n" +
                 "\timport key <wif|path>\n" +
                 "\texport key [address] [path]\n" +
@@ -506,12 +506,33 @@ namespace Neo.Shell
             switch (args[1].ToLower())
             {
                 case "gas":
-                    ClaimTransaction tx = coins.Claim();
-                    if (tx != null)
+                    if (args.Length > 2)
                     {
-                        Console.WriteLine($"Tranaction Suceeded: {tx.Hash}");
+                        switch (args[2].ToLower())
+                        {
+                            case "all":
+                                ClaimTransaction[] txs = coins.ClaimAll();
+                                if (txs.Length > 0)
+                                {
+                                    foreach (ClaimTransaction tx in txs)
+                                    {
+                                        Console.WriteLine($"Tranaction Suceeded: {tx.Hash}");
+                                    }
+                                }
+                                return true;
+                            default:
+                                return base.OnCommand(args);
+                        }
                     }
-                    return true;
+                    else
+                    {
+                        ClaimTransaction tx = coins.Claim();
+                        if (tx != null)
+                        {
+                            Console.WriteLine($"Tranaction Suceeded: {tx.Hash}");
+                        }
+                        return true;
+                    }
                 default:
                     return base.OnCommand(args);
             }
