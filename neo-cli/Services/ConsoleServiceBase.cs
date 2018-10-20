@@ -26,7 +26,7 @@ namespace Neo.Services
                     Console.WriteLine(Assembly.GetEntryAssembly().GetName().Version);
                     return true;
                 default:
-                    Console.WriteLine("error");
+                    Console.WriteLine("error: command not found " + args[0]);
                     return true;
             }
         }
