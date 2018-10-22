@@ -32,13 +32,18 @@ cd neo-cli
 dotnet restore
 dotnet publish -c Release
 ```
-In order to run, you need version 1.1.2 of .Net Core. Download the SDK [binary](https://www.microsoft.com/net/download/linux).
+In order to run, you need .NET Core. Download the SDK [binary](https://www.microsoft.com/net/download/linux).
 
-Assuming you extracted .Net in the parent folder:
+Assuming you extracted .NET in the parent folder:
 
 ```sh
 ../dotnet bin/Release/netcoreapp1.0/neo-cli.dll .
 ```
+
+## Logging
+
+To enable logs in neo-cli, you need to add the ApplicationLogs plugin. Please check [here](https://github.com/neo-project/neo-plugins) for more information.
+
 
 ## Usage
 
