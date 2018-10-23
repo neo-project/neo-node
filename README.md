@@ -45,6 +45,10 @@ Assuming you extracted .NET in the parent folder:
 To enable logs in neo-cli, you need to add the ApplicationLogs plugin. Please check [here](https://github.com/neo-project/neo-plugins) for more information.
 
 
+## Bootstrapping the network.
+In order to synchronize the network faster, please check [here](http://docs.neo.org/en-us/network/syncblocks.html).
+
+
 ## Usage
 
-See [documentation](http://docs.neo.org/en-us/node/cli.html). E.g. try `show state` or `create wallet wallet.db3`.
+See [documentation](http://docs.neo.org/en-us/node/cli.html). E.g. try `show state` or `create wallet wallet.json`.
