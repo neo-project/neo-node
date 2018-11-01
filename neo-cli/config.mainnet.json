@@ -1,4 +1,4 @@
-﻿{
+{
   "ApplicationConfiguration": {
     "Paths": {
       "Chain": "Chain_{0}",
@@ -9,6 +9,7 @@
       "WsPort": 10334
     },
     "RPC": {
+      "BindAddress": "127.0.0.1",
       "Port": 10332,
       "SslCert": "",
       "SslCertPassword": ""
