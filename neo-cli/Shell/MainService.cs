@@ -1,4 +1,5 @@
 ﻿using Akka.Actor;
+using Neo.Consensus;
 using Neo.IO;
 using Neo.Ledger;
 using Neo.Network.P2P;
@@ -60,6 +61,8 @@ namespace Neo.Shell
                     return OnRelayCommand(args);
                 case "sign":
                     return OnSignCommand(args);
+                case "change":
+                    return OnChangeCommand(args);
                 case "create":
                     return OnCreateCommand(args);
                 case "export":
@@ -195,6 +198,25 @@ namespace Neo.Shell
             {
                 Console.WriteLine($"One or more errors occurred:\r\n{e.Message}");
             }
+            return true;
+        }
+
+        private bool OnChangeCommand(string[] args)
+        {
+            switch (args[1].ToLower())
+            {
+                case "view":
+                    return OnChangeViewCommand(args);
+                default:
+                    return base.OnCommand(args);
+            }
+        }
+
+        private bool OnChangeViewCommand(string[] args)
+        {
+            if (args.Length != 3) return false;
+            if (!byte.TryParse(args[2], out byte viewnumber)) return false;
+            system.Consensus?.Tell(new ConsensusService.SetViewNumber { ViewNumber = viewnumber });
             return true;
         }
 
@@ -392,7 +414,8 @@ namespace Neo.Shell
                 "\tshow pool [verbose]\n" +
                 "\trelay <jsonObjectToSign>\n" +
                 "Advanced Commands:\n" +
-                "\tstart consensus\n");
+                "\tstart consensus\n" +
+                "\tchange view <viewnumber>\n");
             return true;
         }
 
