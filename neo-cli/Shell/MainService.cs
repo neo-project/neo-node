@@ -414,8 +414,7 @@ namespace Neo.Shell
                 "\tshow pool [verbose]\n" +
                 "\trelay <jsonObjectToSign>\n" +
                 "Advanced Commands:\n" +
-                "\tstart consensus\n" +
-                "\tchange view <viewnumber>\n");
+                "\tstart consensus\n");
             return true;
         }
 
