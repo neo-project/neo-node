@@ -367,7 +367,7 @@ namespace Neo.Shell
             Console.Write(
                 "Normal Commands:\n" +
                 "\tversion\n" +
-                "\thelp\n" +
+                "\thelp [plugin-name]\n" +
                 "\tplugins\n" +
                 "\tclear\n" +
                 "\texit\n" +
@@ -394,8 +394,6 @@ namespace Neo.Shell
                 "\trelay <jsonObjectToSign>\n" +
                 "Advanced Commands:\n" +
                 "\tstart consensus\n");
-
-            Plugin.SendMessage(new string[] { "plugin-help" });
 
             return true;
         }
