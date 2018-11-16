@@ -3,6 +3,25 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.9.2] - 2018-11-16
+### Added
+- Add new plugin type: `IPersistencePlugin`.
+- Allow listing loaded plugins and showing help messages for plugins.
+
+### Changed
+- Allow opening wallet for RPC server after startup.
+- Allow creating iterator from array in API: `Neo.Iterator.Create`.
+- Improve the performance of p2p network.
+
+### Fixed
+- Fixed an issue where getting NEP-5 balance failed if the wallet contained a large number of addresses.
+- Fixed an issue that caused the NeoVM execution state to be inconsistent.
+- Fixed "too many open files" error.
+- Fixed an issue in MerkleTree.
+
+### Removed
+- Remove `Neo.Witness.GetInvocationScript`.(smart contract)
+
 ## [2.9.1] - 2018-10-18
 ### Added
 - Add constant storage for NeoContract.
