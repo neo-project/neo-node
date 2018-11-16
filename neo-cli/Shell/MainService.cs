@@ -69,6 +69,8 @@ namespace Neo.Shell
                     return OnExportCommand(args);
                 case "help":
                     return OnHelpCommand(args);
+                case "plugins":
+                    return OnPluginsCommand(args);
                 case "import":
                     return OnImportCommand(args);
                 case "list":
@@ -389,7 +391,8 @@ namespace Neo.Shell
             Console.Write(
                 "Normal Commands:\n" +
                 "\tversion\n" +
-                "\thelp\n" +
+                "\thelp [plugin-name]\n" +
+                "\tplugins\n" +
                 "\tclear\n" +
                 "\texit\n" +
                 "Wallet Commands:\n" +
@@ -415,6 +418,21 @@ namespace Neo.Shell
                 "\trelay <jsonObjectToSign>\n" +
                 "Advanced Commands:\n" +
                 "\tstart consensus\n");
+
+            return true;
+        }
+
+        private bool OnPluginsCommand(string[] args)
+        {
+            if (Plugin.Plugins.Count > 0)
+            {
+                Console.WriteLine("Loaded plugins:");
+                Plugin.Plugins.ForEach(p => Console.WriteLine("\t" + p.Name));
+            }
+            else
+            {
+                Console.WriteLine("No loaded plugins");
+            }
             return true;
         }
 
