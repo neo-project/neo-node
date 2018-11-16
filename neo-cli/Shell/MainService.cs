@@ -1,4 +1,5 @@
 ﻿using Akka.Actor;
+using Neo.Consensus;
 using Neo.IO;
 using Neo.Ledger;
 using Neo.Network.P2P;
@@ -60,6 +61,8 @@ namespace Neo.Shell
                     return OnRelayCommand(args);
                 case "sign":
                     return OnSignCommand(args);
+                case "change":
+                    return OnChangeCommand(args);
                 case "create":
                     return OnCreateCommand(args);
                 case "export":
@@ -200,6 +203,25 @@ namespace Neo.Shell
             return true;
         }
 
+        private bool OnChangeCommand(string[] args)
+        {
+            switch (args[1].ToLower())
+            {
+                case "view":
+                    return OnChangeViewCommand(args);
+                default:
+                    return base.OnCommand(args);
+            }
+        }
+
+        private bool OnChangeViewCommand(string[] args)
+        {
+            if (args.Length != 3) return false;
+            if (!byte.TryParse(args[2], out byte viewnumber)) return false;
+            system.Consensus?.Tell(new ConsensusService.SetViewNumber { ViewNumber = viewnumber });
+            return true;
+        }
+
         private bool OnCreateCommand(string[] args)
         {
             switch (args[1].ToLower())
@@ -281,6 +303,7 @@ namespace Neo.Shell
                         WalletAccount account = Program.Wallet.CreateAccount();
                         Console.WriteLine($"address: {account.Address}");
                         Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+                        system.RpcServer.OpenWallet(Program.Wallet);
                     }
                     break;
                 case ".json":
@@ -292,6 +315,7 @@ namespace Neo.Shell
                         Program.Wallet = wallet;
                         Console.WriteLine($"address: {account.Address}");
                         Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+                        system.RpcServer.OpenWallet(Program.Wallet);
                     }
                     break;
                 default:
@@ -645,6 +669,7 @@ namespace Neo.Shell
             {
                 Console.WriteLine($"failed to open file \"{path}\"");
             }
+            system.RpcServer.OpenWallet(Program.Wallet);
             return true;
         }
 
