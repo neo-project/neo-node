@@ -400,7 +400,7 @@ namespace Neo.Shell
 
         private bool OnPluginsCommand(string[] args)
         {
-            if (Plugin.Plugins.Any())
+            if (Plugin.Plugins.Count > 0)
             {
                 Console.WriteLine("Loaded plugins:");
                 Plugin.Plugins.ForEach(p => Console.WriteLine("\t" + p.Name));
