@@ -3,6 +3,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.9.3] - 2018-12-05
+### Added
+- First draft of NEO Consensus Unit Tests.
+- Idea of Hashing Interop names on for compacting codes and saving space.
+- Add hot configurations for plugins.
+
+### Changed
+- Limit incoming P2P connections based on parameters.
+- Changing timer to TimeProvider.
+- Improve the performance of p2p network in different aspects regarding messages communicating and task management.
+- Send `Idle` message to actors when they are idle.
+
+### Fixed
+- Fixed an issue on consensus payload messages size.
+- Catch exception in the UPnP layer when reconnecting or out of Network connection.
+
 ## [2.9.2] - 2018-11-16
 ### Added
 - Add new plugin type: `IPersistencePlugin`.
