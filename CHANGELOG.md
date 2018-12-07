@@ -6,19 +6,19 @@ All notable changes to this project will be documented in this file.
 ## [2.9.3] - 2018-12-05
 ### Added
 - First draft of NEO Consensus Unit Tests.
-- Idea of Hashing Interop names on for compacting codes and saving space.
+- Hash Interop names to save space in compiled byte code.
 - Add hot configurations for plugins.
 
 ### Changed
 - Limit incoming P2P connections based on parameters.
 - Changing timer to TimeProvider.
-- Improve the performance of p2p network for header and block propagation.
+- Improve performance of the p2p network for header and block propagation.
 - Send `Idle` message to actors when they are idle.
 
 ### Fixed
 - Fixed an issue on consensus payload messages size.
 - Fix an issue that could cause chain sync to get stuck.
-- Catch exception in the UPnP layer when reconnecting or out of Network connection.
+- Catch exception in the UPnP layer when reconnecting or Network error.
 
 ## [2.9.2] - 2018-11-16
 ### Added
