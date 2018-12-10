@@ -405,7 +405,7 @@ namespace Neo.Shell
                 "\tlist key\n" +
                 "\tshow utxo [id|alias]\n" +
                 "\tshow gas\n" +
-                "\tclaim gas [all]\n" +
+                "\tclaim gas [all] [changeAddress]\n" +
                 "\tcreate address [n=1]\n" +
                 "\timport key <wif|path>\n" +
                 "\texport key [address] [path]\n" +
@@ -552,8 +552,17 @@ namespace Neo.Shell
                         switch (args[2].ToLower())
                         {
                             case "all":
-                                ClaimTransaction[] txs = coins.ClaimAll();
-                                if (txs.Length > 0)
+                                ClaimTransaction[] txs = null;
+                                if (args.Length > 3)
+                                {
+                                    txs = coins.ClaimAll(args[3].ToScriptHash());
+                                }
+                                else
+                                {
+                                    txs = coins.ClaimAll();
+                                }
+
+                                if (txs != null && txs.Length > 0)
                                 {
                                     foreach (ClaimTransaction tx in txs)
                                     {
@@ -562,12 +571,27 @@ namespace Neo.Shell
                                 }
                                 return true;
                             default:
-                                return base.OnCommand(args);
+                                ClaimTransaction tx2 = null;
+                                try
+                                {
+                                    tx2 = coins.Claim(args[2].ToScriptHash());
+                                }
+                                catch (FormatException)
+                                {
+                                    return base.OnCommand(args);
+                                }
+
+                                if (tx2 != null)
+                                {
+                                    Console.WriteLine($"Tranaction Suceeded: {tx2.Hash}");
+                                }
+                                return true;
                         }
                     }
                     else
                     {
                         ClaimTransaction tx = coins.Claim();
+
                         if (tx != null)
                         {
                             Console.WriteLine($"Tranaction Suceeded: {tx.Hash}");
