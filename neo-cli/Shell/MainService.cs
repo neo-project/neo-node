@@ -541,6 +541,17 @@ namespace Neo.Shell
         private bool OnClaimCommand(string[] args)
         {
             if (NoWallet()) return true;
+            string password = ReadPassword("password");
+            if (password.Length == 0)
+            {
+                Console.WriteLine("cancelled");
+                return true;
+            }
+            if (!Program.Wallet.VerifyPassword(password))
+            {
+                Console.WriteLine("Incorrect password");
+                return true;
+            }
 
             Coins coins = new Coins(Program.Wallet, system);
 
