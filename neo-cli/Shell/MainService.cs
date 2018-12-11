@@ -541,17 +541,6 @@ namespace Neo.Shell
         private bool OnClaimCommand(string[] args)
         {
             if (NoWallet()) return true;
-            string password = ReadPassword("password");
-            if (password.Length == 0)
-            {
-                Console.WriteLine("cancelled");
-                return true;
-            }
-            if (!Program.Wallet.VerifyPassword(password))
-            {
-                Console.WriteLine("Incorrect password");
-                return true;
-            }
 
             Coins coins = new Coins(Program.Wallet, system);
 
@@ -566,6 +555,17 @@ namespace Neo.Shell
                                 ClaimTransaction[] txs = null;
                                 if (args.Length > 3)
                                 {
+                                    string password = ReadPassword("password");
+                                    if (password.Length == 0)
+                                    {
+                                        Console.WriteLine("cancelled");
+                                        return true;
+                                    }
+                                    if (!Program.Wallet.VerifyPassword(password))
+                                    {
+                                        Console.WriteLine("Incorrect password");
+                                        return true;
+                                    }
                                     txs = coins.ClaimAll(args[3].ToScriptHash());
                                 }
                                 else
@@ -582,16 +582,28 @@ namespace Neo.Shell
                                 }
                                 return true;
                             default:
-                                ClaimTransaction tx2 = null;
+                                UInt160 change_address = null;
                                 try
                                 {
-                                    tx2 = coins.Claim(args[2].ToScriptHash());
+                                    change_address = args[2].ToScriptHash();
                                 }
                                 catch (FormatException)
                                 {
                                     return base.OnCommand(args);
                                 }
 
+                                string password2 = ReadPassword("password");
+                                if (password2.Length == 0)
+                                {
+                                    Console.WriteLine("cancelled");
+                                    return true;
+                                }
+                                if (!Program.Wallet.VerifyPassword(password2))
+                                {
+                                    Console.WriteLine("Incorrect password");
+                                    return true;
+                                }
+                                ClaimTransaction tx2 = coins.Claim(change_address);
                                 if (tx2 != null)
                                 {
                                     Console.WriteLine($"Tranaction Suceeded: {tx2.Hash}");
