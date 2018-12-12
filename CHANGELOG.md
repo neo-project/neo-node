@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [2.9.3] - 2018-12-05
+## [2.9.3] - 2018-12-12
 ### Added
 - Hash interop names to save space in compiled byte code.(smart contract)
 - Add hot configurations for plugins.
