@@ -3,6 +3,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.9.3] - 2018-12-05
+### Added
+- Hash interop names to save space in compiled byte code.(smart contract)
+- Add hot configurations for plugins.
+- Add `changeAddress` option to `claim gas` CLI command.
+
+### Changed
+- Limit incoming P2P connections based on parameters.
+- Improve performance of the p2p network for header and block propagation.
+
+### Fixed
+- Fixed an issue that could cause chain sync to get stuck.
+- Fixed a display error after opening the wallet.
+- Fixed bugs in the consensus algorithm.
+- Fixed a minor bug in smart contract cost calculation.
+- Catch exception in the UPnP layer when reconnecting or network error.
+
 ## [2.9.2] - 2018-11-16
 ### Added
 - Add new plugin type: `IPersistencePlugin`.
