@@ -548,7 +548,6 @@ namespace Neo.Shell
             bool all = args.Length > 2 && args[2].Equals("all", StringComparison.OrdinalIgnoreCase);
             bool useChangeAddress = (all && args.Length == 4) || (!all && args.Length == 3);
             UInt160 changeAddress = useChangeAddress ? args[args.Length - 1].ToScriptHash() : null;
-            Coins coins = new Coins(Program.Wallet, system);
 
             if (useChangeAddress)
             {
@@ -565,6 +564,7 @@ namespace Neo.Shell
                 }
             }
 
+            Coins coins = new Coins(Program.Wallet, system);
             ClaimTransaction[] txs = all
                 ? coins.ClaimAll(changeAddress)
                 : new[] { coins.Claim(changeAddress) };
