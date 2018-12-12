@@ -77,7 +77,7 @@ namespace Neo.Shell
                         {
                             AssetId = Blockchain.UtilityToken.Hash,
                             Value = snapshot.CalculateBonus(claims.Take(MAX_CLAIMS_AMOUNT)),
-                            ScriptHash = change_address == null ? current_wallet.GetChangeAddress() : change_address
+                            ScriptHash = change_address ?? current_wallet.GetChangeAddress()
                         }
                     }
 
@@ -125,7 +125,7 @@ namespace Neo.Shell
                             {
                                 AssetId = Blockchain.UtilityToken.Hash,
                                 Value = snapshot.CalculateBonus(claims.Skip(i * MAX_CLAIMS_AMOUNT).Take(MAX_CLAIMS_AMOUNT)),
-                                ScriptHash = change_address == null ? current_wallet.GetChangeAddress() : change_address
+                                ScriptHash = change_address ?? current_wallet.GetChangeAddress()
                             }
                         }
                     };
