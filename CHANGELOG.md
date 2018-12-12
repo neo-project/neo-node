@@ -5,20 +5,20 @@ All notable changes to this project will be documented in this file.
 
 ## [2.9.3] - 2018-12-05
 ### Added
-- First draft of NEO Consensus Unit Tests.
-- Hash Interop names to save space in compiled byte code.
+- Hash interop names to save space in compiled byte code.(smart contract)
 - Add hot configurations for plugins.
+- Add `changeAddress` option to `claim gas` CLI command.
 
 ### Changed
 - Limit incoming P2P connections based on parameters.
-- Changing timer to TimeProvider.
 - Improve performance of the p2p network for header and block propagation.
-- Send `Idle` message to actors when they are idle.
 
 ### Fixed
-- Fixed an issue on consensus payload messages size.
-- Fix an issue that could cause chain sync to get stuck.
-- Catch exception in the UPnP layer when reconnecting or Network error.
+- Fixed an issue that could cause chain sync to get stuck.
+- Fixed a display error after opening the wallet.
+- Fixed bugs in the consensus algorithm.
+- Fixed a minor bug in smart contract cost calculation.
+- Catch exception in the UPnP layer when reconnecting or network error.
 
 ## [2.9.2] - 2018-11-16
 ### Added
