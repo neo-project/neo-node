@@ -405,7 +405,7 @@ namespace Neo.Shell
                 "\tlist key\n" +
                 "\tshow utxo [id|alias]\n" +
                 "\tshow gas\n" +
-                "\tclaim gas [all]\n" +
+                "\tclaim gas [all] [changeAddress]\n" +
                 "\tcreate address [n=1]\n" +
                 "\timport key <wif|path>\n" +
                 "\texport key [address] [path]\n" +
@@ -540,43 +540,39 @@ namespace Neo.Shell
 
         private bool OnClaimCommand(string[] args)
         {
+            if (args.Length < 2 || args.Length > 4 || !args[1].Equals("gas", StringComparison.OrdinalIgnoreCase))
+                return base.OnCommand(args);
+
             if (NoWallet()) return true;
 
-            Coins coins = new Coins(Program.Wallet, system);
+            bool all = args.Length > 2 && args[2].Equals("all", StringComparison.OrdinalIgnoreCase);
+            bool useChangeAddress = (all && args.Length == 4) || (!all && args.Length == 3);
+            UInt160 changeAddress = useChangeAddress ? args[args.Length - 1].ToScriptHash() : null;
 
-            switch (args[1].ToLower())
+            if (useChangeAddress)
             {
-                case "gas":
-                    if (args.Length > 2)
-                    {
-                        switch (args[2].ToLower())
-                        {
-                            case "all":
-                                ClaimTransaction[] txs = coins.ClaimAll();
-                                if (txs.Length > 0)
-                                {
-                                    foreach (ClaimTransaction tx in txs)
-                                    {
-                                        Console.WriteLine($"Tranaction Suceeded: {tx.Hash}");
-                                    }
-                                }
-                                return true;
-                            default:
-                                return base.OnCommand(args);
-                        }
-                    }
-                    else
-                    {
-                        ClaimTransaction tx = coins.Claim();
-                        if (tx != null)
-                        {
-                            Console.WriteLine($"Tranaction Suceeded: {tx.Hash}");
-                        }
-                        return true;
-                    }
-                default:
-                    return base.OnCommand(args);
+                string password = ReadPassword("password");
+                if (password.Length == 0)
+                {
+                    Console.WriteLine("cancelled");
+                    return true;
+                }
+                if (!Program.Wallet.VerifyPassword(password))
+                {
+                    Console.WriteLine("Incorrect password");
+                    return true;
+                }
             }
+
+            Coins coins = new Coins(Program.Wallet, system);
+            ClaimTransaction[] txs = all
+                ? coins.ClaimAll(changeAddress)
+                : new[] { coins.Claim(changeAddress) };
+            if (txs is null) return true;
+            foreach (ClaimTransaction tx in txs)
+                if (tx != null)
+                    Console.WriteLine($"Tranaction Suceeded: {tx.Hash}");
+            return true;
         }
 
         private bool OnShowGasCommand(string[] args)
