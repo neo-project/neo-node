@@ -568,8 +568,9 @@ namespace Neo.Shell
             ClaimTransaction[] txs = all
                 ? coins.ClaimAll(changeAddress)
                 : new[] { coins.Claim(changeAddress) };
-            if (txs?.Length > 0)
-                foreach (ClaimTransaction tx in txs)
+            if (txs is null) return true;
+            foreach (ClaimTransaction tx in txs)
+                if (tx != null)
                     Console.WriteLine($"Tranaction Suceeded: {tx.Hash}");
             return true;
         }
