@@ -3,6 +3,7 @@
     "Paths": {
       "Chain": "Chain_{0}",
       "ApplicationLogs": "ApplicationLogs_{0}",
+      "Index": "Index_{0}",
       "PluginURL": "https://github.com/neo-project/neo-plugins/releases/download/v2.9.2/{0}.zip"
     },
     "P2P": {
@@ -10,6 +11,7 @@
       "WsPort": 10334
     },
     "RPC": {
+      "BindAddress": "127.0.0.1",
       "Port": 10332,
       "SslCert": "",
       "SslCertPassword": ""

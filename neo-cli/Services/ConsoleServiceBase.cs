@@ -2,7 +2,6 @@
 using System.Reflection;
 using System.Security;
 using System.Text;
-using Neo.Shell;
 
 namespace Neo.Services
 {
@@ -14,7 +13,7 @@ namespace Neo.Services
 
         protected bool ShowPrompt { get; set; } = true;
 
-		protected virtual bool OnCommand(string[] args)
+        protected virtual bool OnCommand(string[] args)
         {
             switch (args[0].ToLower())
             {
@@ -27,7 +26,7 @@ namespace Neo.Services
                     Console.WriteLine(Assembly.GetEntryAssembly().GetName().Version);
                     return true;
                 default:
-                    Console.WriteLine("error");
+                    Console.WriteLine("error: command not found " + args[0]);
                     return true;
             }
         }
@@ -130,9 +129,9 @@ namespace Neo.Services
                 }
 
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                string line = Console.ReadLine().Trim();
+                string line = Console.ReadLine()?.Trim();
+                if (line == null) break;
                 Console.ForegroundColor = ConsoleColor.White;
-
                 string[] args = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 if (args.Length == 0)
                     continue;
