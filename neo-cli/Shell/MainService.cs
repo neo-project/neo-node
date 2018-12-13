@@ -397,7 +397,6 @@ namespace Neo.Shell
                 "Normal Commands:\n" +
                 "\tversion\n" +
                 "\thelp [plugin-name]\n" +
-                "\tplugins\n" +
                 "\tclear\n" +
                 "\texit\n" +
                 "Wallet Commands:\n" +
@@ -422,6 +421,7 @@ namespace Neo.Shell
                 "\tshow pool [verbose]\n" +
                 "\trelay <jsonObjectToSign>\n" +
                 "Plugin Commands:\n" +
+                "\tplugins\n" +
                 "\tinstall <pluginName>\n" +
                 "\tuninstall <pluginName>\n" +
                 "Advanced Commands:\n" +
@@ -956,13 +956,15 @@ namespace Neo.Shell
                 Console.WriteLine("error");
                 return true;
             }
-            WebClient wc = new WebClient();
             var pluginName = args[1];
             var address = string.Format(Settings.Default.PluginURL, pluginName, typeof(Plugin).Assembly.GetVersion());
-            var fileName = $"Plugins/{pluginName}.zip";
-            Console.WriteLine($"Downloading from {address}");
+            var fileName = Path.Combine("Plugins", $"{pluginName}.zip");
             Directory.CreateDirectory("Plugins");
-            wc.DownloadFile(address, fileName);
+            Console.WriteLine($"Downloading from {address}");
+            using (WebClient wc = new WebClient())
+            {
+                wc.DownloadFile(address, fileName);
+            }
             try
             {
                 ZipFile.ExtractToDirectory(fileName, ".");
@@ -988,9 +990,8 @@ namespace Neo.Shell
                 return true;
             }
             var pluginName = args[1];
-            var address = string.Format(Settings.Default.PluginURL, pluginName, typeof(Plugin).Assembly.GetVersion());
-            Directory.Delete($"Plugins/{pluginName}", true);
-            File.Delete($"Plugins/{pluginName}.dll");
+            Directory.Delete(Path.Combine("Plugins", pluginName), true);
+            File.Delete(Path.Combine("Plugins", $"{pluginName}.dll"));
             Console.WriteLine($"Uninstall successful, please restart neo-cli.");
             return true;
         }
