@@ -2,7 +2,6 @@
   "ApplicationConfiguration": {
     "Paths": {
       "Chain": "Chain_{0}",
-      "ApplicationLogs": "ApplicationLogs_{0}",
       "Index": "Index_{0}",
       "PluginURL": "https://github.com/neo-project/neo-plugins/releases/download/v2.9.2/{0}.zip"
     },

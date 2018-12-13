@@ -1,6 +1,6 @@
-﻿using System.Net;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Neo.Network.P2P;
+using System.Net;
 
 namespace Neo
 {
@@ -31,14 +31,12 @@ namespace Neo
     internal class PathsSettings
     {
         public string Chain { get; }
-        public string ApplicationLogs { get; }
         public string PluginURL { get; }
         public string Index { get; }
 
         public PathsSettings(IConfigurationSection section)
         {
             this.Chain = string.Format(section.GetSection("Chain").Value, Message.Magic.ToString("X8"));
-            this.ApplicationLogs = string.Format(section.GetSection("ApplicationLogs").Value, Message.Magic.ToString("X8"));
             this.PluginURL = section.GetSection("PluginURL").Value;
             this.Index = string.Format(section.GetSection("Index").Value, Message.Magic.ToString("X8"));
         }
