@@ -2,7 +2,8 @@
   "ProtocolConfiguration": {
     "Magic": 7630401,
     "AddressVersion": 23,
-    "SecondsPerBlock": 15, 
+    "SecondsPerBlock": 15,
+    "LowPriorityThreshold": 0.001,
     "StandbyValidators": [
       "03b209fd4f53a7170ea4444e0cb0a6bb6a53c2bd016926989cf85f9b0fba17a70c",
       "02df48f60e8f3e01c48ff40b9b7f1310d7a8b2a193188befe1c2e3df740e895093",
@@ -13,6 +14,16 @@
       "02486fd15702c4490a26703112a5cc1d0923fd697a33406bd5a1c00e0013b09a70"
     ],
     "SeedList": [
+      "seed1.ngd.network:10333",
+      "seed2.ngd.network:10333",
+      "seed3.ngd.network:10333",
+      "seed4.ngd.network:10333",
+      "seed5.ngd.network:10333",
+      "seed6.ngd.network:10333",
+      "seed7.ngd.network:10333",
+      "seed8.ngd.network:10333",
+      "seed9.ngd.network:10333",
+      "seed10.ngd.network:10333",
       "seed1.neo.org:10333",
       "seed2.neo.org:10333",
       "seed3.neo.org:10333",

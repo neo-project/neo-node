@@ -3,6 +3,96 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.9.3] - 2018-12-12
+### Added
+- Hash interop names to save space in compiled byte code.(smart contract)
+- Add hot configurations for plugins.
+- Add `changeAddress` option to `claim gas` CLI command.
+
+### Changed
+- Limit incoming P2P connections based on parameters.
+- Improve performance of the p2p network for header and block propagation.
+
+### Fixed
+- Fixed an issue that could cause chain sync to get stuck.
+- Fixed a display error after opening the wallet.
+- Fixed bugs in the consensus algorithm.
+- Fixed a minor bug in smart contract cost calculation.
+- Catch exception in the UPnP layer when reconnecting or network error.
+
+## [2.9.2] - 2018-11-16
+### Added
+- Add new plugin type: `IPersistencePlugin`.
+- Allow listing loaded plugins and showing help messages for plugins.
+
+### Changed
+- Allow opening wallet for RPC server after startup.
+- Allow creating iterator from array in API: `Neo.Iterator.Create`.
+- Improve the performance of p2p network.
+
+### Fixed
+- Fixed an issue where getting NEP-5 balance failed if the wallet contained a large number of addresses.
+- Fixed an issue that caused the NeoVM execution state to be inconsistent.
+- Fixed "too many open files" error.
+- Fixed an issue in MerkleTree.
+
+### Removed
+- Remove `Neo.Witness.GetInvocationScript`.(smart contract)
+
+## [2.9.1] - 2018-10-18
+### Added
+- Add constant storage for NeoContract.
+- New smart contract API: `System.Runtime.Platform`.
+- New smart contract API: `Neo.Account.IsStandard`.
+- New smart contract API: `Neo.Transaction.GetWitnesses`.
+- Allow the RPC server to bind to local address.
+- Allow client certificate to be checked on the RPC server.
+- Allow setting additional gas to be used in RPC commands `invoke*` for RPC server.
+- New CLI command: `claim gas [all]`.
+
+### Fixed
+- Fix a bug in the RPC server.
+- Fix denial of service with bad UPnP responses.
+
+## [2.9.0] - 2018-09-15
+### Added
+- New RPC command: `getblockheader`.
+- New RPC command: `getwalletheight`.
+- Allow to modify the location of the wallet index directory.
+
+### Changed
+- Significantly improve the stability of the node.
+- Improved Plugins System
+
+### Fixed
+- Close on ^D without errors (linux only).
+
+## [2.8.0] - 2018-08-17
+### Changed
+- Apply NEP-8: Stack Isolation for NeoVM.
+
+### Fixed
+- Fix known bugs.
+
+## [2.7.6.1] - 2018-07-09
+### Fixed
+- Fix a bug that crashes when the non-consensus node runs the "Start consensus" command.
+- Fix a bug that do not load plugins when the node is started.
+
+## [2.7.6] - 2018-06-19
+### Added
+- New CLI command: `import multisigaddress`.
+- New CLI commands: `sign` and `relay`.
+- New RPC command: `getvalidators`.
+- New smart contract APIs: `Neo.Enumerator.*`.
+- New smart contract API: `System.Blockchain.GetTransactionHeight`.
+- New smart contract API: `System.Storage.GetReadOnlyContext` and `Neo.StorageContext.AsReadOnly`.
+
+### Changed
+- Support for NeoContract Standary Namespace.
+- Improved Plugins System: filter transactions in plugin.
+- Improve the speed of creating addresses.
+
 ## [2.7.5] - 2018-05-18
 ### Added
 - Importing/exporting blocks with sharding.
