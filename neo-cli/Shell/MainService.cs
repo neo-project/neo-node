@@ -92,6 +92,10 @@ namespace Neo.Shell
                     return OnStartCommand(args);
                 case "upgrade":
                     return OnUpgradeCommand(args);
+                case "install":
+                    return OnInstallCommand(args);
+                case "uninstall":
+                    return OnUnInstallCommand(args);
                 default:
                     return base.OnCommand(args);
             }
@@ -480,6 +484,9 @@ namespace Neo.Shell
                 "\texport block[s] [path=chain.acc]\n" +
                 "\texport block[s] <start> [count]\n" +
                 "\trelay <jsonObjectToSign>\n" +
+                "Plugin Commands:\n" +
+                "\tinstall <pluginName>\n" +
+                "\tuninstall <pluginName>\n" +
                 "Advanced Commands:\n" +
                 "\tstart consensus\n");
             return true;
@@ -1038,6 +1045,52 @@ namespace Neo.Shell
                 default:
                     return base.OnCommand(args);
             }
+        }
+
+        private bool OnInstallCommand(string[] args)
+        {
+            if (args.Length < 2)
+            {
+                Console.WriteLine("error");
+                return true;
+            }
+            WebClient wc = new WebClient();
+            var pluginName = args[1];
+            var address = string.Format(Settings.Default.Paths.PluginURL, pluginName);
+            var fileName = $"Plugins/{pluginName}.zip";
+            Console.WriteLine($"Downloading from {address}");
+            Directory.CreateDirectory("Plugins");
+            wc.DownloadFile(address, fileName);
+            try
+            {
+                ZipFile.ExtractToDirectory(fileName, ".");
+            }
+            catch (IOException)
+            {
+                Console.WriteLine($"Plugin already exist.");
+                return true;
+            }
+            finally
+            {
+                File.Delete(fileName);
+            }
+            Console.WriteLine($"Install successful, please restart neo-cli.");
+            return true;
+        }
+
+        private bool OnUnInstallCommand(string[] args)
+        {
+            if (args.Length < 2)
+            {
+                Console.WriteLine("error");
+                return true;
+            }
+            var pluginName = args[1];
+            var address = string.Format(Settings.Default.Paths.PluginURL, pluginName);
+            Directory.Delete($"Plugins/{pluginName}", true);
+            File.Delete($"Plugins/{pluginName}.dll");
+            Console.WriteLine($"Uninstall successful, please restart neo-cli.");
+            return true;
         }
 
         private bool OnUpgradeWalletCommand(string[] args)
