@@ -9,7 +9,8 @@ namespace Neo
         public PathsSettings Paths { get; }
         public P2PSettings P2P { get; }
         public RPCSettings RPC { get; }
-        public UnlockWalletSettings UnlockWallet { get; set; }
+        public UnlockWalletSettings UnlockWallet { get; }
+        public string PluginURL { get; }
 
         public static Settings Default { get; }
 
@@ -25,19 +26,18 @@ namespace Neo
             this.P2P = new P2PSettings(section.GetSection("P2P"));
             this.RPC = new RPCSettings(section.GetSection("RPC"));
             this.UnlockWallet = new UnlockWalletSettings(section.GetSection("UnlockWallet"));
+            this.PluginURL = section.GetSection("PluginURL").Value;
         }
     }
 
     internal class PathsSettings
     {
         public string Chain { get; }
-        public string PluginURL { get; }
         public string Index { get; }
 
         public PathsSettings(IConfigurationSection section)
         {
             this.Chain = string.Format(section.GetSection("Chain").Value, Message.Magic.ToString("X8"));
-            this.PluginURL = section.GetSection("PluginURL").Value;
             this.Index = string.Format(section.GetSection("Index").Value, Message.Magic.ToString("X8"));
         }
     }

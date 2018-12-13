@@ -958,7 +958,7 @@ namespace Neo.Shell
             }
             WebClient wc = new WebClient();
             var pluginName = args[1];
-            var address = string.Format(Settings.Default.Paths.PluginURL, pluginName);
+            var address = string.Format(Settings.Default.PluginURL, pluginName);
             var fileName = $"Plugins/{pluginName}.zip";
             Console.WriteLine($"Downloading from {address}");
             Directory.CreateDirectory("Plugins");
@@ -988,7 +988,7 @@ namespace Neo.Shell
                 return true;
             }
             var pluginName = args[1];
-            var address = string.Format(Settings.Default.Paths.PluginURL, pluginName);
+            var address = string.Format(Settings.Default.PluginURL, pluginName);
             Directory.Delete($"Plugins/{pluginName}", true);
             File.Delete($"Plugins/{pluginName}.dll");
             Console.WriteLine($"Uninstall successful, please restart neo-cli.");
