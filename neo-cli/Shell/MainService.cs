@@ -15,6 +15,7 @@ using Neo.Wallets.SQLite;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
@@ -89,6 +90,10 @@ namespace Neo.Shell
                     return OnStartCommand(args);
                 case "upgrade":
                     return OnUpgradeCommand(args);
+                case "install":
+                    return OnInstallCommand(args);
+                case "uninstall":
+                    return OnUnInstallCommand(args);
                 default:
                     return base.OnCommand(args);
             }
@@ -392,7 +397,6 @@ namespace Neo.Shell
                 "Normal Commands:\n" +
                 "\tversion\n" +
                 "\thelp [plugin-name]\n" +
-                "\tplugins\n" +
                 "\tclear\n" +
                 "\texit\n" +
                 "Wallet Commands:\n" +
@@ -416,6 +420,10 @@ namespace Neo.Shell
                 "\tshow state\n" +
                 "\tshow pool [verbose]\n" +
                 "\trelay <jsonObjectToSign>\n" +
+                "Plugin Commands:\n" +
+                "\tplugins\n" +
+                "\tinstall <pluginName>\n" +
+                "\tuninstall <pluginName>\n" +
                 "Advanced Commands:\n" +
                 "\tstart consensus\n");
 
@@ -939,6 +947,53 @@ namespace Neo.Shell
                 default:
                     return base.OnCommand(args);
             }
+        }
+
+        private bool OnInstallCommand(string[] args)
+        {
+            if (args.Length < 2)
+            {
+                Console.WriteLine("error");
+                return true;
+            }
+            var pluginName = args[1];
+            var address = string.Format(Settings.Default.PluginURL, pluginName, typeof(Plugin).Assembly.GetVersion());
+            var fileName = Path.Combine("Plugins", $"{pluginName}.zip");
+            Directory.CreateDirectory("Plugins");
+            Console.WriteLine($"Downloading from {address}");
+            using (WebClient wc = new WebClient())
+            {
+                wc.DownloadFile(address, fileName);
+            }
+            try
+            {
+                ZipFile.ExtractToDirectory(fileName, ".");
+            }
+            catch (IOException)
+            {
+                Console.WriteLine($"Plugin already exist.");
+                return true;
+            }
+            finally
+            {
+                File.Delete(fileName);
+            }
+            Console.WriteLine($"Install successful, please restart neo-cli.");
+            return true;
+        }
+
+        private bool OnUnInstallCommand(string[] args)
+        {
+            if (args.Length < 2)
+            {
+                Console.WriteLine("error");
+                return true;
+            }
+            var pluginName = args[1];
+            Directory.Delete(Path.Combine("Plugins", pluginName), true);
+            File.Delete(Path.Combine("Plugins", $"{pluginName}.dll"));
+            Console.WriteLine($"Uninstall successful, please restart neo-cli.");
+            return true;
         }
 
         private bool OnUpgradeWalletCommand(string[] args)

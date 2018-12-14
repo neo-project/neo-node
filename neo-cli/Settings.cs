@@ -1,6 +1,6 @@
-﻿using System.Net;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Neo.Network.P2P;
+using System.Net;
 
 namespace Neo
 {
@@ -9,7 +9,8 @@ namespace Neo
         public PathsSettings Paths { get; }
         public P2PSettings P2P { get; }
         public RPCSettings RPC { get; }
-        public UnlockWalletSettings UnlockWallet { get; set; }
+        public UnlockWalletSettings UnlockWallet { get; }
+        public string PluginURL { get; }
 
         public static Settings Default { get; }
 
@@ -25,6 +26,7 @@ namespace Neo
             this.P2P = new P2PSettings(section.GetSection("P2P"));
             this.RPC = new RPCSettings(section.GetSection("RPC"));
             this.UnlockWallet = new UnlockWalletSettings(section.GetSection("UnlockWallet"));
+            this.PluginURL = section.GetSection("PluginURL").Value;
         }
     }
 
