@@ -1085,7 +1085,7 @@ namespace Neo.Shell
                 }
             store = new LevelDBStore(Path.GetFullPath(Settings.Default.Paths.Chain));
             system = new NeoSystem(store);
-            // HandleStart(useRPC);
+            HandleStart(useRPC);
         }
 
         private void HandleStart(bool useRPC)
