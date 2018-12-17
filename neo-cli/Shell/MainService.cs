@@ -612,6 +612,7 @@ namespace Neo.Shell
                 "\tsign <jsonObjectToSign>\n" +
                 "Contract Commands:\n" +
                 "\tcontract deploy <avmFilePath> <paramTypes> <returnTypeHexString> <hasStorage (true|false)> <hasDynamicInvoke (true|false)> <isPayable (true|false) <contractName> <contractVersion> <contractAuthor> <contractEmail> <contractDescription>\n" +
+                "\tcontract invoke <scripthash> <command> [optionally quoted params separated by space]\n" +
 
                 "Node Commands:\n" +
                 "\tshow state\n" +
@@ -1084,6 +1085,11 @@ namespace Neo.Shell
                 }
             store = new LevelDBStore(Path.GetFullPath(Settings.Default.Paths.Chain));
             system = new NeoSystem(store);
+            // HandleStart(useRPC);
+        }
+
+        private void HandleStart(bool useRPC)
+        {
             system.StartNode(Settings.Default.P2P.Port, Settings.Default.P2P.WsPort);
             if (Settings.Default.UnlockWallet.IsActive)
             {
