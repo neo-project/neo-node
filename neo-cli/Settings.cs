@@ -1,31 +1,91 @@
 ﻿using Microsoft.Extensions.Configuration;
-using System.Linq;
+using Neo.Network.P2P;
+using System.Net;
 
 namespace Neo
 {
     internal class Settings
     {
-        public string DataDirectoryPath { get; private set; }
-        public ushort NodePort { get; private set; }
-        public ushort WsPort { get; private set; }
-        public string[] UriPrefix { get; private set; }
-        public string SslCert { get; private set; }
-        public string SslCertPassword { get; private set; }
+        public PathsSettings Paths { get; }
+        public P2PSettings P2P { get; }
+        public RPCSettings RPC { get; }
+        public UnlockWalletSettings UnlockWallet { get; }
+        public string PluginURL { get; }
 
-        public static Settings Default { get; private set; }
+        public static Settings Default { get; }
 
         static Settings()
         {
             IConfigurationSection section = new ConfigurationBuilder().AddJsonFile("config.json").Build().GetSection("ApplicationConfiguration");
-            Default = new Settings
+            Default = new Settings(section);
+        }
+
+        public Settings(IConfigurationSection section)
+        {
+            this.Paths = new PathsSettings(section.GetSection("Paths"));
+            this.P2P = new P2PSettings(section.GetSection("P2P"));
+            this.RPC = new RPCSettings(section.GetSection("RPC"));
+            this.UnlockWallet = new UnlockWalletSettings(section.GetSection("UnlockWallet"));
+            this.PluginURL = section.GetSection("PluginURL").Value;
+        }
+    }
+
+    internal class PathsSettings
+    {
+        public string Chain { get; }
+        public string Index { get; }
+
+        public PathsSettings(IConfigurationSection section)
+        {
+            this.Chain = string.Format(section.GetSection("Chain").Value, Message.Magic.ToString("X8"));
+            this.Index = string.Format(section.GetSection("Index").Value, Message.Magic.ToString("X8"));
+        }
+    }
+
+    internal class P2PSettings
+    {
+        public ushort Port { get; }
+        public ushort WsPort { get; }
+
+        public P2PSettings(IConfigurationSection section)
+        {
+            this.Port = ushort.Parse(section.GetSection("Port").Value);
+            this.WsPort = ushort.Parse(section.GetSection("WsPort").Value);
+        }
+    }
+
+    internal class RPCSettings
+    {
+        public IPAddress BindAddress { get; }
+        public ushort Port { get; }
+        public string SslCert { get; }
+        public string SslCertPassword { get; }
+
+        public RPCSettings(IConfigurationSection section)
+        {
+            this.BindAddress = IPAddress.Parse(section.GetSection("BindAddress").Value);
+            this.Port = ushort.Parse(section.GetSection("Port").Value);
+            this.SslCert = section.GetSection("SslCert").Value;
+            this.SslCertPassword = section.GetSection("SslCertPassword").Value;
+        }
+    }
+
+    public class UnlockWalletSettings
+    {
+        public string Path { get; }
+        public string Password { get; }
+        public bool StartConsensus { get; }
+        public bool IsActive { get; }
+
+        public UnlockWalletSettings(IConfigurationSection section)
+        {
+            if (section.Exists())
             {
-                DataDirectoryPath = section.GetSection("DataDirectoryPath").Value,
-                NodePort = ushort.Parse(section.GetSection("NodePort").Value),
-                WsPort = ushort.Parse(section.GetSection("WsPort").Value),
-                UriPrefix = section.GetSection("UriPrefix").GetChildren().Select(p => p.Value).ToArray(),
-                SslCert = section.GetSection("SslCert").Value,
-                SslCertPassword = section.GetSection("SslCertPassword").Value
-            };
+                this.Path = section.GetSection("Path").Value;
+                this.Password = section.GetSection("Password").Value;
+                this.StartConsensus = bool.Parse(section.GetSection("StartConsensus").Value);
+                this.IsActive = bool.Parse(section.GetSection("IsActive").Value);
+            }
         }
     }
 }
