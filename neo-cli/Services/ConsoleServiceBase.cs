@@ -125,7 +125,7 @@ namespace Neo.Services
             string[] SplitArgStrings(string line)
             {
                 bool inQuote = false;
-                List<string> outputArgs = new List<String>();
+                List<string> outputArgs = new List<string>();
                 StringBuilder builder = new StringBuilder();
 
                 void AddArgFromBuilder()
