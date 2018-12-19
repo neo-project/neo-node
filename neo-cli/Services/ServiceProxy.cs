@@ -1,5 +1,4 @@
-﻿#if NET461
-using System.ServiceProcess;
+﻿using System.ServiceProcess;
 
 namespace Neo.Services
 {
@@ -23,4 +22,3 @@ namespace Neo.Services
         }
     }
 }
-#endif

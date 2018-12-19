@@ -1,20 +1,16 @@
 ﻿using System;
-using System.Reflection;
-using System.Security;
-using System.Text;
-#if NET461
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
+using System.Security;
 using System.ServiceProcess;
-#endif
+using System.Text;
 
 namespace Neo.Services
 {
     public abstract class ConsoleServiceBase
     {
-#if NET461
         protected virtual string Depends => null;
-#endif
         protected virtual string Prompt => "service";
 
         public abstract string ServiceName { get; }
@@ -110,7 +106,6 @@ namespace Neo.Services
 
         public void Run(string[] args)
         {
-#if NET461
             if (Environment.UserInteractive)
             {
                 if (args.Length > 0 && args[0] == "/install")
@@ -144,26 +139,21 @@ namespace Neo.Services
                 }
                 else
                 {
-#endif
                     OnStart(args);
                     RunConsole();
                     OnStop();
-#if NET461
                 }
             }
             else
             {
                 ServiceBase.Run(new ServiceProxy(this));
             }
-#endif
         }
 
         private void RunConsole()
         {
             bool running = true;
-#if NET461
             Console.Title = ServiceName;
-#endif
             Console.OutputEncoding = Encoding.Unicode;
 
             Console.ForegroundColor = ConsoleColor.DarkGreen;
