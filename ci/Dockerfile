@@ -21,8 +21,8 @@ ADD neo-cli /opt/neo-cli-github
 ADD ci /opt/ci
 
 WORKDIR /opt/neo-cli-github
-# Build the project
 
+# Build the project
 RUN dotnet restore
 RUN dotnet publish -c Release
 RUN mv bin/Release/netcoreapp2.1/publish /opt/neo-cli
