@@ -130,10 +130,9 @@ namespace Neo.Services
 
                 void AddArgFromBuilder()
                 {
-                    string arg = builder.ToString();
-                    if (arg.Length > 0)
+                    if (builder.Length > 0)
                     {
-                        outputArgs.Add(arg);
+                        outputArgs.Add(builder.ToString());
                         builder.Clear();
                     }
                 }
