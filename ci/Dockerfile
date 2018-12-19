@@ -29,6 +29,6 @@ WORKDIR /opt/neo-cli-github
 
 RUN dotnet restore
 RUN dotnet publish -c Release
-RUN mv bin/Release/netcoreapp2.0/publish /opt/neo-cli
+RUN mv bin/Release/netcoreapp2.1/publish /opt/neo-cli
 
 WORKDIR /opt
