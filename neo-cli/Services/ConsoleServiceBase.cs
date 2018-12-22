@@ -110,6 +110,11 @@ namespace Neo.Services
             {
                 if (args.Length > 0 && args[0] == "/install")
                 {
+                    if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                    {
+                        Console.WriteLine("Only support for installing services on Windows.");
+                        return;
+                    }
                     string arguments = string.Format("create {0} start= auto binPath= \"{1}\"", ServiceName, Process.GetCurrentProcess().MainModule.FileName);
                     if (!string.IsNullOrEmpty(Depends))
                     {
@@ -127,6 +132,11 @@ namespace Neo.Services
                 }
                 else if (args.Length > 0 && args[0] == "/uninstall")
                 {
+                    if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                    {
+                        Console.WriteLine("Only support for installing services on Windows.");
+                        return;
+                    }
                     Process process = Process.Start(new ProcessStartInfo
                     {
                         Arguments = string.Format("delete {0}", ServiceName),
