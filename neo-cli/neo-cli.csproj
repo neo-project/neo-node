@@ -5,7 +5,7 @@
     <AssemblyTitle>Neo.CLI</AssemblyTitle>
     <Version>2.9.3</Version>
     <Authors>The Neo Project</Authors>
-    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
     <AssemblyName>neo-cli</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>Neo.CLI</PackageId>
@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <PackageReference Include="Neo" Version="2.9.3" />
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="4.5.0" />
   </ItemGroup>
 
 </Project>

@@ -1,12 +1,16 @@
 ﻿using System;
+using System.Diagnostics;
+using System.IO;
 using System.Reflection;
 using System.Security;
+using System.ServiceProcess;
 using System.Text;
 
 namespace Neo.Services
 {
     public abstract class ConsoleServiceBase
     {
+        protected virtual string Depends => null;
         protected virtual string Prompt => "service";
 
         public abstract string ServiceName { get; }
@@ -102,17 +106,64 @@ namespace Neo.Services
 
         public void Run(string[] args)
         {
-            OnStart(args);
-            RunConsole();
-            OnStop();
+            if (Environment.UserInteractive)
+            {
+                if (args.Length > 0 && args[0] == "/install")
+                {
+                    if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                    {
+                        Console.WriteLine("Only support for installing services on Windows.");
+                        return;
+                    }
+                    string arguments = string.Format("create {0} start= auto binPath= \"{1}\"", ServiceName, Process.GetCurrentProcess().MainModule.FileName);
+                    if (!string.IsNullOrEmpty(Depends))
+                    {
+                        arguments += string.Format(" depend= {0}", Depends);
+                    }
+                    Process process = Process.Start(new ProcessStartInfo
+                    {
+                        Arguments = arguments,
+                        FileName = Path.Combine(Environment.SystemDirectory, "sc.exe"),
+                        RedirectStandardOutput = true,
+                        UseShellExecute = false
+                    });
+                    process.WaitForExit();
+                    Console.Write(process.StandardOutput.ReadToEnd());
+                }
+                else if (args.Length > 0 && args[0] == "/uninstall")
+                {
+                    if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                    {
+                        Console.WriteLine("Only support for installing services on Windows.");
+                        return;
+                    }
+                    Process process = Process.Start(new ProcessStartInfo
+                    {
+                        Arguments = string.Format("delete {0}", ServiceName),
+                        FileName = Path.Combine(Environment.SystemDirectory, "sc.exe"),
+                        RedirectStandardOutput = true,
+                        UseShellExecute = false
+                    });
+                    process.WaitForExit();
+                    Console.Write(process.StandardOutput.ReadToEnd());
+                }
+                else
+                {
+                    OnStart(args);
+                    RunConsole();
+                    OnStop();
+                }
+            }
+            else
+            {
+                ServiceBase.Run(new ServiceProxy(this));
+            }
         }
 
         private void RunConsole()
         {
             bool running = true;
-#if NET461
             Console.Title = ServiceName;
-#endif
             Console.OutputEncoding = Encoding.Unicode;
 
             Console.ForegroundColor = ConsoleColor.DarkGreen;
