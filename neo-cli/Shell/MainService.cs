@@ -579,7 +579,7 @@ namespace Neo.Shell
             if (txs is null) return true;
             foreach (ClaimTransaction tx in txs)
                 if (tx != null)
-                    Console.WriteLine($"Tranaction Suceeded: {tx.Hash}");
+                    Console.WriteLine($"Transaction Succeeded: {tx.Hash}");
             return true;
         }
 
