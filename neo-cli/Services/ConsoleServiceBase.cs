@@ -163,7 +163,8 @@ namespace Neo.Services
         private void RunConsole()
         {
             bool running = true;
-            Console.Title = ServiceName;
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+                Console.Title = ServiceName;
             Console.OutputEncoding = Encoding.Unicode;
 
             Console.ForegroundColor = ConsoleColor.DarkGreen;
