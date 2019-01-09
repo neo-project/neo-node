@@ -887,7 +887,7 @@ namespace Neo.Shell
                 }
             store = new LevelDBStore(Path.GetFullPath(Settings.Default.Paths.Chain));
             system = new NeoSystem(store);
-            system.StartNode(Settings.Default.P2P.Port, Settings.Default.P2P.WsPort);
+            system.StartNode(Settings.Default.P2P.Port, Settings.Default.P2P.WsPort, Settings.Default.P2P.MinDesiredConnections, Settings.Default.P2P.MaxConnections);
             if (Settings.Default.UnlockWallet.IsActive)
             {
                 try
