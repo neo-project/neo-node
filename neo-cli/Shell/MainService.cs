@@ -425,7 +425,13 @@ namespace Neo.Shell
                 "\tinstall <pluginName>\n" +
                 "\tuninstall <pluginName>\n" +
                 "Advanced Commands:\n" +
-                "\tstart consensus\n");
+                "\tstart consensus\n" +
+                "Plugins now included:\n" +
+                "\tApplicationLogs\n" +
+                "\tImportBlocks\n" +
+                "\tRpcSecurity\n" +
+                "\tSimplePolicy\n" +
+                "\tStatesDumper\n");
 
             return true;
         }
