@@ -823,6 +823,7 @@ namespace Neo.Shell
             bool stop = false;
             int consoleLine = 1;
             Console.CursorVisible = false;
+            Console.Clear();
             Task.Run(() =>
             {
                 while (!stop)
