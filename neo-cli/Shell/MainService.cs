@@ -818,24 +818,37 @@ namespace Neo.Shell
             return true;
         }
 
-        private bool OnShowStateCommand(string[] args)
+         private bool OnShowStateCommand(string[] args)
         {
             bool stop = false;
+            int consoleLine = 1;
+            Console.CursorVisible = false;
             Task.Run(() =>
             {
                 while (!stop)
                 {
                     uint wh = 0;
+                    Console.CursorTop = 0;
+                    Console.CursorLeft = 0;
                     if (Program.Wallet != null)
                         wh = (Program.Wallet.WalletHeight > 0) ? Program.Wallet.WalletHeight - 1 : 0;
-                    Console.Clear();
-                    Console.WriteLine($"block: {wh}/{Blockchain.Singleton.Height}/{Blockchain.Singleton.HeaderHeight}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}");
+                    var output = $"block: {wh}/{Blockchain.Singleton.Height}/{Blockchain.Singleton.HeaderHeight}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}";
+                    Console.Write(output.PadRight(output.Length));
+                    consoleLine = 1;
                     foreach (RemoteNode node in LocalNode.Singleton.GetRemoteNodes().Take(Console.WindowHeight - 2))
-                        Console.WriteLine($"  ip: {node.Remote.Address}\tport: {node.Remote.Port}\tlisten: {node.ListenerPort}\theight: {node.Version?.StartHeight}");
+                    {
+                        output = $"  ip: {node.Remote.Address}\tport: {node.Remote.Port}\tlisten: {node.ListenerPort}\theight: {node.Version?.StartHeight}";
+                        Console.CursorTop = consoleLine++;
+                        Console.CursorLeft = 0;
+                        Console.Write(output.PadRight(output.Length));
+                    }
+
                     Thread.Sleep(500);
                 }
             });
             Console.ReadLine();
+            Console.WriteLine();
+            Console.CursorVisible = true;
             stop = true;
             return true;
         }
