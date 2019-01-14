@@ -810,7 +810,6 @@ namespace Neo.Shell
         private bool OnShowPoolCommand(string[] args)
         {
             bool verbose = args.Length >= 3 && args[2] == "verbose";
-            Transaction[] transactions = Blockchain.Singleton.GetMemoryPool().ToArray();
             Blockchain.Singleton.MemPool.GetVerifiedAndUnverifiedTransactions(
                 out IEnumerable<Transaction> verifiedTransactions, 
                 out IEnumerable<Transaction> unverifiedTransactions);
@@ -823,7 +822,7 @@ namespace Neo.Shell
                 foreach (Transaction tx in unverifiedTransactions)
                     Console.WriteLine($"{tx.Hash} {tx.GetType().Name}");
             }
-            Console.WriteLine($"total: {verifiedTransactions.Length+unverifiedTransactions.Length}");
+            Console.WriteLine($"total: {verifiedTransactions.Count+unverifiedTransactions.Count}");
             return true;
         }
 
