@@ -810,11 +810,11 @@ namespace Neo.Shell
         private bool OnShowPoolCommand(string[] args)
         {
             bool verbose = args.Length >= 3 && args[2] == "verbose";
-            Blockchain.Singleton.MemPool.GetVerifiedAndUnverifiedTransactions(
-                out IEnumerable<Transaction> verifiedTransactions, 
-                out IEnumerable<Transaction> unverifiedTransactions);
             if (verbose)
             {
+                Blockchain.Singleton.MemPool.GetVerifiedAndUnverifiedTransactions(
+                    out IEnumerable<Transaction> verifiedTransactions, 
+                    out IEnumerable<Transaction> unverifiedTransactions);                
                 Console.WriteLine("Verified Transactions:");
                 foreach (Transaction tx in verifiedTransactions)
                     Console.WriteLine($"{tx.Hash} {tx.GetType().Name}");
