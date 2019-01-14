@@ -822,7 +822,7 @@ namespace Neo.Shell
                 foreach (Transaction tx in unverifiedTransactions)
                     Console.WriteLine($"{tx.Hash} {tx.GetType().Name}");
             }
-            Console.WriteLine($"total verified: {verifiedTransactions.Count}, total unverified: {unverifiedTransactions.Count}");
+            Console.WriteLine($"total: {Blockchain.Singleton.MemPool.Count}, total verified: {Blockchain.Singleton.MemPool.VerifiedCount}, total unverified: {Blockchain.Singleton.MemPool.UnVerifiedCount}");
             return true;
         }
 
