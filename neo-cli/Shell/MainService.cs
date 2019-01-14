@@ -811,10 +811,19 @@ namespace Neo.Shell
         {
             bool verbose = args.Length >= 3 && args[2] == "verbose";
             Transaction[] transactions = Blockchain.Singleton.GetMemoryPool().ToArray();
+            Blockchain.Singleton.MemPool.GetVerifiedAndUnverifiedTransactions(
+                out IEnumerable<Transaction> verifiedTransactions, 
+                out IEnumerable<Transaction> unverifiedTransactions);
             if (verbose)
-                foreach (Transaction tx in transactions)
+            {
+                Console.WriteLine("Verified Transactions:");
+                foreach (Transaction tx in verifiedTransactions)
                     Console.WriteLine($"{tx.Hash} {tx.GetType().Name}");
-            Console.WriteLine($"total: {transactions.Length}");
+                Console.WriteLine("Unverified Transactions:");    
+                foreach (Transaction tx in unverifiedTransactions)
+                    Console.WriteLine($"{tx.Hash} {tx.GetType().Name}");
+            }
+            Console.WriteLine($"total: {verifiedTransactions.Length+unverifiedTransactions.Length}");
             return true;
         }
 
