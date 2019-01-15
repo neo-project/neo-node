@@ -817,10 +817,10 @@ namespace Neo.Shell
                     out IEnumerable<Transaction> unverifiedTransactions);                
                 Console.WriteLine("Verified Transactions:");
                 foreach (Transaction tx in verifiedTransactions)
-                    Console.WriteLine($"{tx.Hash} {tx.GetType().Name}");
+                    Console.WriteLine($" {tx.Hash} {tx.GetType().Name}");
                 Console.WriteLine("Unverified Transactions:");    
                 foreach (Transaction tx in unverifiedTransactions)
-                    Console.WriteLine($"{tx.Hash} {tx.GetType().Name}");
+                    Console.WriteLine($" {tx.Hash} {tx.GetType().Name}");
             }
             Console.WriteLine($"total: {Blockchain.Singleton.MemPool.Count}, total verified: {Blockchain.Singleton.MemPool.VerifiedCount}, total unverified: {Blockchain.Singleton.MemPool.UnVerifiedCount}");
             return true;
