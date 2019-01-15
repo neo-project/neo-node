@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Copyright>2016-2019 The Neo Project</Copyright>
     <AssemblyTitle>Neo.CLI</AssemblyTitle>
-    <Version>2.9.4</Version>
+    <Version>2.9.5</Version>
     <Authors>The Neo Project</Authors>
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <AssemblyName>neo-cli</AssemblyName>
