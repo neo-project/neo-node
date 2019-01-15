@@ -835,16 +835,14 @@ namespace Neo.Shell
                     Console.CursorLeft = 0;
                     if (Program.Wallet != null)
                         wh = (Program.Wallet.WalletHeight > 0) ? Program.Wallet.WalletHeight - 1 : 0;
-                    string output = $"block: {wh}/{Blockchain.Singleton.Height}/{Blockchain.Singleton.HeaderHeight}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}\t";
-                    Console.Write(output.PadRight(output.Length));
+                    Console.Write($"block: {wh}/{Blockchain.Singleton.Height}/{Blockchain.Singleton.HeaderHeight}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}\t");
                     consoleLine = 1;
 
                     foreach (RemoteNode node in LocalNode.Singleton.GetRemoteNodes().Take(Console.WindowHeight - 2))
                     {
                         Console.CursorTop = consoleLine++;
                         Console.CursorLeft = 0;
-                        output = $"  ip: {node.Remote.Address}\tport: {node.Remote.Port}\tlisten: {node.ListenerPort}\theight: {node.Version?.StartHeight}\t";
-                        Console.Write(output.PadRight(output.Length));
+                        Console.Write($"  ip: {node.Remote.Address}\tport: {node.Remote.Port}\tlisten: {node.ListenerPort}\theight: {node.Version?.StartHeight}\t");
                     }
 
                     // In case the connection numbre drops, clear those extra nodes
