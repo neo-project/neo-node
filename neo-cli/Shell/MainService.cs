@@ -818,12 +818,14 @@ namespace Neo.Shell
             return true;
         }
 
-         private bool OnShowStateCommand(string[] args)
+        private bool OnShowStateCommand(string[] args)
         {
             bool stop = false;
             int consoleLine = 1;
+            int preConsoleLine = -1;
             Console.CursorVisible = false;
             Console.Clear();
+
             Task.Run(() =>
             {
                 while (!stop)
@@ -833,13 +835,27 @@ namespace Neo.Shell
                     Console.CursorLeft = 0;
                     if (Program.Wallet != null)
                         wh = (Program.Wallet.WalletHeight > 0) ? Program.Wallet.WalletHeight - 1 : 0;
-                    Console.Write($"block: {wh}/{Blockchain.Singleton.Height}/{Blockchain.Singleton.HeaderHeight}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}");
+                    string output = $"block: {wh}/{Blockchain.Singleton.Height}/{Blockchain.Singleton.HeaderHeight}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}\t";
+                    Console.Write(output.PadRight(output.Length));
                     consoleLine = 1;
+
                     foreach (RemoteNode node in LocalNode.Singleton.GetRemoteNodes().Take(Console.WindowHeight - 2))
                     {
                         Console.CursorTop = consoleLine++;
                         Console.CursorLeft = 0;
-                        Console.Write($"  ip: {node.Remote.Address}\tport: {node.Remote.Port}\tlisten: {node.ListenerPort}\theight: {node.Version?.StartHeight}");
+                        output = $"  ip: {node.Remote.Address}\tport: {node.Remote.Port}\tlisten: {node.ListenerPort}\theight: {node.Version?.StartHeight}\t";
+                        Console.Write(output.PadRight(output.Length));
+                    }
+
+                    // In case the connection numbre drops, clear those extra nodes
+                    if (preConsoleLine == -1)
+                        preConsoleLine = consoleLine;
+
+                    while (preConsoleLine > consoleLine)
+                    {
+                        Console.CursorTop = consoleLine++;
+                        Console.CursorLeft = 0;
+                        Console.Write($"".PadRight(Console.WindowWidth));
                     }
 
                     Thread.Sleep(500);
