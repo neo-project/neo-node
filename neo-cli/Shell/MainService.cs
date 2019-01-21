@@ -821,22 +821,29 @@ namespace Neo.Shell
         private bool OnShowStateCommand(string[] args)
         {
             bool stop = false;
-            Task.Run(() =>
+            Console.CursorVisible = false;
+            Console.Clear();
+            Task task = Task.Run(() =>
             {
                 while (!stop)
                 {
+                    Console.SetCursorPosition(0, 0);
                     uint wh = 0;
                     if (Program.Wallet != null)
                         wh = (Program.Wallet.WalletHeight > 0) ? Program.Wallet.WalletHeight - 1 : 0;
-                    Console.Clear();
-                    Console.WriteLine($"block: {wh}/{Blockchain.Singleton.Height}/{Blockchain.Singleton.HeaderHeight}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}");
+                    WriteLineWithoutFlicker($"block: {wh}/{Blockchain.Singleton.Height}/{Blockchain.Singleton.HeaderHeight}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}");
                     foreach (RemoteNode node in LocalNode.Singleton.GetRemoteNodes().Take(Console.WindowHeight - 2))
-                        Console.WriteLine($"  ip: {node.Remote.Address}\tport: {node.Remote.Port}\tlisten: {node.ListenerPort}\theight: {node.Version?.StartHeight}");
+                        WriteLineWithoutFlicker($"  ip: {node.Remote.Address}\tport: {node.Remote.Port}\tlisten: {node.ListenerPort}\theight: {node.Version?.StartHeight}");
+                    while (Console.CursorTop + 1 < Console.WindowHeight)
+                        WriteLineWithoutFlicker();
                     Thread.Sleep(500);
                 }
             });
             Console.ReadLine();
             stop = true;
+            task.Wait();
+            Console.WriteLine();
+            Console.CursorVisible = true;
             return true;
         }
 
@@ -1038,6 +1045,12 @@ namespace Neo.Shell
                 nep6wallet.Unlock(password);
                 return nep6wallet;
             }
+        }
+
+        private static void WriteLineWithoutFlicker(string message = "")
+        {
+            Console.Write(message);
+            Console.Write(new string(' ', Console.BufferWidth - Console.CursorLeft));
         }
     }
 }
