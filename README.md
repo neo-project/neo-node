@@ -56,4 +56,4 @@ In order to synchronize the network faster, please check [here](http://docs.neo.
 
 ## Usage
 
-See [documentation](http://docs.neo.org/en-us/node/cli.html). E.g. try `show state` or `create wallet wallet.json`.
+See [documentation](https://docs.neo.org/en-us/node/cli/cli.html). E.g. try `show state` or `create wallet wallet.json`.

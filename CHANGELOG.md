@@ -3,6 +3,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.9.4] - 2019-01-07
+### Added
+- Allow to start as a service in windows.
+- New CLI commands: `install <plugin>` and `uninstall <plugin>`.
+- Allow plugins to get contract execution results.
+- Allow plugins to delay starting the node.
+- Allow plugins to have third-party dependencies.
+
+### Fixed
+- Fixed a concurrency issue.
+- Fixed a block relaying issue.
+- Fixed an issue where sometimes transactions could not be removed from the memory pool.
+
 ## [2.9.3] - 2018-12-12
 ### Added
 - Hash interop names to save space in compiled byte code.(smart contract)
