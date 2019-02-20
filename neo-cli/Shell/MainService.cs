@@ -93,8 +93,10 @@ namespace Neo.Shell
                     return OnStartCommand(args);
                 case "upgrade":
                     return OnUpgradeCommand(args);
-                case "contract":
-                    return OnContractCommand(args);
+                case "deploy":
+                    return OnDeployCommand(args);
+                case "invoke":
+                    return OnInvokeCommand(args);
                 case "install":
                     return OnInstallCommand(args);
                 case "uninstall":
@@ -148,116 +150,107 @@ namespace Neo.Shell
             return true;
         }
 
-        private bool OnContractCommand(string[] args)
+        private bool OnDeployCommand(string[] args)
         {
-            string command = args[1].ToLower();
+            if (NoWallet()) return true;
+            var tx = LoadScriptTransaction(
+                /* filePath */ args[1],
+                /* paramTypes */ args[2],
+                /* returnType */ args[3],
+                /* hasStorage */ args[4] == "true",
+                /* hasDynamicInvoke */ args[5] == "true",
+                /* isPayable */ args[6] == "true",
+                /* contractName */ args[7],
+                /* contractVersion */ args[8],
+                /* contractAuthor */ args[9],
+                /* contractEmail */ args[10],
+                /* contractDescription */ args[11]);
 
-            switch (command)
+            tx.Version = 1;
+            if (tx.Attributes == null) tx.Attributes = new TransactionAttribute[0];
+            if (tx.Inputs == null) tx.Inputs = new CoinReference[0];
+            if (tx.Outputs == null) tx.Outputs = new TransactionOutput[0];
+            if (tx.Witnesses == null) tx.Witnesses = new Witness[0];
+            ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, null, true);
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"VM State: {engine.State}");
+            sb.AppendLine($"Gas Consumed: {engine.GasConsumed}");
+            sb.AppendLine(
+                $"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
+            Console.WriteLine(sb.ToString());
+            if (engine.State.HasFlag(VMState.FAULT))
             {
-                case "deploy":
-                {
-                    if (NoWallet()) return true;
-                    var tx = LoadScriptTransaction(
-                        /* filePath */ args[2],
-                        /* paramTypes */ args[3],
-                        /* returnType */ args[4],
-                        /* hasStorage */ args[5] == "true",
-                        /* hasDynamicInvoke */ args[6] == "true",
-                        /* isPayable */ args[7] == "true",
-                        /* contractName */ args[8],
-                        /* contractVersion */ args[9],
-                        /* contractAuthor */ args[10],
-                        /* contractEmail */ args[11],
-                        /* contractDescription */ args[12]);
-
-                    tx.Version = 1;
-                    if (tx.Attributes == null) tx.Attributes = new TransactionAttribute[0];
-                    if (tx.Inputs == null) tx.Inputs = new CoinReference[0];
-                    if (tx.Outputs == null) tx.Outputs = new TransactionOutput[0];
-                    if (tx.Witnesses == null) tx.Witnesses = new Witness[0];
-                    ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, null, true);
-                    StringBuilder sb = new StringBuilder();
-                    sb.AppendLine($"VM State: {engine.State}");
-                    sb.AppendLine($"Gas Consumed: {engine.GasConsumed}");
-                    sb.AppendLine(
-                        $"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
-                    Console.WriteLine(sb.ToString());
-                    if (engine.State.HasFlag(VMState.FAULT))
-                    {
-                        Console.WriteLine("Engine faulted.");
-                        return true;
-                    }
-
-                    tx.Gas = engine.GasConsumed - Fixed8.FromDecimal(10);
-                    if (tx.Gas < Fixed8.Zero) tx.Gas = Fixed8.Zero;
-                    tx.Gas = tx.Gas.Ceiling();
-
-                    tx = DecorateScriptTransaction(tx);
-
-                    return SignAndSendTx(tx);
-                }
-                case "invoke":
-                {
-                    var scriptHash = UInt160.Parse(args[2]);
-
-                    List<ContractParameter> contractParameters = new List<ContractParameter>();
-                    for (int i = 4; i < args.Length; i++)
-                    {
-                        contractParameters.Add(new ContractParameter()
-                            {
-                                // TODO: support contract params of type other than string.
-                                Type = ContractParameterType.String,
-                                Value = args[i]
-                            });
-                    }
-
-                    ContractParameter[] parameters =
-                    {
-                        new ContractParameter
-                        {
-                            Type = ContractParameterType.String,
-                            Value = args[3]
-                        },
-                        new ContractParameter
-                        {
-                            Type = ContractParameterType.Array,
-                            Value = contractParameters.ToArray()
-                        }
-                    };
-
-                    var tx = new InvocationTransaction();
-
-                    using (ScriptBuilder scriptBuilder = new ScriptBuilder())
-                    {
-                        scriptBuilder.EmitAppCall(scriptHash, parameters);
-                        Console.WriteLine($"Invoking script with: '{scriptBuilder.ToArray().ToHexString()}'");
-                        tx.Script = scriptBuilder.ToArray();
-                    }
-
-                    if (tx.Attributes == null) tx.Attributes = new TransactionAttribute[0];
-                    if (tx.Inputs == null) tx.Inputs = new CoinReference[0];
-                    if (tx.Outputs == null) tx.Outputs = new TransactionOutput[0];
-                    if (tx.Witnesses == null) tx.Witnesses = new Witness[0];
-                    ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx);
-
-                    StringBuilder sb = new StringBuilder();
-                    sb.AppendLine($"VM State: {engine.State}");
-                    sb.AppendLine($"Gas Consumed: {engine.GasConsumed}");
-                    sb.AppendLine(
-                        $"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
-                    Console.WriteLine(sb.ToString());
-                    if (engine.State.HasFlag(VMState.FAULT))
-                    {
-                        Console.WriteLine("Engine faulted.");
-                        return true;
-                    }
-
-                    tx = DecorateScriptTransaction(tx);
-                    return SignAndSendTx(tx);
-                }
+                Console.WriteLine("Engine faulted.");
+                return true;
             }
 
-            return true;
+            tx.Gas = engine.GasConsumed - Fixed8.FromDecimal(10);
+            if (tx.Gas < Fixed8.Zero) tx.Gas = Fixed8.Zero;
+            tx.Gas = tx.Gas.Ceiling();
+
+            tx = DecorateScriptTransaction(tx);
+
+            return SignAndSendTx(tx);
+        }
+
+        private bool OnInvokeCommand(string[] args)
+        {
+            var scriptHash = UInt160.Parse(args[1]);
+
+            List<ContractParameter> contractParameters = new List<ContractParameter>();
+            for (int i = 3; i < args.Length; i++)
+            {
+                contractParameters.Add(new ContractParameter()
+                {
+                    // TODO: support contract params of type other than string.
+                    Type = ContractParameterType.String,
+                    Value = args[i]
+                });
+            }
+
+            ContractParameter[] parameters =
+            {
+                new ContractParameter
+                {
+                    Type = ContractParameterType.String,
+                    Value = args[2]
+                },
+                new ContractParameter
+                {
+                    Type = ContractParameterType.Array,
+                    Value = contractParameters.ToArray()
+                }
+            };
+
+            var tx = new InvocationTransaction();
+
+            using (ScriptBuilder scriptBuilder = new ScriptBuilder())
+            {
+                scriptBuilder.EmitAppCall(scriptHash, parameters);
+                Console.WriteLine($"Invoking script with: '{scriptBuilder.ToArray().ToHexString()}'");
+                tx.Script = scriptBuilder.ToArray();
+            }
+
+            if (tx.Attributes == null) tx.Attributes = new TransactionAttribute[0];
+            if (tx.Inputs == null) tx.Inputs = new CoinReference[0];
+            if (tx.Outputs == null) tx.Outputs = new TransactionOutput[0];
+            if (tx.Witnesses == null) tx.Witnesses = new Witness[0];
+            ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx);
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"VM State: {engine.State}");
+            sb.AppendLine($"Gas Consumed: {engine.GasConsumed}");
+            sb.AppendLine(
+                $"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
+            Console.WriteLine(sb.ToString());
+            if (engine.State.HasFlag(VMState.FAULT))
+            {
+                Console.WriteLine("Engine faulted.");
+                return true;
+            }
+
+            tx = DecorateScriptTransaction(tx);
+            return SignAndSendTx(tx);
         }
 
         public InvocationTransaction LoadScriptTransaction(
@@ -611,9 +604,8 @@ namespace Neo.Shell
                 "\tsend <id|alias> <address> <value>|all [fee=0]\n" +
                 "\tsign <jsonObjectToSign>\n" +
                 "Contract Commands:\n" +
-                "\tcontract deploy <avmFilePath> <paramTypes> <returnTypeHexString> <hasStorage (true|false)> <hasDynamicInvoke (true|false)> <isPayable (true|false) <contractName> <contractVersion> <contractAuthor> <contractEmail> <contractDescription>\n" +
-                "\tcontract invoke <scripthash> <command> [optionally quoted params separated by space]\n" +
-
+                "\tdeploy <avmFilePath> <paramTypes> <returnTypeHexString> <hasStorage (true|false)> <hasDynamicInvoke (true|false)> <isPayable (true|false) <contractName> <contractVersion> <contractAuthor> <contractEmail> <contractDescription>\n" +
+                "\tinvoke <scripthash> <command> [optionally quoted params separated by space]\n" +
                 "Node Commands:\n" +
                 "\tshow state\n" +
                 "\tshow pool [verbose]\n" +
