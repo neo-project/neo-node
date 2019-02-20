@@ -1,6 +1,7 @@
 ﻿using Akka.Actor;
 using Neo.Consensus;
 using Neo.IO;
+using Neo.IO.Json;
 using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
@@ -9,6 +10,7 @@ using Neo.Persistence.LevelDB;
 using Neo.Plugins;
 using Neo.Services;
 using Neo.SmartContract;
+using Neo.VM;
 using Neo.Wallets;
 using Neo.Wallets.NEP6;
 using Neo.Wallets.SQLite;
@@ -22,8 +24,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Neo.IO.Json;
-using Neo.VM;
 using ECCurve = Neo.Cryptography.ECC.ECCurve;
 using ECPoint = Neo.Cryptography.ECC.ECPoint;
 
@@ -308,7 +308,7 @@ namespace Neo.Shell
             }
             catch (InvalidOperationException ex)
             {
-                Console.WriteLine($"Error creating contract params: {ex}" );
+                Console.WriteLine($"Error creating contract params: {ex}");
                 throw;
             }
             Program.Wallet.Sign(context);
