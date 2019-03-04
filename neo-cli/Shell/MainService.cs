@@ -1013,7 +1013,7 @@ namespace Neo.Shell
             bool stop = false;
             Console.CursorVisible = false;
             Console.Clear();
-            Task task = Task.Run(() =>
+            Task task = Task.Run(async () =>
             {
                 while (!stop)
                 {
@@ -1021,12 +1021,19 @@ namespace Neo.Shell
                     uint wh = 0;
                     if (Program.Wallet != null)
                         wh = (Program.Wallet.WalletHeight > 0) ? Program.Wallet.WalletHeight - 1 : 0;
+
                     WriteLineWithoutFlicker($"block: {wh}/{Blockchain.Singleton.Height}/{Blockchain.Singleton.HeaderHeight}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}");
-                    foreach (RemoteNode node in LocalNode.Singleton.GetRemoteNodes().Take(Console.WindowHeight - 2))
-                        WriteLineWithoutFlicker($"  ip: {node.Remote.Address}\tport: {node.Remote.Port}\tlisten: {node.ListenerPort}\theight: {node.Version?.StartHeight}");
-                    while (Console.CursorTop + 1 < Console.WindowHeight)
+                    int linesWritten = 1;
+                    foreach (RemoteNode node in LocalNode.Singleton.GetRemoteNodes().Take(Console.WindowHeight - 2).ToArray())
+                    {
+                        WriteLineWithoutFlicker(
+                            $"  ip: {node.Remote.Address}\tport: {node.Remote.Port}\tlisten: {node.ListenerPort}\theight: {node.Version?.StartHeight}");
+                        linesWritten++;
+                    }
+
+                    while (++linesWritten < Console.WindowHeight)
                         WriteLineWithoutFlicker();
-                    Thread.Sleep(500);
+                    await Task.Delay(500);
                 }
             });
             Console.ReadLine();
@@ -1237,10 +1244,12 @@ namespace Neo.Shell
             }
         }
 
-        private static void WriteLineWithoutFlicker(string message = "")
+        private static void WriteLineWithoutFlicker(string message = "", int maxWidth=80)
         {
-            Console.Write(message);
-            Console.Write(new string(' ', Console.BufferWidth - Console.CursorLeft));
+            if (message.Length > 0) Console.Write(message);
+            var spacesToErase = maxWidth - message.Length;
+            if (spacesToErase < 0) spacesToErase = 0;
+            Console.WriteLine(new string(' ', spacesToErase));
         }
     }
 }
