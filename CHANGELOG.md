@@ -3,6 +3,25 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.10.0] - 2019-03-07
+### Added
+- dBFT 2.0
+- Add safety checks for ConsensusContext Deserialization.
+- Refactor RpcServer.
+- Add support for Deploy and Invoke on neo-cli.
+- Fix a dead lock in `WalletIndexer`.
+- Updating Unknown to Policy Fail.
+- RPC call gettransactionheight.
+- Policy filter GetRelayResult message.
+- xxxxxx
+
+### Fixed
+- Fix startup issue in non-windows platform.
+- Solve the issue of console flicker.
+- Fix show state command on Linux.
+- Downgrade Sqlite to 2.1.4.
+- xxxxxx
+
 ## [2.9.4] - 2019-01-07
 ### Added
 - Allow to start as a service in windows.
