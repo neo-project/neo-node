@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Security;
@@ -38,6 +40,102 @@ namespace Neo.Services
         protected internal abstract void OnStart(string[] args);
 
         protected internal abstract void OnStop();
+
+        private static string[] ParseCommandLine(string line)
+        {
+            List<string> outputArgs = new List<string>();
+            using (StringReader reader = new StringReader(line))
+            {
+                while (true)
+                {
+                    switch (reader.Peek())
+                    {
+                        case -1:
+                            return outputArgs.ToArray();
+                        case ' ':
+                            reader.Read();
+                            break;
+                        case '\"':
+                            outputArgs.Add(ParseCommandLineString(reader));
+                            break;
+                        default:
+                            outputArgs.Add(ParseCommandLineArgument(reader));
+                            break;
+                    }
+                }
+            }
+        }
+
+        private static string ParseCommandLineArgument(TextReader reader)
+        {
+            StringBuilder sb = new StringBuilder();
+            while (true)
+            {
+                int c = reader.Read();
+                switch (c)
+                {
+                    case -1:
+                    case ' ':
+                        return sb.ToString();
+                    default:
+                        sb.Append((char)c);
+                        break;
+                }
+            }
+        }
+
+        private static string ParseCommandLineString(TextReader reader)
+        {
+            if (reader.Read() != '\"') throw new FormatException();
+            StringBuilder sb = new StringBuilder();
+            while (true)
+            {
+                int c = reader.Peek();
+                switch (c)
+                {
+                    case '\"':
+                        reader.Read();
+                        return sb.ToString();
+                    case '\\':
+                        sb.Append(ParseEscapeCharacter(reader));
+                        break;
+                    default:
+                        reader.Read();
+                        sb.Append((char)c);
+                        break;
+                }
+            }
+        }
+
+        private static char ParseEscapeCharacter(TextReader reader)
+        {
+            if (reader.Read() != '\\') throw new FormatException();
+            int c = reader.Read();
+            switch (c)
+            {
+                case -1:
+                    throw new FormatException();
+                case 'n':
+                    return '\n';
+                case 'r':
+                    return '\r';
+                case 't':
+                    return '\t';
+                case 'x':
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 0; i < 2; i++)
+                    {
+                        int h = reader.Read();
+                        if (h >= '0' && h <= '9' || h >= 'A' && h <= 'F' || h >= 'a' && h <= 'f')
+                            sb.Append((char)h);
+                        else
+                            throw new FormatException();
+                    }
+                    return (char)byte.Parse(sb.ToString(), NumberStyles.AllowHexSpecifier);
+                default:
+                    return (char)c;
+            }
+        }
 
         public static string ReadPassword(string prompt)
         {
@@ -184,7 +282,8 @@ namespace Neo.Services
                 string line = Console.ReadLine()?.Trim();
                 if (line == null) break;
                 Console.ForegroundColor = ConsoleColor.White;
-                string[] args = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+                string[] args = ParseCommandLine(line);
                 if (args.Length == 0)
                     continue;
                 try
