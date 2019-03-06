@@ -22,7 +22,6 @@ using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using ECCurve = Neo.Cryptography.ECC.ECCurve;
 using ECPoint = Neo.Cryptography.ECC.ECPoint;
@@ -495,7 +494,8 @@ namespace Neo.Shell
                         WalletAccount account = Program.Wallet.CreateAccount();
                         Console.WriteLine($"address: {account.Address}");
                         Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                        system.RpcServer?.OpenWallet(Program.Wallet);
+                        if (system.RpcServer != null)
+                            system.RpcServer.Wallet = Program.Wallet;
                     }
                     break;
                 case ".json":
@@ -507,7 +507,8 @@ namespace Neo.Shell
                         Program.Wallet = wallet;
                         Console.WriteLine($"address: {account.Address}");
                         Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                        system.RpcServer?.OpenWallet(Program.Wallet);
+                        if (system.RpcServer != null)
+                            system.RpcServer.Wallet = Program.Wallet;
                     }
                     break;
                 default:
@@ -863,7 +864,8 @@ namespace Neo.Shell
             {
                 Console.WriteLine($"failed to open file \"{path}\"");
             }
-            system.RpcServer?.OpenWallet(Program.Wallet);
+            if (system.RpcServer != null)
+                system.RpcServer.Wallet = Program.Wallet;
             return true;
         }
 
@@ -1000,11 +1002,19 @@ namespace Neo.Shell
         private bool OnShowPoolCommand(string[] args)
         {
             bool verbose = args.Length >= 3 && args[2] == "verbose";
-            Transaction[] transactions = Blockchain.Singleton.GetMemoryPool().ToArray();
             if (verbose)
-                foreach (Transaction tx in transactions)
-                    Console.WriteLine($"{tx.Hash} {tx.GetType().Name}");
-            Console.WriteLine($"total: {transactions.Length}");
+            {
+                Blockchain.Singleton.MemPool.GetVerifiedAndUnverifiedTransactions(
+                    out IEnumerable<Transaction> verifiedTransactions,
+                    out IEnumerable<Transaction> unverifiedTransactions);
+                Console.WriteLine("Verified Transactions:");
+                foreach (Transaction tx in verifiedTransactions)
+                    Console.WriteLine($" {tx.Hash} {tx.GetType().Name}");
+                Console.WriteLine("Unverified Transactions:");
+                foreach (Transaction tx in unverifiedTransactions)
+                    Console.WriteLine($" {tx.Hash} {tx.GetType().Name}");
+            }
+            Console.WriteLine($"total: {Blockchain.Singleton.MemPool.Count}, verified: {Blockchain.Singleton.MemPool.VerifiedCount}, unverified: {Blockchain.Singleton.MemPool.UnVerifiedCount}");
             return true;
         }
 
@@ -1244,7 +1254,7 @@ namespace Neo.Shell
             }
         }
 
-        private static void WriteLineWithoutFlicker(string message = "", int maxWidth=80)
+        private static void WriteLineWithoutFlicker(string message = "", int maxWidth = 80)
         {
             if (message.Length > 0) Console.Write(message);
             var spacesToErase = maxWidth - message.Length;
