@@ -5,10 +5,10 @@ All notable changes to this project will be documented in this file.
 
 ## [2.10.0] - 2019-03-07
 ### Added
-- dBFT 2.0
+- dBFT 2.0 (Commit Phase + Recovery)
+- Sorted MemoryPool (Intelligent Tx Reverification)
 - VM optimizations.
-- Add safety checks for ConsensusContext Deserialization.
-- Refactor RpcServer.
+- Refactor RpcServer and move wallet related commands to a plugin.
 - Add support for Deploy and Invoke on neo-cli.
 - Fix a dead lock in `WalletIndexer`.
 - Updating Unknown to Policy Fail.
@@ -18,8 +18,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Fix startup issue in non-windows platform.
-- Solve the issue of console flicker.
-- Fix show state command on Linux.
+- Fix console flicker with show state command.
 - Downgrade Sqlite to 2.1.4.
 - xxxxxx
 
