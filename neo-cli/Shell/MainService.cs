@@ -22,7 +22,6 @@ using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using ECCurve = Neo.Cryptography.ECC.ECCurve;
 using ECPoint = Neo.Cryptography.ECC.ECPoint;
@@ -1015,7 +1014,7 @@ namespace Neo.Shell
                 foreach (Transaction tx in unverifiedTransactions)
                     Console.WriteLine($" {tx.Hash} {tx.GetType().Name}");
             }
-            Console.WriteLine($"total: {Blockchain.Singleton.MemPool.Count}, total verified: {Blockchain.Singleton.MemPool.VerifiedCount}, total unverified: {Blockchain.Singleton.MemPool.UnVerifiedCount}");
+            Console.WriteLine($"total: {Blockchain.Singleton.MemPool.Count}, verified: {Blockchain.Singleton.MemPool.VerifiedCount}, unverified: {Blockchain.Singleton.MemPool.UnVerifiedCount}");
             return true;
         }
 
