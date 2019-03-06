@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 ## [2.10.0] - 2019-03-07
 ### Added
 - dBFT 2.0
+- VM optimizations.
 - Add safety checks for ConsensusContext Deserialization.
 - Refactor RpcServer.
 - Add support for Deploy and Invoke on neo-cli.
