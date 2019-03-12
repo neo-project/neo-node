@@ -955,7 +955,7 @@ namespace Neo.Shell
                 {
                     if (!Fixed8.TryParse(args[4], out fee) || fee < Fixed8.Zero)
                     {
-                        Console.WriteLine("Incorrect Amount Format");
+                        Console.WriteLine("Incorrect Fee Format");
                         return true;
                     }
                 }
