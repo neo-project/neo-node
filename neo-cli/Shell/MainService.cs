@@ -22,7 +22,6 @@ using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using ECCurve = Neo.Cryptography.ECC.ECCurve;
 using ECPoint = Neo.Cryptography.ECC.ECPoint;
@@ -157,9 +156,9 @@ namespace Neo.Shell
                 /* filePath */ args[1],
                 /* paramTypes */ args[2],
                 /* returnType */ args[3],
-                /* hasStorage */ args[4] == "true",
-                /* hasDynamicInvoke */ args[5] == "true",
-                /* isPayable */ args[6] == "true",
+                /* hasStorage */ args[4].ToBool(),
+                /* hasDynamicInvoke */ args[5].ToBool(),
+                /* isPayable */ args[6].ToBool(),
                 /* contractName */ args[7],
                 /* contractVersion */ args[8],
                 /* contractAuthor */ args[9],
@@ -495,7 +494,8 @@ namespace Neo.Shell
                         WalletAccount account = Program.Wallet.CreateAccount();
                         Console.WriteLine($"address: {account.Address}");
                         Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                        system.RpcServer?.OpenWallet(Program.Wallet);
+                        if (system.RpcServer != null)
+                            system.RpcServer.Wallet = Program.Wallet;
                     }
                     break;
                 case ".json":
@@ -507,7 +507,8 @@ namespace Neo.Shell
                         Program.Wallet = wallet;
                         Console.WriteLine($"address: {account.Address}");
                         Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                        system.RpcServer?.OpenWallet(Program.Wallet);
+                        if (system.RpcServer != null)
+                            system.RpcServer.Wallet = Program.Wallet;
                     }
                     break;
                 default:
@@ -863,7 +864,8 @@ namespace Neo.Shell
             {
                 Console.WriteLine($"failed to open file \"{path}\"");
             }
-            system.RpcServer?.OpenWallet(Program.Wallet);
+            if (system.RpcServer != null)
+                system.RpcServer.Wallet = Program.Wallet;
             return true;
         }
 
@@ -1000,11 +1002,19 @@ namespace Neo.Shell
         private bool OnShowPoolCommand(string[] args)
         {
             bool verbose = args.Length >= 3 && args[2] == "verbose";
-            Transaction[] transactions = Blockchain.Singleton.GetMemoryPool().ToArray();
             if (verbose)
-                foreach (Transaction tx in transactions)
-                    Console.WriteLine($"{tx.Hash} {tx.GetType().Name}");
-            Console.WriteLine($"total: {transactions.Length}");
+            {
+                Blockchain.Singleton.MemPool.GetVerifiedAndUnverifiedTransactions(
+                    out IEnumerable<Transaction> verifiedTransactions,
+                    out IEnumerable<Transaction> unverifiedTransactions);
+                Console.WriteLine("Verified Transactions:");
+                foreach (Transaction tx in verifiedTransactions)
+                    Console.WriteLine($" {tx.Hash} {tx.GetType().Name}");
+                Console.WriteLine("Unverified Transactions:");
+                foreach (Transaction tx in unverifiedTransactions)
+                    Console.WriteLine($" {tx.Hash} {tx.GetType().Name}");
+            }
+            Console.WriteLine($"total: {Blockchain.Singleton.MemPool.Count}, verified: {Blockchain.Singleton.MemPool.VerifiedCount}, unverified: {Blockchain.Singleton.MemPool.UnVerifiedCount}");
             return true;
         }
 
@@ -1013,7 +1023,7 @@ namespace Neo.Shell
             bool stop = false;
             Console.CursorVisible = false;
             Console.Clear();
-            Task task = Task.Run(() =>
+            Task task = Task.Run(async () =>
             {
                 while (!stop)
                 {
@@ -1021,12 +1031,19 @@ namespace Neo.Shell
                     uint wh = 0;
                     if (Program.Wallet != null)
                         wh = (Program.Wallet.WalletHeight > 0) ? Program.Wallet.WalletHeight - 1 : 0;
+
                     WriteLineWithoutFlicker($"block: {wh}/{Blockchain.Singleton.Height}/{Blockchain.Singleton.HeaderHeight}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}");
-                    foreach (RemoteNode node in LocalNode.Singleton.GetRemoteNodes().Take(Console.WindowHeight - 2))
-                        WriteLineWithoutFlicker($"  ip: {node.Remote.Address}\tport: {node.Remote.Port}\tlisten: {node.ListenerPort}\theight: {node.Version?.StartHeight}");
-                    while (Console.CursorTop + 1 < Console.WindowHeight)
+                    int linesWritten = 1;
+                    foreach (RemoteNode node in LocalNode.Singleton.GetRemoteNodes().Take(Console.WindowHeight - 2).ToArray())
+                    {
+                        WriteLineWithoutFlicker(
+                            $"  ip: {node.Remote.Address}\tport: {node.Remote.Port}\tlisten: {node.ListenerPort}\theight: {node.Version?.StartHeight}");
+                        linesWritten++;
+                    }
+
+                    while (++linesWritten < Console.WindowHeight)
                         WriteLineWithoutFlicker();
-                    Thread.Sleep(500);
+                    await Task.Delay(500);
                 }
             });
             Console.ReadLine();
@@ -1237,10 +1254,12 @@ namespace Neo.Shell
             }
         }
 
-        private static void WriteLineWithoutFlicker(string message = "")
+        private static void WriteLineWithoutFlicker(string message = "", int maxWidth = 80)
         {
-            Console.Write(message);
-            Console.Write(new string(' ', Console.BufferWidth - Console.CursorLeft));
+            if (message.Length > 0) Console.Write(message);
+            var spacesToErase = maxWidth - message.Length;
+            if (spacesToErase < 0) spacesToErase = 0;
+            Console.WriteLine(new string(' ', spacesToErase));
         }
     }
 }

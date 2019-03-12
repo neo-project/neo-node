@@ -5,6 +5,13 @@ namespace Neo
 {
     internal static class Helper
     {
+        internal static bool ToBool(this string input)
+        {
+            input = input.ToLowerInvariant();
+
+            return input == "true" || input == "yes" || input == "1";
+        }
+
         internal static string GetVersion(this Assembly assembly)
         {
             CustomAttributeData attribute = assembly.CustomAttributes.FirstOrDefault(p => p.AttributeType == typeof(AssemblyInformationalVersionAttribute));
