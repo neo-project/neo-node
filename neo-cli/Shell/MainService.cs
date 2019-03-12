@@ -944,12 +944,22 @@ namespace Neo.Shell
             else
             {
                 AssetDescriptor descriptor = new AssetDescriptor(assetId);
-                if (!BigDecimal.TryParse(args[3], descriptor.Decimals, out BigDecimal amount))
+                if (!BigDecimal.TryParse(args[3], descriptor.Decimals, out BigDecimal amount) || amount.Sign <= 0)
                 {
                     Console.WriteLine("Incorrect Amount Format");
                     return true;
                 }
-                Fixed8 fee = args.Length >= 5 ? Fixed8.Parse(args[4]) : Fixed8.Zero;
+                Fixed8 fee = Fixed8.Zero;
+
+                if (args.Length >= 5)
+                {
+                    if (!Fixed8.TryParse(args[4], out fee) || fee < Fixed8.Zero)
+                    {
+                        Console.WriteLine("Incorrect Amount Format");
+                        return true;
+                    }
+                }
+
                 tx = Program.Wallet.MakeTransaction(null, new[]
                 {
                     new TransferOutput
