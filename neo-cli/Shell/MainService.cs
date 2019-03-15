@@ -282,9 +282,9 @@ namespace Neo.Shell
         {
             Fixed8 fee = Fixed8.FromDecimal(0.001m);
 
-            if (tx.Script.Length > 1024)
+            if (tx.Size > 1024)
             {
-                fee += Fixed8.FromDecimal(tx.Script.Length * 0.00001m);
+                fee += Fixed8.FromDecimal((tx.Size - 1024) * 0.00001m);
             }
 
             return Program.Wallet.MakeTransaction(new InvocationTransaction
