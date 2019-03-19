@@ -187,7 +187,7 @@ namespace Neo.Shell
             if (tx.Gas < Fixed8.Zero) tx.Gas = Fixed8.Zero;
             tx.Gas = tx.Gas.Ceiling();
 
-            tx = DecorateScriptTransaction(tx);
+            tx = DecorateInvocationTransaction(tx);
 
             return SignAndSendTx(tx);
         }
@@ -248,7 +248,7 @@ namespace Neo.Shell
                 return true;
             }
 
-            tx = DecorateScriptTransaction(tx);
+            tx = DecorateInvocationTransaction(tx);
             return SignAndSendTx(tx);
         }
 
@@ -278,7 +278,7 @@ namespace Neo.Shell
             }
         }
 
-        public InvocationTransaction DecorateScriptTransaction(InvocationTransaction tx)
+        public InvocationTransaction DecorateInvocationTransaction(InvocationTransaction tx)
         {
             Fixed8 fee = Fixed8.FromDecimal(0.001m);
 
