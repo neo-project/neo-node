@@ -1,5 +1,6 @@
-﻿using Akka.Actor;
+using Akka.Actor;
 using Neo.Consensus;
+using Neo.Cryptography;
 using Neo.IO;
 using Neo.IO.Json;
 using Neo.Ledger;
@@ -163,7 +164,8 @@ namespace Neo.Shell
                 /* contractVersion */ args[8],
                 /* contractAuthor */ args[9],
                 /* contractEmail */ args[10],
-                /* contractDescription */ args[11]);
+                /* contractDescription */ args[11],
+                /* scriptHash */ out var scriptHash);
 
             tx.Version = 1;
             if (tx.Attributes == null) tx.Attributes = new TransactionAttribute[0];
@@ -172,6 +174,7 @@ namespace Neo.Shell
             if (tx.Witnesses == null) tx.Witnesses = new Witness[0];
             ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, null, true);
             StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"Script hash: {scriptHash.ToString()}");
             sb.AppendLine($"VM State: {engine.State}");
             sb.AppendLine($"Gas Consumed: {engine.GasConsumed}");
             sb.AppendLine(
@@ -256,7 +259,7 @@ namespace Neo.Shell
             string avmFilePath, string paramTypes, string returnTypeHexString,
             bool hasStorage, bool hasDynamicInvoke, bool isPayable,
             string contractName, string contractVersion, string contractAuthor,
-            string contractEmail, string contractDescription)
+            string contractEmail, string contractDescription, out UInt160 scriptHash)
         {
             byte[] script = File.ReadAllBytes(avmFilePath);
             // See ContractParameterType Enum
@@ -269,6 +272,8 @@ namespace Neo.Shell
             if (isPayable) properties |= ContractPropertyState.Payable;
             using (ScriptBuilder sb = new ScriptBuilder())
             {
+                scriptHash = script.ToScriptHash();
+
                 sb.EmitSysCall("Neo.Contract.Create", script, parameterList, returnType, properties,
                     contractName, contractVersion, contractAuthor, contractEmail, contractDescription);
                 return new InvocationTransaction
