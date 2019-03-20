@@ -1,6 +1,5 @@
 using Akka.Actor;
 using Neo.Consensus;
-using Neo.Cryptography;
 using Neo.IO;
 using Neo.IO.Json;
 using Neo.Ledger;
@@ -1061,7 +1060,7 @@ namespace Neo.Shell
                     await Task.Delay(500);
                 }
             });
-            Console.ReadLine();
+            ReadLine();
             stop = true;
             task.Wait();
             Console.WriteLine();
