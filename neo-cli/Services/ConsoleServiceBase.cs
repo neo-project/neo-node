@@ -209,7 +209,8 @@ namespace Neo.Services
             return securePwd;
         }
 
-        private void TriggerGracefulShutdown() {
+        private void TriggerGracefulShutdown()
+        {
             if (!_running) return;
             _running = false;
             _shutdownTokenSource.Cancel();
