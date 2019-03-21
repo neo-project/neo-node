@@ -995,7 +995,6 @@ namespace Neo.Shell
                     return true;
                 }
                 
-                
             }
             ContractParametersContext context = new ContractParametersContext(tx);
             Program.Wallet.Sign(context);
