@@ -977,7 +977,7 @@ namespace Neo.Shell
 
                 if (tx.Size > 1024)
                 {
-                    fee += Fixed8.FromDecimal(tx.Size * 0.00001m);
+                    fee += Fixed8.FromDecimal(tx.Size * 0.00001m + 0.001m);
                     tx = Program.Wallet.MakeTransaction(null, new[]
                     {
                         new TransferOutput
@@ -994,7 +994,7 @@ namespace Neo.Shell
                     Console.WriteLine("Insufficient funds");
                     return true;
                 }
-                
+                 
             }
             ContractParametersContext context = new ContractParametersContext(tx);
             Program.Wallet.Sign(context);
