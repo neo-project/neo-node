@@ -1,5 +1,6 @@
-﻿using Akka.Actor;
+using Akka.Actor;
 using Neo.Consensus;
+using Neo.Cryptography;
 using Neo.IO;
 using Neo.IO.Json;
 using Neo.Ledger;
@@ -163,7 +164,8 @@ namespace Neo.Shell
                 /* contractVersion */ args[8],
                 /* contractAuthor */ args[9],
                 /* contractEmail */ args[10],
-                /* contractDescription */ args[11]);
+                /* contractDescription */ args[11],
+                /* scriptHash */ out var scriptHash);
 
             tx.Version = 1;
             if (tx.Attributes == null) tx.Attributes = new TransactionAttribute[0];
@@ -172,6 +174,7 @@ namespace Neo.Shell
             if (tx.Witnesses == null) tx.Witnesses = new Witness[0];
             ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, null, true);
             StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"Script hash: {scriptHash.ToString()}");
             sb.AppendLine($"VM State: {engine.State}");
             sb.AppendLine($"Gas Consumed: {engine.GasConsumed}");
             sb.AppendLine(
@@ -187,7 +190,7 @@ namespace Neo.Shell
             if (tx.Gas < Fixed8.Zero) tx.Gas = Fixed8.Zero;
             tx.Gas = tx.Gas.Ceiling();
 
-            tx = DecorateScriptTransaction(tx);
+            tx = DecorateInvocationTransaction(tx);
 
             return SignAndSendTx(tx);
         }
@@ -248,7 +251,7 @@ namespace Neo.Shell
                 return true;
             }
 
-            tx = DecorateScriptTransaction(tx);
+            tx = DecorateInvocationTransaction(tx);
             return SignAndSendTx(tx);
         }
 
@@ -256,7 +259,7 @@ namespace Neo.Shell
             string avmFilePath, string paramTypes, string returnTypeHexString,
             bool hasStorage, bool hasDynamicInvoke, bool isPayable,
             string contractName, string contractVersion, string contractAuthor,
-            string contractEmail, string contractDescription)
+            string contractEmail, string contractDescription, out UInt160 scriptHash)
         {
             byte[] script = File.ReadAllBytes(avmFilePath);
             // See ContractParameterType Enum
@@ -269,6 +272,8 @@ namespace Neo.Shell
             if (isPayable) properties |= ContractPropertyState.Payable;
             using (ScriptBuilder sb = new ScriptBuilder())
             {
+                scriptHash = script.ToScriptHash();
+
                 sb.EmitSysCall("Neo.Contract.Create", script, parameterList, returnType, properties,
                     contractName, contractVersion, contractAuthor, contractEmail, contractDescription);
                 return new InvocationTransaction
@@ -278,13 +283,13 @@ namespace Neo.Shell
             }
         }
 
-        public InvocationTransaction DecorateScriptTransaction(InvocationTransaction tx)
+        public InvocationTransaction DecorateInvocationTransaction(InvocationTransaction tx)
         {
             Fixed8 fee = Fixed8.FromDecimal(0.001m);
 
-            if (tx.Script.Length > 1024)
+            if (tx.Size > 1024)
             {
-                fee += Fixed8.FromDecimal(tx.Script.Length * 0.00001m);
+                fee += Fixed8.FromDecimal(tx.Size * 0.00001m);
             }
 
             return Program.Wallet.MakeTransaction(new InvocationTransaction
@@ -944,12 +949,22 @@ namespace Neo.Shell
             else
             {
                 AssetDescriptor descriptor = new AssetDescriptor(assetId);
-                if (!BigDecimal.TryParse(args[3], descriptor.Decimals, out BigDecimal amount))
+                if (!BigDecimal.TryParse(args[3], descriptor.Decimals, out BigDecimal amount) || amount.Sign <= 0)
                 {
                     Console.WriteLine("Incorrect Amount Format");
                     return true;
                 }
-                Fixed8 fee = args.Length >= 5 ? Fixed8.Parse(args[4]) : Fixed8.Zero;
+                Fixed8 fee = Fixed8.Zero;
+
+                if (args.Length >= 5)
+                {
+                    if (!Fixed8.TryParse(args[4], out fee) || fee < Fixed8.Zero)
+                    {
+                        Console.WriteLine("Incorrect Fee Format");
+                        return true;
+                    }
+                }
+
                 tx = Program.Wallet.MakeTransaction(null, new[]
                 {
                     new TransferOutput
@@ -1123,7 +1138,8 @@ namespace Neo.Shell
                     Settings.Default.RPC.Port,
                     wallet: Program.Wallet,
                     sslCert: Settings.Default.RPC.SslCert,
-                    password: Settings.Default.RPC.SslCertPassword);
+                    password: Settings.Default.RPC.SslCertPassword,
+                    maxGasInvoke: Settings.Default.RPC.MaxGasInvoke);
             }
         }
 
