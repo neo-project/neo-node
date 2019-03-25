@@ -272,8 +272,10 @@ namespace Neo.Services
             bool running = true;
             string[] emptyarg = new string[] { "" };
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            {
                 Console.Title = ServiceName;
-            Console.OutputEncoding = Encoding.Unicode;
+                Console.OutputEncoding = Encoding.Unicode;
+            }
 
             Console.ForegroundColor = ConsoleColor.DarkGreen;
             Console.WriteLine($"{ServiceName} Version: {Assembly.GetEntryAssembly().GetVersion()}");
