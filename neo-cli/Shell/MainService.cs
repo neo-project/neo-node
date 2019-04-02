@@ -83,6 +83,8 @@ namespace Neo.Shell
                     return OnClaimCommand(args);
                 case "open":
                     return OnOpenCommand(args);
+                case "close":
+                    return OnCloseCommand(args);
                 case "rebuild":
                     return OnRebuildCommand(args);
                 case "send":
@@ -595,6 +597,7 @@ namespace Neo.Shell
                 "Wallet Commands:\n" +
                 "\tcreate wallet <path>\n" +
                 "\topen wallet <path>\n" +
+                "\tclose wallet\n" +
                 "\tupgrade wallet <path>\n" +
                 "\trebuild index\n" +
                 "\tlist address\n" +
@@ -838,6 +841,7 @@ namespace Neo.Shell
                     return base.OnCommand(args);
             }
         }
+        
 
         //TODO: 目前没有想到其它安全的方法来保存密码
         //所以只能暂时手动输入，但如此一来就不能以服务的方式启动了
@@ -871,6 +875,45 @@ namespace Neo.Shell
             }
             if (system.RpcServer != null)
                 system.RpcServer.Wallet = Program.Wallet;
+            return true;
+        }
+
+        /// <summary>
+        /// process "close" command
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private bool OnCloseCommand(string[] args)
+        {
+            switch (args[1].ToLower())
+            {
+                case "wallet":
+                    return OnCloseWalletCommand(args);
+                default:
+                    return base.OnCommand(args);
+            }
+        }
+
+        /// <summary>
+        /// process "close wallet" command
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private bool OnCloseWalletCommand(string[] args)
+        {
+            if (Program.Wallet == null)
+            {
+                Console.WriteLine($"Wallet is not opened");
+                return true;
+            }
+            
+            Program.Wallet.Dispose();
+            Program.Wallet = null;
+            if (system.RpcServer != null)
+            {
+                system.RpcServer.Wallet = null;
+            }
+            Console.WriteLine($"Wallet is closed");
             return true;
         }
 
