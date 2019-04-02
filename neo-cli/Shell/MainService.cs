@@ -1015,11 +1015,27 @@ namespace Neo.Shell
                         ScriptHash = scriptHash
                     }
                 }, fee: fee);
+
+                if (tx.Size > 1024)
+                {
+                    fee += Fixed8.FromDecimal(tx.Size * 0.00001m + 0.001m);
+                    tx = Program.Wallet.MakeTransaction(null, new[]
+                    {
+                        new TransferOutput
+                        {
+                            AssetId = assetId,
+                            Value = amount,
+                            ScriptHash = scriptHash
+                        }
+                    }, fee: fee);
+                }
+
                 if (tx == null)
                 {
                     Console.WriteLine("Insufficient funds");
                     return true;
                 }
+                 
             }
             ContractParametersContext context = new ContractParametersContext(tx);
             Program.Wallet.Sign(context);
