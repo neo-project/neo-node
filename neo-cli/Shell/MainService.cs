@@ -911,6 +911,7 @@ namespace Neo.Shell
             {
                 system.RpcServer.Wallet = null;
             }
+            Console.WriteLine($"Wallet is closed");
             return true;
         }
 
