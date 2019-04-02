@@ -906,6 +906,8 @@ namespace Neo.Shell
                 Console.WriteLine($"Wallet is not opened");
                 return true;
             }
+            
+            Program.Wallet.Dispose();
             Program.Wallet = null;
             if (system.RpcServer != null)
             {
