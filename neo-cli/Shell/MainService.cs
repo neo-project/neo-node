@@ -1018,6 +1018,10 @@ namespace Neo.Shell
                     }
                 }, fee: fee);
 
+                ContractParametersContext transContext = new ContractParametersContext(tx);
+                Program.Wallet.Sign(transContext);
+                tx.Witnesses = transContext.GetWitnesses();
+                
                 if (tx.Size > 1024)
                 {
                     fee += Fixed8.FromDecimal(tx.Size * 0.00001m + 0.001m);
