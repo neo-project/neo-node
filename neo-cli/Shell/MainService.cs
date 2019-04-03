@@ -1024,16 +1024,20 @@ namespace Neo.Shell
                 
                 if (tx.Size > 1024)
                 {
-                    fee = Fixed8.Max(Fixed8.FromDecimal(tx.Size * 0.00001m + 0.001m), fee);
-                    tx = Program.Wallet.MakeTransaction(null, new[]
+                    Fixed8 calFee = Fixed8.FromDecimal(tx.Size * 0.00001m + 0.001m);
+                    if (fee < calFee)
                     {
-                        new TransferOutput
+                        fee = calFee;
+                        tx = Program.Wallet.MakeTransaction(null, new[]
                         {
-                            AssetId = assetId,
-                            Value = amount,
-                            ScriptHash = scriptHash
-                        }
-                    }, fee: fee);
+                            new TransferOutput
+                            {
+                                AssetId = assetId,
+                                Value = amount,
+                                ScriptHash = scriptHash
+                            }
+                        }, fee: fee);
+                    }
                 }
 
                 if (tx == null)
