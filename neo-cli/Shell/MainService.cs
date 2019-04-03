@@ -1043,15 +1043,13 @@ namespace Neo.Shell
                                 ScriptHash = scriptHash
                             }
                         }, fee: fee);
+                        if (tx == null)
+                        {
+                            Console.WriteLine("Insufficient funds");
+                            return true;
+                        }
                     }
                 }
-
-                if (tx == null)
-                {
-                    Console.WriteLine("Insufficient funds");
-                    return true;
-                }
-                 
             }
             ContractParametersContext context = new ContractParametersContext(tx);
             Program.Wallet.Sign(context);
