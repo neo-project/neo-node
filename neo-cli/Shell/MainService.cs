@@ -1018,10 +1018,16 @@ namespace Neo.Shell
                     }
                 }, fee: fee);
 
+                if (tx == null)
+                {
+                    Console.WriteLine("Insufficient funds");
+                    return true;
+                }
+
                 ContractParametersContext transContext = new ContractParametersContext(tx);
                 Program.Wallet.Sign(transContext);
                 tx.Witnesses = transContext.GetWitnesses();
-                
+
                 if (tx.Size > 1024)
                 {
                     Fixed8 calFee = Fixed8.FromDecimal(tx.Size * 0.00001m + 0.001m);
