@@ -1024,7 +1024,7 @@ namespace Neo.Shell
                 
                 if (tx.Size > 1024)
                 {
-                    fee += Fixed8.FromDecimal(tx.Size * 0.00001m + 0.001m);
+                    fee = Fixed8.Max(Fixed8.FromDecimal(tx.Size * 0.00001m + 0.001m), fee);
                     tx = Program.Wallet.MakeTransaction(null, new[]
                     {
                         new TransferOutput
