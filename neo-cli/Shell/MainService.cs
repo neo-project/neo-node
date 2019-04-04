@@ -321,7 +321,7 @@ namespace Neo.Shell
             string msg;
             if (context.Completed)
             {
-                context.Verifiable.Witnesses = context.GetWitnesses();
+                ((Transaction)context.Verifiable).Witnesses = context.GetWitnesses();
                 Program.Wallet.ApplyTransaction(tx);
 
                 system.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
@@ -357,7 +357,12 @@ namespace Neo.Shell
                     Console.WriteLine("The signature is incomplete.");
                     return true;
                 }
-                context.Verifiable.Witnesses = context.GetWitnesses();
+
+                if (context.Verifiable is Transaction tx)
+                {
+                    tx.Witnesses = context.GetWitnesses();
+                }
+
                 IInventory inventory = (IInventory)context.Verifiable;
                 system.LocalNode.Tell(new LocalNode.Relay { Inventory = inventory });
                 Console.WriteLine($"Data relay success, the hash is shown as follows:\r\n{inventory.Hash}");
@@ -841,7 +846,7 @@ namespace Neo.Shell
                     return base.OnCommand(args);
             }
         }
-        
+
 
         //TODO: 目前没有想到其它安全的方法来保存密码
         //所以只能暂时手动输入，但如此一来就不能以服务的方式启动了
@@ -906,7 +911,7 @@ namespace Neo.Shell
                 Console.WriteLine($"Wallet is not opened");
                 return true;
             }
-            
+
             Program.Wallet.Dispose();
             Program.Wallet = null;
             if (system.RpcServer != null)
