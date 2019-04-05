@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [2.10.0] - 2019-03-07
+## [2.10.0] - 2019-03-13
 ### Added
 - dBFT 2.0
 - Add support for deploying and invoking contracts.

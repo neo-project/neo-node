@@ -1,5 +1,6 @@
-﻿using Akka.Actor;
+using Akka.Actor;
 using Neo.Consensus;
+using Neo.Cryptography;
 using Neo.IO;
 using Neo.IO.Json;
 using Neo.Ledger;
@@ -82,6 +83,8 @@ namespace Neo.Shell
                     return OnClaimCommand(args);
                 case "open":
                     return OnOpenCommand(args);
+                case "close":
+                    return OnCloseCommand(args);
                 case "rebuild":
                     return OnRebuildCommand(args);
                 case "send":
@@ -163,7 +166,8 @@ namespace Neo.Shell
                 /* contractVersion */ args[8],
                 /* contractAuthor */ args[9],
                 /* contractEmail */ args[10],
-                /* contractDescription */ args[11]);
+                /* contractDescription */ args[11],
+                /* scriptHash */ out var scriptHash);
 
             tx.Version = 1;
             if (tx.Attributes == null) tx.Attributes = new TransactionAttribute[0];
@@ -172,6 +176,7 @@ namespace Neo.Shell
             if (tx.Witnesses == null) tx.Witnesses = new Witness[0];
             ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, null, true);
             StringBuilder sb = new StringBuilder();
+            sb.AppendLine($"Script hash: {scriptHash.ToString()}");
             sb.AppendLine($"VM State: {engine.State}");
             sb.AppendLine($"Gas Consumed: {engine.GasConsumed}");
             sb.AppendLine(
@@ -187,7 +192,7 @@ namespace Neo.Shell
             if (tx.Gas < Fixed8.Zero) tx.Gas = Fixed8.Zero;
             tx.Gas = tx.Gas.Ceiling();
 
-            tx = DecorateScriptTransaction(tx);
+            tx = DecorateInvocationTransaction(tx);
 
             return SignAndSendTx(tx);
         }
@@ -248,7 +253,7 @@ namespace Neo.Shell
                 return true;
             }
 
-            tx = DecorateScriptTransaction(tx);
+            tx = DecorateInvocationTransaction(tx);
             return SignAndSendTx(tx);
         }
 
@@ -256,7 +261,7 @@ namespace Neo.Shell
             string avmFilePath, string paramTypes, string returnTypeHexString,
             bool hasStorage, bool hasDynamicInvoke, bool isPayable,
             string contractName, string contractVersion, string contractAuthor,
-            string contractEmail, string contractDescription)
+            string contractEmail, string contractDescription, out UInt160 scriptHash)
         {
             byte[] script = File.ReadAllBytes(avmFilePath);
             // See ContractParameterType Enum
@@ -269,6 +274,8 @@ namespace Neo.Shell
             if (isPayable) properties |= ContractPropertyState.Payable;
             using (ScriptBuilder sb = new ScriptBuilder())
             {
+                scriptHash = script.ToScriptHash();
+
                 sb.EmitSysCall("Neo.Contract.Create", script, parameterList, returnType, properties,
                     contractName, contractVersion, contractAuthor, contractEmail, contractDescription);
                 return new InvocationTransaction
@@ -278,13 +285,13 @@ namespace Neo.Shell
             }
         }
 
-        public InvocationTransaction DecorateScriptTransaction(InvocationTransaction tx)
+        public InvocationTransaction DecorateInvocationTransaction(InvocationTransaction tx)
         {
             Fixed8 fee = Fixed8.FromDecimal(0.001m);
 
-            if (tx.Script.Length > 1024)
+            if (tx.Size > 1024)
             {
-                fee += Fixed8.FromDecimal(tx.Script.Length * 0.00001m);
+                fee += Fixed8.FromDecimal(tx.Size * 0.00001m);
             }
 
             return Program.Wallet.MakeTransaction(new InvocationTransaction
@@ -594,6 +601,7 @@ namespace Neo.Shell
                 "Wallet Commands:\n" +
                 "\tcreate wallet <path>\n" +
                 "\topen wallet <path>\n" +
+                "\tclose wallet\n" +
                 "\tupgrade wallet <path>\n" +
                 "\trebuild index\n" +
                 "\tlist address\n" +
@@ -837,6 +845,7 @@ namespace Neo.Shell
                     return base.OnCommand(args);
             }
         }
+        
 
         //TODO: 目前没有想到其它安全的方法来保存密码
         //所以只能暂时手动输入，但如此一来就不能以服务的方式启动了
@@ -870,6 +879,45 @@ namespace Neo.Shell
             }
             if (system.RpcServer != null)
                 system.RpcServer.Wallet = Program.Wallet;
+            return true;
+        }
+
+        /// <summary>
+        /// process "close" command
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private bool OnCloseCommand(string[] args)
+        {
+            switch (args[1].ToLower())
+            {
+                case "wallet":
+                    return OnCloseWalletCommand(args);
+                default:
+                    return base.OnCommand(args);
+            }
+        }
+
+        /// <summary>
+        /// process "close wallet" command
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private bool OnCloseWalletCommand(string[] args)
+        {
+            if (Program.Wallet == null)
+            {
+                Console.WriteLine($"Wallet is not opened");
+                return true;
+            }
+            
+            Program.Wallet.Dispose();
+            Program.Wallet = null;
+            if (system.RpcServer != null)
+            {
+                system.RpcServer.Wallet = null;
+            }
+            Console.WriteLine($"Wallet is closed");
             return true;
         }
 
@@ -973,10 +1021,38 @@ namespace Neo.Shell
                         ScriptHash = scriptHash
                     }
                 }, fee: fee);
+
                 if (tx == null)
                 {
                     Console.WriteLine("Insufficient funds");
                     return true;
+                }
+
+                ContractParametersContext transContext = new ContractParametersContext(tx);
+                Program.Wallet.Sign(transContext);
+                tx.Witnesses = transContext.GetWitnesses();
+
+                if (tx.Size > 1024)
+                {
+                    Fixed8 calFee = Fixed8.FromDecimal(tx.Size * 0.00001m + 0.001m);
+                    if (fee < calFee)
+                    {
+                        fee = calFee;
+                        tx = Program.Wallet.MakeTransaction(null, new[]
+                        {
+                            new TransferOutput
+                            {
+                                AssetId = assetId,
+                                Value = amount,
+                                ScriptHash = scriptHash
+                            }
+                        }, fee: fee);
+                        if (tx == null)
+                        {
+                            Console.WriteLine("Insufficient funds");
+                            return true;
+                        }
+                    }
                 }
             }
             ContractParametersContext context = new ContractParametersContext(tx);
@@ -1142,7 +1218,8 @@ namespace Neo.Shell
                     Settings.Default.RPC.Port,
                     wallet: Program.Wallet,
                     sslCert: Settings.Default.RPC.SslCert,
-                    password: Settings.Default.RPC.SslCertPassword);
+                    password: Settings.Default.RPC.SslCertPassword,
+                    maxGasInvoke: Settings.Default.RPC.MaxGasInvoke);
             }
         }
 

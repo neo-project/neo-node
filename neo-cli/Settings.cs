@@ -66,6 +66,7 @@ namespace Neo
         public ushort Port { get; }
         public string SslCert { get; }
         public string SslCertPassword { get; }
+        public Fixed8 MaxGasInvoke { get; }
 
         public RPCSettings(IConfigurationSection section)
         {
@@ -73,6 +74,7 @@ namespace Neo
             this.Port = ushort.Parse(section.GetSection("Port").Value);
             this.SslCert = section.GetSection("SslCert").Value;
             this.SslCertPassword = section.GetSection("SslCertPassword").Value;
+            this.MaxGasInvoke = Fixed8.Parse(section.GetValue("MaxGasInvoke", "0"));
         }
     }
 
