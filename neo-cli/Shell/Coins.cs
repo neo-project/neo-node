@@ -169,7 +169,7 @@ namespace Neo.Shell
 
             if (context.Completed)
             {
-                context.Verifiable.Witnesses = context.GetWitnesses();
+                tx.Witnesses = context.GetWitnesses();
                 current_wallet.ApplyTransaction(tx);
 
                 bool relay_result = system.Blockchain.Ask<RelayResultReason>(tx).Result == RelayResultReason.Succeed;
