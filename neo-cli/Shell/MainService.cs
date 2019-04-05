@@ -321,7 +321,7 @@ namespace Neo.Shell
             string msg;
             if (context.Completed)
             {
-                context.Verifiable.Witnesses = context.GetWitnesses();
+                tx.Witnesses = context.GetWitnesses();
                 Program.Wallet.ApplyTransaction(tx);
 
                 system.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
@@ -357,10 +357,14 @@ namespace Neo.Shell
                     Console.WriteLine("The signature is incomplete.");
                     return true;
                 }
-                context.Verifiable.Witnesses = context.GetWitnesses();
-                IInventory inventory = (IInventory)context.Verifiable;
-                system.LocalNode.Tell(new LocalNode.Relay { Inventory = inventory });
-                Console.WriteLine($"Data relay success, the hash is shown as follows:\r\n{inventory.Hash}");
+                if (!(context.Verifiable is Transaction tx))
+                {
+                    Console.WriteLine($"Only support to relay transaction.");
+                    return true;
+                }
+                tx.Witnesses = context.GetWitnesses();
+                system.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
+                Console.WriteLine($"Data relay success, the hash is shown as follows:\r\n{tx.Hash}");
             }
             catch (Exception e)
             {
@@ -1187,7 +1191,12 @@ namespace Neo.Shell
                 }
             store = new LevelDBStore(Path.GetFullPath(Settings.Default.Paths.Chain));
             system = new NeoSystem(store);
-            system.StartNode(Settings.Default.P2P.Port, Settings.Default.P2P.WsPort, Settings.Default.P2P.MinDesiredConnections, Settings.Default.P2P.MaxConnections);
+            system.StartNode(
+                port: Settings.Default.P2P.Port,
+                wsPort: Settings.Default.P2P.WsPort,
+                minDesiredConnections: Settings.Default.P2P.MinDesiredConnections,
+                maxConnections: Settings.Default.P2P.MaxConnections,
+                maxConnectionsPerAddress: Settings.Default.P2P.MaxConnectionsPerAddress);
             if (Settings.Default.UnlockWallet.IsActive)
             {
                 try

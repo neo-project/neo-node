@@ -48,6 +48,7 @@ namespace Neo
         public ushort WsPort { get; }
         public int MinDesiredConnections { get; }
         public int MaxConnections { get; }
+        public int MaxConnectionsPerAddress { get; }
 
         public P2PSettings(IConfigurationSection section)
         {
@@ -55,6 +56,7 @@ namespace Neo
             this.WsPort = ushort.Parse(section.GetSection("WsPort").Value);
             this.MinDesiredConnections = section.GetValue("MinDesiredConnections", Peer.DefaultMinDesiredConnections);
             this.MaxConnections = section.GetValue("MaxConnections", Peer.DefaultMaxConnections);
+            this.MaxConnectionsPerAddress = section.GetValue("MaxConnectionsPerAddress", 3);
         }
     }
 
