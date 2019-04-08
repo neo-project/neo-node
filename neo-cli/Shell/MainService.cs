@@ -82,6 +82,8 @@ namespace Neo.Shell
                     return OnClaimCommand(args);
                 case "open":
                     return OnOpenCommand(args);
+                case "close":
+                    return OnCloseCommand(args);
                 case "rebuild":
                     return OnRebuildCommand(args);
                 case "send":
@@ -318,7 +320,7 @@ namespace Neo.Shell
             string msg;
             if (context.Completed)
             {
-                context.Verifiable.Witnesses = context.GetWitnesses();
+                tx.Witnesses = context.GetWitnesses();
                 Program.Wallet.ApplyTransaction(tx);
 
                 system.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
@@ -354,10 +356,14 @@ namespace Neo.Shell
                     Console.WriteLine("The signature is incomplete.");
                     return true;
                 }
-                context.Verifiable.Witnesses = context.GetWitnesses();
-                IInventory inventory = (IInventory)context.Verifiable;
-                system.LocalNode.Tell(new LocalNode.Relay { Inventory = inventory });
-                Console.WriteLine($"Data relay success, the hash is shown as follows:\r\n{inventory.Hash}");
+                if (!(context.Verifiable is Transaction tx))
+                {
+                    Console.WriteLine($"Only support to relay transaction.");
+                    return true;
+                }
+                tx.Witnesses = context.GetWitnesses();
+                system.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
+                Console.WriteLine($"Data relay success, the hash is shown as follows:\r\n{tx.Hash}");
             }
             catch (Exception e)
             {
@@ -594,6 +600,7 @@ namespace Neo.Shell
                 "Wallet Commands:\n" +
                 "\tcreate wallet <path>\n" +
                 "\topen wallet <path>\n" +
+                "\tclose wallet\n" +
                 "\tupgrade wallet <path>\n" +
                 "\trebuild index\n" +
                 "\tlist address\n" +
@@ -837,6 +844,7 @@ namespace Neo.Shell
                     return base.OnCommand(args);
             }
         }
+        
 
         //TODO: 目前没有想到其它安全的方法来保存密码
         //所以只能暂时手动输入，但如此一来就不能以服务的方式启动了
@@ -870,6 +878,45 @@ namespace Neo.Shell
             }
             if (system.RpcServer != null)
                 system.RpcServer.Wallet = Program.Wallet;
+            return true;
+        }
+
+        /// <summary>
+        /// process "close" command
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private bool OnCloseCommand(string[] args)
+        {
+            switch (args[1].ToLower())
+            {
+                case "wallet":
+                    return OnCloseWalletCommand(args);
+                default:
+                    return base.OnCommand(args);
+            }
+        }
+
+        /// <summary>
+        /// process "close wallet" command
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private bool OnCloseWalletCommand(string[] args)
+        {
+            if (Program.Wallet == null)
+            {
+                Console.WriteLine($"Wallet is not opened");
+                return true;
+            }
+            
+            Program.Wallet.Dispose();
+            Program.Wallet = null;
+            if (system.RpcServer != null)
+            {
+                system.RpcServer.Wallet = null;
+            }
+            Console.WriteLine($"Wallet is closed");
             return true;
         }
 
@@ -974,26 +1021,38 @@ namespace Neo.Shell
                     }
                 }, fee: fee);
 
-                if (tx.Size > 1024)
-                {
-                    fee += Fixed8.FromDecimal(tx.Size * 0.00001m + 0.001m);
-                    tx = Program.Wallet.MakeTransaction(null, new[]
-                    {
-                        new TransferOutput
-                        {
-                            AssetId = assetId,
-                            Value = amount,
-                            ScriptHash = scriptHash
-                        }
-                    }, fee: fee);
-                }
-
                 if (tx == null)
                 {
                     Console.WriteLine("Insufficient funds");
                     return true;
                 }
-                 
+
+                ContractParametersContext transContext = new ContractParametersContext(tx);
+                Program.Wallet.Sign(transContext);
+                tx.Witnesses = transContext.GetWitnesses();
+
+                if (tx.Size > 1024)
+                {
+                    Fixed8 calFee = Fixed8.FromDecimal(tx.Size * 0.00001m + 0.001m);
+                    if (fee < calFee)
+                    {
+                        fee = calFee;
+                        tx = Program.Wallet.MakeTransaction(null, new[]
+                        {
+                            new TransferOutput
+                            {
+                                AssetId = assetId,
+                                Value = amount,
+                                ScriptHash = scriptHash
+                            }
+                        }, fee: fee);
+                        if (tx == null)
+                        {
+                            Console.WriteLine("Insufficient funds");
+                            return true;
+                        }
+                    }
+                }
             }
             ContractParametersContext context = new ContractParametersContext(tx);
             Program.Wallet.Sign(context);
@@ -1067,7 +1126,7 @@ namespace Neo.Shell
                     foreach (RemoteNode node in LocalNode.Singleton.GetRemoteNodes().Take(Console.WindowHeight - 2).ToArray())
                     {
                         WriteLineWithoutFlicker(
-                            $"  ip: {node.Remote.Address}\tport: {node.Remote.Port}\tlisten: {node.ListenerPort}\theight: {node.Version?.StartHeight}");
+                            $"  ip: {node.Remote.Address}\tport: {node.Remote.Port}\tlisten: {node.ListenerPort}\theight: {node.LastBlockIndex}");
                         linesWritten++;
                     }
 
@@ -1131,7 +1190,12 @@ namespace Neo.Shell
                 }
             store = new LevelDBStore(Path.GetFullPath(Settings.Default.Paths.Chain));
             system = new NeoSystem(store);
-            system.StartNode(Settings.Default.P2P.Port, Settings.Default.P2P.WsPort, Settings.Default.P2P.MinDesiredConnections, Settings.Default.P2P.MaxConnections);
+            system.StartNode(
+                port: Settings.Default.P2P.Port,
+                wsPort: Settings.Default.P2P.WsPort,
+                minDesiredConnections: Settings.Default.P2P.MinDesiredConnections,
+                maxConnections: Settings.Default.P2P.MaxConnections,
+                maxConnectionsPerAddress: Settings.Default.P2P.MaxConnectionsPerAddress);
             if (Settings.Default.UnlockWallet.IsActive)
             {
                 try

@@ -3,6 +3,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.10.1] - 2019-04-05
+### Added
+- New CLI commands: `close wallet`.
+- New RPC command: `listplugins`.
+- New plugin type: `IP2PPlugin`.
+- Allow setting `MaxConnectionsPerAddress` in `config.json`.
+- Allow setting `MaxGasInvoke` in `config.json`.
+- Automatically set transaction fee.
+
+### Changed
+- Improve performance of NeoVM.
+- Improve performance of `.db3` wallet.
+
+### Fixed
+- Fixed a bug in dBFT 2.0.
+- Fixed bugs in NeoVM.
+- Fixed bugs in RPC commands: `getblock` and `getblockhash`.
+
 ## [2.10.0] - 2019-03-13
 ### Added
 - dBFT 2.0
