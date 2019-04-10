@@ -23,6 +23,8 @@ namespace Neo.Services
         {
             switch (args[0].ToLower())
             {
+                case "":
+                    return true;
                 case "clear":
                     Console.Clear();
                     return true;
@@ -30,8 +32,6 @@ namespace Neo.Services
                     return false;
                 case "version":
                     Console.WriteLine(Assembly.GetEntryAssembly().GetName().Version);
-                    return true;
-                case "":
                     return true;
                 default:
                     Console.WriteLine("error: command not found " + args[0]);
@@ -263,7 +263,7 @@ namespace Neo.Services
         private void RunConsole()
         {
             bool running = true;
-            string[] emptyarg = new string[] {""};
+            string[] emptyarg = new string[] { "" };
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
                 Console.Title = ServiceName;
             Console.OutputEncoding = Encoding.Unicode;
