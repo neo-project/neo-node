@@ -36,6 +36,7 @@ namespace Neo.Shell
         private LevelDBStore store;
         private NeoSystem system;
         private WalletIndexer indexer;
+        
 
         protected override string Prompt => "neo";
         public override string ServiceName => "NEO-CLI";
@@ -992,9 +993,23 @@ namespace Neo.Shell
                         }
                     }
                 };
+                ContractParametersContext context = new ContractParametersContext(tx);
+                Program.Wallet.Sign(context);
+                if (context.Completed)
+                {
+                    tx.Witnesses = context.GetWitnesses();
+                    Program.Wallet.ApplyTransaction(tx);
+                    system.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
+                    Console.WriteLine($"TXID: {tx.Hash}");
+                }
+                else
+                {
+                    Console.WriteLine("SignatureContext:");
+                    Console.WriteLine(context.ToString());
+                }
             }
             else
-            {
+             {
                 AssetDescriptor descriptor = new AssetDescriptor(assetId);
                 if (!BigDecimal.TryParse(args[3], descriptor.Decimals, out BigDecimal amount) || amount.Sign <= 0)
                 {
@@ -1028,47 +1043,48 @@ namespace Neo.Shell
                     return true;
                 }
 
-                ContractParametersContext transContext = new ContractParametersContext(tx);
-                Program.Wallet.Sign(transContext);
-                tx.Witnesses = transContext.GetWitnesses();
-
-                if (tx.Size > 1024)
+                ContractParametersContext context = new ContractParametersContext(tx);
+                Program.Wallet.Sign(context);
+                if (context.Completed)
                 {
-                    Fixed8 calFee = Fixed8.FromDecimal(tx.Size * 0.00001m + 0.001m);
-                    if (fee < calFee)
+                    tx.Witnesses = context.GetWitnesses();
+                    if (tx.Size > 1024)
                     {
-                        fee = calFee;
-                        tx = Program.Wallet.MakeTransaction(null, new[]
+                        Fixed8 calFee = Fixed8.FromDecimal(tx.Size * 0.00001m + 0.001m);
+                        if (fee < calFee)
                         {
-                            new TransferOutput
+                            fee = calFee;
+                            tx = Program.Wallet.MakeTransaction(null, new[]
                             {
-                                AssetId = assetId,
-                                Value = amount,
-                                ScriptHash = scriptHash
+                                new TransferOutput
+                                {
+                                    AssetId = assetId,
+                                    Value = amount,
+                                    ScriptHash = scriptHash
+                                }
+                            }, fee: fee);
+                            if (tx == null)
+                            {
+                                Console.WriteLine("Insufficient funds");
+                                return true;
                             }
-                        }, fee: fee);
-                        if (tx == null)
-                        {
-                            Console.WriteLine("Insufficient funds");
-                            return true;
+                            context = new ContractParametersContext(tx);
+                            Program.Wallet.Sign(context);
+                            tx.Witnesses = context.GetWitnesses();
                         }
                     }
+                    Program.Wallet.ApplyTransaction(tx);
+                    system.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
+                    Console.WriteLine($"TXID: {tx.Hash}");
                 }
+                else
+                {
+                    Console.WriteLine("SignatureContext:");
+                    Console.WriteLine(context.ToString());
+                }
+                
             }
-            ContractParametersContext context = new ContractParametersContext(tx);
-            Program.Wallet.Sign(context);
-            if (context.Completed)
-            {
-                tx.Witnesses = context.GetWitnesses();
-                Program.Wallet.ApplyTransaction(tx);
-                system.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
-                Console.WriteLine($"TXID: {tx.Hash}");
-            }
-            else
-            {
-                Console.WriteLine("SignatureContext:");
-                Console.WriteLine(context.ToString());
-            }
+            
             return true;
         }
 
