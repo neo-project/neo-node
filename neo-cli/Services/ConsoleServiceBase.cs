@@ -23,6 +23,8 @@ namespace Neo.Services
         {
             switch (args[0].ToLower())
             {
+                case "":
+                    return true;
                 case "clear":
                     Console.Clear();
                     return true;
@@ -261,6 +263,7 @@ namespace Neo.Services
         private void RunConsole()
         {
             bool running = true;
+            string[] emptyarg = new string[] { "" };
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
                 Console.Title = ServiceName;
             Console.OutputEncoding = Encoding.Unicode;
@@ -285,7 +288,7 @@ namespace Neo.Services
 
                 string[] args = ParseCommandLine(line);
                 if (args.Length == 0)
-                    continue;
+                    args = emptyarg;
                 try
                 {
                     running = OnCommand(args);
