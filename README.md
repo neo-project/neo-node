@@ -1,8 +1,22 @@
-[![Build Status](https://travis-ci.org/neo-project/neo-cli.svg?branch=master)](https://travis-ci.org/neo-project/neo-cli)
+<p align="center">
+<img
+    src="https://neo-cdn.azureedge.net/images/neo_logo.svg"
+    width="250px">
+</p>
+
+<p align="center">      
+  <a href="https://travis-ci.org/neo-project/neo-cli">
+    <img src="https://travis-ci.org/neo-project/neo-cli.svg?branch=master">
+  </a>
+  <a href="https://github.com/neo-project/neo-cli/blob/master/LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-blue.svg">
+  </a>
+
+</p>
 
 ## Prerequisites
 
-You will need Window or Linux. Use a virtual machine if you have a Mac. Ubuntu 14 and 16 are supported. Ubuntu 17 is not supported.
+You will need Window, Linux or macOS. Ubuntu 14 and 16 are supported. Ubuntu 17 is not supported.
 
 Install [.NET Core](https://www.microsoft.com/net/download/core).
 
@@ -10,7 +24,12 @@ On Linux, install the LevelDB and SQLite3 dev packages. E.g. on Ubuntu:
 
 ```sh
 sudo apt-get install libleveldb-dev sqlite3 libsqlite3-dev libunwind8-dev
+```
 
+On macOS, install the LevelDB package. E.g. install via Homebrew:
+
+```
+brew install --ignore-dependencies --build-from-source leveldb
 ```
 
 On Windows, use the [Neo version of LevelDB](https://github.com/neo-project/leveldb).
@@ -32,14 +51,23 @@ cd neo-cli
 dotnet restore
 dotnet publish -c Release
 ```
-In order to run, you need version 1.1.2 of .Net Core. Download the SDK [binary](https://www.microsoft.com/net/download/linux).
+In order to run, you need .NET Core. Download the SDK [binary](https://www.microsoft.com/net/download/linux).
 
-Assuming you extracted .Net in the parent folder:
+Assuming you extracted .NET in the parent folder:
 
 ```sh
 ../dotnet bin/Release/netcoreapp1.0/neo-cli.dll .
 ```
 
+## Logging
+
+To enable logs in neo-cli, you need to add the ApplicationLogs plugin. Please check [here](https://github.com/neo-project/neo-plugins) for more information.
+
+
+## Bootstrapping the network.
+In order to synchronize the network faster, please check [here](http://docs.neo.org/en-us/network/syncblocks.html).
+
+
 ## Usage
 
-See [documentation](http://docs.neo.org/en-us/node/cli.html). E.g. try `show state` or `create wallet wallet.db3`.
+See [documentation](https://docs.neo.org/en-us/node/cli/cli.html). E.g. try `show state` or `create wallet wallet.json`.
