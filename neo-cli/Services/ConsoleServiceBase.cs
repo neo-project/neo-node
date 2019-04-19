@@ -138,8 +138,7 @@ namespace Neo.Services
                     return (char)c;
             }
         }
-
-        public static string ReadPassword(string prompt)
+        public static string ReadUserInput(string prompt, bool safe = true)
         {
             const string t = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
             StringBuilder sb = new StringBuilder();
@@ -155,7 +154,11 @@ namespace Neo.Services
                 if (t.IndexOf(key.KeyChar) != -1)
                 {
                     sb.Append(key.KeyChar);
-                    Console.Write('*');
+                    if (safe) {
+                        Console.Write('*');
+                    } else {
+                        Console.Write(key.KeyChar);
+                    }
                 }
                 else if (key.Key == ConsoleKey.Backspace && sb.Length > 0)
                 {
