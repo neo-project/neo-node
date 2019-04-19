@@ -252,13 +252,13 @@ namespace Neo.Shell
                 Console.WriteLine("Engine faulted.");
                 return true;
             }
-            if (ReadUserInput("relay tx(no|yes)", false) != "yes") {
-                return true;
-            }
             if (NoWallet()) return true;
             tx = DecorateInvocationTransaction(tx);
             if (tx == null) {
                 Console.WriteLine("error: insufficient balance.");
+                return true;
+            }
+            if (ReadUserInput("relay tx(no|yes)", false) != "yes") {
                 return true;
             }
             return SignAndSendTx(tx);
