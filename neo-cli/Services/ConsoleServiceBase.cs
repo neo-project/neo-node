@@ -138,7 +138,7 @@ namespace Neo.Services
                     return (char)c;
             }
         }
-        public static string ReadUserInput(string prompt, bool safe = true)
+        public static string ReadUserInput(string prompt, bool safe = false)
         {
             const string t = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
             StringBuilder sb = new StringBuilder();

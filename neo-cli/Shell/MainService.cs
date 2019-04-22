@@ -258,7 +258,7 @@ namespace Neo.Shell
                 Console.WriteLine("error: insufficient balance.");
                 return true;
             }
-            if (ReadUserInput("relay tx(no|yes)", false) != "yes") {
+            if (ReadUserInput("relay tx(no|yes)") != "yes") {
                 return true;
             }
             return SignAndSendTx(tx);
@@ -492,13 +492,13 @@ namespace Neo.Shell
                 return true;
             }
             string path = args[2];
-            string password = ReadUserInput("password");
+            string password = ReadUserInput("password", true);
             if (password.Length == 0)
             {
                 Console.WriteLine("cancelled");
                 return true;
             }
-            string password2 = ReadUserInput("password");
+            string password2 = ReadUserInput("password", true);
             if (password != password2)
             {
                 Console.WriteLine("error");
@@ -573,7 +573,7 @@ namespace Neo.Shell
                 scriptHash = args[2].ToScriptHash();
                 path = args[3];
             }
-            string password = ReadUserInput("password");
+            string password = ReadUserInput("password", true);
             if (password.Length == 0)
             {
                 Console.WriteLine("cancelled");
@@ -769,7 +769,7 @@ namespace Neo.Shell
 
             if (useChangeAddress)
             {
-                string password = ReadUserInput("password");
+                string password = ReadUserInput("password", true);
                 if (password.Length == 0)
                 {
                     Console.WriteLine("cancelled");
@@ -870,7 +870,7 @@ namespace Neo.Shell
                 Console.WriteLine($"File does not exist");
                 return true;
             }
-            string password = ReadUserInput("password");
+            string password = ReadUserInput("password", true);
             if (password.Length == 0)
             {
                 Console.WriteLine("cancelled");
@@ -953,7 +953,7 @@ namespace Neo.Shell
                 return true;
             }
             if (NoWallet()) return true;
-            string password = ReadUserInput("password");
+            string password = ReadUserInput("password", true);
             if (password.Length == 0)
             {
                 Console.WriteLine("cancelled");
@@ -1331,7 +1331,7 @@ namespace Neo.Shell
                 Console.WriteLine("File does not exist.");
                 return true;
             }
-            string password = ReadUserInput("password");
+            string password = ReadUserInput("password", true);
             if (password.Length == 0)
             {
                 Console.WriteLine("cancelled");
