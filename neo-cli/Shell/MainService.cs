@@ -254,11 +254,13 @@ namespace Neo.Shell
             }
             if (NoWallet()) return true;
             tx = DecorateInvocationTransaction(tx);
-            if (tx == null) {
+            if (tx == null)
+            {
                 Console.WriteLine("error: insufficient balance.");
                 return true;
             }
-            if (ReadUserInput("relay tx(no|yes)") != "yes") {
+            if (ReadUserInput("relay tx(no|yes)") != "yes")
+            {
                 return true;
             }
             return SignAndSendTx(tx);
