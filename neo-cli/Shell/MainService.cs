@@ -36,7 +36,6 @@ namespace Neo.Shell
         private LevelDBStore store;
         private NeoSystem system;
         private WalletIndexer indexer;
-        
 
         protected override string Prompt => "neo";
         public override string ServiceName => "NEO-CLI";
