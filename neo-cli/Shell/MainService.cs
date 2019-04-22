@@ -1008,7 +1008,7 @@ namespace Neo.Shell
                 }
             }
             else
-             {
+            {
                 AssetDescriptor descriptor = new AssetDescriptor(assetId);
                 if (!BigDecimal.TryParse(args[3], descriptor.Decimals, out BigDecimal amount) || amount.Sign <= 0)
                 {
