@@ -23,6 +23,8 @@ namespace Neo.Services
         {
             switch (args[0].ToLower())
             {
+                case "":
+                    return true;
                 case "clear":
                     Console.Clear();
                     return true;
@@ -137,7 +139,7 @@ namespace Neo.Services
             }
         }
 
-        public static string ReadPassword(string prompt)
+        public static string ReadUserInput(string prompt, bool password = false)
         {
             const string t = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
             StringBuilder sb = new StringBuilder();
@@ -153,7 +155,14 @@ namespace Neo.Services
                 if (t.IndexOf(key.KeyChar) != -1)
                 {
                     sb.Append(key.KeyChar);
-                    Console.Write('*');
+                    if (password)
+                    {
+                        Console.Write('*');
+                    }
+                    else
+                    {
+                        Console.Write(key.KeyChar);
+                    }
                 }
                 else if (key.Key == ConsoleKey.Backspace && sb.Length > 0)
                 {
@@ -261,6 +270,7 @@ namespace Neo.Services
         private void RunConsole()
         {
             bool running = true;
+            string[] emptyarg = new string[] { "" };
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
                 Console.Title = ServiceName;
             Console.OutputEncoding = Encoding.Unicode;
@@ -285,7 +295,7 @@ namespace Neo.Services
 
                 string[] args = ParseCommandLine(line);
                 if (args.Length == 0)
-                    continue;
+                    args = emptyarg;
                 try
                 {
                     running = OnCommand(args);
