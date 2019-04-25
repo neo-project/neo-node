@@ -131,17 +131,7 @@ namespace Neo.Shell
                 case "tx":
                     payload = Blockchain.Singleton.GetTransaction(UInt256.Parse(args[2]));
                     break;
-                case "alert":
-                case "consensus":
-                case "filteradd":
-                case "filterload":
-                case "headers":
-                case "merkleblock":
-                case "ping":
-                case "pong":
-                case "reject":
-                case "verack":
-                case "version":
+                default:
                     Console.WriteLine($"Command \"{command}\" is not supported.");
                     return true;
             }
@@ -852,7 +842,6 @@ namespace Neo.Shell
             }
         }
 
-
         //TODO: 目前没有想到其它安全的方法来保存密码
         //所以只能暂时手动输入，但如此一来就不能以服务的方式启动了
         //未来再想想其它办法，比如采用智能卡之类的
@@ -1087,7 +1076,6 @@ namespace Neo.Shell
                     Console.WriteLine("SignatureContext:");
                     Console.WriteLine(context.ToString());
                 }
-
             }
 
             return true;
