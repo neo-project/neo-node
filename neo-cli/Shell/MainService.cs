@@ -1319,7 +1319,6 @@ namespace Neo.Shell
             return true;
         }
 
-
         private bool OnUnInstallCommand(string[] args)
         {
             if (args.Length < 2)
