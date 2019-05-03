@@ -37,8 +37,8 @@ namespace Neo
 
         public PathsSettings(IConfigurationSection section)
         {
-            this.Chain = string.Format(section.GetSection("Chain").Value, Message.Magic.ToString("X8"));
-            this.Index = string.Format(section.GetSection("Index").Value, Message.Magic.ToString("X8"));
+            this.Chain = string.Format(section.GetSection("Chain").Value, ProtocolSettings.Default.Magic.ToString("X8"));
+            this.Index = string.Format(section.GetSection("Index").Value, ProtocolSettings.Default.Magic.ToString("X8"));
         }
     }
 
