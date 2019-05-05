@@ -1,6 +1,5 @@
 using Akka.Actor;
 using Neo.Consensus;
-using Neo.Cryptography;
 using Neo.IO;
 using Neo.IO.Json;
 using Neo.Ledger;
@@ -31,8 +30,6 @@ namespace Neo.Shell
 {
     internal class MainService : ConsoleServiceBase
     {
-        private const string PeerStatePath = "peers.dat";
-
         private LevelDBStore store;
         private NeoSystem system;
         private WalletIndexer indexer;
@@ -134,17 +131,7 @@ namespace Neo.Shell
                 case "tx":
                     payload = Blockchain.Singleton.GetTransaction(UInt256.Parse(args[2]));
                     break;
-                case "alert":
-                case "consensus":
-                case "filteradd":
-                case "filterload":
-                case "headers":
-                case "merkleblock":
-                case "ping":
-                case "pong":
-                case "reject":
-                case "verack":
-                case "version":
+                default:
                     Console.WriteLine($"Command \"{command}\" is not supported.");
                     return true;
             }
@@ -854,7 +841,6 @@ namespace Neo.Shell
                     return base.OnCommand(args);
             }
         }
-        
 
         //TODO: 目前没有想到其它安全的方法来保存密码
         //所以只能暂时手动输入，但如此一来就不能以服务的方式启动了
@@ -919,7 +905,7 @@ namespace Neo.Shell
                 Console.WriteLine($"Wallet is not opened");
                 return true;
             }
-            
+
             Program.Wallet.Dispose();
             Program.Wallet = null;
             if (system.RpcServer != null)
@@ -1090,9 +1076,8 @@ namespace Neo.Shell
                     Console.WriteLine("SignatureContext:");
                     Console.WriteLine(context.ToString());
                 }
-                
             }
-            
+
             return true;
         }
 
@@ -1290,18 +1275,32 @@ namespace Neo.Shell
                 Console.WriteLine("error");
                 return true;
             }
+
+            bool isTemp;
+            string fileName;
             var pluginName = args[1];
-            var address = string.Format(Settings.Default.PluginURL, pluginName, typeof(Plugin).Assembly.GetVersion());
-            var fileName = Path.Combine("Plugins", $"{pluginName}.zip");
-            Directory.CreateDirectory("Plugins");
-            Console.WriteLine($"Downloading from {address}");
-            using (WebClient wc = new WebClient())
+
+            if (!File.Exists(pluginName))
             {
-                wc.DownloadFile(address, fileName);
+                var address = string.Format(Settings.Default.PluginURL, pluginName, typeof(Plugin).Assembly.GetVersion());
+                fileName = Path.Combine(Path.GetTempPath(), $"{pluginName}.zip");
+                isTemp = true;
+
+                Console.WriteLine($"Downloading from {address}");
+                using (WebClient wc = new WebClient())
+                {
+                    wc.DownloadFile(address, fileName);
+                }
             }
+            else
+            {
+                fileName = pluginName;
+                isTemp = false;
+            }
+
             try
             {
-                ZipFile.ExtractToDirectory(fileName, ".");
+                ZipFile.ExtractToDirectory(fileName, Path.Combine(".", "Plugins", $"{Path.GetFileNameWithoutExtension(fileName)}"));
             }
             catch (IOException)
             {
@@ -1310,8 +1309,12 @@ namespace Neo.Shell
             }
             finally
             {
-                File.Delete(fileName);
+                if (isTemp)
+                {
+                    File.Delete(fileName);
+                }
             }
+
             Console.WriteLine($"Install successful, please restart neo-cli.");
             return true;
         }
