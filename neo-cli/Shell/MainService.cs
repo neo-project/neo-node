@@ -10,6 +10,7 @@ using Neo.Persistence.LevelDB;
 using Neo.Plugins;
 using Neo.Services;
 using Neo.SmartContract;
+using Neo.SmartContract.Native;
 using Neo.VM;
 using Neo.Wallets;
 using Neo.Wallets.NEP6;
@@ -20,8 +21,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Numerics;
 using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
 using ECCurve = Neo.Cryptography.ECC.ECCurve;
 using ECPoint = Neo.Cryptography.ECC.ECPoint;
@@ -76,8 +77,6 @@ namespace Neo.Shell
                     return OnImportCommand(args);
                 case "list":
                     return OnListCommand(args);
-                case "claim":
-                    return OnClaimCommand(args);
                 case "open":
                     return OnOpenCommand(args);
                 case "close":
@@ -107,28 +106,32 @@ namespace Neo.Shell
 
         private bool OnBroadcastCommand(string[] args)
         {
-            string command = args[1].ToLower();
+            if (!Enum.TryParse(args[1], true, out MessageCommand command))
+            {
+                Console.WriteLine($"Command \"{args[1]}\" is not supported.");
+                return true;
+            }
             ISerializable payload = null;
             switch (command)
             {
-                case "addr":
-                    payload = AddrPayload.Create(NetworkAddressWithTime.Create(new IPEndPoint(IPAddress.Parse(args[2]), ushort.Parse(args[3])), NetworkAddressWithTime.NODE_NETWORK, DateTime.UtcNow.ToTimestamp()));
+                case MessageCommand.Addr:
+                    payload = AddrPayload.Create(NetworkAddressWithTime.Create(new IPEndPoint(IPAddress.Parse(args[2]), ushort.Parse(args[3])), VersionServices.FullNode, DateTime.UtcNow.ToTimestamp()));
                     break;
-                case "block":
+                case MessageCommand.Block:
                     if (args[2].Length == 64 || args[2].Length == 66)
                         payload = Blockchain.Singleton.GetBlock(UInt256.Parse(args[2]));
                     else
                         payload = Blockchain.Singleton.Store.GetBlock(uint.Parse(args[2]));
                     break;
-                case "getblocks":
-                case "getheaders":
+                case MessageCommand.GetBlocks:
+                case MessageCommand.GetHeaders:
                     payload = GetBlocksPayload.Create(UInt256.Parse(args[2]));
                     break;
-                case "getdata":
-                case "inv":
+                case MessageCommand.GetData:
+                case MessageCommand.Inv:
                     payload = InvPayload.Create(Enum.Parse<InventoryType>(args[2], true), args.Skip(3).Select(UInt256.Parse).ToArray());
                     break;
-                case "tx":
+                case MessageCommand.Transaction:
                     payload = Blockchain.Singleton.GetTransaction(UInt256.Parse(args[2]));
                     break;
                 default:
@@ -142,44 +145,27 @@ namespace Neo.Shell
         private bool OnDeployCommand(string[] args)
         {
             if (NoWallet()) return true;
-            var tx = LoadScriptTransaction(
+            byte[] script = LoadDeploymentScript(
                 /* filePath */ args[1],
-                /* paramTypes */ args[2],
-                /* returnType */ args[3],
-                /* hasStorage */ args[4].ToBool(),
-                /* hasDynamicInvoke */ args[5].ToBool(),
-                /* isPayable */ args[6].ToBool(),
-                /* contractName */ args[7],
-                /* contractVersion */ args[8],
-                /* contractAuthor */ args[9],
-                /* contractEmail */ args[10],
-                /* contractDescription */ args[11],
+                /* hasStorage */ args[2].ToBool(),
+                /* isPayable */ args[3].ToBool(),
                 /* scriptHash */ out var scriptHash);
 
-            tx.Version = 1;
-            if (tx.Attributes == null) tx.Attributes = new TransactionAttribute[0];
-            if (tx.Inputs == null) tx.Inputs = new CoinReference[0];
-            if (tx.Outputs == null) tx.Outputs = new TransactionOutput[0];
-            if (tx.Witnesses == null) tx.Witnesses = new Witness[0];
-            ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, null, true);
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine($"Script hash: {scriptHash.ToString()}");
-            sb.AppendLine($"VM State: {engine.State}");
-            sb.AppendLine($"Gas Consumed: {engine.GasConsumed}");
-            sb.AppendLine(
-                $"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
-            Console.WriteLine(sb.ToString());
-            if (engine.State.HasFlag(VMState.FAULT))
+            Transaction tx = new Transaction { Script = script };
+            try
+            {
+                Program.Wallet.FillTransaction(tx);
+            }
+            catch (InvalidOperationException)
             {
                 Console.WriteLine("Engine faulted.");
                 return true;
             }
+            Console.WriteLine($"Script hash: {scriptHash.ToString()}");
+            Console.WriteLine($"Gas: {tx.Gas}");
+            Console.WriteLine();
 
-            tx.Gas = engine.GasConsumed - Fixed8.FromDecimal(10);
-            if (tx.Gas < Fixed8.Zero) tx.Gas = Fixed8.Zero;
-            tx.Gas = tx.Gas.Ceiling();
-
-            tx = DecorateInvocationTransaction(tx);
+            DecorateInvocationTransaction(tx);
 
             return SignAndSendTx(tx);
         }
@@ -199,53 +185,42 @@ namespace Neo.Shell
                 });
             }
 
-            ContractParameter[] parameters =
+            Transaction tx = new Transaction
             {
-                new ContractParameter
-                {
-                    Type = ContractParameterType.String,
-                    Value = args[2]
-                },
-                new ContractParameter
-                {
-                    Type = ContractParameterType.Array,
-                    Value = contractParameters.ToArray()
-                }
+                Sender = UInt160.Zero,
+                Attributes = new TransactionAttribute[0],
+                Witnesses = new Witness[0]
             };
-
-            var tx = new InvocationTransaction();
 
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
             {
-                scriptBuilder.EmitAppCall(scriptHash, parameters);
-                Console.WriteLine($"Invoking script with: '{scriptBuilder.ToArray().ToHexString()}'");
+                scriptBuilder.EmitAppCall(scriptHash, args[2], contractParameters.ToArray());
                 tx.Script = scriptBuilder.ToArray();
+                Console.WriteLine($"Invoking script with: '{tx.Script.ToHexString()}'");
             }
 
-            if (tx.Attributes == null) tx.Attributes = new TransactionAttribute[0];
-            if (tx.Inputs == null) tx.Inputs = new CoinReference[0];
-            if (tx.Outputs == null) tx.Outputs = new TransactionOutput[0];
-            if (tx.Witnesses == null) tx.Witnesses = new Witness[0];
             ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx);
 
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine($"VM State: {engine.State}");
-            sb.AppendLine($"Gas Consumed: {engine.GasConsumed}");
-            sb.AppendLine(
-                $"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
-            Console.WriteLine(sb.ToString());
+            Console.WriteLine($"VM State: {engine.State}");
+            Console.WriteLine($"Gas Consumed: {engine.GasConsumed}");
+            Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
+            Console.WriteLine();
             if (engine.State.HasFlag(VMState.FAULT))
             {
                 Console.WriteLine("Engine faulted.");
                 return true;
             }
             if (NoWallet()) return true;
-            tx = DecorateInvocationTransaction(tx);
-            if (tx == null)
+            try
+            {
+                Program.Wallet.FillTransaction(tx);
+            }
+            catch (InvalidOperationException)
             {
                 Console.WriteLine("error: insufficient balance.");
                 return true;
             }
+            DecorateInvocationTransaction(tx);
             if (ReadUserInput("relay tx(no|yes)") != "yes")
             {
                 return true;
@@ -253,55 +228,31 @@ namespace Neo.Shell
             return SignAndSendTx(tx);
         }
 
-        public InvocationTransaction LoadScriptTransaction(
-            string avmFilePath, string paramTypes, string returnTypeHexString,
-            bool hasStorage, bool hasDynamicInvoke, bool isPayable,
-            string contractName, string contractVersion, string contractAuthor,
-            string contractEmail, string contractDescription, out UInt160 scriptHash)
+        private byte[] LoadDeploymentScript(string avmFilePath, bool hasStorage, bool isPayable, out UInt160 scriptHash)
         {
             byte[] script = File.ReadAllBytes(avmFilePath);
-            // See ContractParameterType Enum
-            byte[] parameterList = paramTypes.HexToBytes();
-            ContractParameterType returnType = returnTypeHexString.HexToBytes()
-                .Select(p => (ContractParameterType?)p).FirstOrDefault() ?? ContractParameterType.Void;
+            scriptHash = script.ToScriptHash();
             ContractPropertyState properties = ContractPropertyState.NoProperty;
             if (hasStorage) properties |= ContractPropertyState.HasStorage;
-            if (hasDynamicInvoke) properties |= ContractPropertyState.HasDynamicInvoke;
             if (isPayable) properties |= ContractPropertyState.Payable;
             using (ScriptBuilder sb = new ScriptBuilder())
             {
-                scriptHash = script.ToScriptHash();
-
-                sb.EmitSysCall("Neo.Contract.Create", script, parameterList, returnType, properties,
-                    contractName, contractVersion, contractAuthor, contractEmail, contractDescription);
-                return new InvocationTransaction
-                {
-                    Script = sb.ToArray()
-                };
+                sb.EmitSysCall(InteropService.Neo_Contract_Create, script, properties);
+                return sb.ToArray();
             }
         }
 
-        public InvocationTransaction DecorateInvocationTransaction(InvocationTransaction tx)
+        public void DecorateInvocationTransaction(Transaction tx)
         {
-            Fixed8 fee = Fixed8.FromDecimal(0.001m);
+            tx.NetworkFee = 100000;
 
             if (tx.Size > 1024)
             {
-                fee += Fixed8.FromDecimal(tx.Size * 0.00001m);
+                tx.NetworkFee += tx.Size * 1000;
             }
-
-            return Program.Wallet.MakeTransaction(new InvocationTransaction
-            {
-                Version = tx.Version,
-                Script = tx.Script,
-                Gas = tx.Gas,
-                Attributes = tx.Attributes,
-                Inputs = tx.Inputs,
-                Outputs = tx.Outputs
-            }, fee: fee);
         }
 
-        public bool SignAndSendTx(InvocationTransaction tx)
+        public bool SignAndSendTx(Transaction tx)
         {
             ContractParametersContext context;
             try
@@ -603,17 +554,15 @@ namespace Neo.Shell
                 "\tlist address\n" +
                 "\tlist asset\n" +
                 "\tlist key\n" +
-                "\tshow utxo [id|alias]\n" +
                 "\tshow gas\n" +
-                "\tclaim gas [all] [changeAddress]\n" +
                 "\tcreate address [n=1]\n" +
                 "\timport key <wif|path>\n" +
                 "\texport key [address] [path]\n" +
                 "\timport multisigaddress m pubkeys...\n" +
-                "\tsend <id|alias> <address> <value>|all [fee=0]\n" +
+                "\tsend <id|alias> <address> <value> [fee=0]\n" +
                 "\tsign <jsonObjectToSign>\n" +
                 "Contract Commands:\n" +
-                "\tdeploy <avmFilePath> <paramTypes> <returnTypeHexString> <hasStorage (true|false)> <hasDynamicInvoke (true|false)> <isPayable (true|false) <contractName> <contractVersion> <contractAuthor> <contractEmail> <contractDescription>\n" +
+                "\tdeploy <avmFilePath> <hasStorage (true|false)> <isPayable (true|false)\n" +
                 "\tinvoke <scripthash> <command> [optionally quoted params separated by space]\n" +
                 "Node Commands:\n" +
                 "\tshow state\n" +
@@ -745,50 +694,16 @@ namespace Neo.Shell
             }
         }
 
-        private bool OnClaimCommand(string[] args)
-        {
-            if (args.Length < 2 || args.Length > 4 || !args[1].Equals("gas", StringComparison.OrdinalIgnoreCase))
-                return base.OnCommand(args);
-
-            if (NoWallet()) return true;
-
-            bool all = args.Length > 2 && args[2].Equals("all", StringComparison.OrdinalIgnoreCase);
-            bool useChangeAddress = (all && args.Length == 4) || (!all && args.Length == 3);
-            UInt160 changeAddress = useChangeAddress ? args[args.Length - 1].ToScriptHash() : null;
-
-            if (useChangeAddress)
-            {
-                string password = ReadUserInput("password", true);
-                if (password.Length == 0)
-                {
-                    Console.WriteLine("cancelled");
-                    return true;
-                }
-                if (!Program.Wallet.VerifyPassword(password))
-                {
-                    Console.WriteLine("Incorrect password");
-                    return true;
-                }
-            }
-
-            Coins coins = new Coins(Program.Wallet, system);
-            ClaimTransaction[] txs = all
-                ? coins.ClaimAll(changeAddress)
-                : new[] { coins.Claim(changeAddress) };
-            if (txs is null) return true;
-            foreach (ClaimTransaction tx in txs)
-                if (tx != null)
-                    Console.WriteLine($"Transaction Succeeded: {tx.Hash}");
-            return true;
-        }
-
         private bool OnShowGasCommand(string[] args)
         {
             if (NoWallet()) return true;
-
-            Coins coins = new Coins(Program.Wallet, system);
-            Console.WriteLine($"unavailable: {coins.UnavailableBonus().ToString()}");
-            Console.WriteLine($"  available: {coins.AvailableBonus().ToString()}");
+            BigInteger gas = BigInteger.Zero;
+            using (Snapshot snapshot = Blockchain.Singleton.GetSnapshot())
+                foreach (UInt160 account in Program.Wallet.GetAccounts().Select(p => p.ScriptHash))
+                {
+                    gas += NativeContract.NEO.UnclaimedGas(snapshot, account, snapshot.Height + 1);
+                }
+            Console.WriteLine($"unclaimed gas: {new BigDecimal(gas, NativeContract.GAS.Decimals)}");
             return true;
         }
 
@@ -815,19 +730,8 @@ namespace Neo.Shell
         private bool OnListAssetCommand(string[] args)
         {
             if (NoWallet()) return true;
-            foreach (var item in Program.Wallet.GetCoins().Where(p => !p.State.HasFlag(CoinState.Spent)).GroupBy(p => p.Output.AssetId, (k, g) => new
-            {
-                Asset = Blockchain.Singleton.Store.GetAssets().TryGet(k),
-                Balance = g.Sum(p => p.Output.Value),
-                Confirmed = g.Where(p => p.State.HasFlag(CoinState.Confirmed)).Sum(p => p.Output.Value)
-            }))
-            {
-                Console.WriteLine($"       id:{item.Asset.AssetId}");
-                Console.WriteLine($"     name:{item.Asset.GetName()}");
-                Console.WriteLine($"  balance:{item.Balance}");
-                Console.WriteLine($"confirmed:{item.Confirmed}");
-                Console.WriteLine();
-            }
+            Console.WriteLine($"NEO: {Program.Wallet.GetAvailable(NativeContract.NEO.Hash)}");
+            Console.WriteLine($"GAS: {Program.Wallet.GetAvailable(NativeContract.GAS.Hash)}");
             return true;
         }
 
@@ -952,130 +856,73 @@ namespace Neo.Shell
                 Console.WriteLine("Incorrect password");
                 return true;
             }
-            UIntBase assetId;
+            UInt160 assetId;
             switch (args[1].ToLower())
             {
                 case "neo":
-                case "ans":
-                    assetId = Blockchain.GoverningToken.Hash;
+                    assetId = NativeContract.NEO.Hash;
                     break;
                 case "gas":
-                case "anc":
-                    assetId = Blockchain.UtilityToken.Hash;
+                    assetId = NativeContract.GAS.Hash;
                     break;
                 default:
-                    assetId = UIntBase.Parse(args[1]);
+                    assetId = UInt160.Parse(args[1]);
                     break;
             }
-            UInt160 scriptHash = args[2].ToScriptHash();
-            bool isSendAll = string.Equals(args[3], "all", StringComparison.OrdinalIgnoreCase);
+            UInt160 to = args[2].ToScriptHash();
             Transaction tx;
-            if (isSendAll)
+            AssetDescriptor descriptor = new AssetDescriptor(assetId);
+            if (!BigDecimal.TryParse(args[3], descriptor.Decimals, out BigDecimal amount) || amount.Sign <= 0)
             {
-                Coin[] coins = Program.Wallet.FindUnspentCoins().Where(p => p.Output.AssetId.Equals(assetId)).ToArray();
-                tx = new ContractTransaction
+                Console.WriteLine("Incorrect Amount Format");
+                return true;
+            }
+            long fee = 0;
+            if (args.Length >= 5)
+            {
+                if (!BigDecimal.TryParse(args[4], NativeContract.GAS.Decimals, out BigDecimal f) || f.Sign < 0)
                 {
-                    Attributes = new TransactionAttribute[0],
-                    Inputs = coins.Select(p => p.Reference).ToArray(),
-                    Outputs = new[]
-                    {
-                        new TransactionOutput
-                        {
-                            AssetId = (UInt256)assetId,
-                            Value = coins.Sum(p => p.Output.Value),
-                            ScriptHash = scriptHash
-                        }
-                    }
-                };
-                ContractParametersContext context = new ContractParametersContext(tx);
-                Program.Wallet.Sign(context);
-                if (context.Completed)
-                {
-                    tx.Witnesses = context.GetWitnesses();
-                    Program.Wallet.ApplyTransaction(tx);
-                    system.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
-                    Console.WriteLine($"TXID: {tx.Hash}");
+                    Console.WriteLine("Incorrect Fee Format");
+                    return true;
                 }
-                else
+                fee = (long)f.Value;
+            }
+
+            tx = Program.Wallet.MakeTransaction(null, new[]
+            {
+                new TransferOutput
                 {
-                    Console.WriteLine("SignatureContext:");
-                    Console.WriteLine(context.ToString());
+                    AssetId = assetId,
+                    Value = amount,
+                    ScriptHash = to
                 }
+            }, net_fee: fee);
+
+            if (tx == null)
+            {
+                Console.WriteLine("Insufficient funds");
+                return true;
+            }
+
+            ContractParametersContext context = new ContractParametersContext(tx);
+            Program.Wallet.Sign(context);
+            if (context.Completed)
+            {
+                tx.Witnesses = context.GetWitnesses();
+                if (tx.Size > 1024)
+                {
+                    long calFee = tx.Size * 1000 + 100000;
+                    if (tx.NetworkFee < calFee)
+                        tx.NetworkFee = calFee;
+                }
+                Program.Wallet.ApplyTransaction(tx);
+                system.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
+                Console.WriteLine($"TXID: {tx.Hash}");
             }
             else
             {
-                AssetDescriptor descriptor = new AssetDescriptor(assetId);
-                if (!BigDecimal.TryParse(args[3], descriptor.Decimals, out BigDecimal amount) || amount.Sign <= 0)
-                {
-                    Console.WriteLine("Incorrect Amount Format");
-                    return true;
-                }
-                Fixed8 fee = Fixed8.Zero;
-
-                if (args.Length >= 5)
-                {
-                    if (!Fixed8.TryParse(args[4], out fee) || fee < Fixed8.Zero)
-                    {
-                        Console.WriteLine("Incorrect Fee Format");
-                        return true;
-                    }
-                }
-
-                tx = Program.Wallet.MakeTransaction(null, new[]
-                {
-                    new TransferOutput
-                    {
-                        AssetId = assetId,
-                        Value = amount,
-                        ScriptHash = scriptHash
-                    }
-                }, fee: fee);
-
-                if (tx == null)
-                {
-                    Console.WriteLine("Insufficient funds");
-                    return true;
-                }
-
-                ContractParametersContext context = new ContractParametersContext(tx);
-                Program.Wallet.Sign(context);
-                if (context.Completed)
-                {
-                    tx.Witnesses = context.GetWitnesses();
-                    if (tx.Size > 1024)
-                    {
-                        Fixed8 calFee = Fixed8.FromDecimal(tx.Size * 0.00001m + 0.001m);
-                        if (fee < calFee)
-                        {
-                            fee = calFee;
-                            tx = Program.Wallet.MakeTransaction(null, new[]
-                            {
-                                new TransferOutput
-                                {
-                                    AssetId = assetId,
-                                    Value = amount,
-                                    ScriptHash = scriptHash
-                                }
-                            }, fee: fee);
-                            if (tx == null)
-                            {
-                                Console.WriteLine("Insufficient funds");
-                                return true;
-                            }
-                            context = new ContractParametersContext(tx);
-                            Program.Wallet.Sign(context);
-                            tx.Witnesses = context.GetWitnesses();
-                        }
-                    }
-                    Program.Wallet.ApplyTransaction(tx);
-                    system.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
-                    Console.WriteLine($"TXID: {tx.Hash}");
-                }
-                else
-                {
-                    Console.WriteLine("SignatureContext:");
-                    Console.WriteLine(context.ToString());
-                }
+                Console.WriteLine("SignatureContext:");
+                Console.WriteLine(context.ToString());
             }
 
             return true;
@@ -1091,8 +938,6 @@ namespace Neo.Shell
                     return OnShowPoolCommand(args);
                 case "state":
                     return OnShowStateCommand(args);
-                case "utxo":
-                    return OnShowUtxoCommand(args);
                 default:
                     return base.OnCommand(args);
             }
@@ -1150,39 +995,6 @@ namespace Neo.Shell
             task.Wait();
             Console.WriteLine();
             Console.CursorVisible = true;
-            return true;
-        }
-
-        private bool OnShowUtxoCommand(string[] args)
-        {
-            if (NoWallet()) return true;
-            IEnumerable<Coin> coins = Program.Wallet.FindUnspentCoins();
-            if (args.Length >= 3)
-            {
-                UInt256 assetId;
-                switch (args[2].ToLower())
-                {
-                    case "neo":
-                    case "ans":
-                        assetId = Blockchain.GoverningToken.Hash;
-                        break;
-                    case "gas":
-                    case "anc":
-                        assetId = Blockchain.UtilityToken.Hash;
-                        break;
-                    default:
-                        assetId = UInt256.Parse(args[2]);
-                        break;
-                }
-                coins = coins.Where(p => p.Output.AssetId.Equals(assetId));
-            }
-            Coin[] coins_array = coins.ToArray();
-            const int MAX_SHOW = 100;
-            for (int i = 0; i < coins_array.Length && i < MAX_SHOW; i++)
-                Console.WriteLine($"{coins_array[i].Reference.PrevHash}:{coins_array[i].Reference.PrevIndex}");
-            if (coins_array.Length > MAX_SHOW)
-                Console.WriteLine($"({coins_array.Length - MAX_SHOW} more)");
-            Console.WriteLine($"total: {coins_array.Length} UTXOs");
             return true;
         }
 

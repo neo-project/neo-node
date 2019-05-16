@@ -29,12 +29,6 @@
       "seed3.neo.org:20333",
       "seed4.neo.org:20333",
       "seed5.neo.org:20333"
-    ],
-    "SystemFee": {
-      "EnrollmentTransaction": 10,
-      "IssueTransaction": 5,
-      "PublishTransaction": 5,
-      "RegisterTransaction": 100
-    }
+    ]
   }
 }
