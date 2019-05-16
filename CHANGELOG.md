@@ -3,6 +3,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.10.2] - 2019-05-16
+### Fixed
+- Fixed bugs in dBFT 2.0.
+- Fixed bugs in NeoVM.
+- Fixed memory leak.
+- Fixed bugs in CLI and RPC.
+
 ## [2.10.1] - 2019-04-05
 ### Added
 - New CLI commands: `close wallet`.
