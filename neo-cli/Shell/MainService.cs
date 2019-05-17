@@ -4,6 +4,7 @@ using Neo.IO;
 using Neo.IO.Json;
 using Neo.Ledger;
 using Neo.Network.P2P;
+using Neo.Network.P2P.Capabilities;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.Persistence.LevelDB;
@@ -115,7 +116,7 @@ namespace Neo.Shell
             switch (command)
             {
                 case MessageCommand.Addr:
-                    payload = AddrPayload.Create(NetworkAddressWithTime.Create(new IPEndPoint(IPAddress.Parse(args[2]), ushort.Parse(args[3])), VersionServices.FullNode, DateTime.UtcNow.ToTimestamp()));
+                    payload = AddrPayload.Create(NetworkAddressWithTime.Create(IPAddress.Parse(args[2]), DateTime.UtcNow.ToTimestamp(), new FullNodeCapability(), new ServerCapability(NodeCapabilityType.TcpServer, ushort.Parse(args[3]))));
                     break;
                 case MessageCommand.Block:
                     if (args[2].Length == 64 || args[2].Length == 66)
@@ -981,7 +982,7 @@ namespace Neo.Shell
                     foreach (RemoteNode node in LocalNode.Singleton.GetRemoteNodes().Take(Console.WindowHeight - 2).ToArray())
                     {
                         WriteLineWithoutFlicker(
-                            $"  ip: {node.Remote.Address}\tport: {node.Remote.Port}\tlisten: {node.ListenerPort}\theight: {node.LastBlockIndex}");
+                            $"  ip: {node.Remote.Address}\tport: {node.Remote.Port}\tlisten: {node.ListenerTcpPort}\theight: {node.LastBlockIndex}");
                         linesWritten++;
                     }
 
@@ -1012,12 +1013,14 @@ namespace Neo.Shell
                 }
             store = new LevelDBStore(Path.GetFullPath(Settings.Default.Paths.Chain));
             system = new NeoSystem(store);
-            system.StartNode(
-                port: Settings.Default.P2P.Port,
-                wsPort: Settings.Default.P2P.WsPort,
-                minDesiredConnections: Settings.Default.P2P.MinDesiredConnections,
-                maxConnections: Settings.Default.P2P.MaxConnections,
-                maxConnectionsPerAddress: Settings.Default.P2P.MaxConnectionsPerAddress);
+            system.StartNode(new ChannelsConfig
+            {
+                Tcp = new IPEndPoint(IPAddress.Any, Settings.Default.P2P.Port),
+                WebSocket = new IPEndPoint(IPAddress.Any, Settings.Default.P2P.WsPort),
+                MinDesiredConnections = Settings.Default.P2P.MinDesiredConnections,
+                MaxConnections = Settings.Default.P2P.MaxConnections,
+                MaxConnectionsPerAddress = Settings.Default.P2P.MaxConnectionsPerAddress
+            });
             if (Settings.Default.UnlockWallet.IsActive)
             {
                 try
