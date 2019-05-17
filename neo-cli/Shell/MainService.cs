@@ -1300,7 +1300,7 @@ namespace Neo.Shell
 
             try
             {
-                ZipFile.ExtractToDirectory(fileName, Path.Combine(".", "Plugins", $"{Path.GetFileNameWithoutExtension(fileName)}"));
+                ZipFile.ExtractToDirectory(fileName, ".");
             }
             catch (IOException)
             {
