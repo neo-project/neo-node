@@ -23,12 +23,7 @@
       "seed7.ngd.network:10333",
       "seed8.ngd.network:10333",
       "seed9.ngd.network:10333",
-      "seed10.ngd.network:10333",
-      "seed1.neo.org:10333",
-      "seed2.neo.org:10333",
-      "seed3.neo.org:10333",
-      "seed4.neo.org:10333",
-      "seed5.neo.org:10333"
+      "seed10.ngd.network:10333"
     ],
     "SystemFee": {
       "EnrollmentTransaction": 1000,
