@@ -31,7 +31,7 @@ namespace Neo.Services
                 case "exit":
                     return false;
                 case "version":
-                    Console.WriteLine(Assembly.GetEntryAssembly().GetName().Version);
+                    Console.WriteLine(Assembly.GetEntryAssembly().GetVersion());
                     return true;
                 default:
                     Console.WriteLine("error: command not found " + args[0]);
@@ -276,8 +276,7 @@ namespace Neo.Services
             Console.OutputEncoding = Encoding.Unicode;
 
             Console.ForegroundColor = ConsoleColor.DarkGreen;
-            Version ver = Assembly.GetEntryAssembly().GetName().Version;
-            Console.WriteLine($"{ServiceName} Version: {ver}");
+            Console.WriteLine($"{ServiceName} Version: {Assembly.GetEntryAssembly().GetVersion()}");
             Console.WriteLine();
 
             while (running)
