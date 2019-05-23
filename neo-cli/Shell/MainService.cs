@@ -1147,8 +1147,13 @@ namespace Neo.Shell
                 Console.WriteLine("error");
                 return true;
             }
+
             var pluginName = args[1];
-            Directory.Delete(Path.Combine("Plugins", pluginName), true);
+            if (Directory.Exists(Path.Combine("Plugins", pluginName)))
+            {
+                Directory.Delete(Path.Combine("Plugins", pluginName), true);
+            }
+
             File.Delete(Path.Combine("Plugins", $"{pluginName}.dll"));
             Console.WriteLine($"Uninstall successful, please restart neo-cli.");
             return true;
