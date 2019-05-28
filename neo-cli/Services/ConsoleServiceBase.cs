@@ -23,7 +23,7 @@ namespace Neo.Services
         protected bool ShowPrompt { get; set; } = true;
 
         private bool _running;
-        private CancellationTokenSource _shutdownTokenSource = new CancellationTokenSource();
+        private readonly CancellationTokenSource _shutdownTokenSource = new CancellationTokenSource();
         private readonly CountdownEvent _shutdownAcknowledged = new CountdownEvent(1);
 
         protected virtual bool OnCommand(string[] args)
