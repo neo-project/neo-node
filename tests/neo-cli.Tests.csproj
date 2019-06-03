@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <AssemblyName>neo-cli.Tests</AssemblyName>
+    <RootNamespace>neo-cli.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Update="protocol.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentAssertions" Version="5.5.3" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.9.0" />
+    <PackageReference Include="MSTest.TestAdapter" Version="1.4.0" />
+    <PackageReference Include="MSTest.TestFramework" Version="1.4.0" />
+    <PackageReference Include="Moq" Version="4.7.63" />
+  </ItemGroup>
+
+  <ItemGroup>
+  <!-- must see how to effectively include neo here -->
+  <!--
+    <ProjectReference Include="../neo-plugins/SimplePolicy/SimplePolicy.csproj" />
+    <ProjectReference Include="../neo-cli/neo-cli/neo-cli.csproj" />
+    <ProjectReference Include="../neo/neo/neo.csproj" />
+  -->
+  </ItemGroup>
+
+</Project>

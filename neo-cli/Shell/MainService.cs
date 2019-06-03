@@ -184,9 +184,9 @@ namespace Neo.Shell
             return SignAndSendTx(tx);
         }
 
-        private bool OnInvokeCommand(string[] args)
+        internal protected void ParseParametersInvoke(string[] args, out UInt160 scriptHash, out ContractParameter[] parameters)
         {
-            var scriptHash = UInt160.Parse(args[1]);
+            scriptHash = UInt160.Parse(args[1]);
 
             List<ContractParameter> contractParameters = new List<ContractParameter>();
             for (int i = 3; i < args.Length; i++)
@@ -199,7 +199,7 @@ namespace Neo.Shell
                 });
             }
 
-            ContractParameter[] parameters =
+            parameters = new ContractParameter[]
             {
                 new ContractParameter
                 {
@@ -212,8 +212,11 @@ namespace Neo.Shell
                     Value = contractParameters.ToArray()
                 }
             };
+        }
 
-            var tx = new InvocationTransaction();
+        internal protected bool PrepareInvoke(UInt160 scriptHash, ContractParameter[] parameters, out InvocationTransaction tx)
+        {
+            tx = new InvocationTransaction();
 
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
             {
@@ -241,6 +244,17 @@ namespace Neo.Shell
             }
             if (NoWallet()) return true;
             tx = DecorateInvocationTransaction(tx);
+            // not completed yet
+            return false;
+        }
+
+        private bool OnInvokeCommand(string[] args)
+        {
+            ParseParametersInvoke(args, out UInt160 scriptHash, out ContractParameter[] parameters);
+            
+            if(PrepareInvoke(scriptHash, parameters, out InvocationTransaction tx))
+                return true;
+            
             if (tx == null)
             {
                 Console.WriteLine("Error: insufficient balance.");
