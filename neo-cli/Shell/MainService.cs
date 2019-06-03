@@ -259,6 +259,12 @@ namespace Neo.Shell
             string contractName, string contractVersion, string contractAuthor,
             string contractEmail, string contractDescription, out UInt160 scriptHash)
         {
+            var info = new FileInfo(avmFilePath);
+            if (!info.Exists || info.Length >= Transaction.MaxTransactionSize)
+            {
+                throw new ArgumentException(nameof(avmFilePath));
+            }
+
             byte[] script = File.ReadAllBytes(avmFilePath);
             // See ContractParameterType Enum
             byte[] parameterList = paramTypes.HexToBytes();
