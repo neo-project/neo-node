@@ -1087,6 +1087,13 @@ namespace Neo.Shell
             }
 
             var pluginName = args[1];
+
+            if (!Plugin.Plugins.Any(u => u.Name == pluginName))
+            {
+                Console.WriteLine("Plugin not found");
+                return true;
+            }
+
             if (Directory.Exists(Path.Combine("Plugins", pluginName)))
             {
                 Directory.Delete(Path.Combine("Plugins", pluginName), true);
