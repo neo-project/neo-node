@@ -229,9 +229,9 @@ namespace Neo.Shell
             return SignAndSendTx(tx);
         }
 
-        private byte[] LoadDeploymentScript(string avmFilePath, bool hasStorage, bool isPayable, out UInt160 scriptHash)
+        private byte[] LoadDeploymentScript(string nvmFilePath, bool hasStorage, bool isPayable, out UInt160 scriptHash)
         {
-            byte[] script = File.ReadAllBytes(avmFilePath);
+            byte[] script = File.ReadAllBytes(nvmFilePath);
             scriptHash = script.ToScriptHash();
             ContractPropertyState properties = ContractPropertyState.NoProperty;
             if (hasStorage) properties |= ContractPropertyState.HasStorage;
@@ -563,7 +563,7 @@ namespace Neo.Shell
                 "\tsend <id|alias> <address> <value> [fee=0]\n" +
                 "\tsign <jsonObjectToSign>\n" +
                 "Contract Commands:\n" +
-                "\tdeploy <avmFilePath> <hasStorage (true|false)> <isPayable (true|false)\n" +
+                "\tdeploy <nvmFilePath> <hasStorage (true|false)> <isPayable (true|false)\n" +
                 "\tinvoke <scripthash> <command> [optionally quoted params separated by space]\n" +
                 "Node Commands:\n" +
                 "\tshow state\n" +
