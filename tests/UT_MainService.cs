@@ -4,7 +4,7 @@ using Neo.Plugins;
 using Neo.Network.P2P.Payloads;
 using Neo;
 using Neo.Persistence;
-using Settings = Neo.Plugins.Settings;
+//using Settings = Neo.Plugins.Settings;
 using System.Collections.Generic;
 using Neo.Cryptography;
 using System.Numerics;
@@ -14,6 +14,7 @@ using System;
 using Moq;
 // neo-cli
 using Neo.Shell;
+using Neo.SmartContract;
 
 namespace NeoCli.UnitTests
 {
@@ -33,8 +34,8 @@ namespace NeoCli.UnitTests
         [TestMethod]
         public void TestOnInvoke()
         {
-            string[] args = {"invoke", "0x0000000000000000000000000000000000000000"};
-            uut.ParseParametersInvoke(args, out UInt160 scriptHash, out ContractParameter[] parameters));
+            string[] args = {"invoke", "0x0000000000000000000000000000000000000000", "totalSupply"};
+            uut.ParseParametersInvoke(args, out UInt160 scriptHash, out ContractParameter[] parameters);
 
             scriptHash.Should().Be(UInt160.Zero);
         }

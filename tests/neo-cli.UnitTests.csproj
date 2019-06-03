@@ -22,12 +22,8 @@
   </ItemGroup>
 
   <ItemGroup>
-  <!-- must see how to effectively include neo here -->
-  <!--
-    <ProjectReference Include="../neo-plugins/SimplePolicy/SimplePolicy.csproj" />
-    <ProjectReference Include="../neo-cli/neo-cli/neo-cli.csproj" />
-    <ProjectReference Include="../neo/neo/neo.csproj" />
-  -->
+    <PackageReference Include="Neo" Version="2.10.2" />
+    <ProjectReference Include="../neo-cli/neo-cli.csproj" />
   </ItemGroup>
 
 </Project>
