@@ -719,13 +719,13 @@ namespace Neo.Shell
 
                 if (!file.Exists)
                 {
-                    Console.WriteLine($"Error: File {args[2]} doesn't exists");
+                    Console.WriteLine($"Error: File '{args[2]}'  doesn't exists");
                     return true;
                 }
 
                 if (file.Length > 1024 * 1024)
                 {
-                    if (ReadUserInput($"The file {file.FullName} is too big, do you want to continue? (yes|no)", false)?.ToLowerInvariant() != "yes") return true;
+                    if (ReadUserInput($"The file '{file.FullName}' is too big, do you want to continue? (yes|no)", false)?.ToLowerInvariant() != "yes") return true;
                 }
 
                 string[] lines = File.ReadAllLines(args[2]);
@@ -1402,7 +1402,7 @@ namespace Neo.Shell
             string path_new = Path.ChangeExtension(path, ".json");
             if (File.Exists(path_new))
             {
-                Console.WriteLine($"File {path_new} already exists");
+                Console.WriteLine($"File '{path_new}' already exists");
                 return true;
             }
             NEP6Wallet.Migrate(GetIndexer(), path_new, path, password).Save();
