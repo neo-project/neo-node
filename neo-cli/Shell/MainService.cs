@@ -243,7 +243,7 @@ namespace Neo.Shell
             tx = DecorateInvocationTransaction(tx);
             if (tx == null)
             {
-                Console.WriteLine("error: insufficient balance.");
+                Console.WriteLine("Error: insufficient balance.");
                 return true;
             }
             if (ReadUserInput("relay tx(no|yes)") != "yes")
@@ -1387,6 +1387,11 @@ namespace Neo.Shell
                 return true;
             }
             string path_new = Path.ChangeExtension(path, ".json");
+            if (File.Exists(path_new))
+            {
+                Console.WriteLine($"File {path_new} already exists");
+                return true;
+            }
             NEP6Wallet.Migrate(GetIndexer(), path_new, path, password).Save();
             Console.WriteLine($"Wallet file upgrade complete. New wallet file has been auto-saved at: {path_new}");
             return true;
