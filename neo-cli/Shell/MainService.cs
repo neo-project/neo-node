@@ -669,7 +669,7 @@ namespace Neo.Shell
 
                 if (!file.Exists)
                 {
-                    Console.WriteLine($"Error: File '{args[2]}' doesn't exists");
+                    Console.WriteLine($"Error: File '{file.FullName}' doesn't exists");
                     return true;
                 }
 
