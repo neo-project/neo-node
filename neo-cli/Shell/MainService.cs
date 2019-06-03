@@ -243,7 +243,7 @@ namespace Neo.Shell
             tx = DecorateInvocationTransaction(tx);
             if (tx == null)
             {
-                Console.WriteLine("error: insufficient balance.");
+                Console.WriteLine("Error: insufficient balance.");
                 return true;
             }
             if (ReadUserInput("relay tx(no|yes)") != "yes")
@@ -259,6 +259,12 @@ namespace Neo.Shell
             string contractName, string contractVersion, string contractAuthor,
             string contractEmail, string contractDescription, out UInt160 scriptHash)
         {
+            var info = new FileInfo(avmFilePath);
+            if (!info.Exists || info.Length >= Transaction.MaxTransactionSize)
+            {
+                throw new ArgumentException(nameof(avmFilePath));
+            }
+
             byte[] script = File.ReadAllBytes(avmFilePath);
             // See ContractParameterType Enum
             byte[] parameterList = paramTypes.HexToBytes();
@@ -562,6 +568,11 @@ namespace Neo.Shell
                 scriptHash = args[2].ToScriptHash();
                 path = args[3];
             }
+            if (File.Exists(path))
+            {
+                Console.WriteLine($"Error: File '{path}' already exists");
+                return true;
+            }
             string password = ReadUserInput("password", true);
             if (password.Length == 0)
             {
@@ -704,6 +715,19 @@ namespace Neo.Shell
             catch (FormatException) { }
             if (prikey == null)
             {
+                var file = new FileInfo(args[2]);
+
+                if (!file.Exists)
+                {
+                    Console.WriteLine($"Error: File '{file.FullName}' doesn't exists");
+                    return true;
+                }
+
+                if (file.Length > 1024 * 1024)
+                {
+                    if (ReadUserInput($"The file '{file.FullName}' is too big, do you want to continue? (yes|no)", false)?.ToLowerInvariant() != "yes") return true;
+                }
+
                 string[] lines = File.ReadAllLines(args[2]);
                 for (int i = 0; i < lines.Length; i++)
                 {
@@ -1376,6 +1400,11 @@ namespace Neo.Shell
                 return true;
             }
             string path_new = Path.ChangeExtension(path, ".json");
+            if (File.Exists(path_new))
+            {
+                Console.WriteLine($"File '{path_new}' already exists");
+                return true;
+            }
             NEP6Wallet.Migrate(GetIndexer(), path_new, path, password).Save();
             Console.WriteLine($"Wallet file upgrade complete. New wallet file has been auto-saved at: {path_new}");
             return true;
