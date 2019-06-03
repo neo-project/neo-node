@@ -715,6 +715,19 @@ namespace Neo.Shell
             catch (FormatException) { }
             if (prikey == null)
             {
+                var file = new FileInfo(args[2]);
+
+                if (!file.Exists)
+                {
+                    Console.WriteLine($"Error: File {args[2]} doesn't exists");
+                    return true;
+                }
+
+                if (file.Length > 1024 * 1024)
+                {
+                    if (ReadUserInput($"The file {file.FullName} is too big, do you want to continue? (yes|no)", false)?.ToLowerInvariant() != "yes") return true;
+                }
+
                 string[] lines = File.ReadAllLines(args[2]);
                 for (int i = 0; i < lines.Length; i++)
                 {
