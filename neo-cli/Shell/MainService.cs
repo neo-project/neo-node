@@ -568,6 +568,11 @@ namespace Neo.Shell
                 scriptHash = args[2].ToScriptHash();
                 path = args[3];
             }
+            if (File.Exists(path))
+            {
+                Console.WriteLine($"Error: File '{path}' already exists");
+                return true;
+            }
             string password = ReadUserInput("password", true);
             if (password.Length == 0)
             {
