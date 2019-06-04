@@ -34,12 +34,10 @@ namespace Neo
     internal class PathsSettings
     {
         public string Chain { get; }
-        public string Index { get; }
 
         public PathsSettings(IConfigurationSection section)
         {
             this.Chain = string.Format(section.GetSection("Chain").Value, ProtocolSettings.Default.Magic.ToString("X8"));
-            this.Index = string.Format(section.GetSection("Index").Value, ProtocolSettings.Default.Magic.ToString("X8"));
         }
     }
 
