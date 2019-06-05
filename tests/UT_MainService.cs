@@ -32,12 +32,9 @@ namespace NeoCli.UnitTests
         }
 
         [TestMethod]
-        public void TestOnInvoke()
+        public void TestTemplate()
         {
-            string[] args = {"invoke", "0x0000000000000000000000000000000000000000", "totalSupply"};
-            uut.ParseParametersInvoke(args, out UInt160 scriptHash, out ContractParameter[] parameters);
-
-            scriptHash.Should().Be(UInt160.Zero);
+            // Nothing to do here now... put some tests
         }
     }
 }
