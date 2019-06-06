@@ -11,6 +11,7 @@ using Neo.Persistence.LevelDB;
 using Neo.Plugins;
 using Neo.Services;
 using Neo.SmartContract;
+using Neo.SmartContract.Manifest;
 using Neo.SmartContract.Native;
 using Neo.VM;
 using Neo.Wallets;
@@ -34,17 +35,9 @@ namespace Neo.Shell
     {
         private LevelDBStore store;
         private NeoSystem system;
-        private WalletIndexer indexer;
 
         protected override string Prompt => "neo";
         public override string ServiceName => "NEO-CLI";
-
-        private WalletIndexer GetIndexer()
-        {
-            if (indexer is null)
-                indexer = new WalletIndexer(Settings.Default.Paths.Index);
-            return indexer;
-        }
 
         private static bool NoWallet()
         {
@@ -82,8 +75,6 @@ namespace Neo.Shell
                     return OnOpenCommand(args);
                 case "close":
                     return OnCloseCommand(args);
-                case "rebuild":
-                    return OnRebuildCommand(args);
                 case "send":
                     return OnSendCommand(args);
                 case "show":
@@ -165,9 +156,6 @@ namespace Neo.Shell
             Console.WriteLine($"Script hash: {scriptHash.ToString()}");
             Console.WriteLine($"Gas: {tx.Gas}");
             Console.WriteLine();
-
-            DecorateInvocationTransaction(tx);
-
             return SignAndSendTx(tx);
         }
 
@@ -190,7 +178,11 @@ namespace Neo.Shell
             {
                 Sender = UInt160.Zero,
                 Attributes = new TransactionAttribute[0],
-                Witnesses = new Witness[0]
+                Witness = new Witness
+                {
+                    InvocationScript = new byte[0],
+                    VerificationScript = new byte[0]
+                }
             };
 
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
@@ -218,10 +210,9 @@ namespace Neo.Shell
             }
             catch (InvalidOperationException)
             {
-                Console.WriteLine("error: insufficient balance.");
+                Console.WriteLine("Error: insufficient balance.");
                 return true;
             }
-            DecorateInvocationTransaction(tx);
             if (ReadUserInput("relay tx(no|yes)") != "yes")
             {
                 return true;
@@ -231,25 +222,22 @@ namespace Neo.Shell
 
         private byte[] LoadDeploymentScript(string nvmFilePath, bool hasStorage, bool isPayable, out UInt160 scriptHash)
         {
+            var info = new FileInfo(nvmFilePath);
+            if (!info.Exists || info.Length >= Transaction.MaxTransactionSize)
+            {
+                throw new ArgumentException(nameof(nvmFilePath));
+            }
+
             byte[] script = File.ReadAllBytes(nvmFilePath);
+
             scriptHash = script.ToScriptHash();
-            ContractPropertyState properties = ContractPropertyState.NoProperty;
-            if (hasStorage) properties |= ContractPropertyState.HasStorage;
-            if (isPayable) properties |= ContractPropertyState.Payable;
+            ContractFeatures properties = ContractFeatures.NoProperty;
+            if (hasStorage) properties |= ContractFeatures.HasStorage;
+            if (isPayable) properties |= ContractFeatures.Payable;
             using (ScriptBuilder sb = new ScriptBuilder())
             {
                 sb.EmitSysCall(InteropService.Neo_Contract_Create, script, properties);
                 return sb.ToArray();
-            }
-        }
-
-        public void DecorateInvocationTransaction(Transaction tx)
-        {
-            tx.NetworkFee = 100000;
-
-            if (tx.Size > 1024)
-            {
-                tx.NetworkFee += tx.Size * 1000;
             }
         }
 
@@ -269,8 +257,7 @@ namespace Neo.Shell
             string msg;
             if (context.Completed)
             {
-                tx.Witnesses = context.GetWitnesses();
-                Program.Wallet.ApplyTransaction(tx);
+                tx.Witness = context.GetWitness();
 
                 system.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
 
@@ -310,7 +297,7 @@ namespace Neo.Shell
                     Console.WriteLine($"Only support to relay transaction.");
                     return true;
                 }
-                tx.Witnesses = context.GetWitnesses();
+                tx.Witness = context.GetWitness();
                 system.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
                 Console.WriteLine($"Data relay success, the hash is shown as follows:\r\n{tx.Hash}");
             }
@@ -449,7 +436,7 @@ namespace Neo.Shell
             {
                 case ".db3":
                     {
-                        Program.Wallet = UserWallet.Create(GetIndexer(), path, password);
+                        Program.Wallet = UserWallet.Create(path, password);
                         WalletAccount account = Program.Wallet.CreateAccount();
                         Console.WriteLine($"address: {account.Address}");
                         Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
@@ -459,7 +446,7 @@ namespace Neo.Shell
                     break;
                 case ".json":
                     {
-                        NEP6Wallet wallet = new NEP6Wallet(GetIndexer(), path);
+                        NEP6Wallet wallet = new NEP6Wallet(path);
                         wallet.Unlock(password);
                         WalletAccount account = wallet.CreateAccount();
                         wallet.Save();
@@ -514,6 +501,11 @@ namespace Neo.Shell
                 scriptHash = args[2].ToScriptHash();
                 path = args[3];
             }
+            if (File.Exists(path))
+            {
+                Console.WriteLine($"Error: File '{path}' already exists");
+                return true;
+            }
             string password = ReadUserInput("password", true);
             if (password.Length == 0)
             {
@@ -551,7 +543,6 @@ namespace Neo.Shell
                 "\topen wallet <path>\n" +
                 "\tclose wallet\n" +
                 "\tupgrade wallet <path>\n" +
-                "\trebuild index\n" +
                 "\tlist address\n" +
                 "\tlist asset\n" +
                 "\tlist key\n" +
@@ -560,7 +551,7 @@ namespace Neo.Shell
                 "\timport key <wif|path>\n" +
                 "\texport key [address] [path]\n" +
                 "\timport multisigaddress m pubkeys...\n" +
-                "\tsend <id|alias> <address> <value> [fee=0]\n" +
+                "\tsend <id|alias> <address> <value>\n" +
                 "\tsign <jsonObjectToSign>\n" +
                 "Contract Commands:\n" +
                 "\tdeploy <nvmFilePath> <hasStorage (true|false)> <isPayable (true|false)\n" +
@@ -654,6 +645,19 @@ namespace Neo.Shell
             catch (FormatException) { }
             if (prikey == null)
             {
+                var file = new FileInfo(args[2]);
+
+                if (!file.Exists)
+                {
+                    Console.WriteLine($"Error: File '{file.FullName}' doesn't exists");
+                    return true;
+                }
+
+                if (file.Length > 1024 * 1024)
+                {
+                    if (ReadUserInput($"The file '{file.FullName}' is too big, do you want to continue? (yes|no)", false)?.ToLowerInvariant() != "yes") return true;
+                }
+
                 string[] lines = File.ReadAllLines(args[2]);
                 for (int i = 0; i < lines.Length; i++)
                 {
@@ -771,7 +775,7 @@ namespace Neo.Shell
             }
             try
             {
-                Program.Wallet = OpenWallet(GetIndexer(), path, password);
+                Program.Wallet = OpenWallet(path, password);
             }
             catch (CryptographicException)
             {
@@ -810,31 +814,12 @@ namespace Neo.Shell
                 Console.WriteLine($"Wallet is not opened");
                 return true;
             }
-
-            Program.Wallet.Dispose();
             Program.Wallet = null;
             if (system.RpcServer != null)
             {
                 system.RpcServer.Wallet = null;
             }
             Console.WriteLine($"Wallet is closed");
-            return true;
-        }
-
-        private bool OnRebuildCommand(string[] args)
-        {
-            switch (args[1].ToLower())
-            {
-                case "index":
-                    return OnRebuildIndexCommand(args);
-                default:
-                    return base.OnCommand(args);
-            }
-        }
-
-        private bool OnRebuildIndexCommand(string[] args)
-        {
-            GetIndexer().RebuildIndex();
             return true;
         }
 
@@ -878,17 +863,6 @@ namespace Neo.Shell
                 Console.WriteLine("Incorrect Amount Format");
                 return true;
             }
-            long fee = 0;
-            if (args.Length >= 5)
-            {
-                if (!BigDecimal.TryParse(args[4], NativeContract.GAS.Decimals, out BigDecimal f) || f.Sign < 0)
-                {
-                    Console.WriteLine("Incorrect Fee Format");
-                    return true;
-                }
-                fee = (long)f.Value;
-            }
-
             tx = Program.Wallet.MakeTransaction(null, new[]
             {
                 new TransferOutput
@@ -897,7 +871,7 @@ namespace Neo.Shell
                     Value = amount,
                     ScriptHash = to
                 }
-            }, net_fee: fee);
+            });
 
             if (tx == null)
             {
@@ -909,14 +883,7 @@ namespace Neo.Shell
             Program.Wallet.Sign(context);
             if (context.Completed)
             {
-                tx.Witnesses = context.GetWitnesses();
-                if (tx.Size > 1024)
-                {
-                    long calFee = tx.Size * 1000 + 100000;
-                    if (tx.NetworkFee < calFee)
-                        tx.NetworkFee = calFee;
-                }
-                Program.Wallet.ApplyTransaction(tx);
+                tx.Witness = context.GetWitness();
                 system.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
                 Console.WriteLine($"TXID: {tx.Hash}");
             }
@@ -973,11 +940,7 @@ namespace Neo.Shell
                 while (!stop)
                 {
                     Console.SetCursorPosition(0, 0);
-                    uint wh = 0;
-                    if (Program.Wallet != null)
-                        wh = (Program.Wallet.WalletHeight > 0) ? Program.Wallet.WalletHeight - 1 : 0;
-
-                    WriteLineWithoutFlicker($"block: {wh}/{Blockchain.Singleton.Height}/{Blockchain.Singleton.HeaderHeight}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}");
+                    WriteLineWithoutFlicker($"block: {Blockchain.Singleton.Height}/{Blockchain.Singleton.HeaderHeight}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}");
                     int linesWritten = 1;
                     foreach (RemoteNode node in LocalNode.Singleton.GetRemoteNodes().Take(Console.WindowHeight - 2).ToArray())
                     {
@@ -1025,7 +988,7 @@ namespace Neo.Shell
             {
                 try
                 {
-                    Program.Wallet = OpenWallet(GetIndexer(), Settings.Default.UnlockWallet.Path, Settings.Default.UnlockWallet.Password);
+                    Program.Wallet = OpenWallet(Settings.Default.UnlockWallet.Path, Settings.Default.UnlockWallet.Password);
                 }
                 catch (CryptographicException)
                 {
@@ -1190,21 +1153,26 @@ namespace Neo.Shell
                 Console.WriteLine("cancelled");
                 return true;
             }
+            if (File.Exists(path_new))
+            {
+                Console.WriteLine($"File '{path_new}' already exists");
+                return true;
+            }
             string path_new = Path.ChangeExtension(path, ".json");
-            NEP6Wallet.Migrate(GetIndexer(), path_new, path, password).Save();
+            NEP6Wallet.Migrate(path_new, path, password).Save();
             Console.WriteLine($"Wallet file upgrade complete. New wallet file has been auto-saved at: {path_new}");
             return true;
         }
 
-        private static Wallet OpenWallet(WalletIndexer indexer, string path, string password)
+        private static Wallet OpenWallet(string path, string password)
         {
             if (Path.GetExtension(path) == ".db3")
             {
-                return UserWallet.Open(indexer, path, password);
+                return UserWallet.Open(path, password);
             }
             else
             {
-                NEP6Wallet nep6wallet = new NEP6Wallet(indexer, path);
+                NEP6Wallet nep6wallet = new NEP6Wallet(path);
                 nep6wallet.Unlock(password);
                 return nep6wallet;
             }
