@@ -1133,7 +1133,7 @@ namespace Neo.Shell
                     out IEnumerable<Transaction> unverifiedTransactions);
                 Console.WriteLine("Verified Transactions:");
                 foreach (Transaction tx in verifiedTransactions)
-                    Console.WriteLine($" {tx.Hash} {tx.GetType().Name} {tx.NetworkFee}GAS_NetFee {tx.IsLowPriority}");
+                    Console.WriteLine($" {tx.Hash} {tx.GetType().Name} {tx.NetworkFee} GAS_NetFee {tx.IsLowPriority}");
                 Console.WriteLine("Unverified Transactions:");
                 foreach (Transaction tx in unverifiedTransactions)
                     Console.WriteLine($" {tx.Hash} {tx.GetType().Name} {tx.NetworkFee}GAS_NetFee {tx.IsLowPriority}");
