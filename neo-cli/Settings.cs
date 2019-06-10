@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Neo.Network.P2P;
+using Neo.SmartContract.Native;
 using System.Net;
 
 namespace Neo
@@ -33,12 +34,10 @@ namespace Neo
     internal class PathsSettings
     {
         public string Chain { get; }
-        public string Index { get; }
 
         public PathsSettings(IConfigurationSection section)
         {
-            this.Chain = string.Format(section.GetSection("Chain").Value, Message.Magic.ToString("X8"));
-            this.Index = string.Format(section.GetSection("Index").Value, Message.Magic.ToString("X8"));
+            this.Chain = string.Format(section.GetSection("Chain").Value, ProtocolSettings.Default.Magic.ToString("X8"));
         }
     }
 
@@ -66,7 +65,7 @@ namespace Neo
         public ushort Port { get; }
         public string SslCert { get; }
         public string SslCertPassword { get; }
-        public Fixed8 MaxGasInvoke { get; }
+        public long MaxGasInvoke { get; }
 
         public RPCSettings(IConfigurationSection section)
         {
@@ -74,7 +73,7 @@ namespace Neo
             this.Port = ushort.Parse(section.GetSection("Port").Value);
             this.SslCert = section.GetSection("SslCert").Value;
             this.SslCertPassword = section.GetSection("SslCertPassword").Value;
-            this.MaxGasInvoke = Fixed8.Parse(section.GetValue("MaxGasInvoke", "0"));
+            this.MaxGasInvoke = (long)BigDecimal.Parse(section.GetValue("MaxGasInvoke", "0"), NativeContract.GAS.Decimals).Value;
         }
     }
 
