@@ -920,10 +920,10 @@ namespace Neo.Shell
                     out IEnumerable<Transaction> unverifiedTransactions);
                 Console.WriteLine("Verified Transactions:");
                 foreach (Transaction tx in verifiedTransactions)
-                    Console.WriteLine($" {tx.Hash} {tx.GetType().Name} {tx.NetworkFee} GAS_NetFee {tx.IsLowPriority}");
+                    Console.WriteLine($" {tx.Hash} {tx.GetType().Name} {tx.NetworkFee} GAS_NetFee");
                 Console.WriteLine("Unverified Transactions:");
                 foreach (Transaction tx in unverifiedTransactions)
-                    Console.WriteLine($" {tx.Hash} {tx.GetType().Name} {tx.NetworkFee} GAS_NetFee {tx.IsLowPriority}");
+                    Console.WriteLine($" {tx.Hash} {tx.GetType().Name} {tx.NetworkFee} GAS_NetFee");
             }
             Console.WriteLine($"total: {Blockchain.Singleton.MemPool.Count}, verified: {Blockchain.Singleton.MemPool.VerifiedCount}, unverified: {Blockchain.Singleton.MemPool.UnVerifiedCount}");
             return true;
@@ -1152,12 +1152,12 @@ namespace Neo.Shell
                 Console.WriteLine("cancelled");
                 return true;
             }
+            string path_new = Path.ChangeExtension(path, ".json");
             if (File.Exists(path_new))
             {
                 Console.WriteLine($"File '{path_new}' already exists");
                 return true;
             }
-            string path_new = Path.ChangeExtension(path, ".json");
             NEP6Wallet.Migrate(path_new, path, password).Save();
             Console.WriteLine($"Wallet file upgrade complete. New wallet file has been auto-saved at: {path_new}");
             return true;
