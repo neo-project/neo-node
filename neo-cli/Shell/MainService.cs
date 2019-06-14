@@ -1152,12 +1152,12 @@ namespace Neo.Shell
                 Console.WriteLine("cancelled");
                 return true;
             }
+            string path_new = Path.ChangeExtension(path, ".json");
             if (File.Exists(path_new))
             {
                 Console.WriteLine($"File '{path_new}' already exists");
                 return true;
             }
-            string path_new = Path.ChangeExtension(path, ".json");
             NEP6Wallet.Migrate(path_new, path, password).Save();
             Console.WriteLine($"Wallet file upgrade complete. New wallet file has been auto-saved at: {path_new}");
             return true;
