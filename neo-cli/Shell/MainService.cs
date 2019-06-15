@@ -407,7 +407,7 @@ namespace Neo.Shell
             Console.WriteLine();
             string path = "address.txt";
             Console.WriteLine($"export addresses to {path}");
-            File.WriteAllLines(path, addresses);
+            File.AppendAllLines(path, addresses);
             return true;
         }
 
