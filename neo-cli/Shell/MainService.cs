@@ -934,14 +934,6 @@ namespace Neo.Shell
             bool stop = false;
             Console.CursorVisible = false;
             Console.Clear();
-            Task broadcast = Task.Run(async () =>
-            {
-                while (!stop)
-                {
-                    system.LocalNode.Tell(Message.Create(MessageCommand.Ping, PingPayload.Create(Blockchain.Singleton.Height)));
-                    await Task.Delay(Blockchain.TimePerBlock);
-                }
-            });
             Task task = Task.Run(async () =>
             {
                 while (!stop)
@@ -964,7 +956,6 @@ namespace Neo.Shell
             Console.ReadLine();
             stop = true;
             task.Wait();
-            broadcast.Wait();
             Console.WriteLine();
             Console.CursorVisible = true;
             return true;
