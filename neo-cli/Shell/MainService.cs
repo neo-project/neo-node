@@ -25,6 +25,7 @@ using System.Linq;
 using System.Net;
 using System.Numerics;
 using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 using ECCurve = Neo.Cryptography.ECC.ECCurve;
 using ECPoint = Neo.Cryptography.ECC.ECPoint;
@@ -938,12 +939,21 @@ namespace Neo.Shell
 
         private bool OnShowStateCommand(string[] args)
         {
-            bool stop = false;
+            var cancel = new CancellationTokenSource();
+
             Console.CursorVisible = false;
             Console.Clear();
+            Task broadcast = Task.Run(async () =>
+            {
+                while (!cancel.Token.IsCancellationRequested)
+                {
+                    system.LocalNode.Tell(Message.Create(MessageCommand.Ping, PingPayload.Create(Blockchain.Singleton.Height)));
+                    await Task.Delay(Blockchain.TimePerBlock, cancel.Token);
+                }
+            });
             Task task = Task.Run(async () =>
             {
-                while (!stop)
+                while (!cancel.Token.IsCancellationRequested)
                 {
                     Console.SetCursorPosition(0, 0);
                     WriteLineWithoutFlicker($"block: {Blockchain.Singleton.Height}/{Blockchain.Singleton.HeaderHeight}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}");
@@ -957,12 +967,13 @@ namespace Neo.Shell
 
                     while (++linesWritten < Console.WindowHeight)
                         WriteLineWithoutFlicker();
-                    await Task.Delay(500);
+
+                    await Task.Delay(500, cancel.Token);
                 }
             });
             Console.ReadLine();
-            stop = true;
-            task.Wait();
+            cancel.Cancel();
+            Task.WaitAll(task, broadcast);
             Console.WriteLine();
             Console.CursorVisible = true;
             return true;
