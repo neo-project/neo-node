@@ -25,6 +25,7 @@ using System.Linq;
 using System.Net;
 using System.Numerics;
 using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 using ECCurve = Neo.Cryptography.ECC.ECCurve;
 using ECPoint = Neo.Cryptography.ECC.ECPoint;
@@ -380,6 +381,14 @@ namespace Neo.Shell
                 return true;
             }
 
+            string path = "address.txt";
+
+            if (File.Exists(path) &&
+                ReadUserInput($"The file '{path}' already exists, do you want to overwrite it? (yes|no)", false)?.ToLowerInvariant() != "yes")
+            {
+                return true;
+            }
+
             ushort count;
             if (args.Length >= 3)
                 count = ushort.Parse(args[2]);
@@ -405,7 +414,6 @@ namespace Neo.Shell
             if (Program.Wallet is NEP6Wallet wallet)
                 wallet.Save();
             Console.WriteLine();
-            string path = "address.txt";
             Console.WriteLine($"export addresses to {path}");
             File.WriteAllLines(path, addresses);
             return true;
@@ -920,10 +928,10 @@ namespace Neo.Shell
                     out IEnumerable<Transaction> unverifiedTransactions);
                 Console.WriteLine("Verified Transactions:");
                 foreach (Transaction tx in verifiedTransactions)
-                    Console.WriteLine($" {tx.Hash} {tx.GetType().Name} {tx.NetworkFee} GAS_NetFee {tx.IsLowPriority}");
+                    Console.WriteLine($" {tx.Hash} {tx.GetType().Name} {tx.NetworkFee} GAS_NetFee");
                 Console.WriteLine("Unverified Transactions:");
                 foreach (Transaction tx in unverifiedTransactions)
-                    Console.WriteLine($" {tx.Hash} {tx.GetType().Name} {tx.NetworkFee} GAS_NetFee {tx.IsLowPriority}");
+                    Console.WriteLine($" {tx.Hash} {tx.GetType().Name} {tx.NetworkFee} GAS_NetFee");
             }
             Console.WriteLine($"total: {Blockchain.Singleton.MemPool.Count}, verified: {Blockchain.Singleton.MemPool.VerifiedCount}, unverified: {Blockchain.Singleton.MemPool.UnVerifiedCount}");
             return true;
@@ -931,12 +939,21 @@ namespace Neo.Shell
 
         private bool OnShowStateCommand(string[] args)
         {
-            bool stop = false;
+            var cancel = new CancellationTokenSource();
+
             Console.CursorVisible = false;
             Console.Clear();
+            Task broadcast = Task.Run(async () =>
+            {
+                while (!cancel.Token.IsCancellationRequested)
+                {
+                    system.LocalNode.Tell(Message.Create(MessageCommand.Ping, PingPayload.Create(Blockchain.Singleton.Height)));
+                    await Task.Delay(Blockchain.TimePerBlock, cancel.Token);
+                }
+            });
             Task task = Task.Run(async () =>
             {
-                while (!stop)
+                while (!cancel.Token.IsCancellationRequested)
                 {
                     Console.SetCursorPosition(0, 0);
                     WriteLineWithoutFlicker($"block: {Blockchain.Singleton.Height}/{Blockchain.Singleton.HeaderHeight}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}");
@@ -950,12 +967,13 @@ namespace Neo.Shell
 
                     while (++linesWritten < Console.WindowHeight)
                         WriteLineWithoutFlicker();
-                    await Task.Delay(500);
+
+                    await Task.Delay(500, cancel.Token);
                 }
             });
             Console.ReadLine();
-            stop = true;
-            task.Wait();
+            cancel.Cancel();
+            Task.WaitAll(task, broadcast);
             Console.WriteLine();
             Console.CursorVisible = true;
             return true;
@@ -1152,12 +1170,12 @@ namespace Neo.Shell
                 Console.WriteLine("cancelled");
                 return true;
             }
+            string path_new = Path.ChangeExtension(path, ".json");
             if (File.Exists(path_new))
             {
                 Console.WriteLine($"File '{path_new}' already exists");
                 return true;
             }
-            string path_new = Path.ChangeExtension(path, ".json");
             NEP6Wallet.Migrate(path_new, path, password).Save();
             Console.WriteLine($"Wallet file upgrade complete. New wallet file has been auto-saved at: {path_new}");
             return true;
