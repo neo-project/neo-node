@@ -380,6 +380,14 @@ namespace Neo.Shell
                 return true;
             }
 
+            string path = "address.txt";
+
+            if (File.Exists(path) &&
+                ReadUserInput($"The file '{path}' already exists, do you want to overwrite it? (yes|no)", false)?.ToLowerInvariant() != "yes")
+            {
+                return true;
+            }
+
             ushort count;
             if (args.Length >= 3)
                 count = ushort.Parse(args[2]);
@@ -405,9 +413,8 @@ namespace Neo.Shell
             if (Program.Wallet is NEP6Wallet wallet)
                 wallet.Save();
             Console.WriteLine();
-            string path = "address.txt";
             Console.WriteLine($"export addresses to {path}");
-            File.AppendAllLines(path, addresses);
+            File.WriteAllLines(path, addresses);
             return true;
         }
 
