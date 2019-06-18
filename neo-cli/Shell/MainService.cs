@@ -672,9 +672,9 @@ namespace Neo.Shell
         {
             if (NoWallet()) return true;
 
-            if (args.Length < 5)
+            if (args.Length < 4)
             {
-                Console.WriteLine("Error. Use at least 2 public keys to create a multisig address.");
+                Console.WriteLine("Error. Invalid parameters.");
                 return true;
             }
 
