@@ -426,6 +426,11 @@ namespace Neo.Shell
                 Console.WriteLine("error");
                 return true;
             }
+            if (system.RpcServer != null &&
+                ReadUserInput("Warning: Opening the wallet with RPC turned on will result in asset loss. Are you sure you want to do this? (yes|no)", false)?.ToLowerInvariant() != "yes")
+            {
+                return true;
+            }
             string path = args[2];
             string password = ReadUserInput("password", true);
             if (password.Length == 0)
@@ -766,6 +771,11 @@ namespace Neo.Shell
             if (args.Length < 3)
             {
                 Console.WriteLine("error");
+                return true;
+            }
+            if (system.RpcServer != null &&
+                ReadUserInput("Warning: Opening the wallet with RPC turned on will result in asset loss. Are you sure you want to do this? (yes|no)", false)?.ToLowerInvariant() != "yes")
+            {
                 return true;
             }
             string path = args[2];
