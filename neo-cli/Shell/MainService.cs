@@ -774,7 +774,7 @@ namespace Neo.Shell
                 return true;
             }
             if (system.RpcServer != null &&
-                ReadUserInput("Warning: Opening the wallet with RPC turned on will result in asset loss. Are you sure you want to do this? (yes|no)", false)?.ToLowerInvariant() != "yes")
+                ReadUserInput("Warning: Opening the wallet with RPC turned on could result in asset loss. Are you sure you want to do this? (yes|no)", false)?.ToLowerInvariant() != "yes")
             {
                 return true;
             }
