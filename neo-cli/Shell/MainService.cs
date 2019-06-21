@@ -983,7 +983,7 @@ namespace Neo.Shell
             });
             Console.ReadLine();
             cancel.Cancel();
-            Task.WaitAll(task, broadcast);
+            try { Task.WaitAll(task, broadcast); } catch { }
             Console.WriteLine();
             Console.CursorVisible = true;
             return true;
