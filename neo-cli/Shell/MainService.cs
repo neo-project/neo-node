@@ -739,7 +739,24 @@ namespace Neo.Shell
             if (NoWallet()) return true;
             foreach (Contract contract in Program.Wallet.GetAccounts().Where(p => !p.WatchOnly).Select(p => p.Contract))
             {
-                Console.WriteLine($"{contract.Address}\t{(contract.Script.IsStandardContract() ? "Standard" : "Nonstandard")}");
+                var type = "Nonstandard";
+
+                if (contract.Script.IsStandardContract())
+                {
+                    if (contract.Script.IsMultiSigContract())
+                    {
+                        type = "MultiSig";
+                    }
+                    else
+                    {
+                        if (contract.Script.IsSignatureContract())
+                        {
+                            type = "Standard";
+                        }
+                    }
+                }
+
+                Console.WriteLine($"{contract.Address}\t{type}");
             }
             return true;
         }
