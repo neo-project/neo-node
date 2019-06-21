@@ -741,19 +741,13 @@ namespace Neo.Shell
             {
                 var type = "Nonstandard";
 
-                if (contract.Script.IsStandardContract())
+                if (contract.Script.IsMultiSigContract())
                 {
-                    if (contract.Script.IsMultiSigContract())
-                    {
-                        type = "MultiSig";
-                    }
-                    else
-                    {
-                        if (contract.Script.IsSignatureContract())
-                        {
-                            type = "Standard";
-                        }
-                    }
+                    type = "MultiSignature";
+                }
+                else if (contract.Script.IsSignatureContract())
+                {
+                    type = "Standard";
                 }
 
                 Console.WriteLine($"{contract.Address}\t{type}");
