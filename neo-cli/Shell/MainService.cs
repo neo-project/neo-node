@@ -994,8 +994,7 @@ namespace Neo.Shell
             });
             Console.ReadLine();
             cancel.Cancel();
-            try { Task.WaitAll(task, broadcast); }
-            catch { }
+            Task.WaitAll(task, broadcast);
             Console.WriteLine();
             Console.CursorVisible = true;
             return true;
