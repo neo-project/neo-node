@@ -737,21 +737,30 @@ namespace Neo.Shell
         private bool OnListAddressCommand(string[] args)
         {
             if (NoWallet()) return true;
-            foreach (Contract contract in Program.Wallet.GetAccounts().Where(p => !p.WatchOnly).Select(p => p.Contract))
+
+            using (var snapshot = Blockchain.Singleton.GetSnapshot())
             {
-                var type = "Nonstandard";
-
-                if (contract.Script.IsMultiSigContract())
+                foreach (Contract contract in Program.Wallet.GetAccounts().Where(p => !p.WatchOnly).Select(p => p.Contract))
                 {
-                    type = "MultiSignature";
-                }
-                else if (contract.Script.IsSignatureContract())
-                {
-                    type = "Standard";
-                }
+                    var type = "Nonstandard";
 
-                Console.WriteLine($"{contract.Address}\t{type}");
+                    if (contract.Script.IsMultiSigContract())
+                    {
+                        type = "MultiSignature";
+                    }
+                    else if (contract.Script.IsSignatureContract())
+                    {
+                        type = "Standard";
+                    }
+                    else if (snapshot.Contracts.TryGet(contract.ScriptHash) != null)
+                    {
+                        type = "Deployed-Nonstandard";
+                    }
+
+                    Console.WriteLine($"{contract.Address}\t{type}");
+                }
             }
+
             return true;
         }
 
