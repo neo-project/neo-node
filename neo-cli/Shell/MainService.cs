@@ -427,6 +427,11 @@ namespace Neo.Shell
                 Console.WriteLine("error");
                 return true;
             }
+            if (system.RpcServer != null &&
+                ReadUserInput("Warning: Opening the wallet with RPC turned on could result in asset loss. Are you sure you want to do this? (yes|no)", false)?.ToLowerInvariant() != "yes")
+            {
+                return true;
+            }
             string path = args[2];
             string password = ReadUserInput("password", true);
             if (password.Length == 0)
@@ -733,10 +738,30 @@ namespace Neo.Shell
         private bool OnListAddressCommand(string[] args)
         {
             if (NoWallet()) return true;
-            foreach (Contract contract in Program.Wallet.GetAccounts().Where(p => !p.WatchOnly).Select(p => p.Contract))
+
+            using (var snapshot = Blockchain.Singleton.GetSnapshot())
             {
-                Console.WriteLine($"{contract.Address}\t{(contract.Script.IsStandardContract() ? "Standard" : "Nonstandard")}");
+                foreach (Contract contract in Program.Wallet.GetAccounts().Where(p => !p.WatchOnly).Select(p => p.Contract))
+                {
+                    var type = "Nonstandard";
+
+                    if (contract.Script.IsMultiSigContract())
+                    {
+                        type = "MultiSignature";
+                    }
+                    else if (contract.Script.IsSignatureContract())
+                    {
+                        type = "Standard";
+                    }
+                    else if (snapshot.Contracts.TryGet(contract.ScriptHash) != null)
+                    {
+                        type = "Deployed-Nonstandard";
+                    }
+
+                    Console.WriteLine($"{contract.Address}\t{type}");
+                }
             }
+
             return true;
         }
 
@@ -767,6 +792,11 @@ namespace Neo.Shell
             if (args.Length < 3)
             {
                 Console.WriteLine("error");
+                return true;
+            }
+            if (system.RpcServer != null &&
+                ReadUserInput("Warning: Opening the wallet with RPC turned on could result in asset loss. Are you sure you want to do this? (yes|no)", false)?.ToLowerInvariant() != "yes")
+            {
                 return true;
             }
             string path = args[2];
@@ -974,7 +1004,7 @@ namespace Neo.Shell
             });
             Console.ReadLine();
             cancel.Cancel();
-            Task.WaitAll(task, broadcast);
+            try { Task.WaitAll(task, broadcast); } catch { }
             Console.WriteLine();
             Console.CursorVisible = true;
             return true;
