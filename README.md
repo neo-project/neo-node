@@ -11,7 +11,7 @@
   <a href="https://github.com/neo-project/neo-cli/blob/master/LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-blue.svg">
   </a>
-  <img src="https://badge.fury.io/gh/neo-project%2Fneo-cli.svg">
+  [![neo-cli version](https://badge.fury.io/gh/neo-project%2Fneo-cli.svg)](https://github.com/neo-project/neo-cli/releases)
 </p>
 
 ## Prerequisites
