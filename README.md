@@ -4,15 +4,9 @@
     width="250px">
 </p>
 
-<p align="center">      
-  <a href="https://travis-ci.org/neo-project/neo-cli">
-    <img src="https://travis-ci.org/neo-project/neo-cli.svg?branch=master">
-  </a>
-  <a href="https://github.com/neo-project/neo-cli/blob/master/LICENSE">
-    <img src="https://img.shields.io/badge/license-MIT-blue.svg">
-  </a>
-  [![neo-cli version](https://badge.fury.io/gh/neo-project%2Fneo-cli.svg)](https://github.com/neo-project/neo-cli/releases)
-</p>
+[![travis](https://travis-ci.org/neo-project/neo-cli.svg?branch=master)](https://travis-ci.org/neo-project/neo-cli)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/neo-project/neo-cli/blob/master/LICENSE)
+[![neo-cli version](https://badge.fury.io/gh/neo-project%2Fneo-cli.svg)](https://github.com/neo-project/neo-cli/releases)
 
 ## Prerequisites
 
