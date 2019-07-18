@@ -28,10 +28,11 @@ RUN groupadd --gid 1000 neo && \
 
 RUN wget -q https://github.com/neo-project/neo-cli/releases/download/$VERSION/neo-cli-linux-x64.zip && \
     unzip -o neo-cli-linux-x64.zip -d /home/neo && \
+    rm -rf /neo-cli-linux-x64.zip && \
 #####  The plugins can be added like this:
 #    wget -q https://github.com/neo-project/neo-plugins/releases/download/$VERSION/ImportBlocks.zip && \
 #    unzip -o ImportBlocks.zip -d /home/neo && \
-#    rm -rf /neo-cli-linux-x64.zip /ImportBlocks.zip && \
+#    rm -rf /ImportBlocks.zip && \
     chmod +x /home/neo/neo-cli/neo-cli && \
     sed -i "s/127.0.0.1/0.0.0.0/g" /home/neo/neo-cli/config.json && \
     chown -R neo:neo /home/neo
