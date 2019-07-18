@@ -42,11 +42,18 @@ RUN wget -q https://github.com/neo-project/neo-cli/releases/download/$VERSION/ne
 #RUN chmod a+x /usr/local/bin/start-script.sh
 #ENTRYPOINT ["/bin/bash", "/usr/local/bin/start-script.sh"]
 
-WORKDIR /home/neo
 VOLUME /home/neo/data/
-USER neo
+WORKDIR /home/neo/data
+
+#####  In kubernetes volumes are attached with predefined UID. In plain docker it's a bit harder to achieve, so this one is commented out
+#USER neo
 
 EXPOSE 10332
 EXPOSE 10334
 
 CMD ["/home/neo/neo-cli/neo-cli", "--rpc"]
+
+#####  IMPORTANT NOTE   #####
+# There is no problem in catching tty in kubernetes, but to run it in docker you need to:
+# add -t to allow tty, ex: docker run -t neo
+# add -d to have your tty back and run docker in background: docker run -dt neo
