@@ -1020,6 +1020,18 @@ namespace Neo.Shell
                     case "-r":
                         useRPC = true;
                         break;
+                    case "/testnet":
+                    case "--testnet":
+                    case "-t":
+                        File.Copy("config_testnet.json", "config.json", true);
+                        File.Copy("protocol_testnet.json", "protocol.json", true);
+                        break;
+                    case "/mainnet":
+                    case "--mainnet":
+                    case "-m":
+                        File.Copy("config_mainnet.json", "config.json", true);
+                        File.Copy("protocol_mainnet.json", "protocol.json", true);
+                        break;
                 }
             store = new LevelDBStore(Path.GetFullPath(Settings.Default.Paths.Chain));
             system = new NeoSystem(store);
