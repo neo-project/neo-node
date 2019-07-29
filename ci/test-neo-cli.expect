@@ -19,7 +19,7 @@ expect {
 #
 send "create wallet test-wallet.json\n"
 
-expect{
+expect {
     "*(yes|no)" { send "yes\n"}
 }
 
