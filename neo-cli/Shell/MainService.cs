@@ -1,4 +1,5 @@
 using Akka.Actor;
+using Microsoft.Extensions.Configuration;
 using Neo.Consensus;
 using Neo.IO;
 using Neo.IO.Json;
@@ -1023,14 +1024,14 @@ namespace Neo.Shell
                     case "/testnet":
                     case "--testnet":
                     case "-t":
-                        File.Copy("config_testnet.json", "config.json", true);
-                        File.Copy("protocol_testnet.json", "protocol.json", true);
+                        Settings.Initialize(new ConfigurationBuilder().AddJsonFile("config_testnet.json").Build());
+                        ProtocolSettings.Initialize(new ConfigurationBuilder().AddJsonFile("protocol_testnet.json").Build());
                         break;
                     case "/mainnet":
                     case "--mainnet":
                     case "-m":
-                        File.Copy("config_mainnet.json", "config.json", true);
-                        File.Copy("protocol_mainnet.json", "protocol.json", true);
+                        Settings.Initialize(new ConfigurationBuilder().AddJsonFile("config_mainnet.json").Build());
+                        ProtocolSettings.Initialize(new ConfigurationBuilder().AddJsonFile("protocol_mainnet.json").Build());
                         break;
                 }
             store = new LevelDBStore(Path.GetFullPath(Settings.Default.Paths.Chain));
