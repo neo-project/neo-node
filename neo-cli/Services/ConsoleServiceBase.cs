@@ -23,13 +23,15 @@ namespace Neo.Services
         {
             switch (args[0].ToLower())
             {
+                case "":
+                    return true;
                 case "clear":
                     Console.Clear();
                     return true;
                 case "exit":
                     return false;
                 case "version":
-                    Console.WriteLine(Assembly.GetEntryAssembly().GetName().Version);
+                    Console.WriteLine(Assembly.GetEntryAssembly().GetVersion());
                     return true;
                 default:
                     Console.WriteLine("error: command not found " + args[0]);
@@ -137,7 +139,7 @@ namespace Neo.Services
             }
         }
 
-        public static string ReadPassword(string prompt)
+        public static string ReadUserInput(string prompt, bool password = false)
         {
             const string t = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
             StringBuilder sb = new StringBuilder();
@@ -153,7 +155,14 @@ namespace Neo.Services
                 if (t.IndexOf(key.KeyChar) != -1)
                 {
                     sb.Append(key.KeyChar);
-                    Console.Write('*');
+                    if (password)
+                    {
+                        Console.Write('*');
+                    }
+                    else
+                    {
+                        Console.Write(key.KeyChar);
+                    }
                 }
                 else if (key.Key == ConsoleKey.Backspace && sb.Length > 0)
                 {
@@ -261,13 +270,12 @@ namespace Neo.Services
         private void RunConsole()
         {
             bool running = true;
+            string[] emptyarg = new string[] { "" };
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
                 Console.Title = ServiceName;
-            Console.OutputEncoding = Encoding.Unicode;
 
             Console.ForegroundColor = ConsoleColor.DarkGreen;
-            Version ver = Assembly.GetEntryAssembly().GetName().Version;
-            Console.WriteLine($"{ServiceName} Version: {ver}");
+            Console.WriteLine($"{ServiceName} Version: {Assembly.GetEntryAssembly().GetVersion()}");
             Console.WriteLine();
 
             while (running)
@@ -283,11 +291,12 @@ namespace Neo.Services
                 if (line == null) break;
                 Console.ForegroundColor = ConsoleColor.White;
 
-                string[] args = ParseCommandLine(line);
-                if (args.Length == 0)
-                    continue;
                 try
                 {
+                    string[] args = ParseCommandLine(line);
+                    if (args.Length == 0)
+                        args = emptyarg;
+
                     running = OnCommand(args);
                 }
                 catch (Exception ex)
