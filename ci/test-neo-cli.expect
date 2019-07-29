@@ -18,11 +18,6 @@ expect {
 # Test 'create wallet'
 #
 send "create wallet test-wallet.json\n"
-
-expect {
-    "*(yes|no)" { send "yes\n"}
-}
-
 expect {
     "password:" { send "asd\n" }
     "error" { exit 2 }
