@@ -34,7 +34,6 @@ JSONRPC_RES=$( curl --silent \
 echo "JSON-RPC response: $JSONRPC_RES"
 
 # Make sure we get a valid response
-# echo ${JSONRPC_RES} | grep --quiet "00c10b746f74616c537570706c7967f91d6b7085db7c5aaf09f19eeec1ca3c0db2c6ec"
 echo ${JSONRPC_RES} | grep --quiet "00c10b746f74616c537570706c7914f91d6b7085db7c5aaf09f19eeec1ca3c0db2c6ec68627d5b52"
 
 
