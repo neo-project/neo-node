@@ -19,6 +19,7 @@ WORKDIR /opt
 # Get code to test
 ADD neo-cli /opt/neo-cli-github
 ADD ci /opt/ci
+COPY NuGet.Config /opt
 
 WORKDIR /opt/neo-cli-github
 
