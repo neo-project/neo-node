@@ -225,15 +225,15 @@ namespace Neo.Shell
                 throw new ArgumentException(nameof(nefFilePath));
             }
 
-            byte[] script = File.ReadAllBytes(nefFilePath);
+            var file = File.ReadAllBytes(nefFilePath).AsSerializable<NefFile>();
+            scriptHash = file.ScriptHash;
 
-            scriptHash = script.ToScriptHash();
             ContractFeatures properties = ContractFeatures.NoProperty;
             if (hasStorage) properties |= ContractFeatures.HasStorage;
             if (isPayable) properties |= ContractFeatures.Payable;
             using (ScriptBuilder sb = new ScriptBuilder())
             {
-                sb.EmitSysCall(InteropService.Neo_Contract_Create, script, properties);
+                sb.EmitSysCall(InteropService.Neo_Contract_Create, file.Script, properties);
                 return sb.ToArray();
             }
         }
