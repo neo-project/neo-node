@@ -1020,14 +1020,14 @@ namespace Neo.Shell
                     case "/testnet":
                     case "--testnet":
                     case "-t":
-                        Settings.Initialize(new ConfigurationBuilder().AddJsonFile("config.testnet.json").Build());
                         ProtocolSettings.Initialize(new ConfigurationBuilder().AddJsonFile("protocol.testnet.json").Build());
+                        Settings.Initialize(new ConfigurationBuilder().AddJsonFile("config.testnet.json").Build());
                         break;
                     case "/mainnet":
                     case "--mainnet":
                     case "-m":
-                        Settings.Initialize(new ConfigurationBuilder().AddJsonFile("config.mainnet.json").Build());
                         ProtocolSettings.Initialize(new ConfigurationBuilder().AddJsonFile("protocol.mainnet.json").Build());
+                        Settings.Initialize(new ConfigurationBuilder().AddJsonFile("config.mainnet.json").Build());
                         break;
                 }
             store = new LevelDBStore(Path.GetFullPath(Settings.Default.Paths.Chain));
