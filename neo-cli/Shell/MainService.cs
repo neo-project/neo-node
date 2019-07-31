@@ -25,6 +25,7 @@ using System.Linq;
 using System.Net;
 using System.Numerics;
 using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using ECCurve = Neo.Cryptography.ECC.ECCurve;
@@ -225,7 +226,11 @@ namespace Neo.Shell
                 throw new ArgumentException(nameof(nefFilePath));
             }
 
-            var file = File.ReadAllBytes(nefFilePath).AsSerializable<NefFile>();
+            NefFile file;
+            using (var stream = new BinaryReader(File.OpenRead(nefFilePath), Encoding.UTF8, false))
+            {
+                file = stream.ReadSerializable<NefFile>();
+            }
             scriptHash = file.ScriptHash;
 
             ContractFeatures properties = ContractFeatures.NoProperty;
