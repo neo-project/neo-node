@@ -17,7 +17,7 @@ namespace Neo
 
         static Settings()
         {
-            IConfigurationSection section = new ConfigurationBuilder().AddJsonFile("config.json").Build().GetSection("ApplicationConfiguration");
+            IConfigurationSection section = Helper.LoadConfig("config").GetSection("ApplicationConfiguration");
             Default = new Settings(section);
         }
 
