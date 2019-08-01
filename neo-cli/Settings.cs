@@ -2,6 +2,7 @@
 using Neo.Network.P2P;
 using Neo.SmartContract.Native;
 using System.Net;
+using System.Threading;
 
 namespace Neo
 {
@@ -13,12 +14,30 @@ namespace Neo
         public UnlockWalletSettings UnlockWallet { get; }
         public string PluginURL { get; }
 
-        public static Settings Default { get; }
+        static Settings _default;
 
-        static Settings()
+        static bool UpdateDefault(IConfiguration configuration)
         {
-            IConfigurationSection section = Helper.LoadConfig("config").GetSection("ApplicationConfiguration");
-            Default = new Settings(section);
+            var settings = new Settings(configuration.GetSection("ApplicationConfiguration"));
+            return null == Interlocked.CompareExchange(ref _default, settings, null);
+        }
+
+        public static bool Initialize(IConfiguration configuration)
+        {
+            return UpdateDefault(configuration);
+        }
+
+        public static Settings Default
+        {
+            get
+            {
+                if (_default == null)
+                {
+                    UpdateDefault(Helper.LoadConfig("config").Build());
+                }
+
+                return _default;
+            }
         }
 
         public Settings(IConfigurationSection section)
