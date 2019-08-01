@@ -4,7 +4,7 @@ using System.Reflection;
 namespace Neo
 {
     /// <summary>
-    /// extension methods
+    /// Extension methods
     /// </summary>
     internal static class Extensions
     {
