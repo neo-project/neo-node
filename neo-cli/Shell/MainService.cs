@@ -25,6 +25,7 @@ using System.Linq;
 using System.Net;
 using System.Numerics;
 using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using ECCurve = Neo.Cryptography.ECC.ECCurve;
@@ -144,10 +145,10 @@ namespace Neo.Shell
                 /* isPayable */ args[3].ToBool(),
                 /* scriptHash */ out var scriptHash);
 
-            Transaction tx = new Transaction { Script = script };
+            Transaction tx;
             try
             {
-                Program.Wallet.FillTransaction(tx);
+                tx = Program.Wallet.MakeTransaction(null, script);
             }
             catch (InvalidOperationException)
             {
@@ -155,7 +156,7 @@ namespace Neo.Shell
                 return true;
             }
             Console.WriteLine($"Script hash: {scriptHash.ToString()}");
-            Console.WriteLine($"Gas: {tx.Gas}");
+            Console.WriteLine($"Gas: {tx.SystemFee}");
             Console.WriteLine();
             return SignAndSendTx(tx);
         }
@@ -179,11 +180,7 @@ namespace Neo.Shell
             {
                 Sender = UInt160.Zero,
                 Attributes = new TransactionAttribute[0],
-                Witness = new Witness
-                {
-                    InvocationScript = new byte[0],
-                    VerificationScript = new byte[0]
-                }
+                Witnesses = new Witness[0]
             };
 
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
@@ -207,7 +204,7 @@ namespace Neo.Shell
             if (NoWallet()) return true;
             try
             {
-                Program.Wallet.FillTransaction(tx);
+                tx = Program.Wallet.MakeTransaction(null, tx.Script);
             }
             catch (InvalidOperationException)
             {
@@ -221,22 +218,27 @@ namespace Neo.Shell
             return SignAndSendTx(tx);
         }
 
-        private byte[] LoadDeploymentScript(string avmFilePath, bool hasStorage, bool isPayable, out UInt160 scriptHash)
+        private byte[] LoadDeploymentScript(string nefFilePath, bool hasStorage, bool isPayable, out UInt160 scriptHash)
         {
-            var info = new FileInfo(avmFilePath);
+            var info = new FileInfo(nefFilePath);
             if (!info.Exists || info.Length >= Transaction.MaxTransactionSize)
             {
-                throw new ArgumentException(nameof(avmFilePath));
+                throw new ArgumentException(nameof(nefFilePath));
             }
 
-            byte[] script = File.ReadAllBytes(avmFilePath);
-            scriptHash = script.ToScriptHash();
+            NefFile file;
+            using (var stream = new BinaryReader(File.OpenRead(nefFilePath), Encoding.UTF8, false))
+            {
+                file = stream.ReadSerializable<NefFile>();
+            }
+            scriptHash = file.ScriptHash;
+
             ContractFeatures properties = ContractFeatures.NoProperty;
             if (hasStorage) properties |= ContractFeatures.HasStorage;
             if (isPayable) properties |= ContractFeatures.Payable;
             using (ScriptBuilder sb = new ScriptBuilder())
             {
-                sb.EmitSysCall(InteropService.Neo_Contract_Create, script, properties);
+                sb.EmitSysCall(InteropService.Neo_Contract_Create, file.Script, properties);
                 return sb.ToArray();
             }
         }
@@ -257,7 +259,7 @@ namespace Neo.Shell
             string msg;
             if (context.Completed)
             {
-                tx.Witness = context.GetWitness();
+                tx.Witnesses = context.GetWitnesses();
 
                 system.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
 
@@ -297,7 +299,7 @@ namespace Neo.Shell
                     Console.WriteLine($"Only support to relay transaction.");
                     return true;
                 }
-                tx.Witness = context.GetWitness();
+                tx.Witnesses = context.GetWitnesses();
                 system.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
                 Console.WriteLine($"Data relay success, the hash is shown as follows:\r\n{tx.Hash}");
             }
@@ -566,7 +568,7 @@ namespace Neo.Shell
                 "\tsend <id|alias> <address> <value>\n" +
                 "\tsign <jsonObjectToSign>\n" +
                 "Contract Commands:\n" +
-                "\tdeploy <avmFilePath> <hasStorage (true|false)> <isPayable (true|false)\n" +
+                "\tdeploy <nefFilePath> <hasStorage (true|false)> <isPayable (true|false)\n" +
                 "\tinvoke <scripthash> <command> [optionally quoted params separated by space]\n" +
                 "Node Commands:\n" +
                 "\tshow state\n" +
@@ -744,7 +746,7 @@ namespace Neo.Shell
                 {
                     var type = "Nonstandard";
 
-                    if (contract.Script.IsMultiSigContract())
+                    if (contract.Script.IsMultiSigContract(out _, out _))
                     {
                         type = "MultiSignature";
                     }
@@ -900,7 +902,7 @@ namespace Neo.Shell
                 Console.WriteLine("Incorrect Amount Format");
                 return true;
             }
-            tx = Program.Wallet.MakeTransaction(null, new[]
+            tx = Program.Wallet.MakeTransaction(new[]
             {
                 new TransferOutput
                 {
@@ -920,7 +922,7 @@ namespace Neo.Shell
             Program.Wallet.Sign(context);
             if (context.Completed)
             {
-                tx.Witness = context.GetWitness();
+                tx.Witnesses = context.GetWitnesses();
                 system.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
                 Console.WriteLine($"TXID: {tx.Hash}");
             }
