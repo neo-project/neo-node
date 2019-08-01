@@ -3,7 +3,10 @@ using System.Reflection;
 
 namespace Neo
 {
-    internal static class Helper
+    /// <summary>
+    /// extension methods
+    /// </summary>
+    internal static class Extensions
     {
         internal static bool ToBool(this string input)
         {
