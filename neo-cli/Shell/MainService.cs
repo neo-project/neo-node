@@ -1015,6 +1015,7 @@ namespace Neo.Shell
         protected internal override void OnStart(string[] args)
         {
             bool useRPC = false;
+            string netType = "mainnet";
             for (int i = 0; i < args.Length; i++)
                 switch (args[i])
                 {
@@ -1026,16 +1027,18 @@ namespace Neo.Shell
                     case "/testnet":
                     case "--testnet":
                     case "-t":
-                        ProtocolSettings.Initialize(new ConfigurationBuilder().AddJsonFile("protocol.testnet.json").Build());
-                        Settings.Initialize(new ConfigurationBuilder().AddJsonFile("config.testnet.json").Build());
+                        netType = "testnet";
                         break;
                     case "/mainnet":
                     case "--mainnet":
                     case "-m":
-                        ProtocolSettings.Initialize(new ConfigurationBuilder().AddJsonFile("protocol.mainnet.json").Build());
-                        Settings.Initialize(new ConfigurationBuilder().AddJsonFile("config.mainnet.json").Build());
+                        netType = "mainnet";
                         break;
                 }
+
+            ProtocolSettings.Initialize(new ConfigurationBuilder().AddJsonFile("protocol."+ netType + ".json").Build());
+            Settings.Initialize(new ConfigurationBuilder().AddJsonFile("config."+ netType + ".json").Build());
+
             store = new LevelDBStore(Path.GetFullPath(Settings.Default.Paths.Chain));
             system = new NeoSystem(store);
             system.StartNode(new ChannelsConfig
