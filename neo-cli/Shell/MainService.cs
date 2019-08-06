@@ -778,10 +778,10 @@ namespace Neo.Shell
                 Console.WriteLine();
             }
             Console.WriteLine("----------------------------------------------------");
-            Console.WriteLine("Total:   "+"NEO: "+Program.Wallet.GetAvailable(NativeContract.NEO.Hash)+"    GAS: "+ Program.Wallet.GetAvailable(NativeContract.GAS.Hash));
+            Console.WriteLine("Total:   " + "NEO: " + Program.Wallet.GetAvailable(NativeContract.NEO.Hash) + "    GAS: " + Program.Wallet.GetAvailable(NativeContract.GAS.Hash));
             Console.WriteLine();
-            Console.WriteLine("NEO hash: "+ NativeContract.NEO.Hash);
-            Console.WriteLine("GAS hash: "+ NativeContract.GAS.Hash);
+            Console.WriteLine("NEO hash: " + NativeContract.NEO.Hash);
+            Console.WriteLine("GAS hash: " + NativeContract.GAS.Hash);
             return true;
         }
 
