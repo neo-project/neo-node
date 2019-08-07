@@ -12,6 +12,8 @@ namespace Neo.Services
 {
     public abstract class ConsoleServiceBase
     {
+        private bool running = true;
+
         protected virtual string Depends => null;
         protected virtual string Prompt => "service";
 
@@ -267,9 +269,16 @@ namespace Neo.Services
             }
         }
 
+        private void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
+        {
+            running = false;
+            e.Cancel = true;
+        }
+
         private void RunConsole()
         {
-            bool running = true;
+            Console.CancelKeyPress += Console_CancelKeyPress;
+
             string[] emptyarg = new string[] { "" };
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
                 Console.Title = ServiceName;
