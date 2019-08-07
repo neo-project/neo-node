@@ -41,7 +41,10 @@ namespace Neo.Services
             }
         }
 
-        protected internal abstract void OnStart(string[] args);
+        protected internal virtual void OnStart(string[] args)
+        {
+            Console.CancelKeyPress += Console_CancelKeyPress;
+        }
 
         protected internal abstract void OnStop();
 
@@ -277,8 +280,6 @@ namespace Neo.Services
 
         private void RunConsole()
         {
-            Console.CancelKeyPress += Console_CancelKeyPress;
-
             string[] emptyarg = new string[] { "" };
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
                 Console.Title = ServiceName;

@@ -1014,6 +1014,8 @@ namespace Neo.Shell
 
         protected internal override void OnStart(string[] args)
         {
+            base.OnStart(args);
+
             bool useRPC = false;
             for (int i = 0; i < args.Length; i++)
                 switch (args[i])
