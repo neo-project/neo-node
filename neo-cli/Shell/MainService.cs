@@ -770,8 +770,18 @@ namespace Neo.Shell
         private bool OnListAssetCommand(string[] args)
         {
             if (NoWallet()) return true;
-            Console.WriteLine($"NEO: {Program.Wallet.GetAvailable(NativeContract.NEO.Hash)}");
-            Console.WriteLine($"GAS: {Program.Wallet.GetAvailable(NativeContract.GAS.Hash)}");
+            foreach (UInt160 account in Program.Wallet.GetAccounts().Select(p => p.ScriptHash))
+            {
+                Console.WriteLine(account.ToAddress());
+                Console.WriteLine($"NEO: {Program.Wallet.GetBalance(NativeContract.NEO.Hash, account)}");
+                Console.WriteLine($"GAS: {Program.Wallet.GetBalance(NativeContract.GAS.Hash, account)}");
+                Console.WriteLine();
+            }
+            Console.WriteLine("----------------------------------------------------");
+            Console.WriteLine("Total:   " + "NEO: " + Program.Wallet.GetAvailable(NativeContract.NEO.Hash) + "    GAS: " + Program.Wallet.GetAvailable(NativeContract.GAS.Hash));
+            Console.WriteLine();
+            Console.WriteLine("NEO hash: " + NativeContract.NEO.Hash);
+            Console.WriteLine("GAS hash: " + NativeContract.GAS.Hash);
             return true;
         }
 
