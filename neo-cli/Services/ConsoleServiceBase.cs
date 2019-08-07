@@ -46,7 +46,10 @@ namespace Neo.Services
             Console.CancelKeyPress += Console_CancelKeyPress;
         }
 
-        protected internal abstract void OnStop();
+        protected internal virtual void OnStop()
+        {
+            Console.CancelKeyPress -= Console_CancelKeyPress;
+        }
 
         private static string[] ParseCommandLine(string line)
         {
@@ -280,6 +283,7 @@ namespace Neo.Services
 
         private void RunConsole()
         {
+            running = true;
             string[] emptyarg = new string[] { "" };
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
                 Console.Title = ServiceName;

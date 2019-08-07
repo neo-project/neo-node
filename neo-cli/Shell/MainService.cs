@@ -1095,6 +1095,7 @@ namespace Neo.Shell
 
         protected internal override void OnStop()
         {
+            base.OnStop();
             system.Dispose();
             store.Dispose();
         }
