@@ -70,7 +70,7 @@ docker build -t neo-cli .
 docker run -p 10332:10332 -p 10333:10333 --name=neo-cli-mainnet neo-cli
 ```
 
-After start the container successfully,use the following scripts to open neo-cli interactive window :
+After start the container successfully, use the following scripts to open neo-cli interactive window:
 
 ```sh
 docker exec -it neo-cli-mainnet /bin/bash
