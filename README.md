@@ -60,6 +60,22 @@ Assuming you extracted .NET in the parent folder:
 ```sh
 ../dotnet bin/Release/netcoreapp1.0/neo-cli.dll .
 ```
+## Build into Docker
+
+Clone the neo-cli repository.
+
+```sh
+cd neo-cli
+docker build -t neo-cli .
+docker run -p 10332:10332 -p 10333:10333 --name=neo-cli-mainnet neo-cli
+```
+
+After start the container successfully,use the following scripts to open neo-cli interactive window :
+
+```sh
+docker exec -it neo-cli-mainnet /bin/bash
+screen -r node
+```
 
 ## Logging
 
