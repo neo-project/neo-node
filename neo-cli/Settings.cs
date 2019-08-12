@@ -33,7 +33,7 @@ namespace Neo
             {
                 if (_default == null)
                 {
-                    UpdateDefault(new ConfigurationBuilder().AddJsonFile("config.json").Build());
+                    UpdateDefault(Helper.LoadConfig("config"));
                 }
 
                 return _default;
