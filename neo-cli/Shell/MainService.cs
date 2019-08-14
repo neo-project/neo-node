@@ -149,7 +149,7 @@ namespace Neo.Shell
             Transaction tx;
             try
             {
-                tx = Program.Wallet.MakeTransaction(null, script);
+                tx = Program.Wallet.MakeTransaction(script);
             }
             catch (InvalidOperationException)
             {
@@ -205,7 +205,7 @@ namespace Neo.Shell
             if (NoWallet()) return true;
             try
             {
-                tx = Program.Wallet.MakeTransaction(null, tx.Script);
+                tx = Program.Wallet.MakeTransaction(tx.Script);
             }
             catch (InvalidOperationException)
             {
