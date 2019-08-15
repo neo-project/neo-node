@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.10.3] - 2019-08-15
+### Fixed
+- Fixed bugs
+
 ## [2.10.2] - 2019-05-16
 ### Fixed
 - Fixed bugs in dBFT 2.0.
