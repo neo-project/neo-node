@@ -1,9 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26430.15
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29123.88
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "neo-cli", "neo-cli\neo-cli.csproj", "{900CA179-AEF0-43F3-9833-5DB060272D8E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "neo", "..\neo\neo\neo.csproj", "{269CE6FD-3332-4351-B57B-0947F29C643A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Lib", "Lib", "{756E58BC-46FE-4BCA-BEFC-C66155184FA6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,8 +19,18 @@ Global
 		{900CA179-AEF0-43F3-9833-5DB060272D8E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{900CA179-AEF0-43F3-9833-5DB060272D8E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{900CA179-AEF0-43F3-9833-5DB060272D8E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{269CE6FD-3332-4351-B57B-0947F29C643A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{269CE6FD-3332-4351-B57B-0947F29C643A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{269CE6FD-3332-4351-B57B-0947F29C643A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{269CE6FD-3332-4351-B57B-0947F29C643A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{269CE6FD-3332-4351-B57B-0947F29C643A} = {756E58BC-46FE-4BCA-BEFC-C66155184FA6}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9497B828-EF6B-461F-A689-8DEA97BD52B2}
 	EndGlobalSection
 EndGlobal
