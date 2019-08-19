@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -225,8 +225,6 @@ namespace Neo.Services
             _shutdownTokenSource.Cancel();
             // Wait for us to have triggered shutdown.
             _shutdownAcknowledged.Wait();
-            // Wait slightly longer for the main thread to finish.
-            Thread.Sleep(100);
         }
 
         private void SigTermEventHandler(AssemblyLoadContext obj)
@@ -236,6 +234,7 @@ namespace Neo.Services
 
         private void CancelHandler(object sender, ConsoleCancelEventArgs e)
         {
+            e.Cancel = true;
             TriggerGracefulShutdown();
         }
 
