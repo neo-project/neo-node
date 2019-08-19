@@ -33,7 +33,7 @@ namespace Neo
             {
                 if (_default == null)
                 {
-                    UpdateDefault(new ConfigurationBuilder().AddJsonFile("config.json").Build());
+                    UpdateDefault(Helper.LoadConfig("config"));
                 }
 
                 return _default;
@@ -92,7 +92,7 @@ namespace Neo
             this.Port = ushort.Parse(section.GetSection("Port").Value);
             this.SslCert = section.GetSection("SslCert").Value;
             this.SslCertPassword = section.GetSection("SslCertPassword").Value;
-            this.MaxGasInvoke = (long)BigDecimal.Parse(section.GetValue("MaxGasInvoke", "0"), NativeContract.GAS.Decimals).Value;
+            this.MaxGasInvoke = (long)BigDecimal.Parse(section.GetValue("MaxGasInvoke", "10"), NativeContract.GAS.Decimals).Value;
         }
     }
 
