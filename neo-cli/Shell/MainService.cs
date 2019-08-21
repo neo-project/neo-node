@@ -191,7 +191,7 @@ namespace Neo.Shell
                 Console.WriteLine($"Invoking script with: '{tx.Script.ToHexString()}'");
             }
 
-            ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx);
+            ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, extraGAS: 100000000);
 
             Console.WriteLine($"VM State: {engine.State}");
             Console.WriteLine($"Gas Consumed: {engine.GasConsumed}");
