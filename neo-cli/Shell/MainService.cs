@@ -806,10 +806,13 @@ namespace Neo.Shell
                 Console.WriteLine("error");
                 return true;
             }
-            if (system.RpcServer != null &&
-                ReadUserInput("Warning: Opening the wallet with RPC turned on could result in asset loss. Are you sure you want to do this? (yes|no)", false)?.ToLowerInvariant() != "yes")
+            if (system.RpcServer != null)
             {
-                return true;
+                string answer = ReadUserInput("Warning: Opening the wallet with RPC turned on could result in asset loss. Are you sure you want to do this? (yes|no)", false)?.ToLowerInvariant();
+                if (answer != "yes" && answer != "y")
+                {
+                    return true;
+                }
             }
             string path = args[2];
             if (!File.Exists(path))
