@@ -212,8 +212,7 @@ namespace Neo.Shell
                 Console.WriteLine("Error: insufficient balance.");
                 return true;
             }
-            string answer = ReadUserInput("relay tx(no|yes)");
-            if (answer != "yes" && answer != "y")
+            if (ReadUserInput("relay tx(no|yes)").IsYes())
             {
                 return true;
             }
@@ -388,8 +387,7 @@ namespace Neo.Shell
             string path = "address.txt";
             if (File.Exists(path))
             {
-                string answer = ReadUserInput($"The file '{path}' already exists, do you want to overwrite it? (yes|no)", false)?.ToLowerInvariant();
-                if (answer != "yes" && answer != "y")
+                if (ReadUserInput($"The file '{path}' already exists, do you want to overwrite it? (yes|no)", false).IsYes())
                 {
                     return true;
                 }
@@ -434,8 +432,7 @@ namespace Neo.Shell
             }
             if (system.RpcServer != null)
             {
-                string answer = ReadUserInput("Warning: Opening the wallet with RPC turned on could result in asset loss. Are you sure you want to do this? (yes|no)", false)?.ToLowerInvariant();
-                if (answer != "yes" && answer != "y")
+                if (ReadUserInput("Warning: Opening the wallet with RPC turned on could result in asset loss. Are you sure you want to do this? (yes|no)", false).IsYes())
                 {
                     return true;
                 }
@@ -676,8 +673,7 @@ namespace Neo.Shell
 
                 if (file.Length > 1024 * 1024)
                 {
-                    string answer = ReadUserInput($"The file '{file.FullName}' is too big, do you want to continue? (yes|no)", false)?.ToLowerInvariant();
-                    if (answer != "yes" && answer != "y")
+                    if (ReadUserInput($"The file '{file.FullName}' is too big, do you want to continue? (yes|no)", false).IsYes())
                     {
                         return true;
                     }
@@ -818,8 +814,7 @@ namespace Neo.Shell
             }
             if (system.RpcServer != null)
             {
-                string answer = ReadUserInput("Warning: Opening the wallet with RPC turned on could result in asset loss. Are you sure you want to do this? (yes|no)", false)?.ToLowerInvariant();
-                if (answer != "yes" && answer != "y")
+                if (ReadUserInput("Warning: Opening the wallet with RPC turned on could result in asset loss. Are you sure you want to do this? (yes|no)", false).IsYes())
                 {
                     return true;
                 }
