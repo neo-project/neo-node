@@ -386,12 +386,6 @@ namespace Neo.Shell
             }
 
             string path = "address.txt";
-
-            //if (File.Exists(path) &&
-            //    ReadUserInput($"The file '{path}' already exists, do you want to overwrite it? (yes|no)", false)?.ToLowerInvariant() != "yes")
-            //{
-            //    return true;
-            //}
             if (File.Exists(path))
             {
                 string answer = ReadUserInput($"The file '{path}' already exists, do you want to overwrite it? (yes|no)", false)?.ToLowerInvariant();
