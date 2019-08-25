@@ -102,12 +102,34 @@ namespace Neo.Shell
                     return OnInstallCommand(args);
                 case "uninstall":
                     return OnUnInstallCommand(args);
+				case "build":
+					return OnBuildCommand(args);
                 default:
                     return base.OnCommand(args);
             }
         }
 
-        private bool OnBroadcastCommand(string[] args)
+		private bool OnBuildCommand(string[] args)
+		{
+			if (args.Length < 2)
+			{
+				Console.WriteLine($"Invalid parameters");
+			}
+			else
+			{
+				string args1 = args[1];
+				if (knownSmartContracts.ContainsKey(args1))
+				{
+					args[1] = knownSmartContracts[args1];
+				}
+				var invocationTransaction = BuildInvocationTransaction(args);
+				Console.WriteLine(invocationTransaction.ToJson());
+			}
+
+			return true;
+		}
+
+		private bool OnBroadcastCommand(string[] args)
         {
             if (!Enum.TryParse(args[1], true, out MessageCommand command))
             {
@@ -170,31 +192,48 @@ namespace Neo.Shell
             return SignAndSendTx(tx);
         }
 
+		private Transaction BuildInvocationTransaction(string[] args)
+		{
+			Transaction tx = new Transaction
+			{
+				Sender = UInt160.Zero,
+				Attributes = new TransactionAttribute[0],
+				Witnesses = new Witness[0]
+			};
+
+			//TODO Use manifest
+			var scriptHash = UInt160.Parse(args[1]);
+			var operation = args[2];
+			List<ContractParameter> contractParameters = ParseParameters(args);
+
+			if (operation.Equals("transfer"))
+			{
+				tx.Sender = (UInt160)contractParameters[0].Value;
+				var cosigner = new Cosigner();
+				cosigner.Scopes = WitnessScope.CalledByEntry;
+				cosigner.Account = tx.Sender;
+				tx.Cosigners = new Cosigner[] { cosigner };
+			}
+
+			using (ScriptBuilder scriptBuilder = new ScriptBuilder())
+			{
+				scriptBuilder.EmitAppCall(scriptHash, operation, contractParameters.ToArray());
+				tx.Script = scriptBuilder.ToArray();
+				Console.WriteLine($"Invoking script with: '{tx.Script.ToHexString()}'");
+			}
+
+			return tx;
+		}
+
         private bool OnInvokeCommand(string[] args)
         {
 			string args1 = args[1];
 			if (knownSmartContracts.ContainsKey(args1))
 			{
-				args1 = knownSmartContracts[args1];
+				args[1] = knownSmartContracts[args1];
 			}
 
-			var scriptHash = UInt160.Parse(args1);
-			List<ContractParameter> contractParameters = ParseParameters(args);
-            
-            Transaction tx = new Transaction
-            {
-                Sender = UInt160.Zero,
-                Attributes = new TransactionAttribute[0],
-                Witnesses = new Witness[0]
-            };
-
-            using (ScriptBuilder scriptBuilder = new ScriptBuilder())
-            {
-                scriptBuilder.EmitAppCall(scriptHash, args[2], contractParameters.ToArray());
-                tx.Script = scriptBuilder.ToArray();
-                Console.WriteLine($"Invoking script with: '{tx.Script.ToHexString()}'");
-            }
-
+			Transaction tx = BuildInvocationTransaction(args);
             ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, testMode: true);
 
             Console.WriteLine($"VM State: {engine.State}");
@@ -203,6 +242,7 @@ namespace Neo.Shell
 			{
 				var snapshot = Blockchain.Singleton.GetSnapshot();
 				//It can't be null
+				var scriptHash = UInt160.Parse(args1);
 				var contract = snapshot.Contracts.TryGet(scriptHash);
 				var method = contract.Manifest.Abi.Methods.First(m => m.Name.Equals(args[2]));
 				var result = engine.ResultStack.First();
@@ -328,6 +368,7 @@ namespace Neo.Shell
                 Console.WriteLine($"Error creating contract params: {ex}");
                 throw;
             }
+			
             Program.Wallet.Sign(context);
             string msg;
             if (context.Completed)
@@ -839,7 +880,8 @@ namespace Neo.Shell
                     }
 
                     Console.WriteLine($"{contract.Address}\t{type}");
-                }
+					Console.WriteLine($"Hash: {contract.ScriptHash}");
+				}
             }
 
             return true;

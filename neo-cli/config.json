@@ -15,10 +15,10 @@
       "MaxGasInvoke": 10
     },
     "UnlockWallet": {
-      "Path": "",
-      "Password": "",
+      "Path": "devnet.json",
+      "Password": "neo",
       "StartConsensus": false,
-      "IsActive": false
+      "IsActive": true
     },
     "PluginURL": "https://github.com/neo-project/neo-plugins/releases/download/v{1}/{0}.zip"
   }

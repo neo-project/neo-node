@@ -11,6 +11,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "neo", "..\neo\neo\neo.cspro
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C1C71BCC-AB2F-41BD-A760-409DD7CAD69A}"
 	ProjectSection(SolutionItems) = preProject
+		..\devnet\devnet.json = ..\devnet\devnet.json
 		..\Dockerfile = ..\Dockerfile
 	EndProjectSection
 EndProject
