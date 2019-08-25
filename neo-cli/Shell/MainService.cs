@@ -1,5 +1,6 @@
 using Akka.Actor;
 using Microsoft.Extensions.Configuration;
+using Neo.Cli.Extensions;
 using Neo.Consensus;
 using Neo.IO;
 using Neo.IO.Json;
@@ -27,6 +28,7 @@ using System.Net;
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
+using Neo.Wallets;
 using System.Threading;
 using System.Threading.Tasks;
 using ECCurve = Neo.Cryptography.ECC.ECCurve;
@@ -38,6 +40,12 @@ namespace Neo.Shell
     {
         private LevelDBStore store;
         private NeoSystem system;
+
+		private Dictionary<string, string> knownSmartContracts = new Dictionary<string, string>() {
+			{ "neo", "0x43cf98eddbe047e198a3e5d57006311442a0ca15" },
+			{ "gas", "0xa1760976db5fcdfab2a9930e8f6ce875b2d18225" },
+			{ "policy", "0x9c5699b260bd468e2160dd5d45dfd2686bba8b77" },
+		};
 
         protected override string Prompt => "neo";
         public override string ServiceName => "NEO-CLI";
@@ -164,19 +172,15 @@ namespace Neo.Shell
 
         private bool OnInvokeCommand(string[] args)
         {
-            var scriptHash = UInt160.Parse(args[1]);
+			string args1 = args[1];
+			if (knownSmartContracts.ContainsKey(args1))
+			{
+				args1 = knownSmartContracts[args1];
+			}
 
-            List<ContractParameter> contractParameters = new List<ContractParameter>();
-            for (int i = 3; i < args.Length; i++)
-            {
-                contractParameters.Add(new ContractParameter()
-                {
-                    // TODO: support contract params of type other than string.
-                    Type = ContractParameterType.String,
-                    Value = args[i]
-                });
-            }
-
+			var scriptHash = UInt160.Parse(args1);
+			List<ContractParameter> contractParameters = ParseParameters(args);
+            
             Transaction tx = new Transaction
             {
                 Sender = UInt160.Zero,
@@ -195,7 +199,28 @@ namespace Neo.Shell
 
             Console.WriteLine($"VM State: {engine.State}");
             Console.WriteLine($"Gas Consumed: {engine.GasConsumed}");
-            Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
+			if (engine.ResultStack.Count == 1)
+			{
+				var snapshot = Blockchain.Singleton.GetSnapshot();
+				//It can't be null
+				var contract = snapshot.Contracts.TryGet(scriptHash);
+				var method = contract.Manifest.Abi.Methods.First(m => m.Name.Equals(args[2]));
+				var result = engine.ResultStack.First();
+				switch (method.ReturnType)
+				{
+					case ContractParameterType.String:
+						Console.WriteLine($"Result: { result.GetString() }");
+						break;
+					case ContractParameterType.Integer:
+						Console.WriteLine($"Result: { result.GetBigInteger() }");
+						break;
+				}
+
+			}
+			else
+			{
+				Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
+			}
             Console.WriteLine();
             if (engine.State.HasFlag(VMState.FAULT))
             {
@@ -219,7 +244,54 @@ namespace Neo.Shell
             return SignAndSendTx(tx);
         }
 
-        private byte[] LoadDeploymentScript(string nefFilePath, bool hasStorage, bool isPayable, out UInt160 scriptHash)
+		private List<ContractParameter> ParseParameters(string[] args)
+		{
+			var contractParameters = new List<ContractParameter>();
+			for (int i = 3; i < args.Length; i++)
+			{
+				var arg = args[i];
+				if (arg.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase))
+				{
+					arg = arg.Substring(2);
+					if (arg.Length == 64)
+					{
+						contractParameters.Add(new ContractParameter()
+						{
+							Type = ContractParameterType.Hash256,
+							Value = UInt256.Parse(arg)
+						});
+					}
+					else
+					{
+						contractParameters.Add(new ContractParameter()
+						{
+							Type = ContractParameterType.Hash160,
+							Value = UInt160.Parse(arg)
+						});
+					}
+
+				}
+				else if (arg.StartsWith("A") && arg.Length == 34)
+				{
+					contractParameters.Add(new ContractParameter()
+					{
+						Type = ContractParameterType.Hash160,
+						Value = arg.ToScriptHash()
+					});
+				}
+				else
+				{
+					contractParameters.Add(new ContractParameter()
+					{
+						Type = ContractParameterType.String,
+						Value = arg
+					});
+				}
+			}
+			return contractParameters;
+		}
+
+		private byte[] LoadDeploymentScript(string nefFilePath, bool hasStorage, bool isPayable, out UInt160 scriptHash)
         {
             var info = new FileInfo(nefFilePath);
             if (!info.Exists || info.Length >= Transaction.MaxTransactionSize)
@@ -964,12 +1036,138 @@ namespace Neo.Shell
                     return OnShowPoolCommand(args);
                 case "state":
                     return OnShowStateCommand(args);
-                default:
+				case "block":
+					return OnShowBlock(args);
+				case "transaction":
+					return OnShowTransaction(args);
+				case "contract":
+					return OnShowContract(args);
+				case "keys":
+					return OnShowStorageKeys(args);
+				default:
                     return base.OnCommand(args);
             }
         }
 
-        private bool OnShowPoolCommand(string[] args)
+		private bool OnShowStorageKeys(string[] args)
+		{
+			if (args.Length != 3)
+			{
+				Console.WriteLine("Missing contract hash");
+			}
+			else
+			{
+				string contractHash = args[2];
+				if (knownSmartContracts.ContainsKey(contractHash))
+				{
+					contractHash = knownSmartContracts[contractHash];
+				}
+
+				var snapshot = Blockchain.Singleton.GetSnapshot();
+				var contract160 = UInt160.Parse(contractHash);
+				var smartContract = snapshot.Contracts.TryGet(contract160);
+				if (smartContract != null)
+				{
+					var query = contract160.ToArray().Append((byte)20).ToArray();
+					var keys = snapshot.Storages.Find(query);
+					foreach (var key in keys)
+					{
+						Console.WriteLine($"Storage Key: {key.Key.Key.ToHexString()}\n");
+						Console.WriteLine($"Storage Value: {key.Value.ToArray().ToHexString()}\n");
+					}
+					
+				}
+			}
+
+			return true;
+		}
+
+		private bool OnShowContract(string[] args)
+		{
+			if (args.Length != 3)
+			{
+				Console.WriteLine("Missing contract hash");
+			}
+			else
+			{
+				string contractHash = args[2];
+				if (knownSmartContracts.ContainsKey(contractHash))
+				{
+					contractHash = knownSmartContracts[contractHash];
+				}
+
+				var snapshot = Blockchain.Singleton.GetSnapshot();
+				var contract160 = UInt160.Parse(contractHash);
+				var smartContract = snapshot.Contracts.TryGet(contract160);
+				if (smartContract != null)
+				{
+					Console.WriteLine(smartContract.ToCLIString());
+				}
+			}
+
+			return true;
+		}
+
+		private bool OnShowTransaction(string[] args)
+		{
+			if (args.Length != 3)
+			{
+				Console.WriteLine("Missing transaction hash");
+			}
+			else
+			{
+				string transactionHash = args[2];
+				var snapshot = Blockchain.Singleton.GetSnapshot();
+				var tx256 = UInt256.Parse(transactionHash);
+				var tx = snapshot.GetTransaction(tx256);
+				if (tx != null)
+				{
+					Console.WriteLine(tx.ToCLIString());
+				}
+			}
+
+			return true;
+		}
+
+		// index or hash
+		private bool OnShowBlock(string[] args)
+		{
+			if (args.Length != 3)
+			{
+				Console.WriteLine("Missing block index or hash");
+			}
+			else
+			{
+				string blockId = args[2];
+				var snapshot = Blockchain.Singleton.GetSnapshot();
+				if (blockId.Length == 64)
+				{
+					var blockHash = UInt256.Parse(blockId);
+					if (snapshot.ContainsBlock(blockHash))
+					{
+						var block = snapshot.GetBlock(blockHash);
+						Console.WriteLine($"Block: {block.ToCLIString()}");
+					}
+					else
+					{
+						Console.WriteLine("Block not found");
+					}
+				}
+				else
+				{
+					var blockIndex = UInt32.Parse(blockId);
+					var header = snapshot.GetBlock(blockIndex);
+					if (header != null)
+					{
+						Console.WriteLine($"Block: {header.ToCLIString()}");
+					}
+				}
+			}
+
+			return true;
+		}
+
+		private bool OnShowPoolCommand(string[] args)
         {
             bool verbose = args.Length >= 3 && args[2] == "verbose";
             if (verbose)

@@ -1,0 +1,25 @@
+﻿{
+	"ProtocolConfiguration": {
+		"Magic": 1414481230,
+		"AddressVersion": 23,
+		"MillisecondsPerBlock": 15000,
+		"StandbyValidators": [
+			"0314d2a5989b3893449e99ac2e9e72454275cfa6d3cec7b4cf5708d4a9ac7dceda",
+			"02bc578bbfd14c0d7b6a71ea498c362de04806aeaa82a273ac1bb0a6b31bfb14c3",
+			"036af0f03873e529ba67e0154cd9aa3e932902f3cc79dd8ccaa29efd7812c71c70",
+			"03575b289291404f6decaa4e2f9c761930c02c11a53c93cbae3759650088e92a12",
+			"0342591efaa7735cf8c3b0341bb87904674b1c5047968402acb344135eba43865a",
+			"03ceb7e409139517a47e34e1e1b710757f8d6782c82270a96801d94036a6058add",
+			"037711dd848647377fbed2877925d218b123ad05826cb39df6479b5798c85ebe33"
+		],
+		"SeedList": [
+			"seed1.simpli.com.br:20333",
+			"seed2.simpli.com.br:20333",
+			"seed3.simpli.com.br:20333",
+			"seed4.simpli.com.br:20333",
+			"seed5.simpli.com.br:20333",
+			"seed6.simpli.com.br:20333",
+			"seed7.simpli.com.br:20333"
+		]
+	}
+}
