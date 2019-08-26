@@ -2,6 +2,7 @@
 using Neo.Network.P2P.Payloads;
 using Neo.SmartContract;
 using Neo.VM;
+using Neo.VM.Types;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,6 +12,22 @@ namespace Neo.Cli.Extensions
 {
 	public static class CLIHelper
 	{
+		
+		public static string ToCLIString(this NotifyEventArgs notification)
+		{
+			string output = "";
+			var vmArray = (Neo.VM.Types.Array)notification.State;
+			var notificationName = "";
+			if (vmArray.Count > 0)
+			{
+				notificationName = vmArray[0].GetString();
+			}
+
+			var adapter = NotificationCLIAdapter.GetCliStringAdapter(notificationName);
+			output += adapter(vmArray);
+
+			return output;
+		}
 
 		public static string ToCLIString(this Block block)
 		{

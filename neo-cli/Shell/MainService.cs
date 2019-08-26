@@ -33,6 +33,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ECCurve = Neo.Cryptography.ECC.ECCurve;
 using ECPoint = Neo.Cryptography.ECC.ECPoint;
+using Neo.SmartContract.Native.Tokens;
 
 namespace Neo.Shell
 {
@@ -227,22 +228,21 @@ namespace Neo.Shell
 
         private bool OnInvokeCommand(string[] args)
         {
-			string args1 = args[1];
-			if (knownSmartContracts.ContainsKey(args1))
+			if (knownSmartContracts.ContainsKey(args[1]))
 			{
-				args[1] = knownSmartContracts[args1];
+				args[1] = knownSmartContracts[args[1]];
 			}
 
 			Transaction tx = BuildInvocationTransaction(args);
             ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, testMode: true);
 
             Console.WriteLine($"VM State: {engine.State}");
-            Console.WriteLine($"Gas Consumed: {engine.GasConsumed}");
+            Console.WriteLine($"Gas Consumed: {(engine.GasConsumed / Math.Pow(10, NeoToken.GAS.Decimals))}");
 			if (engine.ResultStack.Count == 1)
 			{
 				var snapshot = Blockchain.Singleton.GetSnapshot();
 				//It can't be null
-				var scriptHash = UInt160.Parse(args1);
+				var scriptHash = UInt160.Parse(args[1]);
 				var contract = snapshot.Contracts.TryGet(scriptHash);
 				var method = contract.Manifest.Abi.Methods.First(m => m.Name.Equals(args[2]));
 				var result = engine.ResultStack.First();
@@ -255,12 +255,21 @@ namespace Neo.Shell
 						Console.WriteLine($"Result: { result.GetBigInteger() }");
 						break;
 				}
-
 			}
 			else
 			{
 				Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
 			}
+
+			if (engine.Notifications.Count != 0)
+			{
+				Console.WriteLine("Notifications:");
+				foreach (var notification in engine.Notifications)
+				{
+					Console.WriteLine(notification.ToCLIString());
+				}
+			}
+
             Console.WriteLine();
             if (engine.State.HasFlag(VMState.FAULT))
             {
