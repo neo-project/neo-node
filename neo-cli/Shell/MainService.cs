@@ -299,6 +299,7 @@ namespace Neo.Shell
 			for (int i = 3; i < args.Length; i++)
 			{
 				var arg = args[i];
+				bool isNumeric = int.TryParse(arg, out int amount);
 				if (arg.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase))
 				{
 					arg = arg.Substring(2);
@@ -326,6 +327,14 @@ namespace Neo.Shell
 					{
 						Type = ContractParameterType.Hash160,
 						Value = arg.ToScriptHash()
+					});
+				}
+				else if(isNumeric)
+				{
+					contractParameters.Add(new ContractParameter()
+					{
+						Type = ContractParameterType.Integer,
+						Value = amount
 					});
 				}
 				else
@@ -1095,10 +1104,39 @@ namespace Neo.Shell
 					return OnShowContract(args);
 				case "keys":
 					return OnShowStorageKeys(args);
+				case "last-transactions":
+					return OnShowLastTransactions(args);
 				default:
                     return base.OnCommand(args);
             }
         }
+
+		private bool OnShowLastTransactions(string[] args)
+		{
+			if (args.Length != 3)
+			{
+				Console.WriteLine("Insuficient arguments");
+			}
+			else
+			{
+				int desiredCount = int.Parse(args[2]);
+				var snapshot = Blockchain.Singleton.GetSnapshot();
+				var blockHash = snapshot.CurrentBlockHash;
+				var countedTransactions = 0;
+				Block block = snapshot.GetBlock(blockHash); 
+				do
+				{
+					foreach (var tx in block.Transactions)
+					{
+						Console.WriteLine(tx.ToCLIString(block.Timestamp));
+					}
+					countedTransactions += block.Transactions.Length;
+					block = snapshot.GetBlock(block.PrevHash);
+				} while (block != null && desiredCount > countedTransactions);
+			}
+
+			return true;
+		}
 
 		private bool OnShowStorageKeys(string[] args)
 		{

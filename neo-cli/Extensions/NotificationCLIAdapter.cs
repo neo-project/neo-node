@@ -18,8 +18,8 @@ namespace Neo.Cli.Extensions
 			var from = new UInt160(notificationArray[1].GetByteArray());
 			var to = new UInt160(notificationArray[2].GetByteArray());
 			var amount = notificationArray[3].GetBigInteger();
-
-			var output = $"transfer / ${from.ToAddress()} / ${to.ToAddress()} / ${amount}";
+			
+			var output = $"transfer / {from.ToAddress()} / {to.ToAddress()} / {amount}";
 			
 			return output;
 		}
