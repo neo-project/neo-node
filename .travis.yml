@@ -3,6 +3,13 @@ sudo: required
 services:
   - docker
 
+install:
+  - dotnet tool install -g dotnet-format --version 4.0.40103 --add-source https://dotnet.myget.org/F/format/api/v3/index.json
+  - export PATH="$PATH:$HOME/.dotnet/tools"
+  - dotnet-format --version
+before_script:
+  - echo "Checking format..." 
+  - dotnet format --check --dry-run -w . -v diagnostic # check C# formatting for neo.sln
 script:
   - docker build -f ci/Dockerfile -t neo-cli-ci .
   - docker run neo-cli-ci /opt/ci/run-tests-in-docker.sh
