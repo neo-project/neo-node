@@ -220,7 +220,9 @@ namespace Neo.Shell
 			{
 				scriptBuilder.EmitAppCall(scriptHash, operation, contractParameters.ToArray());
 				tx.Script = scriptBuilder.ToArray();
+				var hex = tx.Script.ToHexString();
 				Console.WriteLine($"Invoking script with: '{tx.Script.ToHexString()}'");
+				Console.WriteLine($"Script Length: '{tx.Script.ToHexString().Length}'");
 			}
 
 			return tx;
@@ -240,20 +242,21 @@ namespace Neo.Shell
             Console.WriteLine($"Gas Consumed: {(engine.GasConsumed / Math.Pow(10, NeoToken.GAS.Decimals))}");
 			if (engine.ResultStack.Count == 1)
 			{
-				var snapshot = Blockchain.Singleton.GetSnapshot();
-				//It can't be null
-				var scriptHash = UInt160.Parse(args[1]);
-				var contract = snapshot.Contracts.TryGet(scriptHash);
-				var method = contract.Manifest.Abi.Methods.First(m => m.Name.Equals(args[2]));
-				var result = engine.ResultStack.First();
-				switch (method.ReturnType)
+				using (var snapshot = Blockchain.Singleton.GetSnapshot())
 				{
-					case ContractParameterType.String:
-						Console.WriteLine($"Result: { result.GetString() }");
-						break;
-					case ContractParameterType.Integer:
-						Console.WriteLine($"Result: { result.GetBigInteger() }");
-						break;
+					var scriptHash = UInt160.Parse(args[1]);
+					var contract = snapshot.Contracts.TryGet(scriptHash);
+					var method = contract.Manifest.Abi.Methods.First(m => m.Name.Equals(args[2]));
+					var result = engine.ResultStack.First();
+					switch (method.ReturnType)
+					{
+						case ContractParameterType.String:
+							Console.WriteLine($"Result: { result.GetString() }");
+							break;
+						case ContractParameterType.Integer:
+							Console.WriteLine($"Result: { result.GetBigInteger() }");
+							break;
+					}
 				}
 			}
 			else
@@ -290,6 +293,7 @@ namespace Neo.Shell
             {
                 return true;
             }
+
             return SignAndSendTx(tx);
         }
 
@@ -299,7 +303,7 @@ namespace Neo.Shell
 			for (int i = 3; i < args.Length; i++)
 			{
 				var arg = args[i];
-				bool isNumeric = int.TryParse(arg, out int amount);
+				bool isNumeric = BigInteger.TryParse(arg, out BigInteger amount);
 				if (arg.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase))
 				{
 					arg = arg.Substring(2);
@@ -1120,19 +1124,26 @@ namespace Neo.Shell
 			else
 			{
 				int desiredCount = int.Parse(args[2]);
-				var snapshot = Blockchain.Singleton.GetSnapshot();
-				var blockHash = snapshot.CurrentBlockHash;
-				var countedTransactions = 0;
-				Block block = snapshot.GetBlock(blockHash); 
-				do
+				if (desiredCount > 100)
 				{
-					foreach (var tx in block.Transactions)
+					Console.WriteLine("Maxium 100 transactions");
+					return true;
+				}
+				using (var snapshot = Blockchain.Singleton.GetSnapshot())
+				{
+					var blockHash = snapshot.CurrentBlockHash;
+					var countedTransactions = 0;
+					Block block = snapshot.GetBlock(blockHash);
+					do
 					{
-						Console.WriteLine(tx.ToCLIString(block.Timestamp));
-					}
-					countedTransactions += block.Transactions.Length;
-					block = snapshot.GetBlock(block.PrevHash);
-				} while (block != null && desiredCount > countedTransactions);
+						foreach (var tx in block.Transactions)
+						{
+							Console.WriteLine(tx.ToCLIString(block.Timestamp));
+						}
+						countedTransactions += block.Transactions.Length;
+						block = snapshot.GetBlock(block.PrevHash);
+					} while (block != null && desiredCount > countedTransactions);
+				}
 			}
 
 			return true;
@@ -1152,19 +1163,20 @@ namespace Neo.Shell
 					contractHash = knownSmartContracts[contractHash];
 				}
 
-				var snapshot = Blockchain.Singleton.GetSnapshot();
-				var contract160 = UInt160.Parse(contractHash);
-				var smartContract = snapshot.Contracts.TryGet(contract160);
-				if (smartContract != null)
+				using (var snapshot = Blockchain.Singleton.GetSnapshot())
 				{
-					var query = contract160.ToArray().Append((byte)20).ToArray();
-					var keys = snapshot.Storages.Find(query);
-					foreach (var key in keys)
+					var contract160 = UInt160.Parse(contractHash);
+					var smartContract = snapshot.Contracts.TryGet(contract160);
+					if (smartContract != null)
 					{
-						Console.WriteLine($"Storage Key: {key.Key.Key.ToHexString()}\n");
-						Console.WriteLine($"Storage Value: {key.Value.ToArray().ToHexString()}\n");
+						var query = contract160.ToArray().Append((byte)20).ToArray();
+						var keys = snapshot.Storages.Find(query);
+						foreach (var key in keys)
+						{
+							Console.WriteLine($"Storage Key: {key.Key.Key.ToHexString()}\n");
+							Console.WriteLine($"Storage Value: {key.Value.ToArray().ToHexString()}\n");
+						}
 					}
-					
 				}
 			}
 
@@ -1185,12 +1197,14 @@ namespace Neo.Shell
 					contractHash = knownSmartContracts[contractHash];
 				}
 
-				var snapshot = Blockchain.Singleton.GetSnapshot();
-				var contract160 = UInt160.Parse(contractHash);
-				var smartContract = snapshot.Contracts.TryGet(contract160);
-				if (smartContract != null)
+				using (var snapshot = Blockchain.Singleton.GetSnapshot())
 				{
-					Console.WriteLine(smartContract.ToCLIString());
+					var contract160 = UInt160.Parse(contractHash);
+					var smartContract = snapshot.Contracts.TryGet(contract160);
+					if (smartContract != null)
+					{
+						Console.WriteLine(smartContract.ToCLIString());
+					}
 				}
 			}
 
@@ -1206,12 +1220,14 @@ namespace Neo.Shell
 			else
 			{
 				string transactionHash = args[2];
-				var snapshot = Blockchain.Singleton.GetSnapshot();
-				var tx256 = UInt256.Parse(transactionHash);
-				var tx = snapshot.GetTransaction(tx256);
-				if (tx != null)
+				using (var snapshot = Blockchain.Singleton.GetSnapshot())
 				{
-					Console.WriteLine(tx.ToCLIString());
+					var tx256 = UInt256.Parse(transactionHash);
+					var tx = snapshot.GetTransaction(tx256);
+					if (tx != null)
+					{
+						Console.WriteLine(tx.ToCLIString());
+					}
 				}
 			}
 
@@ -1228,27 +1244,29 @@ namespace Neo.Shell
 			else
 			{
 				string blockId = args[2];
-				var snapshot = Blockchain.Singleton.GetSnapshot();
-				if (blockId.Length == 64)
+				using (var snapshot = Blockchain.Singleton.GetSnapshot())
 				{
-					var blockHash = UInt256.Parse(blockId);
-					if (snapshot.ContainsBlock(blockHash))
+					if (blockId.Length == 64)
 					{
-						var block = snapshot.GetBlock(blockHash);
-						Console.WriteLine($"Block: {block.ToCLIString()}");
+						var blockHash = UInt256.Parse(blockId);
+						if (snapshot.ContainsBlock(blockHash))
+						{
+							var block = snapshot.GetBlock(blockHash);
+							Console.WriteLine($"Block: {block.ToCLIString()}");
+						}
+						else
+						{
+							Console.WriteLine("Block not found");
+						}
 					}
 					else
 					{
-						Console.WriteLine("Block not found");
-					}
-				}
-				else
-				{
-					var blockIndex = UInt32.Parse(blockId);
-					var header = snapshot.GetBlock(blockIndex);
-					if (header != null)
-					{
-						Console.WriteLine($"Block: {header.ToCLIString()}");
+						var blockIndex = UInt32.Parse(blockId);
+						var header = snapshot.GetBlock(blockIndex);
+						if (header != null)
+						{
+							Console.WriteLine($"Block: {header.ToCLIString()}");
+						}
 					}
 				}
 			}

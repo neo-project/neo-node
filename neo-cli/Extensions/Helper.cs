@@ -13,49 +13,109 @@ namespace Neo.Cli.Extensions
 {
 	public static class CLIHelper
 	{
-
 		public static DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, 0);
 
-		public static string ToCLIString(this Cosigner c)
+		public static string DisassembleScript(byte[] script)
 		{
-			string output = $"\tAccount: {c.Account}\n";
+			var supportedMethods = InteropService.SupportedMethods();
+			string output = "";
+			var outputAppends = new List<string>();
+			for (int i = 0; i < script.Length; i++)
+			{
+				OpCode currentOpCode = (OpCode)script[i];
+
+				if (currentOpCode == OpCode.SYSCALL)
+				{
+					var interop = script.Skip(i + 1).Take(4).ToArray();
+					var callNumber = BitConverter.ToUInt32(interop);
+					var bytes = BitConverter.GetBytes(InteropService.Neo_Native_Deploy);
+					var methodName = supportedMethods[callNumber];
+					outputAppends.Add($"\t{methodName}\n");
+					i = i + 4;
+				}
+				else if (currentOpCode <= OpCode.PUSHBYTES75)
+				{
+					var byteArraySize = (int)currentOpCode;
+					var byteArray = script.Skip(i + 1).Take(byteArraySize).ToArray();
+					var hexString = byteArray.ToHexString();
+					if (byteArraySize == 20)
+					{
+						var scriptHash = new UInt160(byteArray);
+						hexString = scriptHash.ToString();
+					}
+
+					outputAppends.Add($"\t{hexString}\n");
+					i = i + byteArraySize;
+				}
+				//TODO Finish (I don't have use for this yet)
+				//else if (currentOpCode == OpCode.PUSHDATA1)
+				//{
+				//	byte byteArraySize = script.Skip(i + 1).Take(1).First();
+				//	var byteArray = script.Skip(i + 1).Take(byteArraySize).ToArray();
+				//	var hexString = byteArray.ToHexString();
+				//	outputAppends.Add($"\t{hexString}\n");
+				//	i = i + 1 + byteArraySize;
+				//}
+
+				outputAppends.Add($"\t{currentOpCode.ToString()}\n");
+			}
+
+			for (int i = outputAppends.Count - 1; i >= 0; i--)
+			{
+				output += outputAppends[i];
+			}
+
+			return output;
+		}
+
+		public static string ToCLIString(this Cosigner cosigner)
+		{
+			string output = $"\tAccount: {cosigner.Account}\n";
 			
 			output += "\tScope:\t";
-			if (c.Scopes.HasFlag(WitnessScope.CalledByEntry))
+			if (cosigner.Scopes.HasFlag(WitnessScope.CalledByEntry))
 			{
 				output += $"CalledByEntry\t";
 			}
-			if (c.Scopes.HasFlag(WitnessScope.CustomContracts))
+			if (cosigner.Scopes.HasFlag(WitnessScope.CustomContracts))
 			{
 				output += $"CustomContract\t";
 			}
-			if (c.Scopes.HasFlag(WitnessScope.CustomGroups))
+			if (cosigner.Scopes.HasFlag(WitnessScope.CustomGroups))
 			{
 				output += $"CustomGroup\t";
 			}
 
 			output += "\n";
 
-			if (c.AllowedContracts != null && c.AllowedContracts.Length > 0)
+			if (cosigner.AllowedContracts != null && cosigner.AllowedContracts.Length > 0)
 			{
 				output += "Allowed contracts: \n";
-				foreach (var allowedContract in c.AllowedContracts)
+				foreach (var allowedContract in cosigner.AllowedContracts)
 				{
 					output += $"\t{allowedContract.ToString()}\n";
 				}
 			}
 
-			if (c.AllowedGroups != null && c.AllowedGroups.Length > 0)
+			if (cosigner.AllowedGroups != null && cosigner.AllowedGroups.Length > 0)
 			{
 				output += "Allowed groups: \n";
-				foreach (var allowedGroup in c.AllowedGroups)
+				foreach (var allowedGroup in cosigner.AllowedGroups)
 				{
 					output += $"\t{allowedGroup.ToString()}\n";
 				}
 			}
+			
+			return output;
+		}
 
-
-
+		public static string ToCLIString(this Witness witness)
+		{
+			string output = "";
+			output += $"Invocation: \n";
+			output += DisassembleScript(witness.InvocationScript);
+			output += $"Verification: \n";
+			output += DisassembleScript(witness.VerificationScript);
 			return output;
 		}
 
@@ -104,8 +164,7 @@ namespace Neo.Cli.Extensions
 		}
 
 		public static string ToCLIString(this Transaction t, ulong blockTimestamp = 0)
-		{
-			var supportedMethods = InteropService.SupportedMethods();
+		{	
 			string output = "";
 			output += $"Hash: {t.Hash}\n";
 			if (blockTimestamp > 0)
@@ -128,51 +187,18 @@ namespace Neo.Cli.Extensions
 			
 
 			output += $"Script:\n";
-			var outputAppends = new List<string>();
-			for (int i = 0; i < t.Script.Length; i++)
+			output += DisassembleScript(t.Script);
+		
+			output += "Witnesses: \n";
+			foreach (var witness in t.Witnesses)
 			{
-				OpCode currentOpCode = (OpCode)t.Script[i];
-
-				if (currentOpCode == OpCode.SYSCALL)
-				{
-					var interop = t.Script.Skip(i + 1).Take(4).ToArray();
-					var callNumber = BitConverter.ToUInt32(interop);
-					var bytes = BitConverter.GetBytes(InteropService.Neo_Native_Deploy);
-					var methodName = supportedMethods[callNumber];
-					outputAppends.Add($"\t{methodName}\n");
-					i = i + 4;
-				} else if (currentOpCode <= OpCode.PUSHBYTES75)
-				{
-					var byteArraySize = (int)currentOpCode;
-					var byteArray = t.Script.Skip(i + 1).Take(byteArraySize).ToArray();
-					var hexString = byteArray.ToHexString();
-					if (byteArraySize == 20)
-					{
-						var scriptHash = new UInt160(byteArray);
-						hexString = scriptHash.ToString();
-					}
-
-					outputAppends.Add($"\t{hexString}\n");
-					i = i + byteArraySize; 
-				}
-
-				outputAppends.Add($"\t{currentOpCode.ToString()}\n");
+				output += $"{witness.ToCLIString()}";
 			}
 
-			for (int i = outputAppends.Count - 1; i >= 0; i--)
-			{
-				output += outputAppends[i];
-			}
 
-			//output += "Witnesses: ";
-			//foreach (var witness in t.Witnesses)
-			//{
-			//	output += $"{witness.ToJson()}";
-			//}
-
-			
 			return output;
 		}
+		
 
 		public static string ToCLIString(this ContractState c)
 		{
