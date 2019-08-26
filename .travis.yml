@@ -3,6 +3,8 @@ sudo: required
 services:
   - docker
 
+dotnet: 2.2.300
+
 install:
   - dotnet tool install -g dotnet-format --version 4.0.40103 --add-source https://dotnet.myget.org/F/format/api/v3/index.json
   - export PATH="$PATH:$HOME/.dotnet/tools"
