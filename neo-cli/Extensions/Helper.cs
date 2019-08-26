@@ -73,6 +73,10 @@ namespace Neo.Cli.Extensions
 			string output = $"\tAccount: {cosigner.Account}\n";
 			
 			output += "\tScope:\t";
+			if (cosigner.Scopes.HasFlag(WitnessScope.Global))
+			{
+				output += $"Global\t";
+			}
 			if (cosigner.Scopes.HasFlag(WitnessScope.CalledByEntry))
 			{
 				output += $"CalledByEntry\t";

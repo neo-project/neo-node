@@ -207,7 +207,7 @@ namespace Neo.Shell
 			var operation = args[2];
 			List<ContractParameter> contractParameters = ParseParameters(args);
 
-			if (operation.Equals("transfer"))
+			if (operation.Equals("transfer", StringComparison.CurrentCultureIgnoreCase))
 			{
 				tx.Sender = (UInt160)contractParameters[0].Value;
 				var cosigner = new Cosigner();
@@ -220,9 +220,6 @@ namespace Neo.Shell
 			{
 				scriptBuilder.EmitAppCall(scriptHash, operation, contractParameters.ToArray());
 				tx.Script = scriptBuilder.ToArray();
-				var hex = tx.Script.ToHexString();
-				Console.WriteLine($"Invoking script with: '{tx.Script.ToHexString()}'");
-				Console.WriteLine($"Script Length: '{tx.Script.ToHexString().Length}'");
 			}
 
 			return tx;
@@ -256,6 +253,9 @@ namespace Neo.Shell
 						case ContractParameterType.Integer:
 							Console.WriteLine($"Result: { result.GetBigInteger() }");
 							break;
+						case ContractParameterType.Boolean:
+							Console.WriteLine($"Result: { result.GetBoolean() }");
+							break;
 					}
 				}
 			}
@@ -282,7 +282,7 @@ namespace Neo.Shell
             if (NoWallet()) return true;
             try
             {
-                tx = Program.Wallet.MakeTransaction(tx.Script);
+                tx = Program.Wallet.MakeTransaction(tx.Script, cosigners: tx.Cosigners);
             }
             catch (InvalidOperationException)
             {
