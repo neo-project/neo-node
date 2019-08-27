@@ -9,6 +9,7 @@ using Neo.Network.P2P.Capabilities;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.Persistence.LevelDB;
+using Neo.Persistence.RocksDB;
 using Neo.Plugins;
 using Neo.Services;
 using Neo.SmartContract;
@@ -36,7 +37,7 @@ namespace Neo.Shell
 {
     internal class MainService : ConsoleServiceBase
     {
-        private LevelDBStore store;
+        private Store store;
         private NeoSystem system;
 
         protected override string Prompt => "neo";
@@ -1054,7 +1055,9 @@ namespace Neo.Shell
                         Settings.Initialize(new ConfigurationBuilder().AddJsonFile("config.mainnet.json").Build());
                         break;
                 }
-            store = new LevelDBStore(Path.GetFullPath(Settings.Default.Paths.Chain));
+            store = Settings.Default.Storage.Engine == StorageSettings.EngineType.RocksDB ?
+                (Store) new RocksDBStore(Path.GetFullPath(Settings.Default.Storage.ChainPath)) :
+                new LevelDBStore(Path.GetFullPath(Settings.Default.Storage.ChainPath));
             system = new NeoSystem(store);
             system.StartNode(new ChannelsConfig
             {

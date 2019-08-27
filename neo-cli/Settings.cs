@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Neo.Network.P2P;
 using Neo.SmartContract.Native;
+using System;
 using System.Net;
 using System.Threading;
 
@@ -8,7 +9,7 @@ namespace Neo
 {
     internal class Settings
     {
-        public PathsSettings Paths { get; }
+        public StorageSettings Storage { get; }
         public P2PSettings P2P { get; }
         public RPCSettings RPC { get; }
         public UnlockWalletSettings UnlockWallet { get; }
@@ -42,7 +43,7 @@ namespace Neo
 
         public Settings(IConfigurationSection section)
         {
-            this.Paths = new PathsSettings(section.GetSection("Paths"));
+            this.Storage = new StorageSettings(section.GetSection("Storage"));
             this.P2P = new P2PSettings(section.GetSection("P2P"));
             this.RPC = new RPCSettings(section.GetSection("RPC"));
             this.UnlockWallet = new UnlockWalletSettings(section.GetSection("UnlockWallet"));
@@ -50,13 +51,21 @@ namespace Neo
         }
     }
 
-    internal class PathsSettings
+    internal class StorageSettings
     {
-        public string Chain { get; }
-
-        public PathsSettings(IConfigurationSection section)
+        public enum EngineType
         {
-            this.Chain = string.Format(section.GetSection("Chain").Value, ProtocolSettings.Default.Magic.ToString("X8"));
+            RocksDB,
+            LevelDB
+        }
+
+        public EngineType Engine { get; }
+        public string ChainPath { get; }
+
+        public StorageSettings(IConfigurationSection section)
+        {
+            this.ChainPath = string.Format(section.GetSection("ChainPath").Value, ProtocolSettings.Default.Magic.ToString("X8"));
+            this.Engine = Enum.Parse<EngineType>(section.GetSection("Engine").Value, true);
         }
     }
 
