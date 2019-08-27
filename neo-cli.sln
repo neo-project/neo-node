@@ -15,6 +15,18 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		..\Dockerfile = ..\Dockerfile
 	EndProjectSection
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Neo.Compiler.MSIL", "..\neo-devpack-dotnet\src\Neo.Compiler.MSIL\Neo.Compiler.MSIL.csproj", "{57483A6C-DC5B-4689-A4F5-2F37B80C270C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DevPack", "DevPack", "{FF511B00-8519-4806-89FA-B815A530843C}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Neo.SmartContract.Framework", "..\neo-devpack-dotnet\src\Neo.SmartContract.Framework\Neo.SmartContract.Framework.csproj", "{70B454E6-3D08-4529-BEC0-EBBDEC65CD63}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Neo.Compiler.MSIL.UnitTests", "..\neo-devpack-dotnet\tests\Neo.Compiler.MSIL.UnitTests\Neo.Compiler.MSIL.UnitTests.csproj", "{29EFB1D1-C953-4985-917A-FF5D9A65BF59}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Neo.SmartContract.Framework.UnitTests", "..\neo-devpack-dotnet\tests\Neo.SmartContract.Framework.UnitTests\Neo.SmartContract.Framework.UnitTests.csproj", "{4F6A0359-F78C-48D6-80DB-E3F8D49F702B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "neo.UnitTests", "..\neo\neo.UnitTests\neo.UnitTests.csproj", "{5A02767A-CF6A-4CA9-897E-03135C0C95B6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,9 +45,35 @@ Global
 		{3D438AAE-BE70-4A90-82A2-E967AC62E773}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3D438AAE-BE70-4A90-82A2-E967AC62E773}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3D438AAE-BE70-4A90-82A2-E967AC62E773}.Release|Any CPU.Build.0 = Release|Any CPU
+		{57483A6C-DC5B-4689-A4F5-2F37B80C270C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{57483A6C-DC5B-4689-A4F5-2F37B80C270C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{57483A6C-DC5B-4689-A4F5-2F37B80C270C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{57483A6C-DC5B-4689-A4F5-2F37B80C270C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{70B454E6-3D08-4529-BEC0-EBBDEC65CD63}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{70B454E6-3D08-4529-BEC0-EBBDEC65CD63}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{70B454E6-3D08-4529-BEC0-EBBDEC65CD63}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{70B454E6-3D08-4529-BEC0-EBBDEC65CD63}.Release|Any CPU.Build.0 = Release|Any CPU
+		{29EFB1D1-C953-4985-917A-FF5D9A65BF59}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{29EFB1D1-C953-4985-917A-FF5D9A65BF59}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{29EFB1D1-C953-4985-917A-FF5D9A65BF59}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{29EFB1D1-C953-4985-917A-FF5D9A65BF59}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4F6A0359-F78C-48D6-80DB-E3F8D49F702B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4F6A0359-F78C-48D6-80DB-E3F8D49F702B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4F6A0359-F78C-48D6-80DB-E3F8D49F702B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4F6A0359-F78C-48D6-80DB-E3F8D49F702B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5A02767A-CF6A-4CA9-897E-03135C0C95B6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A02767A-CF6A-4CA9-897E-03135C0C95B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A02767A-CF6A-4CA9-897E-03135C0C95B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A02767A-CF6A-4CA9-897E-03135C0C95B6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{57483A6C-DC5B-4689-A4F5-2F37B80C270C} = {FF511B00-8519-4806-89FA-B815A530843C}
+		{70B454E6-3D08-4529-BEC0-EBBDEC65CD63} = {FF511B00-8519-4806-89FA-B815A530843C}
+		{29EFB1D1-C953-4985-917A-FF5D9A65BF59} = {FF511B00-8519-4806-89FA-B815A530843C}
+		{4F6A0359-F78C-48D6-80DB-E3F8D49F702B} = {FF511B00-8519-4806-89FA-B815A530843C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {325D7CCF-5E69-4890-BEF5-9AEFBFF82E35}
