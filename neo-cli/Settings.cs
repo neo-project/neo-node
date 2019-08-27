@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Neo.Network.P2P;
 using Neo.SmartContract.Native;
 using System;
@@ -66,6 +66,13 @@ namespace Neo
         {
             this.ChainPath = string.Format(section.GetSection("ChainPath").Value, ProtocolSettings.Default.Magic.ToString("X8"));
             this.Engine = Enum.Parse<EngineType>(section.GetSection("Engine").Value, true);
+
+            if (IntPtr.Size == 0x04)
+            {
+                // Ensure that LevelDB is mandatory on x86 computers
+
+                this.Engine = EngineType.LevelDB;
+            }
         }
     }
 
