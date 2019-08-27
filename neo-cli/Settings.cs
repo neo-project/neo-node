@@ -2,6 +2,7 @@
 using Neo.Network.P2P;
 using Neo.SmartContract.Native;
 using System.Net;
+using System.Threading;
 
 namespace Neo
 {
@@ -13,12 +14,30 @@ namespace Neo
         public UnlockWalletSettings UnlockWallet { get; }
         public string PluginURL { get; }
 
-        public static Settings Default { get; }
+        static Settings _default;
 
-        static Settings()
+        static bool UpdateDefault(IConfiguration configuration)
         {
-            IConfigurationSection section = new ConfigurationBuilder().AddJsonFile("config.json").Build().GetSection("ApplicationConfiguration");
-            Default = new Settings(section);
+            var settings = new Settings(configuration.GetSection("ApplicationConfiguration"));
+            return null == Interlocked.CompareExchange(ref _default, settings, null);
+        }
+
+        public static bool Initialize(IConfiguration configuration)
+        {
+            return UpdateDefault(configuration);
+        }
+
+        public static Settings Default
+        {
+            get
+            {
+                if (_default == null)
+                {
+                    UpdateDefault(Helper.LoadConfig("config"));
+                }
+
+                return _default;
+            }
         }
 
         public Settings(IConfigurationSection section)
@@ -73,7 +92,7 @@ namespace Neo
             this.Port = ushort.Parse(section.GetSection("Port").Value);
             this.SslCert = section.GetSection("SslCert").Value;
             this.SslCertPassword = section.GetSection("SslCertPassword").Value;
-            this.MaxGasInvoke = (long)BigDecimal.Parse(section.GetValue("MaxGasInvoke", "0"), NativeContract.GAS.Decimals).Value;
+            this.MaxGasInvoke = (long)BigDecimal.Parse(section.GetValue("MaxGasInvoke", "10"), NativeContract.GAS.Decimals).Value;
         }
     }
 
