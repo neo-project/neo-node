@@ -1193,7 +1193,7 @@ namespace Neo.Shell
 
             var pluginName = args[1];
 
-            if (!Plugin.Plugins.Any(u => u.Name == pluginName))
+            if (!Plugin.Plugins.Any(u => u.Name.Contains(pluginName)))
             {
                 Console.WriteLine("Plugin not found");
                 return true;
