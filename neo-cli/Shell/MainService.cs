@@ -28,7 +28,6 @@ using System.Net;
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
-using Neo.Wallets;
 using System.Threading;
 using System.Threading.Tasks;
 using ECCurve = Neo.Cryptography.ECC.ECCurve;
@@ -103,34 +102,65 @@ namespace Neo.Shell
                     return OnInstallCommand(args);
                 case "uninstall":
                     return OnUnInstallCommand(args);
-				case "build":
-					return OnBuildCommand(args);
+				case "tool":
+					return OnToolCommand(args);
                 default:
                     return base.OnCommand(args);
             }
         }
 
-		private bool OnBuildCommand(string[] args)
+		private bool OnToolCommand(string[] args)
 		{
-			if (args.Length < 2)
-			{
-				Console.WriteLine($"Invalid parameters");
-			}
-			else
-			{
-				string args1 = args[1];
-				if (knownSmartContracts.ContainsKey(args1))
-				{
-					args[1] = knownSmartContracts[args1];
-				}
-				var invocationTransaction = BuildInvocationTransaction(args);
-				Console.WriteLine(invocationTransaction.ToJson());
-			}
-
-			return true;
+            switch (args[1].ToLower())
+            {
+                case "hextostr":
+                case "hextostring":
+                    return OnHexToStr(args);
+                case "hextonumber":
+                    return OnHexToNumber(args);
+                default:
+                    return base.OnCommand(args);
+            }
 		}
 
-		private bool OnBroadcastCommand(string[] args)
+        private bool OnHexToStr(string[] args)
+        {
+            if (args.Length != 3)
+            {
+                Console.WriteLine("Invalid Parameters");
+            }else
+            {
+                var hexString = args[2];
+                var bytes = hexString.HexToBytes();
+                var utf8String = Encoding.UTF8.GetString(bytes);
+                Console.WriteLine($"Hex to String: {utf8String}");
+            }
+
+            return true;
+        }
+
+        private bool OnHexToNumber(string[] args)
+        {
+            if (args.Length != 3)
+            {
+                Console.WriteLine("Invalid Parameters");
+            }
+            else
+            {
+                var hexString = args[2];
+                if(hexString.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    hexString = hexString.Substring(2);
+                }
+                var bytes = hexString.HexToBytes();
+                var number = new BigInteger(bytes);
+                Console.WriteLine($"Hex to Number: {number}");
+            }
+
+            return true;
+        }
+
+        private bool OnBroadcastCommand(string[] args)
         {
             if (!Enum.TryParse(args[1], true, out MessageCommand command))
             {
@@ -1151,13 +1181,25 @@ namespace Neo.Shell
 
 		private bool OnShowStorageKeys(string[] args)
 		{
-			if (args.Length != 3)
+			if (args.Length < 4)
 			{
-				Console.WriteLine("Missing contract hash");
+				Console.WriteLine("Missing contract hash or key prefix");
 			}
 			else
 			{
 				string contractHash = args[2];
+                byte prefix = 0;
+                if(args.Length >= 4)
+                {
+                    prefix = Byte.Parse(args[3]);
+                }
+                Func<object, string> keyParser = KeyValueParser.DefaultKeyParser;
+                Func<object, string> valueParser = KeyValueParser.DefaultValueParser;
+                if(args.Length > 4 && args.Length != 6)
+                {
+                    Console.WriteLine("Please use parser for both keys and values. String, address, hex or number");
+                }
+
 				if (knownSmartContracts.ContainsKey(contractHash))
 				{
 					contractHash = knownSmartContracts[contractHash];
@@ -1169,12 +1211,26 @@ namespace Neo.Shell
 					var smartContract = snapshot.Contracts.TryGet(contract160);
 					if (smartContract != null)
 					{
-						var query = contract160.ToArray().Append((byte)20).ToArray();
+                        var query = contract160.ToArray();
+                        if (prefix > 0)
+                            query = query.Append(prefix).ToArray();
 						var keys = snapshot.Storages.Find(query);
+                        int maxResults = 100;
+                        int currentIndex = 0;
 						foreach (var key in keys)
 						{
-							Console.WriteLine($"Storage Key: {key.Key.Key.ToHexString()}\n");
-							Console.WriteLine($"Storage Value: {key.Value.ToArray().ToHexString()}\n");
+                            //Removes prefix - 1 byte / 2 chars
+                            var parsedKey = keyParser(key.Key.Key);
+                            var parsedValue = valueParser(key.Value.Value);
+
+                            Console.WriteLine($"Storage Key: {parsedKey}");
+							Console.WriteLine($"Storage Value: {parsedValue}");
+                            currentIndex++;
+                            if(currentIndex == maxResults)
+                            {
+                                Console.WriteLine($"Max results reached (100)");
+                                break;
+                            }
 						}
 					}
 				}
