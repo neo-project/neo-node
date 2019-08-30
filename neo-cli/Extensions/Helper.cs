@@ -15,6 +15,12 @@ namespace Neo.Cli.Extensions
 	{
 		public static DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, 0);
 
+
+        public static bool IsAddress(this string strParam)
+        {
+            return strParam.StartsWith("A") && strParam.Length == 34;
+        }
+
 		public static string DisassembleScript(byte[] script)
 		{
 			var supportedMethods = InteropService.SupportedMethods();
@@ -139,6 +145,7 @@ namespace Neo.Cli.Extensions
 
 			return output;
 		}
+
 
 		public static string ToCLIString(this Block block)
 		{

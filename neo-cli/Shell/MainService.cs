@@ -118,10 +118,33 @@ namespace Neo.Shell
                     return OnHexToStr(args);
                 case "hextonumber":
                     return OnHexToNumber(args);
+                case "addrtoscript":
+                case "addresstoscript":
+                case "addresstoscripthash":
+                    return OnAddressToScript(args);
+                case "scripttoaddr":
+                case "scripthashtoaddr":
+                case "scripthashtoaddress":
+                    return OnScripthashToAddress(args);
                 default:
                     return base.OnCommand(args);
             }
 		}
+
+        private bool OnAddressToScript(string[] args)
+        {
+            var address = args[2];
+            Console.WriteLine($"Address to ScriptHash: {address.ToScriptHash()}");
+            return true;
+        }
+
+        private bool OnScripthashToAddress(string[] args)
+        {
+            var scriptHash = UInt160.Parse(args[2]);
+            var hexScript = scriptHash.ToAddress();
+            Console.WriteLine($"ScriptHash to Address: {hexScript}");
+            return true;
+        }
 
         private bool OnHexToStr(string[] args)
         {
@@ -266,7 +289,7 @@ namespace Neo.Shell
             ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, testMode: true);
 
             Console.WriteLine($"VM State: {engine.State}");
-            Console.WriteLine($"Gas Consumed: {(engine.GasConsumed / Math.Pow(10, NeoToken.GAS.Decimals))}");
+            Console.WriteLine($"Gas Consumed: {(engine.GasConsumed / NeoToken.GAS.Factor)}");
 			if (engine.ResultStack.Count == 1)
 			{
 				using (var snapshot = Blockchain.Singleton.GetSnapshot())
@@ -355,7 +378,7 @@ namespace Neo.Shell
 					}
 
 				}
-				else if (arg.StartsWith("A") && arg.Length == 34)
+				else if (arg.IsAddress())
 				{
 					contractParameters.Add(new ContractParameter()
 					{
@@ -1163,6 +1186,8 @@ namespace Neo.Shell
 				{
 					var blockHash = snapshot.CurrentBlockHash;
 					var countedTransactions = 0;
+                    var countedBlocks = 0;
+                    var maxBlocks = 10000;
 					Block block = snapshot.GetBlock(blockHash);
 					do
 					{
@@ -1172,7 +1197,20 @@ namespace Neo.Shell
 						}
 						countedTransactions += block.Transactions.Length;
 						block = snapshot.GetBlock(block.PrevHash);
-					} while (block != null && desiredCount > countedTransactions);
+                        countedBlocks++;
+                        if (countedBlocks == maxBlocks)
+                        {
+                            var shouldContinue = ReadUserInput("Max searched blocks reached (10000), continue? ").IsYes();
+                            if (shouldContinue)
+                            {
+                                countedBlocks = 0;
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
+                    } while (block != null && desiredCount > countedTransactions);
 				}
 			}
 
@@ -1188,14 +1226,25 @@ namespace Neo.Shell
 			else
 			{
 				string contractHash = args[2];
-                byte prefix = 0;
+                byte storagePrefix = Byte.Parse(args[3]);
+                byte[] keyQuery = new byte[0];
                 if(args.Length >= 4)
                 {
-                    prefix = Byte.Parse(args[3]);
+
+                        var stringPrefix = args[4];
+                        if (stringPrefix.IsAddress())
+                        {
+                            keyQuery = stringPrefix.ToScriptHash().ToArray();
+                        }
+                        else if (stringPrefix.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            stringPrefix = stringPrefix.Substring(2);
+                            keyQuery = stringPrefix.HexToBytes();
+                        }
                 }
                 Func<object, string> keyParser = KeyValueParser.DefaultKeyParser;
                 Func<object, string> valueParser = KeyValueParser.DefaultValueParser;
-                if(args.Length > 4 && args.Length != 6)
+                if(args.Length > 5 && args.Length != 7)
                 {
                     Console.WriteLine("Please use parser for both keys and values. String, address, hex or number");
                 }
@@ -1212,14 +1261,17 @@ namespace Neo.Shell
 					if (smartContract != null)
 					{
                         var query = contract160.ToArray();
-                        if (prefix > 0)
-                            query = query.Append(prefix).ToArray();
-						var keys = snapshot.Storages.Find(query);
+                        if (storagePrefix > 0)
+                            query = query.Append(storagePrefix).ToArray();
+
+                        if (keyQuery.Length > 0)
+                            query = query.Concat(keyQuery).ToArray();
+
+                        var keys = snapshot.Storages.Find(query);
                         int maxResults = 100;
                         int currentIndex = 0;
 						foreach (var key in keys)
 						{
-                            //Removes prefix - 1 byte / 2 chars
                             var parsedKey = keyParser(key.Key.Key);
                             var parsedValue = valueParser(key.Value.Value);
 
@@ -1228,8 +1280,15 @@ namespace Neo.Shell
                             currentIndex++;
                             if(currentIndex == maxResults)
                             {
-                                Console.WriteLine($"Max results reached (100)");
-                                break;
+                                var shouldContinue = ReadUserInput("Max results reached (100), continue? ").IsYes();
+                                if(shouldContinue)
+                                {
+                                    currentIndex = 0;
+                                }
+                                else
+                                {
+                                    break;
+                                }
                             }
 						}
 					}
