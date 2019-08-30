@@ -116,8 +116,12 @@ namespace Neo.Shell
                 case "hextostr":
                 case "hextostring":
                     return OnHexToStr(args);
+                case "stringtohex":
+                    return OnStringToHex(args);
                 case "hextonumber":
                     return OnHexToNumber(args);
+                case "numbertohex":
+                    return OnNumberToHex(args);
                 case "addrtoscript":
                 case "addresstoscript":
                 case "addresstoscripthash":
@@ -131,27 +135,31 @@ namespace Neo.Shell
             }
 		}
 
-        private bool OnAddressToScript(string[] args)
+        /// <summary>
+        /// Prints a string in hex (transfer -> 7472616e73666572)
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private bool OnStringToHex(string[] args)
         {
-            var address = args[2];
-            Console.WriteLine($"Address to ScriptHash: {address.ToScriptHash()}");
+            var strParam = args[2];
+            var bytesParam = Encoding.UTF8.GetBytes(strParam);
+            Console.WriteLine($"Number to Hex: {bytesParam.ToHexString()}");
             return true;
         }
 
-        private bool OnScripthashToAddress(string[] args)
-        {
-            var scriptHash = UInt160.Parse(args[2]);
-            var hexScript = scriptHash.ToAddress();
-            Console.WriteLine($"ScriptHash to Address: {hexScript}");
-            return true;
-        }
-
+        /// <summary>
+        /// Converts an hexadecimal value to an UTF-8 string (7472616e73666572 -> transfer)
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
         private bool OnHexToStr(string[] args)
         {
             if (args.Length != 3)
             {
                 Console.WriteLine("Invalid Parameters");
-            }else
+            }
+            else
             {
                 var hexString = args[2];
                 var bytes = hexString.HexToBytes();
@@ -162,6 +170,50 @@ namespace Neo.Shell
             return true;
         }
 
+
+        /// <summary>
+        /// Converts an address to its script hash (7472616e73666572 -> ARvw7LYLTUgUurzU2YMioB922pur7mVCjv)
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private bool OnAddressToScript(string[] args)
+        {
+            var address = args[2];
+            Console.WriteLine($"Address to ScriptHash: {address.ToScriptHash()}");
+            return true;
+        }
+
+        /// <summary>
+        /// Converts an script hash to its equivalent address  (ARvw7LYLTUgUurzU2YMioB922pur7mVCjv -> transfer)
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private bool OnScripthashToAddress(string[] args)
+        {
+            var scriptHash = UInt160.Parse(args[2]);
+            var hexScript = scriptHash.ToAddress();
+            Console.WriteLine($"ScriptHash to Address: {hexScript}");
+            return true;
+        }
+
+        /// <summary>
+        /// Prints the desired number in hex format
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private bool OnNumberToHex(string[] args)
+        {
+            var strParam = args[2];
+            var numberParam = BigInteger.Parse(strParam);
+            Console.WriteLine($"Number to Hex: {numberParam.ToByteArray().ToHexString()}");
+            return true;
+        }
+
+        /// <summary>
+        /// Converts a hex value and print it as a number
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
         private bool OnHexToNumber(string[] args)
         {
             if (args.Length != 3)
@@ -289,7 +341,7 @@ namespace Neo.Shell
             ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, testMode: true);
 
             Console.WriteLine($"VM State: {engine.State}");
-            Console.WriteLine($"Gas Consumed: {(engine.GasConsumed / NeoToken.GAS.Factor)}");
+            Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NeoToken.GAS.Decimals)}");
 			if (engine.ResultStack.Count == 1)
 			{
 				using (var snapshot = Blockchain.Singleton.GetSnapshot())
@@ -766,6 +818,18 @@ namespace Neo.Shell
                 "\tshow state\n" +
                 "\tshow pool [verbose]\n" +
                 "\trelay <jsonObjectToSign>\n" +
+                "Show Commands:\n" +
+                "\tshow block <index/hash>\n" +
+                "\tshow transaction <hash>\n" +
+                "\tshow last-transactions <1 - 100>\n" +
+                "\tshow contract <script hash>\n" +
+                "Tool Commands:\n" +
+                "\ttool addressToScript <address>\n" +
+                "\ttool scriptToAddress <scriptHash>\n" +
+                "\ttool hexToString <hex string>\n" +
+                "\ttool stringToHex <scriptHash>\n" +
+                "\ttool hexToNumber <scriptHash>\n" +
+                "\ttool numberToHex <number>\n" +
                 "Plugin Commands:\n" +
                 "\tplugins\n" +
                 "\tinstall <pluginName>\n" +
@@ -1166,6 +1230,11 @@ namespace Neo.Shell
             }
         }
 
+        /// <summary>
+        /// Prints the last transactions in the blockchain
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
 		private bool OnShowLastTransactions(string[] args)
 		{
 			if (args.Length != 3)
@@ -1192,8 +1261,11 @@ namespace Neo.Shell
 						foreach (var tx in block.Transactions)
 						{
 							Console.WriteLine(tx.ToCLIString(block.Timestamp));
-						}
-						countedTransactions += block.Transactions.Length;
+                            countedTransactions++;
+                            if (countedTransactions == desiredCount)
+                                return true;
+                        }
+						
 						block = snapshot.GetBlock(block.PrevHash);
                         countedBlocks++;
                         if (countedBlocks == maxBlocks)
@@ -1215,6 +1287,11 @@ namespace Neo.Shell
 			return true;
 		}
 
+        /// <summary>
+        /// Prints the SmartContract ABI
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
 		private bool OnShowContract(string[] args)
 		{
 			if (args.Length != 3)
@@ -1243,6 +1320,12 @@ namespace Neo.Shell
 			return true;
 		}
 
+
+        /// <summary>
+        /// Find and print a transaction using its hash
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
 		private bool OnShowTransaction(string[] args)
 		{
 			if (args.Length != 3)
@@ -1266,7 +1349,11 @@ namespace Neo.Shell
 			return true;
 		}
 
-		// index or hash
+		/// <summary>
+        /// Finds and print the block using it's scripthash or index
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
 		private bool OnShowBlock(string[] args)
 		{
 			if (args.Length != 3)
@@ -1278,7 +1365,7 @@ namespace Neo.Shell
 				string blockId = args[2];
 				using (var snapshot = Blockchain.Singleton.GetSnapshot())
 				{
-					if (blockId.Length == 64)
+					if (blockId.Length == 66)
 					{
 						var blockHash = UInt256.Parse(blockId);
 						if (snapshot.ContainsBlock(blockHash))

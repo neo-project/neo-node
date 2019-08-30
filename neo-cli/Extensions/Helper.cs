@@ -1,6 +1,7 @@
 ﻿using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
 using Neo.SmartContract;
+using Neo.SmartContract.Native.Tokens;
 using Neo.VM;
 using Neo.VM.Types;
 using Neo.Wallets;
@@ -79,7 +80,7 @@ namespace Neo.Cli.Extensions
 			string output = $"\tAccount: {cosigner.Account}\n";
 			
 			output += "\tScope:\t";
-			if (cosigner.Scopes.HasFlag(WitnessScope.Global))
+			if (cosigner.Scopes == WitnessScope.Global)
 			{
 				output += $"Global\t";
 			}
@@ -184,8 +185,8 @@ namespace Neo.Cli.Extensions
 				blockTime = TimeZoneInfo.ConvertTimeFromUtc(blockTime, TimeZoneInfo.Local);
 				output += $"Timestamp: {blockTime.ToShortDateString()} {blockTime.ToLongTimeString()}\n";
 			}
-			output += $"NetFee: {t.NetworkFee}\n";
-			output += $"SysFee: {t.SystemFee}\n";
+			output += $"NetFee: {new BigDecimal(t.NetworkFee, NeoToken.GAS.Decimals)}\n";
+			output += $"SysFee: {new BigDecimal(t.SystemFee, NeoToken.GAS.Decimals)}\n";
 			output += $"Sender: {t.Sender.ToAddress()}\n";
 			if (t.Cosigners != null && t.Cosigners.Length > 0)
 			{
