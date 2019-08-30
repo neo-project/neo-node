@@ -1159,8 +1159,6 @@ namespace Neo.Shell
 					return OnShowTransaction(args);
 				case "contract":
 					return OnShowContract(args);
-				case "keys":
-					return OnShowStorageKeys(args);
 				case "last-transactions":
 					return OnShowLastTransactions(args);
 				default:
@@ -1211,87 +1209,6 @@ namespace Neo.Shell
                             }
                         }
                     } while (block != null && desiredCount > countedTransactions);
-				}
-			}
-
-			return true;
-		}
-
-		private bool OnShowStorageKeys(string[] args)
-		{
-			if (args.Length < 4)
-			{
-				Console.WriteLine("Missing contract hash or key prefix");
-			}
-			else
-			{
-				string contractHash = args[2];
-                byte storagePrefix = Byte.Parse(args[3]);
-                byte[] keyQuery = new byte[0];
-                if(args.Length >= 4)
-                {
-
-                        var stringPrefix = args[4];
-                        if (stringPrefix.IsAddress())
-                        {
-                            keyQuery = stringPrefix.ToScriptHash().ToArray();
-                        }
-                        else if (stringPrefix.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase))
-                        {
-                            stringPrefix = stringPrefix.Substring(2);
-                            keyQuery = stringPrefix.HexToBytes();
-                        }
-                }
-                Func<object, string> keyParser = KeyValueParser.DefaultKeyParser;
-                Func<object, string> valueParser = KeyValueParser.DefaultValueParser;
-                if(args.Length > 5 && args.Length != 7)
-                {
-                    Console.WriteLine("Please use parser for both keys and values. String, address, hex or number");
-                }
-
-				if (knownSmartContracts.ContainsKey(contractHash))
-				{
-					contractHash = knownSmartContracts[contractHash];
-				}
-
-				using (var snapshot = Blockchain.Singleton.GetSnapshot())
-				{
-					var contract160 = UInt160.Parse(contractHash);
-					var smartContract = snapshot.Contracts.TryGet(contract160);
-					if (smartContract != null)
-					{
-                        var query = contract160.ToArray();
-                        if (storagePrefix > 0)
-                            query = query.Append(storagePrefix).ToArray();
-
-                        if (keyQuery.Length > 0)
-                            query = query.Concat(keyQuery).ToArray();
-
-                        var keys = snapshot.Storages.Find(query);
-                        int maxResults = 100;
-                        int currentIndex = 0;
-						foreach (var key in keys)
-						{
-                            var parsedKey = keyParser(key.Key.Key);
-                            var parsedValue = valueParser(key.Value.Value);
-
-                            Console.WriteLine($"Storage Key: {parsedKey}");
-							Console.WriteLine($"Storage Value: {parsedValue}");
-                            currentIndex++;
-                            if(currentIndex == maxResults)
-                            {
-                                var shouldContinue = ReadUserInput("Max results reached (100), continue? ").IsYes();
-                                if(shouldContinue)
-                                {
-                                    currentIndex = 0;
-                                }
-                                else
-                                {
-                                    break;
-                                }
-                            }
-						}
-					}
 				}
 			}
 
