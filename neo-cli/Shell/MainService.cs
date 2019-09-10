@@ -1192,12 +1192,15 @@ namespace Neo.Shell
             }
 
             var pluginName = args[1];
-
-            if (!Plugin.Plugins.Any(u => u.Name.Contains(pluginName)))
+            var plugin = Plugin.Plugins.Where(u => u.Name.Contains(pluginName)).FirstOrDefault();
+            if (plugin == null)
             {
                 Console.WriteLine("Plugin not found");
                 return true;
             }
+
+            // Get library name
+            pluginName = Path.GetFileNameWithoutExtension(plugin.GetType().Assembly.ManifestModule.Name);
 
             if (Directory.Exists(Path.Combine("Plugins", pluginName)))
             {
