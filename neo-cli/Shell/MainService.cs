@@ -212,7 +212,7 @@ namespace Neo.Shell
                 Console.WriteLine("Error: insufficient balance.");
                 return true;
             }
-            if (ReadUserInput("relay tx(no|yes)") != "yes")
+            if (!ReadUserInput("relay tx(no|yes)").IsYes())
             {
                 return true;
             }
@@ -385,11 +385,12 @@ namespace Neo.Shell
             }
 
             string path = "address.txt";
-
-            if (File.Exists(path) &&
-                ReadUserInput($"The file '{path}' already exists, do you want to overwrite it? (yes|no)", false)?.ToLowerInvariant() != "yes")
+            if (File.Exists(path))
             {
-                return true;
+                if (!ReadUserInput($"The file '{path}' already exists, do you want to overwrite it? (yes|no)", false).IsYes())
+                {
+                    return true;
+                }
             }
 
             ushort count;
@@ -429,10 +430,12 @@ namespace Neo.Shell
                 Console.WriteLine("error");
                 return true;
             }
-            if (system.RpcServer != null &&
-                ReadUserInput("Warning: Opening the wallet with RPC turned on could result in asset loss. Are you sure you want to do this? (yes|no)", false)?.ToLowerInvariant() != "yes")
+            if (system.RpcServer != null)
             {
-                return true;
+                if (!ReadUserInput("Warning: Opening the wallet with RPC turned on could result in asset loss. Are you sure you want to do this? (yes|no)", false).IsYes())
+                {
+                    return true;
+                }
             }
             string path = args[2];
             string password = ReadUserInput("password", true);
@@ -670,7 +673,10 @@ namespace Neo.Shell
 
                 if (file.Length > 1024 * 1024)
                 {
-                    if (ReadUserInput($"The file '{file.FullName}' is too big, do you want to continue? (yes|no)", false)?.ToLowerInvariant() != "yes") return true;
+                    if (!ReadUserInput($"The file '{file.FullName}' is too big, do you want to continue? (yes|no)", false).IsYes())
+                    {
+                        return true;
+                    }
                 }
 
                 string[] lines = File.ReadAllLines(args[2]);
@@ -806,10 +812,12 @@ namespace Neo.Shell
                 Console.WriteLine("error");
                 return true;
             }
-            if (system.RpcServer != null &&
-                ReadUserInput("Warning: Opening the wallet with RPC turned on could result in asset loss. Are you sure you want to do this? (yes|no)", false)?.ToLowerInvariant() != "yes")
+            if (system.RpcServer != null)
             {
-                return true;
+                if (!ReadUserInput("Warning: Opening the wallet with RPC turned on could result in asset loss. Are you sure you want to do this? (yes|no)", false).IsYes())
+                {
+                    return true;
+                }
             }
             string path = args[2];
             if (!File.Exists(path))
