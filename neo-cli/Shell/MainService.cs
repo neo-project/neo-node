@@ -142,8 +142,7 @@ namespace Neo.Shell
             if (NoWallet()) return true;
             byte[] script = LoadDeploymentScript(
                 /* filePath */ args[1],
-                /* hasStorage */ args[2].ToBool(),
-                /* isPayable */ args[3].ToBool(),
+                /* manifest */ args[2],
                 /* scriptHash */ out var scriptHash);
 
             Transaction tx;
@@ -219,9 +218,20 @@ namespace Neo.Shell
             return SignAndSendTx(tx);
         }
 
-        private byte[] LoadDeploymentScript(string nefFilePath, bool hasStorage, bool isPayable, out UInt160 scriptHash)
+        private byte[] LoadDeploymentScript(string nefFilePath, string manifestFilePath, out UInt160 scriptHash)
         {
-            var info = new FileInfo(nefFilePath);
+            // Read manifest
+
+            var info = new FileInfo(manifestFilePath);
+            if (!info.Exists || info.Length >= Transaction.MaxTransactionSize)
+            {
+                throw new ArgumentException(nameof(manifestFilePath));
+            }
+            var manifest = File.ReadAllText(manifestFilePath);
+
+            // Read nef
+
+            info = new FileInfo(nefFilePath);
             if (!info.Exists || info.Length >= Transaction.MaxTransactionSize)
             {
                 throw new ArgumentException(nameof(nefFilePath));
@@ -232,14 +242,13 @@ namespace Neo.Shell
             {
                 file = stream.ReadSerializable<NefFile>();
             }
-            scriptHash = file.ScriptHash;
 
-            ContractFeatures properties = ContractFeatures.NoProperty;
-            if (hasStorage) properties |= ContractFeatures.HasStorage;
-            if (isPayable) properties |= ContractFeatures.Payable;
+            // Build script
+
+            scriptHash = file.ScriptHash;
             using (ScriptBuilder sb = new ScriptBuilder())
             {
-                sb.EmitSysCall(InteropService.Neo_Contract_Create, file.Script, properties);
+                sb.EmitSysCall(InteropService.Neo_Contract_Create, file.Script, manifest);
                 return sb.ToArray();
             }
         }
@@ -572,7 +581,7 @@ namespace Neo.Shell
                 "\tsend <id|alias> <address> <value>\n" +
                 "\tsign <jsonObjectToSign>\n" +
                 "Contract Commands:\n" +
-                "\tdeploy <nefFilePath> <hasStorage (true|false)> <isPayable (true|false)\n" +
+                "\tdeploy <nefFilePath> <manifestFile>\n" +
                 "\tinvoke <scripthash> <command> [optionally quoted params separated by space]\n" +
                 "Node Commands:\n" +
                 "\tshow state\n" +
