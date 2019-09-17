@@ -227,7 +227,7 @@ namespace Neo.Shell
             {
                 throw new ArgumentException(nameof(manifestFilePath));
             }
-            var manifest = File.ReadAllText(manifestFilePath);
+            var manifest = ContractManifest.Parse(manifestFilePath);
 
             // Read nef
 
@@ -248,7 +248,7 @@ namespace Neo.Shell
             scriptHash = file.ScriptHash;
             using (ScriptBuilder sb = new ScriptBuilder())
             {
-                sb.EmitSysCall(InteropService.Neo_Contract_Create, file.Script, manifest);
+                sb.EmitSysCall(InteropService.Neo_Contract_Create, file.Script, manifest.ToJson().ToString());
                 return sb.ToArray();
             }
         }
