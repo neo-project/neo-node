@@ -227,6 +227,7 @@ namespace Neo.Shell
             {
                 throw new ArgumentException(nameof(manifestFilePath));
             }
+
             var manifest = ContractManifest.Parse(File.ReadAllText(manifestFilePath));
 
             // Read nef
