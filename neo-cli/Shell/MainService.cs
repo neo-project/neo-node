@@ -244,6 +244,39 @@ namespace Neo.Shell
                 file = stream.ReadSerializable<NefFile>();
             }
 
+            // Basic script checks
+
+            using (var engine = new ApplicationEngine(TriggerType.Application, null, null, 0, true))
+            {
+                var context = engine.LoadScript(file.Script);
+
+                while (context.InstructionPointer <= context.Script.Length)
+                {
+                    // Check bad opcodes
+
+                    if (context.CurrentInstruction == null || !Enum.IsDefined(typeof(OpCode), context.CurrentInstruction.OpCode))
+                    {
+                        throw new FormatException($"OpCode not found at {context.InstructionPointer}");
+                    }
+
+                    switch (context.CurrentInstruction.OpCode)
+                    {
+                        case OpCode.SYSCALL:
+                            {
+                                // Check bad syscalls (NEO2)
+
+                                if (!InteropService.SupportedMethods().ContainsKey(context.CurrentInstruction.TokenU32))
+                                {
+                                    throw new FormatException($"Syscall not found {context.CurrentInstruction.TokenU32}. Are you using a NEO2 smartContract?");
+                                }
+                                break;
+                            }
+                    }
+
+                    context.InstructionPointer += context.CurrentInstruction.Size;
+                }
+            }
+
             // Build script
 
             scriptHash = file.ScriptHash;
