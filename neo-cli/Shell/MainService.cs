@@ -254,26 +254,28 @@ namespace Neo.Shell
                 {
                     // Check bad opcodes
 
-                    if (context.CurrentInstruction == null || !Enum.IsDefined(typeof(OpCode), context.CurrentInstruction.OpCode))
+                    var ci = context.CurrentInstruction;
+
+                    if (ci == null || !Enum.IsDefined(typeof(OpCode), ci.OpCode))
                     {
-                        throw new FormatException($"OpCode not found at {context.InstructionPointer}");
+                        throw new FormatException($"OpCode not found at {context.InstructionPointer}-{((byte)ci.OpCode).ToString("x2")}");
                     }
 
-                    switch (context.CurrentInstruction.OpCode)
+                    switch (ci.OpCode)
                     {
                         case OpCode.SYSCALL:
                             {
                                 // Check bad syscalls (NEO2)
 
-                                if (!InteropService.SupportedMethods().ContainsKey(context.CurrentInstruction.TokenU32))
+                                if (!InteropService.SupportedMethods().ContainsKey(ci.TokenU32))
                                 {
-                                    throw new FormatException($"Syscall not found {context.CurrentInstruction.TokenU32}. Are you using a NEO2 smartContract?");
+                                    throw new FormatException($"Syscall not found {ci.TokenU32}. Are you using a NEO2 smartContract?");
                                 }
                                 break;
                             }
                     }
 
-                    context.InstructionPointer += context.CurrentInstruction.Size;
+                    context.InstructionPointer += ci.Size;
                 }
             }
 
