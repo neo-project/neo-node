@@ -269,7 +269,7 @@ namespace Neo.Shell
 
                                 if (!InteropService.SupportedMethods().ContainsKey(ci.TokenU32))
                                 {
-                                    throw new FormatException($"Syscall not found {ci.TokenU32}. Are you using a NEO2 smartContract?");
+                                    throw new FormatException($"Syscall not found {ci.TokenU32.ToString("x2")}. Are you using a NEO2 smartContract?");
                                 }
                                 break;
                             }
