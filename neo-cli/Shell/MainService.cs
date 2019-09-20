@@ -289,11 +289,10 @@ namespace Neo.Shell
 
         public InvocationTransaction DecorateInvocationTransaction(InvocationTransaction tx)
         {
-            Fixed8 fee = Fixed8.Zero;
+            Fixed8 fee = Fixed8.FromDecimal(0.001m);
 
             if (tx.Size > 1024)
             {
-                fee = Fixed8.FromDecimal(0.001m);
                 fee += Fixed8.FromDecimal(tx.Size * 0.00001m);
             }
 
