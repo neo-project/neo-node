@@ -222,7 +222,7 @@ namespace Neo.Shell
         {
             if (string.IsNullOrEmpty(manifestFilePath))
             {
-                manifestFilePath = Path.ChangeExtension(nefFilePath, ".manifest" + Path.GetExtension(nefFilePath));
+                manifestFilePath = Path.ChangeExtension(nefFilePath, ".manifest.json");
             }
 
             // Read manifest
