@@ -142,7 +142,7 @@ namespace Neo.Shell
             if (NoWallet()) return true;
             byte[] script = LoadDeploymentScript(
                 /* filePath */ args[1],
-                /* manifest */ args[2],
+                /* manifest */ args.Length == 2 ? "" : args[2],
                 /* scriptHash */ out var scriptHash);
 
             Transaction tx;
@@ -220,6 +220,11 @@ namespace Neo.Shell
 
         private byte[] LoadDeploymentScript(string nefFilePath, string manifestFilePath, out UInt160 scriptHash)
         {
+            if (string.IsNullOrEmpty(manifestFilePath))
+            {
+                manifestFilePath = Path.ChangeExtension(nefFilePath, ".manifest" + Path.GetExtension(nefFilePath));
+            }
+
             // Read manifest
 
             var info = new FileInfo(manifestFilePath);
@@ -617,7 +622,7 @@ namespace Neo.Shell
                 "\tsend <id|alias> <address> <value>\n" +
                 "\tsign <jsonObjectToSign>\n" +
                 "Contract Commands:\n" +
-                "\tdeploy <nefFilePath> <manifestFile>\n" +
+                "\tdeploy <nefFilePath> [manifestFile]\n" +
                 "\tinvoke <scripthash> <command> [optionally quoted params separated by space]\n" +
                 "Node Commands:\n" +
                 "\tshow state\n" +
