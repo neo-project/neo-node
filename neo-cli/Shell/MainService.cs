@@ -142,7 +142,7 @@ namespace Neo.Shell
             if (NoWallet()) return true;
             byte[] script = LoadDeploymentScript(
                 /* filePath */ args[1],
-                /* manifest */ args.Length >= 2 ? "" : args[2],
+                /* manifest */ args.Length == 2 ? "" : args[2],
                 /* scriptHash */ out var scriptHash);
 
             Transaction tx;
