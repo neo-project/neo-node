@@ -301,11 +301,7 @@ namespace Neo.Services
                 }
                 catch (Exception ex)
                 {
-#if DEBUG
                     Console.WriteLine($"error: {ex.Message}");
-#else
-                    Console.WriteLine("error");
-#endif
                 }
             }
 
