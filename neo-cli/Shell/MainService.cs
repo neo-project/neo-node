@@ -1021,10 +1021,11 @@ namespace Neo.Shell
 
                     maxLines = Math.Max(maxLines, linesWritten);
 
-                    while (++linesWritten < maxLines)
+                    while (linesWritten < maxLines)
+                    {
                         WriteLineWithoutFlicker("", Console.WindowWidth - 1);
-
-                    maxLines = 0;
+                        maxLines--;
+                    }
 
                     await Task.Delay(500, cancel.Token);
                 }
