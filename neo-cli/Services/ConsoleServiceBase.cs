@@ -1,15 +1,12 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
-using System.Runtime.Loader;
 using System.Security;
 using System.ServiceProcess;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Neo.Services
 {
@@ -21,10 +18,6 @@ namespace Neo.Services
         public abstract string ServiceName { get; }
 
         protected bool ShowPrompt { get; set; } = true;
-
-        private bool _running;
-        private readonly CancellationTokenSource _shutdownTokenSource = new CancellationTokenSource();
-        private readonly CountdownEvent _shutdownAcknowledged = new CountdownEvent(1);
 
         protected virtual bool OnCommand(string[] args)
         {
@@ -218,26 +211,6 @@ namespace Neo.Services
             return securePwd;
         }
 
-        private void TriggerGracefulShutdown()
-        {
-            if (!_running) return;
-            _running = false;
-            _shutdownTokenSource.Cancel();
-            // Wait for us to have triggered shutdown.
-            _shutdownAcknowledged.Wait();
-        }
-
-        private void SigTermEventHandler(AssemblyLoadContext obj)
-        {
-            TriggerGracefulShutdown();
-        }
-
-        private void CancelHandler(object sender, ConsoleCancelEventArgs e)
-        {
-            e.Cancel = true;
-            TriggerGracefulShutdown();
-        }
-
         public void Run(string[] args)
         {
             if (Environment.UserInteractive)
@@ -286,7 +259,6 @@ namespace Neo.Services
                     OnStart(args);
                     RunConsole();
                     OnStop();
-                    _shutdownAcknowledged.Signal();
                 }
             }
             else
@@ -295,28 +267,9 @@ namespace Neo.Services
             }
         }
 
-        protected string ReadLine()
-        {
-            Task<string> readLineTask = Task.Run(() => Console.ReadLine());
-            try
-            {
-                readLineTask.Wait(_shutdownTokenSource.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                return null;
-            }
-
-            return readLineTask.Result;
-        }
-
         private void RunConsole()
         {
-            _running = true;
-            // Register sigterm event handler
-            AssemblyLoadContext.Default.Unloading += SigTermEventHandler;
-            // Register sigint event handler
-            Console.CancelKeyPress += CancelHandler;
+            bool running = true;
             string[] emptyarg = new string[] { "" };
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
                 Console.Title = ServiceName;
@@ -325,7 +278,7 @@ namespace Neo.Services
             Console.WriteLine($"{ServiceName} Version: {Assembly.GetEntryAssembly().GetVersion()}");
             Console.WriteLine();
 
-            while (_running)
+            while (running)
             {
                 if (ShowPrompt)
                 {
@@ -334,7 +287,7 @@ namespace Neo.Services
                 }
 
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                string line = ReadLine()?.Trim();
+                string line = Console.ReadLine()?.Trim();
                 if (line == null) break;
                 Console.ForegroundColor = ConsoleColor.White;
 
@@ -344,7 +297,7 @@ namespace Neo.Services
                     if (args.Length == 0)
                         args = emptyarg;
 
-                    _running = OnCommand(args);
+                    running = OnCommand(args);
                 }
                 catch (Exception ex)
                 {
