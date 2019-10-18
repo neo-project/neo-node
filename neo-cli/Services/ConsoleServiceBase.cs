@@ -335,7 +335,6 @@ namespace Neo.Services
 
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 string line = ReadLine()?.Trim();
-                if (line == null) break;
                 if (line == null)
                 {
                     _running = false;
