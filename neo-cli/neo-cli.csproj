@@ -8,7 +8,7 @@
     <TargetFramework>netcoreapp3.0</TargetFramework>
     <AssemblyName>neo-cli</AssemblyName>
     <OutputType>Exe</OutputType>
-    <PublishReadyToRun>true</PublishReadyToRun>
+    <PublishReadyToRun>false</PublishReadyToRun>
     <PackageId>Neo.CLI</PackageId>
     <RootNamespace>Neo</RootNamespace>
     <Company>The Neo Project</Company>
