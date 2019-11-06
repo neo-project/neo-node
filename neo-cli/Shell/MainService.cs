@@ -1128,6 +1128,10 @@ namespace Neo.Shell
                 {
                     Program.Wallet = OpenWallet(Settings.Default.UnlockWallet.Path, Settings.Default.UnlockWallet.Password);
                 }
+                catch (FileNotFoundException)
+                {
+                    Console.WriteLine($"Warning: wallet file \"{Settings.Default.UnlockWallet.Path}\" not found.");
+                }
                 catch (CryptographicException)
                 {
                     Console.WriteLine($"failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
@@ -1304,6 +1308,11 @@ namespace Neo.Shell
 
         private static Wallet OpenWallet(string path, string password)
         {
+            if (!File.Exists(path))
+            {
+                throw new FileNotFoundException();
+            }
+
             if (Path.GetExtension(path) == ".db3")
             {
                 return UserWallet.Open(path, password);
