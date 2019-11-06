@@ -1054,20 +1054,28 @@ namespace Neo.Shell
             });
             Task task = Task.Run(async () =>
             {
+                int maxLines = 0;
+
                 while (!cancel.Token.IsCancellationRequested)
                 {
                     Console.SetCursorPosition(0, 0);
-                    WriteLineWithoutFlicker($"block: {Blockchain.Singleton.Height}/{Blockchain.Singleton.HeaderHeight}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}");
+                    WriteLineWithoutFlicker($"block: {Blockchain.Singleton.Height}/{Blockchain.Singleton.HeaderHeight}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}", Console.WindowWidth - 1);
+
                     int linesWritten = 1;
-                    foreach (RemoteNode node in LocalNode.Singleton.GetRemoteNodes().Take(Console.WindowHeight - 2).ToArray())
+                    foreach (RemoteNode node in LocalNode.Singleton.GetRemoteNodes().OrderByDescending(u => u.LastBlockIndex).Take(Console.WindowHeight - 2).ToArray())
                     {
-                        WriteLineWithoutFlicker(
-                            $"  ip: {node.Remote.Address.ToString().PadRight(15)}\tport: {node.Remote.Port.ToString().PadRight(5)}\tlisten: {node.ListenerTcpPort.ToString().PadRight(5)}\theight: {node.LastBlockIndex}");
+                        Console.WriteLine(
+                            $"  ip: {node.Remote.Address.ToString().PadRight(15)}\tport: {node.Remote.Port.ToString().PadRight(5)}\tlisten: {node.ListenerTcpPort.ToString().PadRight(5)}\theight: {node.LastBlockIndex.ToString().PadRight(7)}");
                         linesWritten++;
                     }
 
-                    while (++linesWritten < Console.WindowHeight)
-                        WriteLineWithoutFlicker();
+                    maxLines = Math.Max(maxLines, linesWritten);
+
+                    while (linesWritten < maxLines)
+                    {
+                        WriteLineWithoutFlicker("", Console.WindowWidth - 1);
+                        maxLines--;
+                    }
 
                     await Task.Delay(500, cancel.Token);
                 }
@@ -1119,6 +1127,10 @@ namespace Neo.Shell
                 try
                 {
                     Program.Wallet = OpenWallet(Settings.Default.UnlockWallet.Path, Settings.Default.UnlockWallet.Password);
+                }
+                catch (FileNotFoundException)
+                {
+                    Console.WriteLine($"Warning: wallet file \"{Settings.Default.UnlockWallet.Path}\" not found.");
                 }
                 catch (CryptographicException)
                 {
@@ -1296,6 +1308,11 @@ namespace Neo.Shell
 
         private static Wallet OpenWallet(string path, string password)
         {
+            if (!File.Exists(path))
+            {
+                throw new FileNotFoundException();
+            }
+
             if (Path.GetExtension(path) == ".db3")
             {
                 return UserWallet.Open(path, password);
