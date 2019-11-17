@@ -18,7 +18,7 @@ sleep 3
 # Test a RPX smart contract query
 JSONRPC_RES=$( curl --silent \
   --request POST \
-  --url localhost:10332/ \
+  --url localhost:20332/ \
   --header 'accept: application/json' \
   --header 'content-type: application/json' \
   --data '{
