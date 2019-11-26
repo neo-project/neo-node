@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   
   <PropertyGroup>
     <Copyright>2016-2019 The Neo Project</Copyright>
@@ -8,7 +8,6 @@
     <TargetFramework>netcoreapp3.0</TargetFramework>
     <AssemblyName>neo-cli</AssemblyName>
     <OutputType>Exe</OutputType>
-    <PublishReadyToRun>false</PublishReadyToRun>
     <PackageId>Neo.CLI</PackageId>
     <RootNamespace>Neo</RootNamespace>
     <Company>The Neo Project</Company>
@@ -29,7 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Neo" Version="3.0.0-preview1" />
+    <PackageReference Include="Neo" Version="3.0.0-CI00797" />
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="4.5.0" />
   </ItemGroup>
 
