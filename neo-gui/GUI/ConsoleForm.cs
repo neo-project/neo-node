@@ -7,6 +7,7 @@ namespace Neo.GUI
 {
     internal partial class ConsoleForm : Form
     {
+        private Thread thread;
         private readonly QueueReader queue = new QueueReader();
 
         public ConsoleForm()
@@ -19,13 +20,15 @@ namespace Neo.GUI
             base.OnHandleCreated(e);
             Console.SetOut(new TextBoxWriter(textBox1));
             Console.SetIn(queue);
-            Thread thread = new Thread(Program.Service.RunConsole);
+            thread = new Thread(Program.Service.RunConsole);
             thread.Start();
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            queue.Enqueue("exit\n");
+            queue.Enqueue($"exit{Environment.NewLine}");
+            thread.Join();
+            Console.SetIn(new StreamReader(Console.OpenStandardInput()));
             Console.SetOut(new StreamWriter(Console.OpenStandardOutput()));
             base.OnFormClosing(e);
         }
@@ -34,10 +37,18 @@ namespace Neo.GUI
         {
             if (e.KeyCode == Keys.Enter)
             {
+                e.SuppressKeyPress = true;
                 string line = $"{textBox2.Text}{Environment.NewLine}";
                 textBox1.AppendText(line);
-                if (textBox2.Text == "clear")
-                    textBox1.Clear();
+                switch (textBox2.Text.ToLower())
+                {
+                    case "clear":
+                        textBox1.Clear();
+                        break;
+                    case "exit":
+                        Close();
+                        return;
+                }
                 queue.Enqueue(line);
                 textBox2.Clear();
             }
