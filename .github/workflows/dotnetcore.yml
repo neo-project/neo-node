@@ -20,7 +20,9 @@ jobs:
       run: |
         dotnet tool install --tool-path ./ dotnet-format
         ./dotnet-format --check --dry-run -v diagnostic
+    - name: Build
+      run: dotnet publish -o ./out -c Release
     - name: Run tests with expect
       run: |
         sudo apt-get install tcl tk expect
-        expect ./ci/test-neo-cli.expect
+        expect ./.github/workflow/test-neo-cli.expect
