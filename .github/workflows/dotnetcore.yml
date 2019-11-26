@@ -22,7 +22,7 @@ jobs:
         ./dotnet-format --check --dry-run -v diagnostic
     - name: Build
       run: dotnet publish -o ./out -c Release
+    - name: Install dependencies
+      run: apt-get install libleveldb-dev expect
     - name: Run tests with expect
-      run: |
-        sudo apt-get install tcl tk expect
-        expect ./.github/workflow/test-neo-cli.expect
+      run: expect ./.github/workflow/test-neo-cli.expect
