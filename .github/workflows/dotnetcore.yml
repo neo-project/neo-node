@@ -21,4 +21,6 @@ jobs:
         dotnet tool install --tool-path ./ dotnet-format
         ./dotnet-format --check --dry-run -v diagnostic
     - name: Run tests with expect
-      run: expect ./ci/test-neo-cli.expect
+      run: |
+        sudo apt-get install tcl tk expect
+        expect ./ci/test-neo-cli.expect
