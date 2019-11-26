@@ -46,9 +46,18 @@ namespace Neo.Services
             }
         }
 
-        protected internal abstract void OnStart(string[] args);
+        protected internal virtual void OnStart(string[] args)
+        {
+            // Register sigterm event handler
+            AssemblyLoadContext.Default.Unloading += SigTermEventHandler;
+            // Register sigint event handler
+            Console.CancelKeyPress += CancelHandler;
+        }
 
-        protected internal abstract void OnStop();
+        protected internal virtual void OnStop()
+        {
+            _shutdownAcknowledged.Signal();
+        }
 
         private static string[] ParseCommandLine(string line)
         {
@@ -286,7 +295,6 @@ namespace Neo.Services
                     OnStart(args);
                     RunConsole();
                     OnStop();
-                    _shutdownAcknowledged.Signal();
                 }
             }
             else
@@ -310,16 +318,16 @@ namespace Neo.Services
             return readLineTask.Result;
         }
 
-        private void RunConsole()
+        public void RunConsole()
         {
             _running = true;
-            // Register sigterm event handler
-            AssemblyLoadContext.Default.Unloading += SigTermEventHandler;
-            // Register sigint event handler
-            Console.CancelKeyPress += CancelHandler;
             string[] emptyarg = new string[] { "" };
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
-                Console.Title = ServiceName;
+                try
+                {
+                    Console.Title = ServiceName;
+                }
+                catch { }
 
             Console.ForegroundColor = ConsoleColor.DarkGreen;
             Console.WriteLine($"{ServiceName} Version: {Assembly.GetEntryAssembly().GetVersion()}");
