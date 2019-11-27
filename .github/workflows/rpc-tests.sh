@@ -1,16 +1,9 @@
 #!/bin/bash
-#
-# This script is run inside the Docker container and tests neo-cli
-#
+
 set -e
 
-cd /opt/neo-cli
-
-# Run tests with expect
-expect /opt/ci/test-neo-cli.expect
-
 # Start neo-cli in background for additional JSON-RPC tests
-screen -dmS node1 bash -c "dotnet neo-cli.dll --rpc"
+screen -dmS node1 bash -c "dotnet out/neo-cli.dll --rpc"
 
 # Wait a little bit
 sleep 3
