@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Neo.Network.P2P;
 using Neo.SmartContract.Native;
 using System.Net;
@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace Neo
 {
-    internal class Settings
+    public class Settings
     {
         public PathsSettings Paths { get; }
         public P2PSettings P2P { get; }
@@ -50,7 +50,7 @@ namespace Neo
         }
     }
 
-    internal class PathsSettings
+    public class PathsSettings
     {
         public string Chain { get; }
 
@@ -60,7 +60,7 @@ namespace Neo
         }
     }
 
-    internal class P2PSettings
+    public class P2PSettings
     {
         public ushort Port { get; }
         public ushort WsPort { get; }
@@ -78,7 +78,7 @@ namespace Neo
         }
     }
 
-    internal class RPCSettings
+    public class RPCSettings
     {
         public IPAddress BindAddress { get; }
         public ushort Port { get; }

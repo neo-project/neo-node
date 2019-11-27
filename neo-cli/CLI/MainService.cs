@@ -36,14 +36,64 @@ namespace Neo.CLI
 {
     public class MainService : ConsoleServiceBase
     {
-        private static Wallet CurrentWallet;
+        public event EventHandler WalletChanged;
+
         private LevelDBStore store;
-        private NeoSystem system;
+        private Wallet currentWallet;
+
+        public Wallet CurrentWallet
+        {
+            get
+            {
+                return currentWallet;
+            }
+            private set
+            {
+                currentWallet = value;
+                WalletChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        public NeoSystem NeoSystem { get; private set; }
 
         protected override string Prompt => "neo";
         public override string ServiceName => "NEO-CLI";
 
-        private static bool NoWallet()
+        public void CreateWallet(string path, string password)
+        {
+            switch (Path.GetExtension(path))
+            {
+                case ".db3":
+                    {
+                        UserWallet wallet = UserWallet.Create(path, password);
+                        WalletAccount account = wallet.CreateAccount();
+                        Console.WriteLine($"address: {account.Address}");
+                        Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+                        if (NeoSystem.RpcServer != null)
+                            NeoSystem.RpcServer.Wallet = wallet;
+                        CurrentWallet = wallet;
+                    }
+                    break;
+                case ".json":
+                    {
+                        NEP6Wallet wallet = new NEP6Wallet(path);
+                        wallet.Unlock(password);
+                        WalletAccount account = wallet.CreateAccount();
+                        wallet.Save();
+                        Console.WriteLine($"address: {account.Address}");
+                        Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+                        if (NeoSystem.RpcServer != null)
+                            NeoSystem.RpcServer.Wallet = CurrentWallet;
+                        CurrentWallet = wallet;
+                    }
+                    break;
+                default:
+                    Console.WriteLine("Wallet files in that format are not supported, please use a .json or .db3 file extension.");
+                    break;
+            }
+        }
+
+        private bool NoWallet()
         {
             if (CurrentWallet != null) return false;
             Console.WriteLine("You have to open the wallet first.");
@@ -134,7 +184,7 @@ namespace Neo.CLI
                     Console.WriteLine($"Command \"{command}\" is not supported.");
                     return true;
             }
-            system.LocalNode.Tell(Message.Create(command, payload));
+            NeoSystem.LocalNode.Tell(Message.Create(command, payload));
             return true;
         }
 
@@ -313,7 +363,7 @@ namespace Neo.CLI
             {
                 tx.Witnesses = context.GetWitnesses();
 
-                system.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
+                NeoSystem.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
 
                 msg = $"Signed and relayed transaction with hash={tx.Hash}";
                 Console.WriteLine(msg);
@@ -352,7 +402,7 @@ namespace Neo.CLI
                     return true;
                 }
                 tx.Witnesses = context.GetWitnesses();
-                system.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
+                NeoSystem.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
                 Console.WriteLine($"Data relay success, the hash is shown as follows:{Environment.NewLine}{tx.Hash}");
             }
             catch (Exception e)
@@ -409,7 +459,7 @@ namespace Neo.CLI
         {
             if (args.Length != 3) return false;
             if (!byte.TryParse(args[2], out byte viewnumber)) return false;
-            system.Consensus?.Tell(new ConsensusService.SetViewNumber { ViewNumber = viewnumber });
+            NeoSystem.Consensus?.Tell(new ConsensusService.SetViewNumber { ViewNumber = viewnumber });
             return true;
         }
 
@@ -481,7 +531,7 @@ namespace Neo.CLI
                 Console.WriteLine("error");
                 return true;
             }
-            if (system.RpcServer != null)
+            if (NeoSystem.RpcServer != null)
             {
                 if (!ReadUserInput("Warning: Opening the wallet with RPC turned on could result in asset loss. Are you sure you want to do this? (yes|no)", false).IsYes())
                 {
@@ -501,35 +551,7 @@ namespace Neo.CLI
                 Console.WriteLine("error");
                 return true;
             }
-            switch (Path.GetExtension(path))
-            {
-                case ".db3":
-                    {
-                        CurrentWallet = UserWallet.Create(path, password);
-                        WalletAccount account = CurrentWallet.CreateAccount();
-                        Console.WriteLine($"address: {account.Address}");
-                        Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                        if (system.RpcServer != null)
-                            system.RpcServer.Wallet = CurrentWallet;
-                    }
-                    break;
-                case ".json":
-                    {
-                        NEP6Wallet wallet = new NEP6Wallet(path);
-                        wallet.Unlock(password);
-                        WalletAccount account = wallet.CreateAccount();
-                        wallet.Save();
-                        CurrentWallet = wallet;
-                        Console.WriteLine($"address: {account.Address}");
-                        Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                        if (system.RpcServer != null)
-                            system.RpcServer.Wallet = CurrentWallet;
-                    }
-                    break;
-                default:
-                    Console.WriteLine("Wallet files in that format are not supported, please use a .json or .db3 file extension.");
-                    break;
-            }
+            CreateWallet(path, password);
             return true;
         }
 
@@ -861,7 +883,7 @@ namespace Neo.CLI
                 Console.WriteLine("error");
                 return true;
             }
-            if (system.RpcServer != null)
+            if (NeoSystem.RpcServer != null)
             {
                 if (!ReadUserInput("Warning: Opening the wallet with RPC turned on could result in asset loss. Are you sure you want to do this? (yes|no)", false).IsYes())
                 {
@@ -882,14 +904,14 @@ namespace Neo.CLI
             }
             try
             {
-                CurrentWallet = OpenWallet(path, password);
+                OpenWallet(path, password);
             }
             catch (CryptographicException)
             {
                 Console.WriteLine($"failed to open file \"{path}\"");
             }
-            if (system.RpcServer != null)
-                system.RpcServer.Wallet = CurrentWallet;
+            if (NeoSystem.RpcServer != null)
+                NeoSystem.RpcServer.Wallet = CurrentWallet;
             return true;
         }
 
@@ -922,9 +944,9 @@ namespace Neo.CLI
                 return true;
             }
             CurrentWallet = null;
-            if (system.RpcServer != null)
+            if (NeoSystem.RpcServer != null)
             {
-                system.RpcServer.Wallet = null;
+                NeoSystem.RpcServer.Wallet = null;
             }
             Console.WriteLine($"Wallet is closed");
             return true;
@@ -932,7 +954,7 @@ namespace Neo.CLI
 
         private bool OnSendCommand(string[] args)
         {
-            if (args.Length < 4 || args.Length > 5)
+            if (args.Length != 4)
             {
                 Console.WriteLine("error");
                 return true;
@@ -991,7 +1013,7 @@ namespace Neo.CLI
             if (context.Completed)
             {
                 tx.Witnesses = context.GetWitnesses();
-                system.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
+                NeoSystem.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
                 Console.WriteLine($"TXID: {tx.Hash}");
             }
             else
@@ -1047,7 +1069,7 @@ namespace Neo.CLI
             {
                 while (!cancel.Token.IsCancellationRequested)
                 {
-                    system.LocalNode.Tell(Message.Create(MessageCommand.Ping, PingPayload.Create(Blockchain.Singleton.Height)));
+                    NeoSystem.LocalNode.Tell(Message.Create(MessageCommand.Ping, PingPayload.Create(Blockchain.Singleton.Height)));
                     await Task.Delay(Blockchain.TimePerBlock, cancel.Token);
                 }
             });
@@ -1108,7 +1130,7 @@ namespace Neo.CLI
         {
             if (NoWallet()) return true;
             ShowPrompt = false;
-            system.StartConsensus(CurrentWallet);
+            NeoSystem.StartConsensus(CurrentWallet);
             return true;
         }
 
@@ -1247,7 +1269,7 @@ namespace Neo.CLI
             return true;
         }
 
-        private static Wallet OpenWallet(string path, string password)
+        public void OpenWallet(string path, string password)
         {
             if (!File.Exists(path))
             {
@@ -1256,19 +1278,19 @@ namespace Neo.CLI
 
             if (Path.GetExtension(path) == ".db3")
             {
-                return UserWallet.Open(path, password);
+                CurrentWallet = UserWallet.Open(path, password);
             }
             else
             {
                 NEP6Wallet nep6wallet = new NEP6Wallet(path);
                 nep6wallet.Unlock(password);
-                return nep6wallet;
+                CurrentWallet = nep6wallet;
             }
         }
 
         public void Start(string[] args)
         {
-            if (system != null) return;
+            if (NeoSystem != null) return;
             bool useRPC = false;
             for (int i = 0; i < args.Length; i++)
                 switch (args[i])
@@ -1292,8 +1314,8 @@ namespace Neo.CLI
                         break;
                 }
             store = new LevelDBStore(Path.GetFullPath(Settings.Default.Paths.Chain));
-            system = new NeoSystem(store);
-            system.StartNode(new ChannelsConfig
+            NeoSystem = new NeoSystem(store);
+            NeoSystem.StartNode(new ChannelsConfig
             {
                 Tcp = new IPEndPoint(IPAddress.Any, Settings.Default.P2P.Port),
                 WebSocket = new IPEndPoint(IPAddress.Any, Settings.Default.P2P.WsPort),
@@ -1305,7 +1327,7 @@ namespace Neo.CLI
             {
                 try
                 {
-                    CurrentWallet = OpenWallet(Settings.Default.UnlockWallet.Path, Settings.Default.UnlockWallet.Password);
+                    OpenWallet(Settings.Default.UnlockWallet.Path, Settings.Default.UnlockWallet.Password);
                 }
                 catch (FileNotFoundException)
                 {
@@ -1322,7 +1344,7 @@ namespace Neo.CLI
             }
             if (useRPC)
             {
-                system.StartRpc(Settings.Default.RPC.BindAddress,
+                NeoSystem.StartRpc(Settings.Default.RPC.BindAddress,
                     Settings.Default.RPC.Port,
                     wallet: CurrentWallet,
                     sslCert: Settings.Default.RPC.SslCert,
@@ -1333,11 +1355,11 @@ namespace Neo.CLI
 
         public void Stop()
         {
-            if (system != null)
+            if (NeoSystem != null)
             {
-                system.Dispose();
+                NeoSystem.Dispose();
                 store.Dispose();
-                system = null;
+                NeoSystem = null;
             }
         }
 
