@@ -8,10 +8,7 @@ env:
 jobs:
 
   Test:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
     - name: Chectout
       uses: actions/checkout@v1
@@ -20,17 +17,26 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
     - name: Check format
-      if: matrix.os == 'ubuntu-latest'
       run: |
         dotnet tool install --tool-path ./ dotnet-format
         ./dotnet-format --check --dry-run -v diagnostic
-    - name: Test neo-cli
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        sudo apt-get install libleveldb-dev expect
-        dotnet publish -o ./out -c Release neo-cli
-        expect ./.github/workflows/test-neo-cli.expect
-        ./.github/workflows/rpc-tests.sh
-    - name: Test neo-gui
-      if: matrix.os == 'windows-latest'
-      run: dotnet build -c Release neo-gui
+    - name: Build
+      run: dotnet publish -o ./out -c Release neo-cli
+    - name: Install dependencies
+      run: sudo apt-get install libleveldb-dev expect
+    - name: Run tests with expect
+      run: expect ./.github/workflows/test-neo-cli.expect
+    - name: Run RPC tests
+      run: ./.github/workflows/rpc-tests.sh
+
+  Test_GUI:
+    runs-on: windows-latest
+    steps:
+      - name: Chectout
+        uses: actions/checkout@v1
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Build
+        run: dotnet build -c Release neo-gui
