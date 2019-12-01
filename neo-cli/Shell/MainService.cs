@@ -8,7 +8,6 @@ using Neo.Network.P2P;
 using Neo.Network.P2P.Capabilities;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
-using Neo.Persistence.LevelDB;
 using Neo.Plugins;
 using Neo.Services;
 using Neo.SmartContract;
@@ -36,7 +35,6 @@ namespace Neo.Shell
 {
     internal class MainService : ConsoleServiceBase
     {
-        private LevelDBStore store;
         private NeoSystem system;
 
         protected override string Prompt => "neo";
@@ -116,7 +114,7 @@ namespace Neo.Shell
                     if (args[2].Length == 64 || args[2].Length == 66)
                         payload = Blockchain.Singleton.GetBlock(UInt256.Parse(args[2]));
                     else
-                        payload = Blockchain.Singleton.Store.GetBlock(uint.Parse(args[2]));
+                        payload = Blockchain.Singleton.GetBlock(uint.Parse(args[2]));
                     break;
                 case MessageCommand.GetBlocks:
                 case MessageCommand.GetHeaders:
@@ -774,7 +772,7 @@ namespace Neo.Shell
         {
             if (NoWallet()) return true;
             BigInteger gas = BigInteger.Zero;
-            using (Snapshot snapshot = Blockchain.Singleton.GetSnapshot())
+            using (SnapshotView snapshot = Blockchain.Singleton.GetSnapshot())
                 foreach (UInt160 account in Program.Wallet.GetAccounts().Select(p => p.ScriptHash))
                 {
                     gas += NativeContract.NEO.UnclaimedGas(snapshot, account, snapshot.Height + 1);
@@ -1112,8 +1110,7 @@ namespace Neo.Shell
                         Settings.Initialize(new ConfigurationBuilder().AddJsonFile("config.mainnet.json").Build());
                         break;
                 }
-            store = new LevelDBStore(Path.GetFullPath(Settings.Default.Paths.Chain));
-            system = new NeoSystem(store);
+            system = new NeoSystem();
             system.StartNode(new ChannelsConfig
             {
                 Tcp = new IPEndPoint(IPAddress.Any, Settings.Default.P2P.Port),
@@ -1174,7 +1171,6 @@ namespace Neo.Shell
         protected internal override void OnStop()
         {
             system.Dispose();
-            store.Dispose();
         }
 
         private bool OnUpgradeCommand(string[] args)
