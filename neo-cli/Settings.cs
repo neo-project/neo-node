@@ -8,6 +8,7 @@ namespace Neo
 {
     internal class Settings
     {
+        public StorageSettings Storage { get; }
         public P2PSettings P2P { get; }
         public RPCSettings RPC { get; }
         public UnlockWalletSettings UnlockWallet { get; }
@@ -41,10 +42,21 @@ namespace Neo
 
         public Settings(IConfigurationSection section)
         {
+            this.Storage = new StorageSettings(section.GetSection("Storage"));
             this.P2P = new P2PSettings(section.GetSection("P2P"));
             this.RPC = new RPCSettings(section.GetSection("RPC"));
             this.UnlockWallet = new UnlockWalletSettings(section.GetSection("UnlockWallet"));
             this.PluginURL = section.GetSection("PluginURL").Value;
+        }
+    }
+
+    internal class StorageSettings
+    {
+        public string Engine { get; }
+
+        public StorageSettings(IConfigurationSection section)
+        {
+            this.Engine = section.GetSection("Engine").Value;
         }
     }
 
