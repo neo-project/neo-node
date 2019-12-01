@@ -8,7 +8,6 @@ namespace Neo
 {
     public class Settings
     {
-        public PathsSettings Paths { get; }
         public P2PSettings P2P { get; }
         public RPCSettings RPC { get; }
         public UnlockWalletSettings UnlockWallet { get; }
@@ -33,7 +32,7 @@ namespace Neo
             {
                 if (_default == null)
                 {
-                    UpdateDefault(Helper.LoadConfig("config"));
+                    UpdateDefault(Utility.LoadConfig("config"));
                 }
 
                 return _default;
@@ -42,21 +41,10 @@ namespace Neo
 
         public Settings(IConfigurationSection section)
         {
-            this.Paths = new PathsSettings(section.GetSection("Paths"));
             this.P2P = new P2PSettings(section.GetSection("P2P"));
             this.RPC = new RPCSettings(section.GetSection("RPC"));
             this.UnlockWallet = new UnlockWalletSettings(section.GetSection("UnlockWallet"));
             this.PluginURL = section.GetSection("PluginURL").Value;
-        }
-    }
-
-    public class PathsSettings
-    {
-        public string Chain { get; }
-
-        public PathsSettings(IConfigurationSection section)
-        {
-            this.Chain = string.Format(section.GetSection("Chain").Value, ProtocolSettings.Default.Magic.ToString("X8"));
         }
     }
 
