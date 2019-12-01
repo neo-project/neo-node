@@ -1,8 +1,5 @@
 {
   "ApplicationConfiguration": {
-    "Paths": {
-      "Chain": "Chain_{0}"
-    },
     "P2P": {
       "Port": 10333,
       "WsPort": 10334
