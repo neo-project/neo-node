@@ -1257,14 +1257,14 @@ namespace Neo.Shell
                 return true;
             }
 
-            string path = plugin.GetType().Assembly.Location;
-            File.Delete(path);
-            path = Path.ChangeExtension(path, null);
+            string path = Path.GetDirectoryName(plugin.ConfigFile);
             if (Directory.Exists(path))
             {
                 Directory.Delete(path, true);
             }
 
+            path = Path.ChangeExtension(path, "dll");
+            File.Delete(path);
             Console.WriteLine($"Uninstall successful, please restart neo-cli.");
             return true;
         }
