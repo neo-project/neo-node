@@ -1250,22 +1250,21 @@ namespace Neo.Shell
             }
 
             var pluginName = args[1];
-            var plugin = Plugin.Plugins.Where(u => u.Name.Contains(pluginName)).FirstOrDefault();
-            if (plugin == null)
+            var plugin = Plugin.Plugins.FirstOrDefault(p => p.Name == pluginName);
+            if (plugin is null)
             {
                 Console.WriteLine("Plugin not found");
                 return true;
             }
 
-            // Get library name
-            pluginName = Path.GetFileNameWithoutExtension(plugin.GetType().Assembly.ManifestModule.Name);
-
-            if (Directory.Exists(Path.Combine("Plugins", pluginName)))
+            string path = plugin.GetType().Assembly.Location;
+            File.Delete(path);
+            path = Path.ChangeExtension(path, null);
+            if (Directory.Exists(path))
             {
-                Directory.Delete(Path.Combine("Plugins", pluginName), true);
+                Directory.Delete(path, true);
             }
 
-            File.Delete(Path.Combine("Plugins", $"{pluginName}.dll"));
             Console.WriteLine($"Uninstall successful, please restart neo-cli.");
             return true;
         }
