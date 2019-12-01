@@ -21,7 +21,9 @@ jobs:
         dotnet tool install --tool-path ./ dotnet-format
         ./dotnet-format --check --dry-run -v diagnostic
     - name: Build
-      run: dotnet publish -o ./out -c Release
+      run: |
+        dotnet publish -o ./out -c Release
+        find -name './out/config.json' | xargs perl -pi -e 's|LevelDBStore|MemoryStore|g'
     - name: Install dependencies
       run: sudo apt-get install libleveldb-dev expect
     - name: Run tests with expect
