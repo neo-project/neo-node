@@ -167,7 +167,7 @@ namespace Neo.GUI
             if (Service.CurrentWallet is null) return;
             if (!check_nep5_balance || persistence_span < TimeSpan.FromSeconds(2)) return;
             UInt160[] addresses = Service.CurrentWallet.GetAccounts().Select(p => p.ScriptHash).ToArray();
-            using Snapshot snapshot = Blockchain.Singleton.GetSnapshot();
+            using SnapshotView snapshot = Blockchain.Singleton.GetSnapshot();
             foreach (UInt160 assetId in NEP5Watched)
             {
                 byte[] script;
