@@ -23,7 +23,7 @@ jobs:
     - name: Build
       run: |
         dotnet publish -o ./out -c Release
-        find -name './out/config.json' | xargs perl -pi -e 's|LevelDBStore|MemoryStore|g'
+        find ./out -name 'config.json' | xargs perl -pi -e 's|LevelDBStore|MemoryStore|g'
     - name: Install dependencies
       run: sudo apt-get install libleveldb-dev expect
     - name: Run tests with expect
