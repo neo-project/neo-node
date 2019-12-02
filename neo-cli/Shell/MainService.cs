@@ -9,7 +9,6 @@ using Neo.Network.P2P;
 using Neo.Network.P2P.Capabilities;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
-using Neo.Persistence.LevelDB;
 using Neo.Plugins;
 using Neo.Services;
 using Neo.SmartContract;
@@ -38,7 +37,6 @@ namespace Neo.Shell
 {
     internal class MainService : ConsoleServiceBase
     {
-        private LevelDBStore store;
         private NeoSystem system;
 
 		private Dictionary<string, string> knownSmartContracts = new Dictionary<string, string>() {
@@ -252,7 +250,7 @@ namespace Neo.Shell
                     if (args[2].Length == 64 || args[2].Length == 66)
                         payload = Blockchain.Singleton.GetBlock(UInt256.Parse(args[2]));
                     else
-                        payload = Blockchain.Singleton.Store.GetBlock(uint.Parse(args[2]));
+                        payload = Blockchain.Singleton.GetBlock(uint.Parse(args[2]));
                     break;
                 case MessageCommand.GetBlocks:
                 case MessageCommand.GetHeaders:
@@ -359,7 +357,7 @@ namespace Neo.Shell
 							Console.WriteLine($"Result: { result.GetBigInteger() }");
 							break;
 						case ContractParameterType.Boolean:
-							Console.WriteLine($"Result: { result.GetBoolean() }");
+							Console.WriteLine($"Result: { result.ToBoolean() }");
 							break;
 					}
 				}
@@ -476,6 +474,44 @@ namespace Neo.Shell
             ContractFeatures properties = ContractFeatures.NoProperty;
             if (hasStorage) properties |= ContractFeatures.HasStorage;
             if (isPayable) properties |= ContractFeatures.Payable;
+            // Basic script checks
+
+            using (var engine = new ApplicationEngine(TriggerType.Application, null, null, 0, true))
+            {
+                var context = engine.LoadScript(file.Script);
+
+                while (context.InstructionPointer <= context.Script.Length)
+                {
+                    // Check bad opcodes
+
+                    var ci = context.CurrentInstruction;
+
+                    if (ci == null || !Enum.IsDefined(typeof(OpCode), ci.OpCode))
+                    {
+                        throw new FormatException($"OpCode not found at {context.InstructionPointer}-{((byte)ci.OpCode).ToString("x2")}");
+                    }
+
+                    switch (ci.OpCode)
+                    {
+                        case OpCode.SYSCALL:
+                            {
+                                // Check bad syscalls (NEO2)
+
+                                if (!InteropService.SupportedMethods().ContainsKey(ci.TokenU32))
+                                {
+                                    throw new FormatException($"Syscall not found {ci.TokenU32.ToString("x2")}. Are you using a NEO2 smartContract?");
+                                }
+                                break;
+                            }
+                    }
+
+                    context.InstructionPointer += ci.Size;
+                }
+            }
+
+            // Build script
+
+            scriptHash = file.ScriptHash;
             using (ScriptBuilder sb = new ScriptBuilder())
             {
                 sb.EmitSysCall(InteropService.Neo_Contract_Create, file.Script, properties);
@@ -812,7 +848,7 @@ namespace Neo.Shell
                 "\tsend <id|alias> <address> <value>\n" +
                 "\tsign <jsonObjectToSign>\n" +
                 "Contract Commands:\n" +
-                "\tdeploy <nefFilePath> <hasStorage (true|false)> <isPayable (true|false)\n" +
+                "\tdeploy <nefFilePath> [manifestFile]\n" +
                 "\tinvoke <scripthash> <command> [optionally quoted params separated by space]\n" +
                 "Node Commands:\n" +
                 "\tshow state\n" +
@@ -976,7 +1012,7 @@ namespace Neo.Shell
         {
             if (NoWallet()) return true;
             BigInteger gas = BigInteger.Zero;
-            using (Snapshot snapshot = Blockchain.Singleton.GetSnapshot())
+            using (SnapshotView snapshot = Blockchain.Singleton.GetSnapshot())
                 foreach (UInt160 account in Program.Wallet.GetAccounts().Select(p => p.ScriptHash))
                 {
                     gas += NativeContract.NEO.UnclaimedGas(snapshot, account, snapshot.Height + 1);
@@ -1363,29 +1399,26 @@ namespace Neo.Shell
 			else
 			{
 				string blockId = args[2];
-				using (var snapshot = Blockchain.Singleton.GetSnapshot())
+				if (blockId.Length == 66)
 				{
-					if (blockId.Length == 66)
+					var blockHash = UInt256.Parse(blockId);
+					if (Blockchain.Singleton.ContainsBlock(blockHash))
 					{
-						var blockHash = UInt256.Parse(blockId);
-						if (snapshot.ContainsBlock(blockHash))
-						{
-							var block = snapshot.GetBlock(blockHash);
-							Console.WriteLine($"Block: {block.ToCLIString()}");
-						}
-						else
-						{
-							Console.WriteLine("Block not found");
-						}
+						var block = Blockchain.Singleton.GetBlock(blockHash);
+						Console.WriteLine($"Block: {block.ToCLIString()}");
 					}
 					else
 					{
-						var blockIndex = UInt32.Parse(blockId);
-						var header = snapshot.GetBlock(blockIndex);
-						if (header != null)
-						{
-							Console.WriteLine($"Block: {header.ToCLIString()}");
-						}
+						Console.WriteLine("Block not found");
+					}
+				}
+				else
+				{
+					var blockIndex = uint.Parse(blockId);
+                    var header = Blockchain.Singleton.GetBlock(blockIndex);
+					if (header != null)
+					{
+						Console.WriteLine($"Block: {header.ToCLIString()}");
 					}
 				}
 			}
@@ -1428,20 +1461,28 @@ namespace Neo.Shell
             });
             Task task = Task.Run(async () =>
             {
+                int maxLines = 0;
+
                 while (!cancel.Token.IsCancellationRequested)
                 {
                     Console.SetCursorPosition(0, 0);
-                    WriteLineWithoutFlicker($"block: {Blockchain.Singleton.Height}/{Blockchain.Singleton.HeaderHeight}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}");
+                    WriteLineWithoutFlicker($"block: {Blockchain.Singleton.Height}/{Blockchain.Singleton.HeaderHeight}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}", Console.WindowWidth - 1);
+
                     int linesWritten = 1;
-                    foreach (RemoteNode node in LocalNode.Singleton.GetRemoteNodes().Take(Console.WindowHeight - 2).ToArray())
+                    foreach (RemoteNode node in LocalNode.Singleton.GetRemoteNodes().OrderByDescending(u => u.LastBlockIndex).Take(Console.WindowHeight - 2).ToArray())
                     {
-                        WriteLineWithoutFlicker(
-                            $"  ip: {node.Remote.Address}\tport: {node.Remote.Port}\tlisten: {node.ListenerTcpPort}\theight: {node.LastBlockIndex}");
+                        Console.WriteLine(
+                            $"  ip: {node.Remote.Address.ToString().PadRight(15)}\tport: {node.Remote.Port.ToString().PadRight(5)}\tlisten: {node.ListenerTcpPort.ToString().PadRight(5)}\theight: {node.LastBlockIndex.ToString().PadRight(7)}");
                         linesWritten++;
                     }
 
-                    while (++linesWritten < Console.WindowHeight)
-                        WriteLineWithoutFlicker();
+                    maxLines = Math.Max(maxLines, linesWritten);
+
+                    while (linesWritten < maxLines)
+                    {
+                        WriteLineWithoutFlicker("", Console.WindowWidth - 1);
+                        maxLines--;
+                    }
 
                     await Task.Delay(500, cancel.Token);
                 }
@@ -1478,8 +1519,7 @@ namespace Neo.Shell
                         Settings.Initialize(new ConfigurationBuilder().AddJsonFile("config.mainnet.json").Build());
                         break;
                 }
-            store = new LevelDBStore(Path.GetFullPath(Settings.Default.Paths.Chain));
-            system = new NeoSystem(store);
+            system = new NeoSystem();
             system.StartNode(new ChannelsConfig
             {
                 Tcp = new IPEndPoint(IPAddress.Any, Settings.Default.P2P.Port),
@@ -1493,6 +1533,10 @@ namespace Neo.Shell
                 try
                 {
                     Program.Wallet = OpenWallet(Settings.Default.UnlockWallet.Path, Settings.Default.UnlockWallet.Password);
+                }
+                catch (FileNotFoundException)
+                {
+                    Console.WriteLine($"Warning: wallet file \"{Settings.Default.UnlockWallet.Path}\" not found.");
                 }
                 catch (CryptographicException)
                 {
@@ -1536,7 +1580,6 @@ namespace Neo.Shell
         protected internal override void OnStop()
         {
             system.Dispose();
-            store.Dispose();
         }
 
         private bool OnUpgradeCommand(string[] args)
@@ -1670,6 +1713,11 @@ namespace Neo.Shell
 
         private static Wallet OpenWallet(string path, string password)
         {
+            if (!File.Exists(path))
+            {
+                throw new FileNotFoundException();
+            }
+
             if (Path.GetExtension(path) == ".db3")
             {
                 return UserWallet.Open(path, password);

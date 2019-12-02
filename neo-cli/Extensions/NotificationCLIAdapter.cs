@@ -1,4 +1,5 @@
-﻿using Neo.Wallets;
+using Neo.VM;
+using Neo.Wallets;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -15,8 +16,8 @@ namespace Neo.Cli.Extensions
 			
 		private static string TransferNotificationCLIStringAdapter(VM.Types.Array notificationArray)
 		{
-			var fromBytes = notificationArray[1].GetByteArray();
-			var toBytes = notificationArray[2].GetByteArray();
+			var fromBytes = notificationArray[1].GetSpan().ToArray();
+			var toBytes = notificationArray[2].GetSpan().ToArray();
 			var from = fromBytes.Length > 0 ? new UInt160(fromBytes) : UInt160.Zero;
 			var to = toBytes.Length > 0 ? new UInt160(toBytes) : UInt160.Zero;
 			var amount = notificationArray[3].GetBigInteger();
