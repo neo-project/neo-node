@@ -125,6 +125,7 @@ namespace Neo.Shell
                 case "addresstoscripthash":
                     return OnAddressToScript(args);
                 case "scripttoaddr":
+                case "scripttoaddress":
                 case "scripthashtoaddr":
                 case "scripthashtoaddress":
                     return OnScripthashToAddress(args);
