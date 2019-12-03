@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace Neo
 {
-    internal class Settings
+    public class Settings
     {
         public StorageSettings Storage { get; }
         public P2PSettings P2P { get; }
@@ -50,7 +50,7 @@ namespace Neo
         }
     }
 
-    internal class StorageSettings
+    public class StorageSettings
     {
         public string Engine { get; }
 
@@ -60,7 +60,7 @@ namespace Neo
         }
     }
 
-    internal class P2PSettings
+    public class P2PSettings
     {
         public ushort Port { get; }
         public ushort WsPort { get; }
@@ -78,7 +78,7 @@ namespace Neo
         }
     }
 
-    internal class RPCSettings
+    public class RPCSettings
     {
         public IPAddress BindAddress { get; }
         public ushort Port { get; }
