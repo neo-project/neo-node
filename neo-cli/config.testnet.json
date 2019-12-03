@@ -1,5 +1,8 @@
 {
   "ApplicationConfiguration": {
+    "Storage": {
+      "Engine": "LevelDBStore"
+    },
     "P2P": {
       "Port": 20333,
       "WsPort": 20334
