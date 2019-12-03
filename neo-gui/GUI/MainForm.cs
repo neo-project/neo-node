@@ -173,7 +173,7 @@ namespace Neo.GUI
                 byte[] script;
                 using (ScriptBuilder sb = new ScriptBuilder())
                 {
-                    for (int i = addresses.Length - 1; i >= 0; i++)
+                    for (int i = addresses.Length - 1; i >= 0; i--)
                         sb.EmitAppCall(assetId, "balanceOf", addresses[i]);
                     sb.Emit(OpCode.DEPTH, OpCode.PACK);
                     sb.EmitAppCall(assetId, "decimals");
