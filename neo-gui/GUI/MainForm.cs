@@ -362,7 +362,25 @@ namespace Neo.GUI
 
         private void 官网WToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Process.Start("https://neo.org/");
+            OpenBrowser("https://neo.org/");
+        }
+
+        public static void OpenBrowser(string url)
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Process.Start(new ProcessStartInfo("cmd", $"/c start {url}"));
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                Process.Start("xdg-open", url);
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                Process.Start("open", url);
+            }
+        }
+        
         }
 
         private void 开发人员工具TToolStripMenuItem_Click(object sender, EventArgs e)
