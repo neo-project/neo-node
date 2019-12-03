@@ -22,7 +22,7 @@ jobs:
         ./dotnet-format --check --dry-run -v diagnostic
     - name: Build
       run: |
-        dotnet publish -o ./out -c Release neo-cli
+        dotnet publish -o ./out -c Release
         find ./out -name 'config.json' | xargs perl -pi -e 's|LevelDBStore|MemoryStore|g'
     - name: Install dependencies
       run: sudo apt-get install libleveldb-dev expect
@@ -30,15 +30,3 @@ jobs:
       run: expect ./.github/workflows/test-neo-cli.expect
     - name: Run RPC tests
       run: ./.github/workflows/rpc-tests.sh
-
-  Test_GUI:
-    runs-on: windows-latest
-    steps:
-      - name: Chectout
-        uses: actions/checkout@v1
-      - name: Setup .NET Core
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-      - name: Build
-        run: dotnet build -c Release neo-gui
