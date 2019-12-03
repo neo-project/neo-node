@@ -78,7 +78,7 @@ namespace Neo.Cli.Extensions
         public static string ToCLIString(this Cosigner cosigner)
         {
             string output = $"\tAccount: {cosigner.Account}\n";
-            
+
             output += "\tScope:\t";
             if (cosigner.Scopes == WitnessScope.Global)
             {
@@ -116,7 +116,7 @@ namespace Neo.Cli.Extensions
                     output += $"\t{allowedGroup.ToString()}\n";
                 }
             }
-            
+
             return output;
         }
 
@@ -176,7 +176,7 @@ namespace Neo.Cli.Extensions
         }
 
         public static string ToCLIString(this Transaction t, ulong blockTimestamp = 0)
-        {    
+        {
             string output = "";
             output += $"Hash: {t.Hash}\n";
             if (blockTimestamp > 0)
@@ -196,11 +196,11 @@ namespace Neo.Cli.Extensions
                     output += cosigner.ToCLIString();
                 }
             }
-            
+
 
             output += $"Script:\n";
             output += DisassembleScript(t.Script);
-        
+
             output += "Witnesses: \n";
             foreach (var witness in t.Witnesses)
             {
@@ -210,7 +210,7 @@ namespace Neo.Cli.Extensions
 
             return output;
         }
-        
+
 
         public static string ToCLIString(this ContractState c)
         {
@@ -239,7 +239,7 @@ namespace Neo.Cli.Extensions
                         output += $"\t\tType: {parameter.Type}\n";
                     }
                 }
-                
+
             }
 
             output += $"Events: \n";
