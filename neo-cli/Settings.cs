@@ -6,8 +6,9 @@ using System.Threading;
 
 namespace Neo
 {
-    public class Settings
+    internal class Settings
     {
+        public StorageSettings Storage { get; }
         public P2PSettings P2P { get; }
         public RPCSettings RPC { get; }
         public UnlockWalletSettings UnlockWallet { get; }
@@ -41,6 +42,7 @@ namespace Neo
 
         public Settings(IConfigurationSection section)
         {
+            this.Storage = new StorageSettings(section.GetSection("Storage"));
             this.P2P = new P2PSettings(section.GetSection("P2P"));
             this.RPC = new RPCSettings(section.GetSection("RPC"));
             this.UnlockWallet = new UnlockWalletSettings(section.GetSection("UnlockWallet"));
@@ -48,7 +50,17 @@ namespace Neo
         }
     }
 
-    public class P2PSettings
+    internal class StorageSettings
+    {
+        public string Engine { get; }
+
+        public StorageSettings(IConfigurationSection section)
+        {
+            this.Engine = section.GetSection("Engine").Value;
+        }
+    }
+
+    internal class P2PSettings
     {
         public ushort Port { get; }
         public ushort WsPort { get; }
@@ -66,7 +78,7 @@ namespace Neo
         }
     }
 
-    public class RPCSettings
+    internal class RPCSettings
     {
         public IPAddress BindAddress { get; }
         public ushort Port { get; }
