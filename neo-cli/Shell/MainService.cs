@@ -1110,7 +1110,7 @@ namespace Neo.Shell
                         Settings.Initialize(new ConfigurationBuilder().AddJsonFile("config.mainnet.json").Build());
                         break;
                 }
-            system = new NeoSystem();
+            system = new NeoSystem(Settings.Default.Storage.Engine);
             system.StartNode(new ChannelsConfig
             {
                 Tcp = new IPEndPoint(IPAddress.Any, Settings.Default.P2P.Port),
@@ -1250,19 +1250,22 @@ namespace Neo.Shell
             }
 
             var pluginName = args[1];
-
-            if (!Plugin.Plugins.Any(u => u.Name == pluginName))
+            var plugin = Plugin.Plugins.FirstOrDefault(p => p.Name == pluginName);
+            if (plugin is null)
             {
                 Console.WriteLine("Plugin not found");
                 return true;
             }
 
-            if (Directory.Exists(Path.Combine("Plugins", pluginName)))
+            File.Delete(plugin.Path);
+            File.Delete(plugin.ConfigFile);
+            try
             {
-                Directory.Delete(Path.Combine("Plugins", pluginName), true);
+                Directory.Delete(Path.GetDirectoryName(plugin.ConfigFile), false);
             }
-
-            File.Delete(Path.Combine("Plugins", $"{pluginName}.dll"));
+            catch (IOException)
+            {
+            }
             Console.WriteLine($"Uninstall successful, please restart neo-cli.");
             return true;
         }
