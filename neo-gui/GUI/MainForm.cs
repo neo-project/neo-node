@@ -101,6 +101,22 @@ namespace Neo.GUI
             BeginInvoke(new Action(RefreshConfirmations));
         }
 
+        private static void OpenBrowser(string url)
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Process.Start(new ProcessStartInfo("cmd", $"/c start {url}"));
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                Process.Start("xdg-open", url);
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                Process.Start("open", url);
+            }
+        }
+
         private void Service_WalletChanged(object sender, EventArgs e)
         {
             listView3.Items.Clear();
@@ -365,22 +381,6 @@ namespace Neo.GUI
             OpenBrowser("https://neo.org/");
         }
 
-        public static void OpenBrowser(string url)
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Process.Start(new ProcessStartInfo("cmd", $"/c start {url}"));
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                Process.Start("xdg-open", url);
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            {
-                Process.Start("open", url);
-            }
-        }
-
         private void 开发人员工具TToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Helper.Show<DeveloperToolsForm>();
@@ -570,19 +570,19 @@ namespace Neo.GUI
         private void listView1_DoubleClick(object sender, EventArgs e)
         {
             if (listView1.SelectedIndices.Count == 0) return;
-            Process.Start($"https://neoscan.io/address/{listView1.SelectedItems[0].Text}");
+            OpenBrowser($"https://neoscan.io/address/{listView1.SelectedItems[0].Text}");
         }
 
         private void listView2_DoubleClick(object sender, EventArgs e)
         {
             if (listView2.SelectedIndices.Count == 0) return;
-            Process.Start($"https://neoscan.io/asset/{listView2.SelectedItems[0].Name[2..]}");
+            OpenBrowser($"https://neoscan.io/asset/{listView2.SelectedItems[0].Name[2..]}");
         }
 
         private void listView3_DoubleClick(object sender, EventArgs e)
         {
             if (listView3.SelectedIndices.Count == 0) return;
-            Process.Start($"https://neoscan.io/transaction/{listView3.SelectedItems[0].Name[2..]}");
+            OpenBrowser($"https://neoscan.io/transaction/{listView3.SelectedItems[0].Name[2..]}");
         }
 
         private void toolStripStatusLabel3_Click(object sender, EventArgs e)
