@@ -380,8 +380,6 @@ namespace Neo.GUI
                 Process.Start("open", url);
             }
         }
-        
-        }
 
         private void 开发人员工具TToolStripMenuItem_Click(object sender, EventArgs e)
         {
