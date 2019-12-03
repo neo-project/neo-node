@@ -1110,7 +1110,7 @@ namespace Neo.Shell
                         Settings.Initialize(new ConfigurationBuilder().AddJsonFile("config.mainnet.json").Build());
                         break;
                 }
-            system = new NeoSystem();
+            system = new NeoSystem(Settings.Default.Storage.Engine);
             system.StartNode(new ChannelsConfig
             {
                 Tcp = new IPEndPoint(IPAddress.Any, Settings.Default.P2P.Port),
