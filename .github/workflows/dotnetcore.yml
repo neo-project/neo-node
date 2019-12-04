@@ -10,7 +10,7 @@ jobs:
   Test:
     runs-on: ubuntu-latest
     steps:
-    - name: Chectout
+    - name: Checkout
       uses: actions/checkout@v1
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
@@ -21,10 +21,24 @@ jobs:
         dotnet tool install --tool-path ./ dotnet-format
         ./dotnet-format --check --dry-run -v diagnostic
     - name: Build
-      run: dotnet publish -o ./out -c Release
+      run: |
+        dotnet publish -o ./out -c Release neo-cli
+        find ./out -name 'config.json' | xargs perl -pi -e 's|LevelDBStore|MemoryStore|g'
     - name: Install dependencies
       run: sudo apt-get install libleveldb-dev expect
     - name: Run tests with expect
       run: expect ./.github/workflows/test-neo-cli.expect
     - name: Run RPC tests
       run: ./.github/workflows/rpc-tests.sh
+
+  Test_GUI:
+    runs-on: windows-latest
+    steps:
+      - name: Chectout
+        uses: actions/checkout@v1
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Build
+        run: dotnet build -c Release neo-gui

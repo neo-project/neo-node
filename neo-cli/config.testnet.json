@@ -1,7 +1,7 @@
-﻿{
+{
   "ApplicationConfiguration": {
-    "Paths": {
-      "Chain": "Chain_{0}"
+    "Storage": {
+      "Engine": "LevelDBStore"
     },
     "P2P": {
       "Port": 20333,
