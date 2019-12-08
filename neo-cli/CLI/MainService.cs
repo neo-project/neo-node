@@ -239,17 +239,19 @@ namespace Neo.CLI
                 Console.WriteLine($"Invoking script with: '{tx.Script.ToHexString()}'");
             }
 
-            ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, testMode: true);
-
-            Console.WriteLine($"VM State: {engine.State}");
-            Console.WriteLine($"Gas Consumed: {engine.GasConsumed}");
-            Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
-            Console.WriteLine();
-            if (engine.State.HasFlag(VMState.FAULT))
+            using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, testMode: true))
             {
-                Console.WriteLine("Engine faulted.");
-                return true;
+                Console.WriteLine($"VM State: {engine.State}");
+                Console.WriteLine($"Gas Consumed: {engine.GasConsumed}");
+                Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
+                Console.WriteLine();
+                if (engine.State.HasFlag(VMState.FAULT))
+                {
+                    Console.WriteLine("Engine faulted.");
+                    return true;
+                }
             }
+
             if (NoWallet()) return true;
             try
             {

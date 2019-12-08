@@ -196,7 +196,7 @@ namespace Neo.GUI
                     sb.EmitAppCall(assetId, "name");
                     script = sb.ToArray();
                 }
-                ApplicationEngine engine = ApplicationEngine.Run(script, snapshot);
+                using ApplicationEngine engine = ApplicationEngine.Run(script, snapshot);
                 if (engine.State.HasFlag(VMState.FAULT)) continue;
                 string name = engine.ResultStack.Pop().GetString();
                 byte decimals = (byte)engine.ResultStack.Pop().GetBigInteger();
