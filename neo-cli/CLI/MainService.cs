@@ -78,8 +78,6 @@ namespace Neo.CLI
                         WalletAccount account = wallet.CreateAccount();
                         Console.WriteLine($"address: {account.Address}");
                         Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                        if (NeoSystem.RpcServer != null)
-                            NeoSystem.RpcServer.Wallet = wallet;
                         CurrentWallet = wallet;
                     }
                     break;
@@ -91,8 +89,6 @@ namespace Neo.CLI
                         wallet.Save();
                         Console.WriteLine($"address: {account.Address}");
                         Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                        if (NeoSystem.RpcServer != null)
-                            NeoSystem.RpcServer.Wallet = CurrentWallet;
                         CurrentWallet = wallet;
                     }
                     break;
@@ -603,13 +599,6 @@ namespace Neo.CLI
                 Console.WriteLine("error");
                 return true;
             }
-            if (NeoSystem.RpcServer != null)
-            {
-                if (!ReadUserInput("Warning: Opening the wallet with RPC turned on could result in asset loss. Are you sure you want to do this? (yes|no)", false).IsYes())
-                {
-                    return true;
-                }
-            }
             string path = args[2];
             string password = ReadUserInput("password", true);
             if (password.Length == 0)
@@ -986,13 +975,6 @@ namespace Neo.CLI
                 Console.WriteLine("error");
                 return true;
             }
-            if (NeoSystem.RpcServer != null)
-            {
-                if (!ReadUserInput("Warning: Opening the wallet with RPC turned on could result in asset loss. Are you sure you want to do this? (yes|no)", false).IsYes())
-                {
-                    return true;
-                }
-            }
             string path = args[2];
             if (!File.Exists(path))
             {
@@ -1013,8 +995,6 @@ namespace Neo.CLI
             {
                 Console.WriteLine($"failed to open file \"{path}\"");
             }
-            if (NeoSystem.RpcServer != null)
-                NeoSystem.RpcServer.Wallet = CurrentWallet;
             return true;
         }
 
@@ -1047,10 +1027,6 @@ namespace Neo.CLI
                 return true;
             }
             CurrentWallet = null;
-            if (NeoSystem.RpcServer != null)
-            {
-                NeoSystem.RpcServer.Wallet = null;
-            }
             Console.WriteLine($"Wallet is closed");
             return true;
         }
@@ -1397,15 +1373,9 @@ namespace Neo.CLI
         public async void Start(string[] args)
         {
             if (NeoSystem != null) return;
-            bool useRPC = false;
             for (int i = 0; i < args.Length; i++)
                 switch (args[i])
                 {
-                    case "/rpc":
-                    case "--rpc":
-                    case "-r":
-                        useRPC = true;
-                        break;
                     case "/testnet":
                     case "--testnet":
                     case "-t":
@@ -1461,15 +1431,6 @@ namespace Neo.CLI
                 {
                     OnStartConsensusCommand(null);
                 }
-            }
-            if (useRPC)
-            {
-                NeoSystem.StartRpc(Settings.Default.RPC.BindAddress,
-                    Settings.Default.RPC.Port,
-                    wallet: CurrentWallet,
-                    sslCert: Settings.Default.RPC.SslCert,
-                    password: Settings.Default.RPC.SslCertPassword,
-                    maxGasInvoke: Settings.Default.RPC.MaxGasInvoke);
             }
         }
 

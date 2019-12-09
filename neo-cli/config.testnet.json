@@ -7,19 +7,12 @@
       "Port": 20333,
       "WsPort": 20334
     },
-    "RPC": {
-      "BindAddress": "127.0.0.1",
-      "Port": 20332,
-      "SslCert": "",
-      "SslCertPassword": "",
-      "MaxGasInvoke": 10
-    },
     "UnlockWallet": {
       "Path": "",
       "Password": "",
       "StartConsensus": false,
       "IsActive": false
     },
-    "PluginURL": "https://github.com/neo-project/neo-plugins/releases/download/v{1}/{0}.zip"
+    "PluginURL": "https://github.com/neo-project/neo-modules/releases/download/v{1}/{0}.zip"
   }
 }
