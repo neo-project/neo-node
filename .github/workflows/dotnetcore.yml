@@ -28,8 +28,6 @@ jobs:
       run: sudo apt-get install libleveldb-dev expect
     - name: Run tests with expect
       run: expect ./.github/workflows/test-neo-cli.expect
-    - name: Run RPC tests
-      run: ./.github/workflows/rpc-tests.sh
 
   Test_GUI:
     runs-on: windows-latest
