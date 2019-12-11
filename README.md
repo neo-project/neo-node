@@ -44,9 +44,10 @@ See also [official docs](https://docs.neo.org/docs/en-us/node/introduction.html)
 
 ```sh
 dotnet neo-cli.dll
-
+```
 or
 
+```sh
 dotnet neo-gui.dll
 ```
 
