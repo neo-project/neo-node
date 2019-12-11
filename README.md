@@ -1,18 +1,20 @@
 <p align="center">
-<img
-    src="https://neo-cdn.azureedge.net/images/neo_logo.svg"
-    width="250px">
+<a href="https://neo.org/">
+      <img
+      src="https://neo3.azureedge.net/images/logo%20files-dark.svg"
+      width="250px" alt="neo-logo">
+  </a>
 </p>
 
 <p align="center">      
-  <a href="https://travis-ci.org/neo-project/neo-cli">
-    <img src="https://travis-ci.org/neo-project/neo-cli.svg?branch=master" alt="Current TravisCI build status.">
+  <a href="https://travis-ci.org/neo-project/neo-node">
+    <img src="https://travis-ci.org/neo-project/neo-node.svg?branch=master" alt="Current TravisCI build status.">
   </a>
-  <a href="https://github.com/neo-project/neo-cli/blob/master/LICENSE">
+  <a href="https://github.com/neo-project/neo-node/blob/master/LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License">
   </a>
-  <a href="https://github.com/neo-project/neo-cli/releases">
-    <img src="https://badge.fury.io/gh/neo-project%2Fneo-cli.svg" alt="Current neo-cli version.">
+  <a href="https://github.com/neo-project/neo-node/releases">
+    <img src="https://badge.fury.io/gh/neo-project%2Fneo-node.svg" alt="Current neo-cli version.">
   </a>    
 </p>
 
