@@ -42,14 +42,13 @@ On Windows, use the [Neo version of LevelDB](https://github.com/neo-project/leve
 
 See also [official docs](https://docs.neo.org/docs/en-us/node/introduction.html). Download and unzip the [latest release](https://github.com/neo-project/neo-node/releases).
 
-```sh
-dotnet neo-cli.dll
-```
-or
+On Linux, you can type the command:
 
 ```sh
-dotnet neo-gui.dll
+./neo-cli
 ```
+
+On Windows, you can just double click the exe to run the node.
 
 ## Compile from source
 
