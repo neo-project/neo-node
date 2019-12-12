@@ -178,7 +178,7 @@ namespace Neo.Services
                     sb.Append(key.KeyChar);
                     if (password)
                     {
-                        Console.Write("*");
+                        Console.Write('*');
                     }
                     else
                     {
