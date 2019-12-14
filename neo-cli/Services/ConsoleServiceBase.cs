@@ -308,7 +308,7 @@ namespace Neo.Services
 
         protected string ReadLine()
         {
-            Task<string> readLineTask = Task.Run(() => ReadUserInput(null, false));
+            Task<string> readLineTask = Task.Run(() => Console.ReadLine());
 
             try
             {
