@@ -19,19 +19,20 @@ namespace Neo.GUI
         private UInt160 script_hash;
         private ContractParameter[] parameters;
 
-        public InvokeContractDialog(Transaction tx = null)
+        public InvokeContractDialog()
         {
             InitializeComponent();
-            this.tx = tx;
-            if (tx != null)
-            {
-                tabControl1.SelectedTab = tabPage2;
-                textBox6.Text = tx.Script.ToHexString();
-                textBox6.ReadOnly = true;
-            }
         }
 
-        public InvokeContractDialog(byte[] script)
+        public InvokeContractDialog(Transaction tx) : this()
+        {
+            this.tx = tx;
+            tabControl1.SelectedTab = tabPage2;
+            textBox6.Text = tx.Script.ToHexString();
+            textBox6.ReadOnly = true;
+        }
+
+        public InvokeContractDialog(byte[] script) : this()
         {
             tabControl1.SelectedTab = tabPage2;
             textBox6.Text = script.ToHexString();
@@ -76,7 +77,7 @@ namespace Neo.GUI
                 Script = script,
                 Witnesses = new Witness[0]
             };
-            ApplicationEngine engine = ApplicationEngine.Run(tx_test.Script, tx_test, testMode: true);
+            using ApplicationEngine engine = ApplicationEngine.Run(tx_test.Script, tx_test, testMode: true);
             StringBuilder sb = new StringBuilder();
             sb.AppendLine($"VM State: {engine.State}");
             sb.AppendLine($"Gas Consumed: {engine.GasConsumed}");

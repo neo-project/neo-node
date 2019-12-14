@@ -26,6 +26,7 @@ using System.Net;
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using ECCurve = Neo.Cryptography.ECC.ECCurve;
@@ -38,7 +39,6 @@ namespace Neo.CLI
         public event EventHandler WalletChanged;
 
         private Wallet currentWallet;
-
         public Wallet CurrentWallet
         {
             get
@@ -52,7 +52,18 @@ namespace Neo.CLI
             }
         }
 
-        public NeoSystem NeoSystem { get; private set; }
+        private NeoSystem neoSystem;
+        public NeoSystem NeoSystem
+        {
+            get
+            {
+                return neoSystem;
+            }
+            private set
+            {
+                neoSystem = value;
+            }
+        }
 
         protected override string Prompt => "neo";
         public override string ServiceName => "NEO-CLI";
@@ -67,8 +78,6 @@ namespace Neo.CLI
                         WalletAccount account = wallet.CreateAccount();
                         Console.WriteLine($"address: {account.Address}");
                         Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                        if (NeoSystem.RpcServer != null)
-                            NeoSystem.RpcServer.Wallet = wallet;
                         CurrentWallet = wallet;
                     }
                     break;
@@ -80,14 +89,73 @@ namespace Neo.CLI
                         wallet.Save();
                         Console.WriteLine($"address: {account.Address}");
                         Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                        if (NeoSystem.RpcServer != null)
-                            NeoSystem.RpcServer.Wallet = CurrentWallet;
                         CurrentWallet = wallet;
                     }
                     break;
                 default:
                     Console.WriteLine("Wallet files in that format are not supported, please use a .json or .db3 file extension.");
                     break;
+            }
+        }
+
+        private static IEnumerable<Block> GetBlocks(Stream stream, bool read_start = false)
+        {
+            using BinaryReader r = new BinaryReader(stream);
+            uint start = read_start ? r.ReadUInt32() : 0;
+            uint count = r.ReadUInt32();
+            uint end = start + count - 1;
+            if (end <= Blockchain.Singleton.Height) yield break;
+            for (uint height = start; height <= end; height++)
+            {
+                var size = r.ReadInt32();
+                if (size > Message.PayloadMaxSize)
+                    throw new ArgumentException($"Block {height} exceeds the maximum allowed size");
+
+                byte[] array = r.ReadBytes(size);
+                if (height > Blockchain.Singleton.Height)
+                {
+                    Block block = array.AsSerializable<Block>();
+                    yield return block;
+                }
+            }
+        }
+
+        private IEnumerable<Block> GetBlocksFromFile()
+        {
+            const string pathAcc = "chain.acc";
+            if (File.Exists(pathAcc))
+                using (FileStream fs = new FileStream(pathAcc, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    foreach (var block in GetBlocks(fs))
+                        yield return block;
+
+            const string pathAccZip = pathAcc + ".zip";
+            if (File.Exists(pathAccZip))
+                using (FileStream fs = new FileStream(pathAccZip, FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (ZipArchive zip = new ZipArchive(fs, ZipArchiveMode.Read))
+                using (Stream zs = zip.GetEntry(pathAcc).Open())
+                    foreach (var block in GetBlocks(zs))
+                        yield return block;
+
+            var paths = Directory.EnumerateFiles(".", "chain.*.acc", SearchOption.TopDirectoryOnly).Concat(Directory.EnumerateFiles(".", "chain.*.acc.zip", SearchOption.TopDirectoryOnly)).Select(p => new
+            {
+                FileName = Path.GetFileName(p),
+                Start = uint.Parse(Regex.Match(p, @"\d+").Value),
+                IsCompressed = p.EndsWith(".zip")
+            }).OrderBy(p => p.Start);
+
+            foreach (var path in paths)
+            {
+                if (path.Start > Blockchain.Singleton.Height + 1) break;
+                if (path.IsCompressed)
+                    using (FileStream fs = new FileStream(path.FileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    using (ZipArchive zip = new ZipArchive(fs, ZipArchiveMode.Read))
+                    using (Stream zs = zip.GetEntry(Path.GetFileNameWithoutExtension(path.FileName)).Open())
+                        foreach (var block in GetBlocks(zs, true))
+                            yield return block;
+                else
+                    using (FileStream fs = new FileStream(path.FileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+                        foreach (var block in GetBlocks(fs, true))
+                            yield return block;
             }
         }
 
@@ -239,17 +307,19 @@ namespace Neo.CLI
                 Console.WriteLine($"Invoking script with: '{tx.Script.ToHexString()}'");
             }
 
-            ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, testMode: true);
-
-            Console.WriteLine($"VM State: {engine.State}");
-            Console.WriteLine($"Gas Consumed: {engine.GasConsumed}");
-            Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
-            Console.WriteLine();
-            if (engine.State.HasFlag(VMState.FAULT))
+            using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, testMode: true))
             {
-                Console.WriteLine("Engine faulted.");
-                return true;
+                Console.WriteLine($"VM State: {engine.State}");
+                Console.WriteLine($"Gas Consumed: {engine.GasConsumed}");
+                Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
+                Console.WriteLine();
+                if (engine.State.HasFlag(VMState.FAULT))
+                {
+                    Console.WriteLine("Engine faulted.");
+                    return true;
+                }
             }
+
             if (NoWallet()) return true;
             try
             {
@@ -529,13 +599,6 @@ namespace Neo.CLI
                 Console.WriteLine("error");
                 return true;
             }
-            if (NeoSystem.RpcServer != null)
-            {
-                if (!ReadUserInput("Warning: Opening the wallet with RPC turned on could result in asset loss. Are you sure you want to do this? (yes|no)", false).IsYes())
-                {
-                    return true;
-                }
-            }
             string path = args[2];
             string password = ReadUserInput("password", true);
             if (password.Length == 0)
@@ -557,11 +620,41 @@ namespace Neo.CLI
         {
             switch (args[1].ToLower())
             {
+                case "block":
+                case "blocks":
+                    return OnExportBlocksCommand(args);
                 case "key":
                     return OnExportKeyCommand(args);
                 default:
                     return base.OnCommand(args);
             }
+        }
+
+        private bool OnExportBlocksCommand(string[] args)
+        {
+            bool writeStart;
+            uint count;
+            string path;
+            if (args.Length >= 3 && uint.TryParse(args[2], out uint start))
+            {
+                if (Blockchain.Singleton.Height < start) return true;
+                count = args.Length >= 4 ? uint.Parse(args[3]) : uint.MaxValue;
+                count = Math.Min(count, Blockchain.Singleton.Height - start + 1);
+                path = $"chain.{start}.acc";
+                writeStart = true;
+            }
+            else
+            {
+                start = 0;
+                count = Blockchain.Singleton.Height - start + 1;
+                path = args.Length >= 3 ? args[2] : "chain.acc";
+                writeStart = false;
+            }
+
+            WriteBlocks(start, count, path, writeStart);
+
+            Console.WriteLine();
+            return true;
         }
 
         private bool OnExportKeyCommand(string[] args)
@@ -653,6 +746,7 @@ namespace Neo.CLI
             Console.WriteLine("\tinstall <pluginName>");
             Console.WriteLine("\tuninstall <pluginName>");
             Console.WriteLine("Advanced Commands:");
+            Console.WriteLine("\texport blocks <index>");
             Console.WriteLine("\tstart consensus");
             return true;
         }
@@ -881,13 +975,6 @@ namespace Neo.CLI
                 Console.WriteLine("error");
                 return true;
             }
-            if (NeoSystem.RpcServer != null)
-            {
-                if (!ReadUserInput("Warning: Opening the wallet with RPC turned on could result in asset loss. Are you sure you want to do this? (yes|no)", false).IsYes())
-                {
-                    return true;
-                }
-            }
             string path = args[2];
             if (!File.Exists(path))
             {
@@ -908,8 +995,6 @@ namespace Neo.CLI
             {
                 Console.WriteLine($"failed to open file \"{path}\"");
             }
-            if (NeoSystem.RpcServer != null)
-                NeoSystem.RpcServer.Wallet = CurrentWallet;
             return true;
         }
 
@@ -942,10 +1027,6 @@ namespace Neo.CLI
                 return true;
             }
             CurrentWallet = null;
-            if (NeoSystem.RpcServer != null)
-            {
-                NeoSystem.RpcServer.Wallet = null;
-            }
             Console.WriteLine($"Wallet is closed");
             return true;
         }
@@ -1289,18 +1370,12 @@ namespace Neo.CLI
             }
         }
 
-        public void Start(string[] args)
+        public async void Start(string[] args)
         {
             if (NeoSystem != null) return;
-            bool useRPC = false;
             for (int i = 0; i < args.Length; i++)
                 switch (args[i])
                 {
-                    case "/rpc":
-                    case "--rpc":
-                    case "-r":
-                        useRPC = true;
-                        break;
                     case "/testnet":
                     case "--testnet":
                     case "-t":
@@ -1315,6 +1390,21 @@ namespace Neo.CLI
                         break;
                 }
             NeoSystem = new NeoSystem(Settings.Default.Storage.Engine);
+            using (IEnumerator<Block> blocksBeingImported = GetBlocksFromFile().GetEnumerator())
+            {
+                while (true)
+                {
+                    List<Block> blocksToImport = new List<Block>();
+                    for (int i = 0; i < 10; i++)
+                    {
+                        if (!blocksBeingImported.MoveNext()) break;
+                        blocksToImport.Add(blocksBeingImported.Current);
+                    }
+                    if (blocksToImport.Count == 0) break;
+                    await NeoSystem.Blockchain.Ask<Blockchain.ImportCompleted>(new Blockchain.Import { Blocks = blocksToImport });
+                    if (NeoSystem is null) return;
+                }
+            }
             NeoSystem.StartNode(new ChannelsConfig
             {
                 Tcp = new IPEndPoint(IPAddress.Any, Settings.Default.P2P.Port),
@@ -1342,23 +1432,52 @@ namespace Neo.CLI
                     OnStartConsensusCommand(null);
                 }
             }
-            if (useRPC)
-            {
-                NeoSystem.StartRpc(Settings.Default.RPC.BindAddress,
-                    Settings.Default.RPC.Port,
-                    wallet: CurrentWallet,
-                    sslCert: Settings.Default.RPC.SslCert,
-                    password: Settings.Default.RPC.SslCertPassword,
-                    maxGasInvoke: Settings.Default.RPC.MaxGasInvoke);
-            }
         }
 
         public void Stop()
         {
-            if (NeoSystem != null)
+            Interlocked.Exchange(ref neoSystem, null)?.Dispose();
+        }
+
+        private void WriteBlocks(uint start, uint count, string path, bool writeStart)
+        {
+            uint end = start + count - 1;
+            using FileStream fs = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.WriteThrough);
+            if (fs.Length > 0)
             {
-                NeoSystem.Dispose();
-                NeoSystem = null;
+                byte[] buffer = new byte[sizeof(uint)];
+                if (writeStart)
+                {
+                    fs.Seek(sizeof(uint), SeekOrigin.Begin);
+                    fs.Read(buffer, 0, buffer.Length);
+                    start += BitConverter.ToUInt32(buffer, 0);
+                    fs.Seek(sizeof(uint), SeekOrigin.Begin);
+                }
+                else
+                {
+                    fs.Read(buffer, 0, buffer.Length);
+                    start = BitConverter.ToUInt32(buffer, 0);
+                    fs.Seek(0, SeekOrigin.Begin);
+                }
+            }
+            else
+            {
+                if (writeStart)
+                {
+                    fs.Write(BitConverter.GetBytes(start), 0, sizeof(uint));
+                }
+            }
+            if (start <= end)
+                fs.Write(BitConverter.GetBytes(count), 0, sizeof(uint));
+            fs.Seek(0, SeekOrigin.End);
+            for (uint i = start; i <= end; i++)
+            {
+                Block block = Blockchain.Singleton.GetBlock(i);
+                byte[] array = block.ToArray();
+                fs.Write(BitConverter.GetBytes(array.Length), 0, sizeof(int));
+                fs.Write(array, 0, array.Length);
+                Console.SetCursorPosition(0, Console.CursorTop);
+                Console.Write($"[{i}/{end}]");
             }
         }
 

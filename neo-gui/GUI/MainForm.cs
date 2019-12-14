@@ -182,7 +182,9 @@ namespace Neo.GUI
             }
             if (Service.CurrentWallet is null) return;
             if (!check_nep5_balance || persistence_span < TimeSpan.FromSeconds(2)) return;
+            check_nep5_balance = false;
             UInt160[] addresses = Service.CurrentWallet.GetAccounts().Select(p => p.ScriptHash).ToArray();
+            if (addresses.Length == 0) return;
             using SnapshotView snapshot = Blockchain.Singleton.GetSnapshot();
             foreach (UInt160 assetId in NEP5Watched)
             {
@@ -196,7 +198,7 @@ namespace Neo.GUI
                     sb.EmitAppCall(assetId, "name");
                     script = sb.ToArray();
                 }
-                ApplicationEngine engine = ApplicationEngine.Run(script, snapshot);
+                using ApplicationEngine engine = ApplicationEngine.Run(script, snapshot, extraGAS: 0_20000000L * addresses.Length);
                 if (engine.State.HasFlag(VMState.FAULT)) continue;
                 string name = engine.ResultStack.Pop().GetString();
                 byte decimals = (byte)engine.ResultStack.Pop().GetBigInteger();
@@ -252,7 +254,6 @@ namespace Neo.GUI
                     });
                 }
             }
-            check_nep5_balance = false;
         }
 
         private void 创建钱包数据库NToolStripMenuItem_Click(object sender, EventArgs e)

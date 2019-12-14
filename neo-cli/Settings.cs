@@ -1,7 +1,5 @@
 using Microsoft.Extensions.Configuration;
 using Neo.Network.P2P;
-using Neo.SmartContract.Native;
-using System.Net;
 using System.Threading;
 
 namespace Neo
@@ -10,7 +8,6 @@ namespace Neo
     {
         public StorageSettings Storage { get; }
         public P2PSettings P2P { get; }
-        public RPCSettings RPC { get; }
         public UnlockWalletSettings UnlockWallet { get; }
         public string PluginURL { get; }
 
@@ -44,7 +41,6 @@ namespace Neo
         {
             this.Storage = new StorageSettings(section.GetSection("Storage"));
             this.P2P = new P2PSettings(section.GetSection("P2P"));
-            this.RPC = new RPCSettings(section.GetSection("RPC"));
             this.UnlockWallet = new UnlockWalletSettings(section.GetSection("UnlockWallet"));
             this.PluginURL = section.GetSection("PluginURL").Value;
         }
@@ -75,24 +71,6 @@ namespace Neo
             this.MinDesiredConnections = section.GetValue("MinDesiredConnections", Peer.DefaultMinDesiredConnections);
             this.MaxConnections = section.GetValue("MaxConnections", Peer.DefaultMaxConnections);
             this.MaxConnectionsPerAddress = section.GetValue("MaxConnectionsPerAddress", 3);
-        }
-    }
-
-    public class RPCSettings
-    {
-        public IPAddress BindAddress { get; }
-        public ushort Port { get; }
-        public string SslCert { get; }
-        public string SslCertPassword { get; }
-        public long MaxGasInvoke { get; }
-
-        public RPCSettings(IConfigurationSection section)
-        {
-            this.BindAddress = IPAddress.Parse(section.GetSection("BindAddress").Value);
-            this.Port = ushort.Parse(section.GetSection("Port").Value);
-            this.SslCert = section.GetSection("SslCert").Value;
-            this.SslCertPassword = section.GetSection("SslCertPassword").Value;
-            this.MaxGasInvoke = (long)BigDecimal.Parse(section.GetValue("MaxGasInvoke", "10"), NativeContract.GAS.Decimals).Value;
         }
     }
 
