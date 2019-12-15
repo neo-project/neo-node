@@ -12,6 +12,8 @@ namespace Neo.CLI
 
         private readonly int _x, _y;
 
+        private bool _inputRedirected;
+
         #endregion
 
         #region Properties
@@ -71,9 +73,10 @@ namespace Neo.CLI
         /// <param name="maxValue">Maximum value</param>
         public ConsolePercent(long value = 0, long maxValue = 100)
         {
+            _inputRedirected = Console.IsInputRedirected;
             _lastFactor = -1;
-            _x = Console.CursorLeft;
-            _y = Console.CursorTop;
+            _x = _inputRedirected ? 0 : Console.CursorLeft;
+            _y = _inputRedirected ? 0 : Console.CursorTop;
 
             MaxValue = maxValue;
             Value = value;
@@ -97,20 +100,27 @@ namespace Neo.CLI
             _lastPercent = percent;
 
             var fill = string.Empty.PadLeft((int)(10 * factor), '■');
-            var clean = string.Empty.PadLeft(10 - fill.Length, '■');
+            var clean = string.Empty.PadLeft(10 - fill.Length, _inputRedirected? '□' : '■');
 
-            Console.SetCursorPosition(_x, _y);
+            if (_inputRedirected)
+            {
+                Console.WriteLine("[" + fill + clean + "] (" + percent + "%)");
+            }
+            else
+            {
+                Console.SetCursorPosition(_x, _y);
 
-            var prevColor = Console.ForegroundColor;
+                var prevColor = Console.ForegroundColor;
 
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.Write("[");
-            Console.ForegroundColor = Percent > 50 ? ConsoleColor.Green : ConsoleColor.DarkGreen;
-            Console.Write(fill);
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.Write(clean + "] (" + percent + "%)");
+                Console.ForegroundColor = ConsoleColor.White;
+                Console.Write("[");
+                Console.ForegroundColor = Percent > 50 ? ConsoleColor.Green : ConsoleColor.DarkGreen;
+                Console.Write(fill);
+                Console.ForegroundColor = ConsoleColor.White;
+                Console.Write(clean + "] (" + percent + "%)");
 
-            Console.ForegroundColor = prevColor;
+                Console.ForegroundColor = prevColor;
+            }
         }
 
         /// <summary>
