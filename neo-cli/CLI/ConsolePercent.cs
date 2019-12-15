@@ -100,7 +100,7 @@ namespace Neo.CLI
             _lastPercent = percent;
 
             var fill = string.Empty.PadLeft((int)(10 * factor), '■');
-            var clean = string.Empty.PadLeft(10 - fill.Length, _inputRedirected? '□' : '■');
+            var clean = string.Empty.PadLeft(10 - fill.Length, _inputRedirected ? '□' : '■');
 
             if (_inputRedirected)
             {
