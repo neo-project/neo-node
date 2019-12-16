@@ -1468,6 +1468,7 @@ namespace Neo.CLI
             if (start <= end)
                 fs.Write(BitConverter.GetBytes(count), 0, sizeof(uint));
             fs.Seek(0, SeekOrigin.End);
+            Console.WriteLine("Export block from "+ start + " to " + end);
 
             using (var percent = new ConsolePercent(start, end))
             {
