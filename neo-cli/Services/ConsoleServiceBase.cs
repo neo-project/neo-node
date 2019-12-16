@@ -160,14 +160,19 @@ namespace Neo.Services
             const string t = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
             StringBuilder sb = new StringBuilder();
             ConsoleKeyInfo key;
-            Console.Write(prompt);
-            Console.Write(": ");
 
+            if (!string.IsNullOrEmpty(prompt))
+            {
+                Console.Write(prompt + ": ");
+            }
+
+            var prevForeground = Console.ForegroundColor;
             Console.ForegroundColor = ConsoleColor.Yellow;
 
             do
             {
                 key = Console.ReadKey(true);
+
                 if (t.IndexOf(key.KeyChar) != -1)
                 {
                     sb.Append(key.KeyChar);
@@ -183,13 +188,11 @@ namespace Neo.Services
                 else if (key.Key == ConsoleKey.Backspace && sb.Length > 0)
                 {
                     sb.Length--;
-                    Console.Write(key.KeyChar);
-                    Console.Write(' ');
-                    Console.Write(key.KeyChar);
+                    Console.Write("\b \b");
                 }
             } while (key.Key != ConsoleKey.Enter);
 
-            Console.ForegroundColor = ConsoleColor.White;
+            Console.ForegroundColor = prevForeground;
             Console.WriteLine();
             return sb.ToString();
         }
@@ -306,6 +309,7 @@ namespace Neo.Services
         protected string ReadLine()
         {
             Task<string> readLineTask = Task.Run(() => Console.ReadLine());
+
             try
             {
                 readLineTask.Wait(_shutdownTokenSource.Token);
