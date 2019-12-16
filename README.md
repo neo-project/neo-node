@@ -63,9 +63,9 @@ cd neo-node/neo-cli
 dotnet restore
 dotnet publish -c Release
 ```
-Next, you should enter the `bin/Release/netcoreapp3.0` folder and paste the `libleveldb.dll` here. In addition, you need to create `Plugins` folder and put the `LevelDBStore` or `RocksDBStore` or other supported storage engine, as well as the configuration file, in the Plugins folder.
+Next, you should enter the working directory (i.e. /bin/Debug, /bin/Release) and paste the `libleveldb.dll` here. In addition, you need to create `Plugins` folder and put the `LevelDBStore` or `RocksDBStore` or other supported storage engine, as well as the configuration file, in the Plugins folder.
 
-Assuming you are in the `bin/Release/netcoreapp3.0` folder:
+Assuming you are in the working directory:
 
 ```sh
 dotnet neo-cli.dll 
