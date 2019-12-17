@@ -1,5 +1,4 @@
-﻿using Neo.Shell;
-using Neo.Wallets;
+using Neo.CLI;
 using System;
 using System.IO;
 
@@ -7,8 +6,6 @@ namespace Neo
 {
     static class Program
     {
-        internal static Wallet Wallet;
-
         private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
             using (FileStream fs = new FileStream("error.log", FileMode.Create, FileAccess.Write, FileShare.None))
@@ -27,9 +24,6 @@ namespace Neo
         static void Main(string[] args)
         {
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
-            var bufferSize = 1024 * 67 + 128;
-            Stream inputStream = Console.OpenStandardInput(bufferSize);
-            Console.SetIn(new StreamReader(inputStream, Console.InputEncoding, false, bufferSize));
             var mainService = new MainService();
             mainService.Run(args);
         }

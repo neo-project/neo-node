@@ -46,9 +46,18 @@ namespace Neo.Services
             }
         }
 
-        protected internal abstract void OnStart(string[] args);
+        protected internal virtual void OnStart(string[] args)
+        {
+            // Register sigterm event handler
+            AssemblyLoadContext.Default.Unloading += SigTermEventHandler;
+            // Register sigint event handler
+            Console.CancelKeyPress += CancelHandler;
+        }
 
-        protected internal abstract void OnStop();
+        protected internal virtual void OnStop()
+        {
+            _shutdownAcknowledged.Signal();
+        }
 
         private static string[] ParseCommandLine(string line)
         {
@@ -151,14 +160,19 @@ namespace Neo.Services
             const string t = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
             StringBuilder sb = new StringBuilder();
             ConsoleKeyInfo key;
-            Console.Write(prompt);
-            Console.Write(": ");
 
+            if (!string.IsNullOrEmpty(prompt))
+            {
+                Console.Write(prompt + ": ");
+            }
+
+            var prevForeground = Console.ForegroundColor;
             Console.ForegroundColor = ConsoleColor.Yellow;
 
             do
             {
                 key = Console.ReadKey(true);
+
                 if (t.IndexOf(key.KeyChar) != -1)
                 {
                     sb.Append(key.KeyChar);
@@ -174,13 +188,11 @@ namespace Neo.Services
                 else if (key.Key == ConsoleKey.Backspace && sb.Length > 0)
                 {
                     sb.Length--;
-                    Console.Write(key.KeyChar);
-                    Console.Write(' ');
-                    Console.Write(key.KeyChar);
+                    Console.Write("\b \b");
                 }
             } while (key.Key != ConsoleKey.Enter);
 
-            Console.ForegroundColor = ConsoleColor.White;
+            Console.ForegroundColor = prevForeground;
             Console.WriteLine();
             return sb.ToString();
         }
@@ -286,7 +298,6 @@ namespace Neo.Services
                     OnStart(args);
                     RunConsole();
                     OnStop();
-                    _shutdownAcknowledged.Signal();
                 }
             }
             else
@@ -298,6 +309,7 @@ namespace Neo.Services
         protected string ReadLine()
         {
             Task<string> readLineTask = Task.Run(() => Console.ReadLine());
+
             try
             {
                 readLineTask.Wait(_shutdownTokenSource.Token);
@@ -310,16 +322,16 @@ namespace Neo.Services
             return readLineTask.Result;
         }
 
-        private void RunConsole()
+        public void RunConsole()
         {
             _running = true;
-            // Register sigterm event handler
-            AssemblyLoadContext.Default.Unloading += SigTermEventHandler;
-            // Register sigint event handler
-            Console.CancelKeyPress += CancelHandler;
             string[] emptyarg = new string[] { "" };
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
-                Console.Title = ServiceName;
+                try
+                {
+                    Console.Title = ServiceName;
+                }
+                catch { }
 
             Console.ForegroundColor = ConsoleColor.DarkGreen;
             Console.WriteLine($"{ServiceName} Version: {Assembly.GetEntryAssembly().GetVersion()}");

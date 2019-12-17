@@ -27,30 +27,147 @@ using System.Net;
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using ECCurve = Neo.Cryptography.ECC.ECCurve;
 using ECPoint = Neo.Cryptography.ECC.ECPoint;
-using Neo.SmartContract.Native.Tokens;
 
-namespace Neo.Shell
+namespace Neo.CLI
 {
-    internal class MainService : ConsoleServiceBase
+    public class MainService : ConsoleServiceBase
     {
-        private NeoSystem system;
+        public event EventHandler WalletChanged;
+
+        private Wallet currentWallet;
+        public Wallet CurrentWallet
+        {
+            get
+            {
+                return currentWallet;
+            }
+            private set
+            {
+                currentWallet = value;
+                WalletChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        private NeoSystem neoSystem;
+        public NeoSystem NeoSystem
+        {
+            get
+            {
+                return neoSystem;
+            }
+            private set
+            {
+                neoSystem = value;
+            }
+        }
 
         private Dictionary<string, string> knownSmartContracts = new Dictionary<string, string>() {
             { "neo", "0x43cf98eddbe047e198a3e5d57006311442a0ca15" },
             { "gas", "0xa1760976db5fcdfab2a9930e8f6ce875b2d18225" },
             { "policy", "0x9c5699b260bd468e2160dd5d45dfd2686bba8b77" },
         };
-
         protected override string Prompt => "neo";
         public override string ServiceName => "NEO-CLI";
 
-        private static bool NoWallet()
+        public void CreateWallet(string path, string password)
         {
-            if (Program.Wallet != null) return false;
+            switch (Path.GetExtension(path))
+            {
+                case ".db3":
+                    {
+                        UserWallet wallet = UserWallet.Create(path, password);
+                        WalletAccount account = wallet.CreateAccount();
+                        Console.WriteLine($"address: {account.Address}");
+                        Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+                        CurrentWallet = wallet;
+                    }
+                    break;
+                case ".json":
+                    {
+                        NEP6Wallet wallet = new NEP6Wallet(path);
+                        wallet.Unlock(password);
+                        WalletAccount account = wallet.CreateAccount();
+                        wallet.Save();
+                        Console.WriteLine($"address: {account.Address}");
+                        Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+                        CurrentWallet = wallet;
+                    }
+                    break;
+                default:
+                    Console.WriteLine("Wallet files in that format are not supported, please use a .json or .db3 file extension.");
+                    break;
+            }
+        }
+
+        private static IEnumerable<Block> GetBlocks(Stream stream, bool read_start = false)
+        {
+            using BinaryReader r = new BinaryReader(stream);
+            uint start = read_start ? r.ReadUInt32() : 0;
+            uint count = r.ReadUInt32();
+            uint end = start + count - 1;
+            if (end <= Blockchain.Singleton.Height) yield break;
+            for (uint height = start; height <= end; height++)
+            {
+                var size = r.ReadInt32();
+                if (size > Message.PayloadMaxSize)
+                    throw new ArgumentException($"Block {height} exceeds the maximum allowed size");
+
+                byte[] array = r.ReadBytes(size);
+                if (height > Blockchain.Singleton.Height)
+                {
+                    Block block = array.AsSerializable<Block>();
+                    yield return block;
+                }
+            }
+        }
+
+        private IEnumerable<Block> GetBlocksFromFile()
+        {
+            const string pathAcc = "chain.acc";
+            if (File.Exists(pathAcc))
+                using (FileStream fs = new FileStream(pathAcc, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    foreach (var block in GetBlocks(fs))
+                        yield return block;
+
+            const string pathAccZip = pathAcc + ".zip";
+            if (File.Exists(pathAccZip))
+                using (FileStream fs = new FileStream(pathAccZip, FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (ZipArchive zip = new ZipArchive(fs, ZipArchiveMode.Read))
+                using (Stream zs = zip.GetEntry(pathAcc).Open())
+                    foreach (var block in GetBlocks(zs))
+                        yield return block;
+
+            var paths = Directory.EnumerateFiles(".", "chain.*.acc", SearchOption.TopDirectoryOnly).Concat(Directory.EnumerateFiles(".", "chain.*.acc.zip", SearchOption.TopDirectoryOnly)).Select(p => new
+            {
+                FileName = Path.GetFileName(p),
+                Start = uint.Parse(Regex.Match(p, @"\d+").Value),
+                IsCompressed = p.EndsWith(".zip")
+            }).OrderBy(p => p.Start);
+
+            foreach (var path in paths)
+            {
+                if (path.Start > Blockchain.Singleton.Height + 1) break;
+                if (path.IsCompressed)
+                    using (FileStream fs = new FileStream(path.FileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    using (ZipArchive zip = new ZipArchive(fs, ZipArchiveMode.Read))
+                    using (Stream zs = zip.GetEntry(Path.GetFileNameWithoutExtension(path.FileName)).Open())
+                        foreach (var block in GetBlocks(zs, true))
+                            yield return block;
+                else
+                    using (FileStream fs = new FileStream(path.FileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+                        foreach (var block in GetBlocks(fs, true))
+                            yield return block;
+            }
+        }
+
+        private bool NoWallet()
+        {
+            if (CurrentWallet != null) return false;
             Console.WriteLine("You have to open the wallet first.");
             return true;
         }
@@ -268,7 +385,7 @@ namespace Neo.Shell
                     Console.WriteLine($"Command \"{command}\" is not supported.");
                     return true;
             }
-            system.LocalNode.Tell(Message.Create(command, payload));
+            NeoSystem.LocalNode.Tell(Message.Create(command, payload));
             return true;
         }
 
@@ -277,14 +394,13 @@ namespace Neo.Shell
             if (NoWallet()) return true;
             byte[] script = LoadDeploymentScript(
                 /* filePath */ args[1],
-                /* hasStorage */ args[2].ToBool(),
-                /* isPayable */ args[3].ToBool(),
+                /* manifest */ args.Length == 2 ? "" : args[2],
                 /* scriptHash */ out var scriptHash);
 
             Transaction tx;
             try
             {
-                tx = Program.Wallet.MakeTransaction(script);
+                tx = CurrentWallet.MakeTransaction(script);
             }
             catch (InvalidOperationException)
             {
@@ -297,8 +413,21 @@ namespace Neo.Shell
             return SignAndSendTx(tx);
         }
 
-        private Transaction BuildInvocationTransaction(string[] args)
+        private bool OnInvokeCommand(string[] args)
         {
+            var scriptHash = UInt160.Parse(args[1]);
+
+            List<ContractParameter> contractParameters = new List<ContractParameter>();
+            for (int i = 3; i < args.Length; i++)
+            {
+                contractParameters.Add(new ContractParameter()
+                {
+                    // TODO: support contract params of type other than string.
+                    Type = ContractParameterType.String,
+                    Value = args[i]
+                });
+            }
+
             Transaction tx = new Transaction
             {
                 Sender = UInt160.Zero,
@@ -306,87 +435,30 @@ namespace Neo.Shell
                 Witnesses = new Witness[0]
             };
 
-            //TODO Use manifest
-            var scriptHash = UInt160.Parse(args[1]);
-            var operation = args[2];
-            List<ContractParameter> contractParameters = ParseParameters(args);
-
-            if (operation.Equals("transfer", StringComparison.CurrentCultureIgnoreCase))
-            {
-                tx.Sender = (UInt160)contractParameters[0].Value;
-                var cosigner = new Cosigner();
-                cosigner.Scopes = WitnessScope.CalledByEntry;
-                cosigner.Account = tx.Sender;
-                tx.Cosigners = new Cosigner[] { cosigner };
-            }
-
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
             {
-                scriptBuilder.EmitAppCall(scriptHash, operation, contractParameters.ToArray());
+                scriptBuilder.EmitAppCall(scriptHash, args[2], contractParameters.ToArray());
                 tx.Script = scriptBuilder.ToArray();
+                Console.WriteLine($"Invoking script with: '{tx.Script.ToHexString()}'");
             }
 
-            return tx;
-        }
-
-        private bool OnInvokeCommand(string[] args)
-        {
-            if (knownSmartContracts.ContainsKey(args[1]))
+            using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, testMode: true))
             {
-                args[1] = knownSmartContracts[args[1]];
-            }
-
-            Transaction tx = BuildInvocationTransaction(args);
-            ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, testMode: true);
-
-            Console.WriteLine($"VM State: {engine.State}");
-            Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NeoToken.GAS.Decimals)}");
-            if (engine.ResultStack.Count == 1)
-            {
-                using (var snapshot = Blockchain.Singleton.GetSnapshot())
-                {
-                    var scriptHash = UInt160.Parse(args[1]);
-                    var contract = snapshot.Contracts.TryGet(scriptHash);
-                    var method = contract.Manifest.Abi.Methods.First(m => m.Name.Equals(args[2]));
-                    var result = engine.ResultStack.First();
-                    switch (method.ReturnType)
-                    {
-                        case ContractParameterType.String:
-                            Console.WriteLine($"Result: { result.GetString() }");
-                            break;
-                        case ContractParameterType.Integer:
-                            Console.WriteLine($"Result: { result.GetBigInteger() }");
-                            break;
-                        case ContractParameterType.Boolean:
-                            Console.WriteLine($"Result: { result.ToBoolean() }");
-                            break;
-                    }
-                }
-            }
-            else
-            {
+                Console.WriteLine($"VM State: {engine.State}");
+                Console.WriteLine($"Gas Consumed: {engine.GasConsumed}");
                 Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
-            }
-
-            if (engine.Notifications.Count != 0)
-            {
-                Console.WriteLine("Notifications:");
-                foreach (var notification in engine.Notifications)
+                Console.WriteLine();
+                if (engine.State.HasFlag(VMState.FAULT))
                 {
-                    Console.WriteLine(notification.ToCLIString());
+                    Console.WriteLine("Engine faulted.");
+                    return true;
                 }
             }
 
-            Console.WriteLine();
-            if (engine.State.HasFlag(VMState.FAULT))
-            {
-                Console.WriteLine("Engine faulted.");
-                return true;
-            }
             if (NoWallet()) return true;
             try
             {
-                tx = Program.Wallet.MakeTransaction(tx.Script, cosigners: tx.Cosigners);
+                tx = CurrentWallet.MakeTransaction(tx.Script);
             }
             catch (InvalidOperationException)
             {
@@ -397,69 +469,29 @@ namespace Neo.Shell
             {
                 return true;
             }
-
             return SignAndSendTx(tx);
         }
 
-        private List<ContractParameter> ParseParameters(string[] args)
+        private byte[] LoadDeploymentScript(string nefFilePath, string manifestFilePath, out UInt160 scriptHash)
         {
-            var contractParameters = new List<ContractParameter>();
-            for (int i = 3; i < args.Length; i++)
+            if (string.IsNullOrEmpty(manifestFilePath))
             {
-                var arg = args[i];
-                bool isNumeric = BigInteger.TryParse(arg, out BigInteger amount);
-                if (arg.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    arg = arg.Substring(2);
-                    if (arg.Length == 64)
-                    {
-                        contractParameters.Add(new ContractParameter()
-                        {
-                            Type = ContractParameterType.Hash256,
-                            Value = UInt256.Parse(arg)
-                        });
-                    }
-                    else
-                    {
-                        contractParameters.Add(new ContractParameter()
-                        {
-                            Type = ContractParameterType.Hash160,
-                            Value = UInt160.Parse(arg)
-                        });
-                    }
-
-                }
-                else if (arg.IsAddress())
-                {
-                    contractParameters.Add(new ContractParameter()
-                    {
-                        Type = ContractParameterType.Hash160,
-                        Value = arg.ToScriptHash()
-                    });
-                }
-                else if (isNumeric)
-                {
-                    contractParameters.Add(new ContractParameter()
-                    {
-                        Type = ContractParameterType.Integer,
-                        Value = amount
-                    });
-                }
-                else
-                {
-                    contractParameters.Add(new ContractParameter()
-                    {
-                        Type = ContractParameterType.String,
-                        Value = arg
-                    });
-                }
+                manifestFilePath = Path.ChangeExtension(nefFilePath, ".manifest.json");
             }
-            return contractParameters;
-        }
 
-        private byte[] LoadDeploymentScript(string nefFilePath, bool hasStorage, bool isPayable, out UInt160 scriptHash)
-        {
-            var info = new FileInfo(nefFilePath);
+            // Read manifest
+
+            var info = new FileInfo(manifestFilePath);
+            if (!info.Exists || info.Length >= Transaction.MaxTransactionSize)
+            {
+                throw new ArgumentException(nameof(manifestFilePath));
+            }
+
+            var manifest = ContractManifest.Parse(File.ReadAllText(manifestFilePath));
+
+            // Read nef
+
+            info = new FileInfo(nefFilePath);
             if (!info.Exists || info.Length >= Transaction.MaxTransactionSize)
             {
                 throw new ArgumentException(nameof(nefFilePath));
@@ -470,11 +502,7 @@ namespace Neo.Shell
             {
                 file = stream.ReadSerializable<NefFile>();
             }
-            scriptHash = file.ScriptHash;
 
-            ContractFeatures properties = ContractFeatures.NoProperty;
-            if (hasStorage) properties |= ContractFeatures.HasStorage;
-            if (isPayable) properties |= ContractFeatures.Payable;
             // Basic script checks
 
             using (var engine = new ApplicationEngine(TriggerType.Application, null, null, 0, true))
@@ -515,12 +543,12 @@ namespace Neo.Shell
             scriptHash = file.ScriptHash;
             using (ScriptBuilder sb = new ScriptBuilder())
             {
-                sb.EmitSysCall(InteropService.Neo_Contract_Create, file.Script, properties);
+                sb.EmitSysCall(InteropService.Neo_Contract_Create, file.Script, manifest.ToJson().ToString());
                 return sb.ToArray();
             }
         }
 
-        public bool SignAndSendTx(Transaction tx)
+        private bool SignAndSendTx(Transaction tx)
         {
             ContractParametersContext context;
             try
@@ -532,14 +560,13 @@ namespace Neo.Shell
                 Console.WriteLine($"Error creating contract params: {ex}");
                 throw;
             }
-
-            Program.Wallet.Sign(context);
+            CurrentWallet.Sign(context);
             string msg;
             if (context.Completed)
             {
                 tx.Witnesses = context.GetWitnesses();
 
-                system.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
+                NeoSystem.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
 
                 msg = $"Signed and relayed transaction with hash={tx.Hash}";
                 Console.WriteLine(msg);
@@ -578,12 +605,12 @@ namespace Neo.Shell
                     return true;
                 }
                 tx.Witnesses = context.GetWitnesses();
-                system.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
-                Console.WriteLine($"Data relay success, the hash is shown as follows:\r\n{tx.Hash}");
+                NeoSystem.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
+                Console.WriteLine($"Data relay success, the hash is shown as follows:{Environment.NewLine}{tx.Hash}");
             }
             catch (Exception e)
             {
-                Console.WriteLine($"One or more errors occurred:\r\n{e.Message}");
+                Console.WriteLine($"One or more errors occurred:{Environment.NewLine}{e.Message}");
             }
             return true;
         }
@@ -606,16 +633,16 @@ namespace Neo.Shell
             try
             {
                 ContractParametersContext context = ContractParametersContext.Parse(jsonObjectToSign);
-                if (!Program.Wallet.Sign(context))
+                if (!CurrentWallet.Sign(context))
                 {
                     Console.WriteLine("The private key that can sign the data is not found.");
                     return true;
                 }
-                Console.WriteLine($"Signed Output:\r\n{context}");
+                Console.WriteLine($"Signed Output:{Environment.NewLine}{context}");
             }
             catch (Exception e)
             {
-                Console.WriteLine($"One or more errors occurred:\r\n{e.Message}");
+                Console.WriteLine($"One or more errors occurred:{Environment.NewLine}{e.Message}");
             }
             return true;
         }
@@ -635,7 +662,7 @@ namespace Neo.Shell
         {
             if (args.Length != 3) return false;
             if (!byte.TryParse(args[2], out byte viewnumber)) return false;
-            system.Consensus?.Tell(new ConsensusService.SetViewNumber { ViewNumber = viewnumber });
+            NeoSystem.Consensus?.Tell(new ConsensusService.SetViewNumber { ViewNumber = viewnumber });
             return true;
         }
 
@@ -681,7 +708,7 @@ namespace Neo.Shell
 
             Parallel.For(0, count, (i) =>
             {
-                WalletAccount account = Program.Wallet.CreateAccount();
+                WalletAccount account = CurrentWallet.CreateAccount();
 
                 lock (addresses)
                 {
@@ -692,7 +719,7 @@ namespace Neo.Shell
                 }
             });
 
-            if (Program.Wallet is NEP6Wallet wallet)
+            if (CurrentWallet is NEP6Wallet wallet)
                 wallet.Save();
             Console.WriteLine();
             Console.WriteLine($"export addresses to {path}");
@@ -707,13 +734,6 @@ namespace Neo.Shell
                 Console.WriteLine("error");
                 return true;
             }
-            if (system.RpcServer != null)
-            {
-                if (!ReadUserInput("Warning: Opening the wallet with RPC turned on could result in asset loss. Are you sure you want to do this? (yes|no)", false).IsYes())
-                {
-                    return true;
-                }
-            }
             string path = args[2];
             string password = ReadUserInput("password", true);
             if (password.Length == 0)
@@ -727,35 +747,7 @@ namespace Neo.Shell
                 Console.WriteLine("error");
                 return true;
             }
-            switch (Path.GetExtension(path))
-            {
-                case ".db3":
-                    {
-                        Program.Wallet = UserWallet.Create(path, password);
-                        WalletAccount account = Program.Wallet.CreateAccount();
-                        Console.WriteLine($"address: {account.Address}");
-                        Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                        if (system.RpcServer != null)
-                            system.RpcServer.Wallet = Program.Wallet;
-                    }
-                    break;
-                case ".json":
-                    {
-                        NEP6Wallet wallet = new NEP6Wallet(path);
-                        wallet.Unlock(password);
-                        WalletAccount account = wallet.CreateAccount();
-                        wallet.Save();
-                        Program.Wallet = wallet;
-                        Console.WriteLine($"address: {account.Address}");
-                        Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                        if (system.RpcServer != null)
-                            system.RpcServer.Wallet = Program.Wallet;
-                    }
-                    break;
-                default:
-                    Console.WriteLine("Wallet files in that format are not supported, please use a .json or .db3 file extension.");
-                    break;
-            }
+            CreateWallet(path, password);
             return true;
         }
 
@@ -763,11 +755,41 @@ namespace Neo.Shell
         {
             switch (args[1].ToLower())
             {
+                case "block":
+                case "blocks":
+                    return OnExportBlocksCommand(args);
                 case "key":
                     return OnExportKeyCommand(args);
                 default:
                     return base.OnCommand(args);
             }
+        }
+
+        private bool OnExportBlocksCommand(string[] args)
+        {
+            bool writeStart;
+            uint count;
+            string path;
+            if (args.Length >= 3 && uint.TryParse(args[2], out uint start))
+            {
+                if (Blockchain.Singleton.Height < start) return true;
+                count = args.Length >= 4 ? uint.Parse(args[3]) : uint.MaxValue;
+                count = Math.Min(count, Blockchain.Singleton.Height - start + 1);
+                path = $"chain.{start}.acc";
+                writeStart = true;
+            }
+            else
+            {
+                start = 0;
+                count = Blockchain.Singleton.Height - start + 1;
+                path = args.Length >= 3 ? args[2] : "chain.acc";
+                writeStart = false;
+            }
+
+            WriteBlocks(start, count, path, writeStart);
+
+            Console.WriteLine();
+            return true;
         }
 
         private bool OnExportKeyCommand(string[] args)
@@ -807,16 +829,16 @@ namespace Neo.Shell
                 Console.WriteLine("cancelled");
                 return true;
             }
-            if (!Program.Wallet.VerifyPassword(password))
+            if (!CurrentWallet.VerifyPassword(password))
             {
                 Console.WriteLine("Incorrect password");
                 return true;
             }
             IEnumerable<KeyPair> keys;
             if (scriptHash == null)
-                keys = Program.Wallet.GetAccounts().Where(p => p.HasKey).Select(p => p.GetKey());
+                keys = CurrentWallet.GetAccounts().Where(p => p.HasKey).Select(p => p.GetKey());
             else
-                keys = new[] { Program.Wallet.GetAccount(scriptHash).GetKey() };
+                keys = new[] { CurrentWallet.GetAccount(scriptHash).GetKey() };
             if (path == null)
                 foreach (KeyPair key in keys)
                     Console.WriteLine(key.Export());
@@ -827,53 +849,52 @@ namespace Neo.Shell
 
         private bool OnHelpCommand(string[] args)
         {
-            Console.Write(
-                "Normal Commands:\n" +
-                "\tversion\n" +
-                "\thelp [plugin-name]\n" +
-                "\tclear\n" +
-                "\texit\n" +
-                "Wallet Commands:\n" +
-                "\tcreate wallet <path>\n" +
-                "\topen wallet <path>\n" +
-                "\tclose wallet\n" +
-                "\tupgrade wallet <path>\n" +
-                "\tlist address\n" +
-                "\tlist asset\n" +
-                "\tlist key\n" +
-                "\tshow gas\n" +
-                "\tcreate address [n=1]\n" +
-                "\timport key <wif|path>\n" +
-                "\texport key [address] [path]\n" +
-                "\timport multisigaddress m pubkeys...\n" +
-                "\tsend <id|alias> <address> <value>\n" +
-                "\tsign <jsonObjectToSign>\n" +
-                "Contract Commands:\n" +
-                "\tdeploy <nefFilePath> [manifestFile]\n" +
-                "\tinvoke <scripthash> <command> [optionally quoted params separated by space]\n" +
-                "Node Commands:\n" +
-                "\tshow state\n" +
-                "\tshow pool [verbose]\n" +
-                "\trelay <jsonObjectToSign>\n" +
-                "Show Commands:\n" +
-                "\tshow block <index/hash>\n" +
-                "\tshow transaction <hash>\n" +
-                "\tshow last-transactions <1 - 100>\n" +
-                "\tshow contract <script hash>\n" +
-                "Tool Commands:\n" +
-                "\ttool addressToScript <address>\n" +
-                "\ttool scriptToAddress <scriptHash>\n" +
-                "\ttool hexToString <hex string>\n" +
-                "\ttool stringToHex <scriptHash>\n" +
-                "\ttool hexToNumber <scriptHash>\n" +
-                "\ttool numberToHex <number>\n" +
-                "Plugin Commands:\n" +
-                "\tplugins\n" +
-                "\tinstall <pluginName>\n" +
-                "\tuninstall <pluginName>\n" +
-                "Advanced Commands:\n" +
-                "\tstart consensus\n");
-
+            Console.WriteLine("Normal Commands:");
+            Console.WriteLine("\tversion");
+            Console.WriteLine("\thelp [plugin-name]");
+            Console.WriteLine("\tclear");
+            Console.WriteLine("\texit");
+            Console.WriteLine("Wallet Commands:");
+            Console.WriteLine("\tcreate wallet <path>");
+            Console.WriteLine("\topen wallet <path>");
+            Console.WriteLine("\tclose wallet");
+            Console.WriteLine("\tupgrade wallet <path>");
+            Console.WriteLine("\tlist address");
+            Console.WriteLine("\tlist asset");
+            Console.WriteLine("\tlist key");
+            Console.WriteLine("\tshow gas");
+            Console.WriteLine("\tcreate address [n=1]");
+            Console.WriteLine("\timport key <wif|path>");
+            Console.WriteLine("\texport key [address] [path]");
+            Console.WriteLine("\timport multisigaddress m pubkeys...");
+            Console.WriteLine("\tsend <id|alias> <address> <value>");
+            Console.WriteLine("\tsign <jsonObjectToSign>");
+            Console.WriteLine("Contract Commands:");
+            Console.WriteLine("\tdeploy <nefFilePath> [manifestFile]");
+            Console.WriteLine("\tinvoke <scripthash> <command> [optionally quoted params separated by space]");
+            Console.WriteLine("Node Commands:");
+            Console.WriteLine("\tshow state");
+            Console.WriteLine("\tshow pool [verbose]");
+            Console.WriteLine("\trelay <jsonObjectToSign>");
+            Console.WriteLine("Show Commands:");
+            Console.WriteLine("\tshow block <index/hash>");
+            Console.WriteLine("\tshow transaction <hash>");
+            Console.WriteLine("\tshow last-transactions <1 - 100>");
+            Console.WriteLine("\tshow contract <script hash>");
+            Console.WriteLine("Tool Commands:");
+            Console.WriteLine("\ttool addressToScript <address>");
+            Console.WriteLine("\ttool scriptToAddress <scriptHash>");
+            Console.WriteLine("\ttool hexToString <hex string>");
+            Console.WriteLine("\ttool stringToHex <scriptHash>");
+            Console.WriteLine("\ttool hexToNumber <scriptHash>");
+            Console.WriteLine("\ttool numberToHex <number>");
+            Console.WriteLine("Plugin Commands:");
+            Console.WriteLine("\tplugins");
+            Console.WriteLine("\tinstall <pluginName>");
+            Console.WriteLine("\tuninstall <pluginName>");
+            Console.WriteLine("Advanced Commands:");
+            Console.WriteLine("\texport blocks <index>");
+            Console.WriteLine("\tstart consensus");
             return true;
         }
 
@@ -926,10 +947,10 @@ namespace Neo.Shell
             ECPoint[] publicKeys = args.Skip(3).Select(p => ECPoint.Parse(p, ECCurve.Secp256r1)).ToArray();
 
             Contract multiSignContract = Contract.CreateMultiSigContract(m, publicKeys);
-            KeyPair keyPair = Program.Wallet.GetAccounts().FirstOrDefault(p => p.HasKey && publicKeys.Contains(p.GetKey().PublicKey))?.GetKey();
+            KeyPair keyPair = CurrentWallet.GetAccounts().FirstOrDefault(p => p.HasKey && publicKeys.Contains(p.GetKey().PublicKey))?.GetKey();
 
-            WalletAccount account = Program.Wallet.CreateAccount(multiSignContract, keyPair);
-            if (Program.Wallet is NEP6Wallet wallet)
+            WalletAccount account = CurrentWallet.CreateAccount(multiSignContract, keyPair);
+            if (CurrentWallet is NEP6Wallet wallet)
                 wallet.Save();
 
             Console.WriteLine("Multisig. Addr.: " + multiSignContract.Address);
@@ -975,7 +996,7 @@ namespace Neo.Shell
                         prikey = lines[i].HexToBytes();
                     else
                         prikey = Wallet.GetPrivateKeyFromWIF(lines[i]);
-                    Program.Wallet.CreateAccount(prikey);
+                    CurrentWallet.CreateAccount(prikey);
                     Array.Clear(prikey, 0, prikey.Length);
                     Console.SetCursorPosition(0, Console.CursorTop);
                     Console.Write($"[{i + 1}/{lines.Length}]");
@@ -984,12 +1005,12 @@ namespace Neo.Shell
             }
             else
             {
-                WalletAccount account = Program.Wallet.CreateAccount(prikey);
+                WalletAccount account = CurrentWallet.CreateAccount(prikey);
                 Array.Clear(prikey, 0, prikey.Length);
                 Console.WriteLine($"address: {account.Address}");
                 Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
             }
-            if (Program.Wallet is NEP6Wallet wallet)
+            if (CurrentWallet is NEP6Wallet wallet)
                 wallet.Save();
             return true;
         }
@@ -1014,7 +1035,7 @@ namespace Neo.Shell
             if (NoWallet()) return true;
             BigInteger gas = BigInteger.Zero;
             using (SnapshotView snapshot = Blockchain.Singleton.GetSnapshot())
-                foreach (UInt160 account in Program.Wallet.GetAccounts().Select(p => p.ScriptHash))
+                foreach (UInt160 account in CurrentWallet.GetAccounts().Select(p => p.ScriptHash))
                 {
                     gas += NativeContract.NEO.UnclaimedGas(snapshot, account, snapshot.Height + 1);
                 }
@@ -1025,7 +1046,7 @@ namespace Neo.Shell
         private bool OnListKeyCommand(string[] args)
         {
             if (NoWallet()) return true;
-            foreach (KeyPair key in Program.Wallet.GetAccounts().Where(p => p.HasKey).Select(p => p.GetKey()))
+            foreach (KeyPair key in CurrentWallet.GetAccounts().Where(p => p.HasKey).Select(p => p.GetKey()))
             {
                 Console.WriteLine(key.PublicKey);
             }
@@ -1038,7 +1059,7 @@ namespace Neo.Shell
 
             using (var snapshot = Blockchain.Singleton.GetSnapshot())
             {
-                foreach (Contract contract in Program.Wallet.GetAccounts().Where(p => !p.WatchOnly).Select(p => p.Contract))
+                foreach (Contract contract in CurrentWallet.GetAccounts().Where(p => !p.WatchOnly).Select(p => p.Contract))
                 {
                     var type = "Nonstandard";
 
@@ -1056,7 +1077,6 @@ namespace Neo.Shell
                     }
 
                     Console.WriteLine($"{contract.Address}\t{type}");
-                    Console.WriteLine($"Hash: {contract.ScriptHash}");
                 }
             }
 
@@ -1066,15 +1086,15 @@ namespace Neo.Shell
         private bool OnListAssetCommand(string[] args)
         {
             if (NoWallet()) return true;
-            foreach (UInt160 account in Program.Wallet.GetAccounts().Select(p => p.ScriptHash))
+            foreach (UInt160 account in CurrentWallet.GetAccounts().Select(p => p.ScriptHash))
             {
                 Console.WriteLine(account.ToAddress());
-                Console.WriteLine($"NEO: {Program.Wallet.GetBalance(NativeContract.NEO.Hash, account)}");
-                Console.WriteLine($"GAS: {Program.Wallet.GetBalance(NativeContract.GAS.Hash, account)}");
+                Console.WriteLine($"NEO: {CurrentWallet.GetBalance(NativeContract.NEO.Hash, account)}");
+                Console.WriteLine($"GAS: {CurrentWallet.GetBalance(NativeContract.GAS.Hash, account)}");
                 Console.WriteLine();
             }
             Console.WriteLine("----------------------------------------------------");
-            Console.WriteLine("Total:   " + "NEO: " + Program.Wallet.GetAvailable(NativeContract.NEO.Hash) + "    GAS: " + Program.Wallet.GetAvailable(NativeContract.GAS.Hash));
+            Console.WriteLine("Total:   " + "NEO: " + CurrentWallet.GetAvailable(NativeContract.NEO.Hash) + "    GAS: " + CurrentWallet.GetAvailable(NativeContract.GAS.Hash));
             Console.WriteLine();
             Console.WriteLine("NEO hash: " + NativeContract.NEO.Hash);
             Console.WriteLine("GAS hash: " + NativeContract.GAS.Hash);
@@ -1102,13 +1122,6 @@ namespace Neo.Shell
                 Console.WriteLine("error");
                 return true;
             }
-            if (system.RpcServer != null)
-            {
-                if (!ReadUserInput("Warning: Opening the wallet with RPC turned on could result in asset loss. Are you sure you want to do this? (yes|no)", false).IsYes())
-                {
-                    return true;
-                }
-            }
             string path = args[2];
             if (!File.Exists(path))
             {
@@ -1123,14 +1136,12 @@ namespace Neo.Shell
             }
             try
             {
-                Program.Wallet = OpenWallet(path, password);
+                OpenWallet(path, password);
             }
             catch (CryptographicException)
             {
                 Console.WriteLine($"failed to open file \"{path}\"");
             }
-            if (system.RpcServer != null)
-                system.RpcServer.Wallet = Program.Wallet;
             return true;
         }
 
@@ -1157,23 +1168,19 @@ namespace Neo.Shell
         /// <returns></returns>
         private bool OnCloseWalletCommand(string[] args)
         {
-            if (Program.Wallet == null)
+            if (CurrentWallet == null)
             {
                 Console.WriteLine($"Wallet is not opened");
                 return true;
             }
-            Program.Wallet = null;
-            if (system.RpcServer != null)
-            {
-                system.RpcServer.Wallet = null;
-            }
+            CurrentWallet = null;
             Console.WriteLine($"Wallet is closed");
             return true;
         }
 
         private bool OnSendCommand(string[] args)
         {
-            if (args.Length < 4 || args.Length > 5)
+            if (args.Length != 4)
             {
                 Console.WriteLine("error");
                 return true;
@@ -1185,7 +1192,7 @@ namespace Neo.Shell
                 Console.WriteLine("cancelled");
                 return true;
             }
-            if (!Program.Wallet.VerifyPassword(password))
+            if (!CurrentWallet.VerifyPassword(password))
             {
                 Console.WriteLine("Incorrect password");
                 return true;
@@ -1211,7 +1218,7 @@ namespace Neo.Shell
                 Console.WriteLine("Incorrect Amount Format");
                 return true;
             }
-            tx = Program.Wallet.MakeTransaction(new[]
+            tx = CurrentWallet.MakeTransaction(new[]
             {
                 new TransferOutput
                 {
@@ -1228,11 +1235,11 @@ namespace Neo.Shell
             }
 
             ContractParametersContext context = new ContractParametersContext(tx);
-            Program.Wallet.Sign(context);
+            CurrentWallet.Sign(context);
             if (context.Completed)
             {
                 tx.Witnesses = context.GetWitnesses();
-                system.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
+                NeoSystem.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
                 Console.WriteLine($"TXID: {tx.Hash}");
             }
             else
@@ -1456,7 +1463,7 @@ namespace Neo.Shell
             {
                 while (!cancel.Token.IsCancellationRequested)
                 {
-                    system.LocalNode.Tell(Message.Create(MessageCommand.Ping, PingPayload.Create(Blockchain.Singleton.Height)));
+                    NeoSystem.LocalNode.Tell(Message.Create(MessageCommand.Ping, PingPayload.Create(Blockchain.Singleton.Height)));
                     await Task.Delay(Blockchain.TimePerBlock, cancel.Token);
                 }
             });
@@ -1488,7 +1495,7 @@ namespace Neo.Shell
                     await Task.Delay(500, cancel.Token);
                 }
             });
-            Console.ReadLine();
+            ReadLine();
             cancel.Cancel();
             try { Task.WaitAll(task, broadcast); } catch { }
             Console.WriteLine();
@@ -1498,65 +1505,8 @@ namespace Neo.Shell
 
         protected internal override void OnStart(string[] args)
         {
-            bool useRPC = false;
-            for (int i = 0; i < args.Length; i++)
-                switch (args[i])
-                {
-                    case "/rpc":
-                    case "--rpc":
-                    case "-r":
-                        useRPC = true;
-                        break;
-                    case "/testnet":
-                    case "--testnet":
-                    case "-t":
-                        ProtocolSettings.Initialize(new ConfigurationBuilder().AddJsonFile("protocol.testnet.json").Build());
-                        Settings.Initialize(new ConfigurationBuilder().AddJsonFile("config.testnet.json").Build());
-                        break;
-                    case "/mainnet":
-                    case "--mainnet":
-                    case "-m":
-                        ProtocolSettings.Initialize(new ConfigurationBuilder().AddJsonFile("protocol.mainnet.json").Build());
-                        Settings.Initialize(new ConfigurationBuilder().AddJsonFile("config.mainnet.json").Build());
-                        break;
-                }
-            system = new NeoSystem(Settings.Default.Storage.Engine);
-            system.StartNode(new ChannelsConfig
-            {
-                Tcp = new IPEndPoint(IPAddress.Any, Settings.Default.P2P.Port),
-                WebSocket = new IPEndPoint(IPAddress.Any, Settings.Default.P2P.WsPort),
-                MinDesiredConnections = Settings.Default.P2P.MinDesiredConnections,
-                MaxConnections = Settings.Default.P2P.MaxConnections,
-                MaxConnectionsPerAddress = Settings.Default.P2P.MaxConnectionsPerAddress
-            });
-            if (Settings.Default.UnlockWallet.IsActive)
-            {
-                try
-                {
-                    Program.Wallet = OpenWallet(Settings.Default.UnlockWallet.Path, Settings.Default.UnlockWallet.Password);
-                }
-                catch (FileNotFoundException)
-                {
-                    Console.WriteLine($"Warning: wallet file \"{Settings.Default.UnlockWallet.Path}\" not found.");
-                }
-                catch (CryptographicException)
-                {
-                    Console.WriteLine($"failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
-                }
-                if (Settings.Default.UnlockWallet.StartConsensus && Program.Wallet != null)
-                {
-                    OnStartConsensusCommand(null);
-                }
-            }
-            if (useRPC)
-            {
-                system.StartRpc(Settings.Default.RPC.BindAddress,
-                    Settings.Default.RPC.Port,
-                    wallet: Program.Wallet,
-                    sslCert: Settings.Default.RPC.SslCert,
-                    password: Settings.Default.RPC.SslCertPassword,
-                    maxGasInvoke: Settings.Default.RPC.MaxGasInvoke);
-            }
+            base.OnStart(args);
+            Start(args);
         }
 
         private bool OnStartCommand(string[] args)
@@ -1574,13 +1524,14 @@ namespace Neo.Shell
         {
             if (NoWallet()) return true;
             ShowPrompt = false;
-            system.StartConsensus(Program.Wallet);
+            NeoSystem.StartConsensus(CurrentWallet);
             return true;
         }
 
         protected internal override void OnStop()
         {
-            system.Dispose();
+            base.OnStop();
+            Stop();
         }
 
         private bool OnUpgradeCommand(string[] args)
@@ -1715,7 +1666,7 @@ namespace Neo.Shell
             return true;
         }
 
-        private static Wallet OpenWallet(string path, string password)
+        public void OpenWallet(string path, string password)
         {
             if (!File.Exists(path))
             {
@@ -1724,13 +1675,124 @@ namespace Neo.Shell
 
             if (Path.GetExtension(path) == ".db3")
             {
-                return UserWallet.Open(path, password);
+                CurrentWallet = UserWallet.Open(path, password);
             }
             else
             {
                 NEP6Wallet nep6wallet = new NEP6Wallet(path);
                 nep6wallet.Unlock(password);
-                return nep6wallet;
+                CurrentWallet = nep6wallet;
+            }
+        }
+
+        public async void Start(string[] args)
+        {
+            if (NeoSystem != null) return;
+            for (int i = 0; i < args.Length; i++)
+                switch (args[i])
+                {
+                    case "/testnet":
+                    case "--testnet":
+                    case "-t":
+                        ProtocolSettings.Initialize(new ConfigurationBuilder().AddJsonFile("protocol.testnet.json").Build());
+                        Settings.Initialize(new ConfigurationBuilder().AddJsonFile("config.testnet.json").Build());
+                        break;
+                    case "/mainnet":
+                    case "--mainnet":
+                    case "-m":
+                        ProtocolSettings.Initialize(new ConfigurationBuilder().AddJsonFile("protocol.mainnet.json").Build());
+                        Settings.Initialize(new ConfigurationBuilder().AddJsonFile("config.mainnet.json").Build());
+                        break;
+                }
+            NeoSystem = new NeoSystem(Settings.Default.Storage.Engine);
+            using (IEnumerator<Block> blocksBeingImported = GetBlocksFromFile().GetEnumerator())
+            {
+                while (true)
+                {
+                    List<Block> blocksToImport = new List<Block>();
+                    for (int i = 0; i < 10; i++)
+                    {
+                        if (!blocksBeingImported.MoveNext()) break;
+                        blocksToImport.Add(blocksBeingImported.Current);
+                    }
+                    if (blocksToImport.Count == 0) break;
+                    await NeoSystem.Blockchain.Ask<Blockchain.ImportCompleted>(new Blockchain.Import { Blocks = blocksToImport });
+                    if (NeoSystem is null) return;
+                }
+            }
+            NeoSystem.StartNode(new ChannelsConfig
+            {
+                Tcp = new IPEndPoint(IPAddress.Any, Settings.Default.P2P.Port),
+                WebSocket = new IPEndPoint(IPAddress.Any, Settings.Default.P2P.WsPort),
+                MinDesiredConnections = Settings.Default.P2P.MinDesiredConnections,
+                MaxConnections = Settings.Default.P2P.MaxConnections,
+                MaxConnectionsPerAddress = Settings.Default.P2P.MaxConnectionsPerAddress
+            });
+            if (Settings.Default.UnlockWallet.IsActive)
+            {
+                try
+                {
+                    OpenWallet(Settings.Default.UnlockWallet.Path, Settings.Default.UnlockWallet.Password);
+                }
+                catch (FileNotFoundException)
+                {
+                    Console.WriteLine($"Warning: wallet file \"{Settings.Default.UnlockWallet.Path}\" not found.");
+                }
+                catch (CryptographicException)
+                {
+                    Console.WriteLine($"failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
+                }
+                if (Settings.Default.UnlockWallet.StartConsensus && CurrentWallet != null)
+                {
+                    OnStartConsensusCommand(null);
+                }
+            }
+        }
+
+        public void Stop()
+        {
+            Interlocked.Exchange(ref neoSystem, null)?.Dispose();
+        }
+
+        private void WriteBlocks(uint start, uint count, string path, bool writeStart)
+        {
+            uint end = start + count - 1;
+            using FileStream fs = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.WriteThrough);
+            if (fs.Length > 0)
+            {
+                byte[] buffer = new byte[sizeof(uint)];
+                if (writeStart)
+                {
+                    fs.Seek(sizeof(uint), SeekOrigin.Begin);
+                    fs.Read(buffer, 0, buffer.Length);
+                    start += BitConverter.ToUInt32(buffer, 0);
+                    fs.Seek(sizeof(uint), SeekOrigin.Begin);
+                }
+                else
+                {
+                    fs.Read(buffer, 0, buffer.Length);
+                    start = BitConverter.ToUInt32(buffer, 0);
+                    fs.Seek(0, SeekOrigin.Begin);
+                }
+            }
+            else
+            {
+                if (writeStart)
+                {
+                    fs.Write(BitConverter.GetBytes(start), 0, sizeof(uint));
+                }
+            }
+            if (start <= end)
+                fs.Write(BitConverter.GetBytes(count), 0, sizeof(uint));
+            fs.Seek(0, SeekOrigin.End);
+            for (uint i = start; i <= end; i++)
+            {
+                Block block = Blockchain.Singleton.GetBlock(i);
+                byte[] array = block.ToArray();
+                fs.Write(BitConverter.GetBytes(array.Length), 0, sizeof(int));
+                fs.Write(array, 0, array.Length);
+                Console.SetCursorPosition(0, Console.CursorTop);
+                Console.Write($"[{i}/{end}]");
             }
         }
 
