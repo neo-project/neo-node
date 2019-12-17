@@ -71,6 +71,7 @@ namespace Neo.CLI
             { "gas", "0xa1760976db5fcdfab2a9930e8f6ce875b2d18225" },
             { "policy", "0x9c5699b260bd468e2160dd5d45dfd2686bba8b77" },
         };
+
         protected override string Prompt => "neo";
         public override string ServiceName => "NEO-CLI";
 
@@ -238,6 +239,7 @@ namespace Neo.CLI
                 case "numbertohex":
                     return OnNumberToHex(args);
                 case "addrtoscript":
+                case "addrtoscripthash":
                 case "addresstoscript":
                 case "addresstoscripthash":
                     return OnAddressToScript(args);
@@ -260,7 +262,7 @@ namespace Neo.CLI
         {
             var strParam = args[2];
             var bytesParam = Encoding.UTF8.GetBytes(strParam);
-            Console.WriteLine($"Number to Hex: {bytesParam.ToHexString()}");
+            Console.WriteLine($"String to Hex: {bytesParam.ToHexString()}");
             return true;
         }
 
@@ -1288,9 +1290,14 @@ namespace Neo.CLI
             else
             {
                 int desiredCount = int.Parse(args[2]);
+                if (desiredCount < 1)
+                {
+                    Console.WriteLine("Minimum 1 transaction");
+                    return true;
+                }
                 if (desiredCount > 100)
                 {
-                    Console.WriteLine("Maxium 100 transactions");
+                    Console.WriteLine("Maximum 100 transactions");
                     return true;
                 }
                 using (var snapshot = Blockchain.Singleton.GetSnapshot())
@@ -1413,7 +1420,7 @@ namespace Neo.CLI
                     if (Blockchain.Singleton.ContainsBlock(blockHash))
                     {
                         var block = Blockchain.Singleton.GetBlock(blockHash);
-                        Console.WriteLine($"Block: {block.ToCLIString()}");
+                        Console.WriteLine($"Block:\n{block.ToCLIString()}");
                     }
                     else
                     {
@@ -1426,7 +1433,7 @@ namespace Neo.CLI
                     var header = Blockchain.Singleton.GetBlock(blockIndex);
                     if (header != null)
                     {
-                        Console.WriteLine($"Block: {header.ToCLIString()}");
+                        Console.WriteLine($"Block:\n{header.ToCLIString()}");
                     }
                 }
             }
