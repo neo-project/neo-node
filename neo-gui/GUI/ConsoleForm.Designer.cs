@@ -38,6 +38,7 @@ namespace Neo.GUI
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.textBox1.Location = new System.Drawing.Point(12, 12);
+            this.textBox1.Font = new System.Drawing.Font("Consolas", 11.0f);
             this.textBox1.MaxLength = 1048576;
             this.textBox1.Multiline = true;
             this.textBox1.Name = "textBox1";
@@ -51,6 +52,7 @@ namespace Neo.GUI
             this.textBox2.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.textBox2.Location = new System.Drawing.Point(12, 385);
+            this.textBox2.Font = new System.Drawing.Font("Consolas", 11.0f);
             this.textBox2.Name = "textBox2";
             this.textBox2.Size = new System.Drawing.Size(609, 21);
             this.textBox2.TabIndex = 0;

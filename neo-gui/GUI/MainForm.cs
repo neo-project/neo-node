@@ -119,6 +119,12 @@ namespace Neo.GUI
 
         private void Service_WalletChanged(object sender, EventArgs e)
         {
+            if (InvokeRequired)
+            {
+                Invoke(new EventHandler(Service_WalletChanged), sender, e);
+                return;
+            }
+
             listView3.Items.Clear();
             修改密码CToolStripMenuItem.Enabled = Service.CurrentWallet is UserWallet;
             交易TToolStripMenuItem.Enabled = Service.CurrentWallet != null;

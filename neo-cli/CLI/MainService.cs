@@ -568,25 +568,24 @@ namespace Neo.CLI
             else
                 count = 1;
 
-            int x = 0;
             List<string> addresses = new List<string>();
-
-            Parallel.For(0, count, (i) =>
+            using (var percent = new ConsolePercent(0, count))
             {
-                WalletAccount account = CurrentWallet.CreateAccount();
-
-                lock (addresses)
+                Parallel.For(0, count, (i) =>
                 {
-                    x++;
+                    WalletAccount account = CurrentWallet.CreateAccount();
                     addresses.Add(account.Address);
-                    Console.SetCursorPosition(0, Console.CursorTop);
-                    Console.Write($"[{x}/{count}]");
-                }
-            });
+                    lock (addresses)
+                    {
+                        addresses.Add(account.Address);
+                        percent.Value++;
+                    }
+                });
+            }
 
             if (CurrentWallet is NEP6Wallet wallet)
                 wallet.Save();
-            Console.WriteLine();
+
             Console.WriteLine($"export addresses to {path}");
             File.WriteAllLines(path, addresses);
             return true;
@@ -652,8 +651,6 @@ namespace Neo.CLI
             }
 
             WriteBlocks(start, count, path, writeStart);
-
-            Console.WriteLine();
             return true;
         }
 
@@ -842,19 +839,20 @@ namespace Neo.CLI
                     }
                 }
 
-                string[] lines = File.ReadAllLines(args[2]);
-                for (int i = 0; i < lines.Length; i++)
+                string[] lines = File.ReadAllLines(args[2]).Where(u => !string.IsNullOrEmpty(u)).ToArray();
+                using (var percent = new ConsolePercent(0, lines.Length))
                 {
-                    if (lines[i].Length == 64)
-                        prikey = lines[i].HexToBytes();
-                    else
-                        prikey = Wallet.GetPrivateKeyFromWIF(lines[i]);
-                    CurrentWallet.CreateAccount(prikey);
-                    Array.Clear(prikey, 0, prikey.Length);
-                    Console.SetCursorPosition(0, Console.CursorTop);
-                    Console.Write($"[{i + 1}/{lines.Length}]");
+                    for (int i = 0; i < lines.Length; i++)
+                    {
+                        if (lines[i].Length == 64)
+                            prikey = lines[i].HexToBytes();
+                        else
+                            prikey = Wallet.GetPrivateKeyFromWIF(lines[i]);
+                        CurrentWallet.CreateAccount(prikey);
+                        Array.Clear(prikey, 0, prikey.Length);
+                        percent.Value++;
+                    }
                 }
-                Console.WriteLine();
             }
             else
             {
@@ -1470,14 +1468,18 @@ namespace Neo.CLI
             if (start <= end)
                 fs.Write(BitConverter.GetBytes(count), 0, sizeof(uint));
             fs.Seek(0, SeekOrigin.End);
-            for (uint i = start; i <= end; i++)
+            Console.WriteLine("Export block from " + start + " to " + end);
+
+            using (var percent = new ConsolePercent(start, end))
             {
-                Block block = Blockchain.Singleton.GetBlock(i);
-                byte[] array = block.ToArray();
-                fs.Write(BitConverter.GetBytes(array.Length), 0, sizeof(int));
-                fs.Write(array, 0, array.Length);
-                Console.SetCursorPosition(0, Console.CursorTop);
-                Console.Write($"[{i}/{end}]");
+                for (uint i = start; i <= end; i++)
+                {
+                    Block block = Blockchain.Singleton.GetBlock(i);
+                    byte[] array = block.ToArray();
+                    fs.Write(BitConverter.GetBytes(array.Length), 0, sizeof(int));
+                    fs.Write(array, 0, array.Length);
+                    percent.Value = i;
+                }
             }
         }
 
