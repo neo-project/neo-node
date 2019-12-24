@@ -22,7 +22,7 @@ Currently, neo-cli and neo-gui are integrated into one repository. You can enter
 
 ## Prerequisites
 
-You will need Window, Linux or macOS. Ubuntu 14 and 16 are supported. Ubuntu 17 is not supported.
+You will need Window, Linux or macOS. Ubuntu LTS 14, 16 and 18 are supported.
 
 Install [.NET Core](https://www.microsoft.com/net/download/core).
 
