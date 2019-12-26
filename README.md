@@ -64,7 +64,6 @@ Assuming you extracted .NET in the parent folder:
 ```
 
 ## Logging
-
 To enable logs in neo-cli, you need to add the ApplicationLogs plugin. Please check [here](https://github.com/neo-project/neo-modules) for more information.
 
 
@@ -73,5 +72,4 @@ In order to synchronize the network faster, please check [here](https://docs.neo
 
 
 ## Usage
-
 See [documentation](https://docs.neo.org/docs/en-us/node/introduction.html). E.g. try `show state` or `create wallet wallet.json`.
