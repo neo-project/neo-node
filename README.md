@@ -1,17 +1,21 @@
 <p align="center">
-<img
-    src="https://neo-cdn.azureedge.net/images/neo_logo.svg"
-    width="250px">
+<a href="https://neo.org/">
+      <img
+      src="https://neo3.azureedge.net/images/logo%20files-dark.svg"
+      width="250px" alt="neo-logo">
+  </a>
 </p>
 
 <p align="center">      
-  <a href="https://travis-ci.org/neo-project/neo-cli">
-    <img src="https://travis-ci.org/neo-project/neo-cli.svg?branch=master">
+  <a href="https://travis-ci.org/neo-project/neo-node">
+    <img src="https://travis-ci.org/neo-project/neo-node.svg?branch=master" alt="Current TravisCI build status.">
   </a>
-  <a href="https://github.com/neo-project/neo-cli/blob/master/LICENSE">
-    <img src="https://img.shields.io/badge/license-MIT-blue.svg">
+  <a href="https://github.com/neo-project/neo-node/blob/master/LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License">
   </a>
-
+  <a href="https://github.com/neo-project/neo-node/releases">
+    <img src="https://badge.fury.io/gh/neo-project%2Fneo-node.svg" alt="Current neo-cli version.">
+  </a>    
 </p>
 
 ## Prerequisites
@@ -36,7 +40,7 @@ On Windows, use the [Neo version of LevelDB](https://github.com/neo-project/leve
 
 ## Download pre-compiled binaries
 
-See also [official docs](http://docs.neo.org/en-us/node/introduction.html). Download and unzip [latest release](https://github.com/neo-project/neo-cli/releases).
+See also [official docs](https://docs.neo.org/docs/en-us/node/introduction.html). Download and unzip [latest release](https://github.com/neo-project/neo-cli/releases).
 
 ```sh
 dotnet neo-cli.dll
@@ -60,14 +64,12 @@ Assuming you extracted .NET in the parent folder:
 ```
 
 ## Logging
-
-To enable logs in neo-cli, you need to add the ApplicationLogs plugin. Please check [here](https://github.com/neo-project/neo-plugins) for more information.
+To get event logs in neo-cli, you need to add the ApplicationLogs plugin. Please check [here](https://github.com/neo-project/neo-modules) for more information.
 
 
 ## Bootstrapping the network.
-In order to synchronize the network faster, please check [here](http://docs.neo.org/en-us/network/syncblocks.html).
+In order to synchronize the network faster, please check [here](https://docs.neo.org/docs/en-us/node/syncblocks.html).
 
 
 ## Usage
-
-See [documentation](https://docs.neo.org/en-us/node/cli/cli.html). E.g. try `show state` or `create wallet wallet.json`.
+See [documentation](https://docs.neo.org/docs/en-us/node/introduction.html). E.g. try `show state` or `create wallet wallet.json`.
