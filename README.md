@@ -64,7 +64,7 @@ Assuming you extracted .NET in the parent folder:
 ```
 
 ## Logging
-To enable logs in neo-cli, you need to add the ApplicationLogs plugin. Please check [here](https://github.com/neo-project/neo-modules) for more information.
+To get event logs in neo-cli, you need to add the ApplicationLogs plugin. Please check [here](https://github.com/neo-project/neo-modules) for more information.
 
 
 ## Bootstrapping the network.
