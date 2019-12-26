@@ -78,7 +78,7 @@ For neo-gui, you just need to enter the `neo-node/neo-gui` folder and follow the
 Clone the neo-node repository.
 
 ```sh
-cd neo-node/neo-cli
+cd neo-node
 docker build -t neo-cli .
 docker run -p 10332:10332 -p 10333:10333 --name=neo-cli-mainnet neo-cli
 ```
