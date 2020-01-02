@@ -26,10 +26,11 @@ You will need Window, Linux or macOS. Ubuntu LTS 14, 16 and 18 are supported.
 
 Install [.NET Core](https://www.microsoft.com/net/download/core).
 
-On Linux, install the LevelDB and SQLite3 dev packages. E.g. on Ubuntu:
+On Linux, install the LevelDB and SQLite3 dev packages. E.g. on Ubuntu or Fedora:
 
 ```sh
-sudo apt-get install libleveldb-dev sqlite3 libsqlite3-dev libunwind8-dev
+sudo apt-get install libleveldb-dev sqlite3 libsqlite3-dev libunwind8-dev # Ubuntu
+sudo dnf install leveldb-devel sqlite sqlite-devel libunwind-devel # Fedora
 ```
 
 On macOS, install the LevelDB package. E.g. install via Homebrew:
