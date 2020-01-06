@@ -1,3 +1,4 @@
+using Neo.VM;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -350,7 +351,11 @@ namespace Neo.Services
                 catch { }
 
             Console.ForegroundColor = ConsoleColor.DarkGreen;
-            Console.WriteLine($"{ServiceName} Version: {Assembly.GetEntryAssembly().GetVersion()}");
+
+            var cliV = Assembly.GetAssembly(typeof(Program)).GetVersion();
+            var neoV = Assembly.GetAssembly(typeof(NeoSystem)).GetVersion();
+            var vmV = Assembly.GetAssembly(typeof(ExecutionEngine)).GetVersion();
+            Console.WriteLine($"{ServiceName} v{cliV}  -  NEO v{neoV}  -  NEO-VM v{vmV}");
             Console.WriteLine();
 
             while (_running)
