@@ -352,7 +352,7 @@ namespace Neo.Services
 
             Console.ForegroundColor = ConsoleColor.DarkGreen;
 
-            var cliV = Assembly.GetEntryAssembly().GetVersion();
+            var cliV = Assembly.GetAssembly(typeof(Program)).GetVersion();
             var neoV = Assembly.GetAssembly(typeof(NeoSystem)).GetVersion();
             var vmV = Assembly.GetAssembly(typeof(ExecutionEngine)).GetVersion();
             Console.WriteLine($"{ServiceName} v{cliV}  -  NEO v{neoV}  -  NEO-VM v{vmV}");
