@@ -574,7 +574,6 @@ namespace Neo.CLI
                 Parallel.For(0, count, (i) =>
                 {
                     WalletAccount account = CurrentWallet.CreateAccount();
-                    addresses.Add(account.Address);
                     lock (addresses)
                     {
                         addresses.Add(account.Address);
