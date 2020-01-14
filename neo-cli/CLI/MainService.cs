@@ -211,9 +211,138 @@ namespace Neo.CLI
                     return OnInstallCommand(args);
                 case "uninstall":
                     return OnUnInstallCommand(args);
+                case "tool":
+                    return OnToolCommand(args);
                 default:
                     return base.OnCommand(args);
             }
+        }
+
+        private bool OnToolCommand(string[] args)
+        {
+            switch (args[1].ToLower())
+            {
+                case "hextostr":
+                case "hextostring":
+                    return OnHexToStr(args);
+                case "stringtohex":
+                    return OnStringToHex(args);
+                case "hextonumber":
+                    return OnHexToNumber(args);
+                case "numbertohex":
+                    return OnNumberToHex(args);
+                case "addrtoscript":
+                case "addrtoscripthash":
+                case "addresstoscript":
+                case "addresstoscripthash":
+                    return OnAddressToScript(args);
+                case "scripttoaddr":
+                case "scripttoaddress":
+                case "scripthashtoaddr":
+                case "scripthashtoaddress":
+                    return OnScripthashToAddress(args);
+                default:
+                    return base.OnCommand(args);
+            }
+        }
+
+        /// <summary>
+        /// Prints a string in hex (transfer -> 7472616e73666572)
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private bool OnStringToHex(string[] args)
+        {
+            var strParam = args[2];
+            var bytesParam = Encoding.UTF8.GetBytes(strParam);
+            Console.WriteLine($"String to Hex: {bytesParam.ToHexString()}");
+            return true;
+        }
+
+        /// <summary>
+        /// Converts an hexadecimal value to an UTF-8 string (7472616e73666572 -> transfer)
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private bool OnHexToStr(string[] args)
+        {
+            if (args.Length != 3)
+            {
+                Console.WriteLine("Invalid Parameters");
+            }
+            else
+            {
+                var hexString = args[2];
+                var bytes = hexString.HexToBytes();
+                var utf8String = Encoding.UTF8.GetString(bytes);
+                Console.WriteLine($"Hex to String: {utf8String}");
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Converts an address to its script hash (Nfo8Ncof8QJsfkjLt1uXSEkkd29cZQcCgf -> 0x4b5acd30ba7ec77199561afa0bbd49b5e94517da)
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private bool OnAddressToScript(string[] args)
+        {
+            var address = args[2];
+            Console.WriteLine($"Address to ScriptHash: {address.ToScriptHash()}");
+            return true;
+        }
+
+        /// <summary>
+        /// Converts an script hash to its equivalent address (0x4b5acd30ba7ec77199561afa0bbd49b5e94517da -> Nfo8Ncof8QJsfkjLt1uXSEkkd29cZQcCgf)
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private bool OnScripthashToAddress(string[] args)
+        {
+            var scriptHash = UInt160.Parse(args[2]);
+            var hexScript = scriptHash.ToAddress();
+            Console.WriteLine($"ScriptHash to Address: {hexScript}");
+            return true;
+        }
+
+        /// <summary>
+        /// Prints the desired number in hex format
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private bool OnNumberToHex(string[] args)
+        {
+            var strParam = args[2];
+            var numberParam = BigInteger.Parse(strParam);
+            Console.WriteLine($"Number to Hex: {numberParam.ToByteArray().ToHexString()}");
+            return true;
+        }
+
+        /// <summary>
+        /// Converts a hex value and print it as a number
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private bool OnHexToNumber(string[] args)
+        {
+            if (args.Length != 3)
+            {
+                Console.WriteLine("Invalid Parameters");
+            }
+            else
+            {
+                var hexString = args[2];
+                if (hexString.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    hexString = hexString.Substring(2);
+                }
+                var bytes = hexString.HexToBytes();
+                var number = new BigInteger(bytes);
+                Console.WriteLine($"Hex to Number: {number}");
+            }
+
+            return true;
         }
 
         private bool OnBroadcastCommand(string[] args)
@@ -741,6 +870,13 @@ namespace Neo.CLI
             Console.WriteLine("\tplugins");
             Console.WriteLine("\tinstall <pluginName>");
             Console.WriteLine("\tuninstall <pluginName>");
+            Console.WriteLine("Tool Commands:");
+            Console.WriteLine("\ttool addressToScript <address>");
+            Console.WriteLine("\ttool scriptToAddress <scriptHash>");
+            Console.WriteLine("\ttool hexToString <hex string>");
+            Console.WriteLine("\ttool stringToHex <text>");
+            Console.WriteLine("\ttool hexToNumber <hex string>");
+            Console.WriteLine("\ttool numberToHex <number>");
             Console.WriteLine("Advanced Commands:");
             Console.WriteLine("\texport blocks <index>");
             Console.WriteLine("\tstart consensus");
