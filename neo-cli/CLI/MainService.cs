@@ -1370,9 +1370,14 @@ namespace Neo.CLI
         public async void Start(string[] args)
         {
             if (NeoSystem != null) return;
+            bool verifyImport = true;
             for (int i = 0; i < args.Length; i++)
                 switch (args[i])
                 {
+                    case "/noverify":
+                    case "--noverify":
+                        verifyImport = false;
+                        break;
                     case "/testnet":
                     case "--testnet":
                     case "-t":
@@ -1398,7 +1403,11 @@ namespace Neo.CLI
                         blocksToImport.Add(blocksBeingImported.Current);
                     }
                     if (blocksToImport.Count == 0) break;
-                    await NeoSystem.Blockchain.Ask<Blockchain.ImportCompleted>(new Blockchain.Import { Blocks = blocksToImport });
+                    await NeoSystem.Blockchain.Ask<Blockchain.ImportCompleted>(new Blockchain.Import
+                    {
+                        Blocks = blocksToImport,
+                        Verify = verifyImport
+                    });
                     if (NeoSystem is null) return;
                 }
             }
