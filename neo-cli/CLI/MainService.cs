@@ -333,7 +333,7 @@ namespace Neo.CLI
                     var hexScript = scriptHash.ToAddress();
                     Console.WriteLine($"ScriptHash to Address: {hexScript}");
                 }
-                catch
+                catch (FormatException)
                 {
                     Console.WriteLine("Input parameter is not a valid scripthash");
                 }
@@ -354,9 +354,9 @@ namespace Neo.CLI
             }
             else
             {
-                var strParam = args[2];
                 try
                 {
+                    var strParam = args[2];
                     var numberParam = BigInteger.Parse(strParam);
                     Console.WriteLine($"Number to Hex: {numberParam.ToByteArray().ToHexString()}");
                 }
