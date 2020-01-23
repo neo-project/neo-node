@@ -1,9 +1,11 @@
+using Neo.CLI.CommandParser;
+using Neo.IO.Json;
 using Neo.VM;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
 using System.Security;
@@ -27,26 +29,201 @@ namespace Neo.Services
         private bool _running;
         private readonly CancellationTokenSource _shutdownTokenSource = new CancellationTokenSource();
         private readonly CountdownEvent _shutdownAcknowledged = new CountdownEvent(1);
+        private readonly Dictionary<string, List<ConsoleCommandAttribute>> _verbs = new Dictionary<string, List<ConsoleCommandAttribute>>();
+        private readonly Dictionary<Type, Func<List<CommandToken>, bool, object>> _handlers = new Dictionary<Type, Func<List<CommandToken>, bool, object>>();
 
-        protected virtual bool OnCommand(string[] args)
+        class SelectedCommand
         {
-            switch (args[0].ToLower())
+            public ConsoleCommandAttribute Command { get; set; }
+            public object[] Arguments { get; set; }
+        }
+
+        protected virtual bool OnCommand(string commandLine)
+        {
+            if (string.IsNullOrEmpty(commandLine))
             {
-                case "":
-                    return true;
-                case "clear":
-                    Console.Clear();
-                    return true;
-                case "exit":
-                    return false;
-                case "version":
-                    Console.WriteLine(Assembly.GetEntryAssembly().GetVersion());
-                    return true;
+                return true;
+            }
+
+            var tokens = CommandToken.Parse(commandLine).ToArray();
+            var availableCommands = new List<SelectedCommand>();
+
+            foreach (var entries in _verbs.Values)
+            {
+                foreach (var command in entries)
+                {
+                    if (command.IsThisCommand(tokens, out var consumedTokens))
+                    {
+                        var arguments = new List<object>();
+                        var args = new List<CommandToken>(tokens.Skip(consumedTokens));
+
+                        try
+                        {
+                            foreach (var arg in command.Method.GetParameters())
+                            {
+                                // Trim start
+
+                                while (args.FirstOrDefault() is CommandSpaceToken) args.RemoveAt(0);
+
+                                // Parse argument
+
+                                var value = arg.HasDefaultValue ? arg.DefaultValue : null;
+                                value = ProcessValue(arg.ParameterType, args, value, false);
+                                arguments.Add(value);
+                            }
+
+                            availableCommands.Add(new SelectedCommand()
+                            {
+                                Arguments = arguments.ToArray(),
+                                Command = command,
+                            });
+                        }
+                        catch
+                        {
+                            // Skip parse errors
+                        }
+                    }
+                }
+            }
+
+            switch (availableCommands.Count)
+            {
+                case 0: return false;
+                case 1:
+                    {
+                        var command = availableCommands[0];
+                        command.Command.Method.Invoke(command.Command.Instance, command.Arguments);
+                        return true;
+                    }
                 default:
-                    Console.WriteLine("error: command not found " + args[0]);
-                    return true;
+                    {
+                        throw new ArgumentException("Ambiguous calls for: " + string.Join(',', availableCommands.Select(u => u.Command.Key).Distinct()));
+                    }
             }
         }
+
+        private object ProcessValue(Type parameterType, List<CommandToken> args, object defaultValue, bool canConsumeAll)
+        {
+            if (args.Count > 0 && _handlers.TryGetValue(parameterType, out var handler))
+            {
+                return handler(args, canConsumeAll);
+            }
+
+            if (args.Count > 0 && parameterType.IsEnum)
+            {
+                // Default conversion for enums
+
+                var token = args[0];
+                args.RemoveAt(0);
+
+                return Enum.Parse(parameterType, token.Value, true);
+            }
+
+            return defaultValue;
+        }
+
+        #region Commands
+
+        /// <summary>
+        /// Process "help" command
+        /// </summary>
+        [ConsoleCommand("help", HelpCategory = "Normal Commands")]
+        protected void OnHelpCommand(string key)
+        {
+            var withHelp = new List<ConsoleCommandAttribute>();
+
+            foreach (var commands in _verbs.Values.Select(u => u))
+            {
+                withHelp.AddRange(commands.Where(u => !string.IsNullOrEmpty(u.HelpCategory)));
+            }
+
+            withHelp.Sort((a, b) =>
+            {
+                var cate = a.HelpCategory.CompareTo(b.HelpCategory);
+                if (cate == 0)
+                {
+                    cate = a.Key.CompareTo(b.Key);
+                }
+                return cate;
+            });
+
+            if (string.IsNullOrEmpty(key))
+            {
+                string last = null;
+                foreach (var command in withHelp)
+                {
+                    if (last != command.HelpCategory)
+                    {
+                        Console.WriteLine($"{command.HelpCategory}:");
+                        last = command.HelpCategory;
+                    }
+
+                    Console.Write($"\t{command.Key}");
+                    Console.WriteLine(" " + string.Join(' ',
+                        command.Method.GetParameters()
+                        .Select(u => u.HasDefaultValue ? $"[{u.Name}={u.DefaultValue.ToString()}]" : $"<{u.Name}>"))
+                        );
+                }
+            }
+            else
+            {
+                // Show help for this specific command
+
+                string last = null;
+                bool found = false;
+                foreach (var command in withHelp.Where(u => u.Key == key))
+                {
+                    found = true;
+
+                    if (last != command.HelpMessage)
+                    {
+                        Console.WriteLine($"{command.HelpMessage}");
+                        last = command.HelpMessage;
+                    }
+
+                    Console.WriteLine($"You can call this command like this:");
+                    Console.Write($"\t{command.Key}");
+                    Console.WriteLine(" " + string.Join(' ',
+                        command.Method.GetParameters()
+                        .Select(u => u.HasDefaultValue ? $"[{u.Name}={u.DefaultValue.ToString()}]" : $"<{u.Name}>"))
+                        );
+                }
+
+                if (!found)
+                {
+                    throw new ArgumentException($"Command not found.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Process "help" command
+        /// </summary>
+        [ConsoleCommand("clear", HelpCategory = "Normal Commands", HelpMessage = "Clear is used in order to clean the console output.")]
+        protected void OnClear()
+        {
+            Console.Clear();
+        }
+
+        /// <summary>
+        /// Process "version" command
+        /// </summary>
+        [ConsoleCommand("version", HelpCategory = "Normal Commands", HelpMessage = "Show the current version.")]
+        protected void OnVersion()
+        {
+            Console.WriteLine(Assembly.GetEntryAssembly().GetVersion());
+        }
+
+        /// <summary>
+        /// Process "exit" command
+        /// </summary>
+        [ConsoleCommand("exit", HelpCategory = "Normal Commands", HelpMessage = "Exit the node.")]
+        protected void OnExit()
+        {
+            _running = false;
+        }
+
+        #endregion
 
         protected internal virtual void OnStart(string[] args)
         {
@@ -59,102 +236,6 @@ namespace Neo.Services
         protected internal virtual void OnStop()
         {
             _shutdownAcknowledged.Signal();
-        }
-
-        private static string[] ParseCommandLine(string line)
-        {
-            List<string> outputArgs = new List<string>();
-            using (StringReader reader = new StringReader(line))
-            {
-                while (true)
-                {
-                    switch (reader.Peek())
-                    {
-                        case -1:
-                            return outputArgs.ToArray();
-                        case ' ':
-                            reader.Read();
-                            break;
-                        case '\"':
-                            outputArgs.Add(ParseCommandLineString(reader));
-                            break;
-                        default:
-                            outputArgs.Add(ParseCommandLineArgument(reader));
-                            break;
-                    }
-                }
-            }
-        }
-
-        private static string ParseCommandLineArgument(TextReader reader)
-        {
-            StringBuilder sb = new StringBuilder();
-            while (true)
-            {
-                int c = reader.Read();
-                switch (c)
-                {
-                    case -1:
-                    case ' ':
-                        return sb.ToString();
-                    default:
-                        sb.Append((char)c);
-                        break;
-                }
-            }
-        }
-
-        private static string ParseCommandLineString(TextReader reader)
-        {
-            if (reader.Read() != '\"') throw new FormatException();
-            StringBuilder sb = new StringBuilder();
-            while (true)
-            {
-                int c = reader.Peek();
-                switch (c)
-                {
-                    case '\"':
-                        reader.Read();
-                        return sb.ToString();
-                    case '\\':
-                        sb.Append(ParseEscapeCharacter(reader));
-                        break;
-                    default:
-                        reader.Read();
-                        sb.Append((char)c);
-                        break;
-                }
-            }
-        }
-
-        private static char ParseEscapeCharacter(TextReader reader)
-        {
-            if (reader.Read() != '\\') throw new FormatException();
-            int c = reader.Read();
-            switch (c)
-            {
-                case -1:
-                    throw new FormatException();
-                case 'n':
-                    return '\n';
-                case 'r':
-                    return '\r';
-                case 't':
-                    return '\t';
-                case 'x':
-                    StringBuilder sb = new StringBuilder();
-                    for (int i = 0; i < 2; i++)
-                    {
-                        int h = reader.Read();
-                        if (h >= '0' && h <= '9' || h >= 'A' && h <= 'F' || h >= 'a' && h <= 'f')
-                            sb.Append((char)h);
-                        else
-                            throw new FormatException();
-                    }
-                    return (char)byte.Parse(sb.ToString(), NumberStyles.AllowHexSpecifier);
-                default:
-                    return (char)c;
-            }
         }
 
         public string ReadUserInput(string prompt, bool password = false)
@@ -267,6 +348,134 @@ namespace Neo.Services
             TriggerGracefulShutdown();
         }
 
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        protected ConsoleServiceBase()
+        {
+            // Register self commands
+
+            RegisterCommandHander(typeof(string), (args, canConsumeAll) =>
+            {
+                if (canConsumeAll)
+                {
+                    var str = CommandToken.ToString(args);
+                    args.Clear();
+                    return str;
+                }
+
+                var token = args[0];
+                args.RemoveAt(0);
+
+                return token.Value;
+            });
+
+            RegisterCommandHander(typeof(string[]), (args, canConsumeAll) =>
+            {
+                var str = (string)_handlers[typeof(string)](args, false);
+                return str.Split(',', ' ');
+            });
+
+            RegisterCommandHander(typeof(byte), (args, canConsumeAll) =>
+            {
+                var str = (string)_handlers[typeof(string)](args, false);
+                return byte.Parse(str);
+            });
+
+            RegisterCommandHander(typeof(bool), (args, canConsumeAll) =>
+            {
+                var str = ((string)_handlers[typeof(bool)](args, false)).ToLowerInvariant();
+                return str == "1" || str == "yes" || str == "y" || bool.Parse(str);
+            });
+
+            RegisterCommandHander(typeof(ushort), (args, canConsumeAll) =>
+            {
+                var str = (string)_handlers[typeof(string)](args, false);
+                return ushort.Parse(str);
+            });
+
+            RegisterCommandHander(typeof(uint), (args, canConsumeAll) =>
+            {
+                var str = (string)_handlers[typeof(string)](args, false);
+                return uint.Parse(str);
+            });
+
+            RegisterCommandHander(typeof(UInt160), (args, canConsumeAll) =>
+            {
+                var str = (string)_handlers[typeof(string)](args, false);
+                return UInt160.Parse(str);
+            });
+
+            RegisterCommandHander(typeof(UInt256), (args, canConsumeAll) =>
+            {
+                var str = (string)_handlers[typeof(string)](args, false);
+                return UInt256.Parse(str);
+            });
+
+            RegisterCommandHander(typeof(UInt256[]), (args, canConsumeAll) =>
+            {
+                var str = (string)_handlers[typeof(string)](args, canConsumeAll);
+                return str.Split(',', ' ').Select(u => UInt256.Parse(u)).ToArray();
+            });
+
+            RegisterCommandHander(typeof(JObject), (args, canConsumeAll) =>
+            {
+                var str = (string)_handlers[typeof(string)](args, canConsumeAll);
+                return JObject.Parse(str);
+            });
+
+            RegisterCommandHander(typeof(JArray), (args, canConsumeAll) =>
+            {
+                var obj = (JObject)_handlers[typeof(JObject)](args, canConsumeAll);
+                return (JArray)obj;
+            });
+
+            RegisterCommand(this);
+        }
+
+        /// <summary>
+        /// Register command handler
+        /// </summary>
+        /// <param name="type">Type</param>
+        /// <param name="handler">Handler</param>
+        public void RegisterCommandHander(Type type, Func<List<CommandToken>, bool, object> handler)
+        {
+            _handlers[type] = handler;
+        }
+
+        /// <summary>
+        /// Register commands
+        /// </summary>
+        /// <param name="instance">Instance</param>
+        public void RegisterCommand(object instance)
+        {
+            foreach (var method in instance.GetType().GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            {
+                foreach (var command in method.GetCustomAttributes<ConsoleCommandAttribute>())
+                {
+                    // Check handlers
+
+                    if (!method.GetParameters().All(u => u.ParameterType.IsEnum || _handlers.ContainsKey(u.ParameterType)))
+                    {
+                        throw new ArgumentException("Handler not found for the command: " + method.ToString());
+                    }
+
+                    // Add command
+
+                    command.SetInstance(instance, method);
+
+                    if (!_verbs.TryGetValue(command.Key, out var commands))
+                    {
+                        _verbs.Add(command.Key, new List<ConsoleCommandAttribute>(new[] { command }));
+                    }
+                    else
+                    {
+                        commands.Add(command);
+                    }
+                }
+            }
+        }
+
         public void Run(string[] args)
         {
             if (Environment.UserInteractive)
@@ -342,7 +551,6 @@ namespace Neo.Services
         public void RunConsole()
         {
             _running = true;
-            string[] emptyarg = new string[] { "" };
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
                 try
                 {
@@ -373,11 +581,10 @@ namespace Neo.Services
 
                 try
                 {
-                    string[] args = ParseCommandLine(line);
-                    if (args.Length == 0)
-                        args = emptyarg;
-
-                    _running = OnCommand(args);
+                    if (!OnCommand(line))
+                    {
+                        Console.WriteLine("error: command not found");
+                    }
                 }
                 catch (Exception ex)
                 {
