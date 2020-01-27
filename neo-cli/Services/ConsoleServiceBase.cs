@@ -169,7 +169,7 @@ namespace Neo.Services
                 return cate;
             });
 
-            if (string.IsNullOrEmpty(key))
+            if (string.IsNullOrEmpty(key) || key.Equals("help", StringComparison.InvariantCultureIgnoreCase))
             {
                 string last = null;
                 foreach (var command in withHelp)
@@ -183,7 +183,7 @@ namespace Neo.Services
                     Console.Write($"\t{command.Key}");
                     Console.WriteLine(" " + string.Join(' ',
                         command.Method.GetParameters()
-                        .Select(u => u.HasDefaultValue ? $"[{u.Name}={u.DefaultValue.ToString()}]" : $"<{u.Name}>"))
+                        .Select(u => u.HasDefaultValue ? $"[{u.Name}={(u.DefaultValue == null ? "null" : u.DefaultValue.ToString())}]" : $"<{u.Name}>"))
                         );
                 }
             }
