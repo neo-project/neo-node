@@ -1,8 +1,8 @@
 ## Setting a private net with neo-cli
 
-1. Clone the newer version of neo-node from [Neo-Node](https://github.com/neo-project/neo-node) for each node you desire to set in your privatenet and one that will receive a different configuration and will be used later.
-2. Create a wallet for each consensus node and write down every public key for the next step.
-3. Set the config and protocol as the example below:
+1. [Clone](https://docs.neo.org/docs/en-us/node/cli/setup.html#publishing-from-neo-cli-source-code) the newer version of [Neo-Node](https://github.com/neo-project/neo-node) for each node you desire to set in your privatenet and another one that will be used for access the Neo-Cli and for transfer GAS or NEO. It is necessary to have copies of the Neo-Node project because each copy will receive a different configuration file.
+2. Run neo-cli.exe inside the path "neo-cli\bin\Debug\netcoreapp3.0" of each copy of the Project and enter the command `create wallet <path>` with the name of the wallet with a JSON file extension inside the prompt that will appear to create a wallet for each consensus node and write down every public key, name of the wallet and password for the next step.
+3. Set the config.json and protocol.json that are located inside the folder neo-cli as the example below:
 
 config.json (consensus node):
 ```json
@@ -29,9 +29,10 @@ config.json (consensus node):
        }
    }
 ```
-- Remember to set different port numbers for each node.
+- Remember to set different port numbers for each node for "P2P" and "RPC".
 - Max connections default is 3, if you're using 4 consensus nodes or more, change this number to at least the number of consensus node plus one. This tutorial set 4 consensus nodes, so it must be at least `"MaxConnectionsPerAddress": 5`.
-- In "UnlockWallet" it must have the path and the password of the wallet created in that node. Different nodes must have different wallets. 
+- In "UnlockWallet" it must have the path and the password of the wallet created in that node. Different nodes must have different wallets.
+- Remember that the paths must have "\\\\" between each folder.
 
 protocol.json:
 ```json
@@ -57,15 +58,13 @@ protocol.json:
 - The "Magic" is the ID of the chain and can be any integer in the range of [0 - 4294967295]. It must be the same number in all nodes.
 - Standby Validators are the public keys of each wallet set in the "UnlockWallet" on "config.json".
 - The number of the port set in P2P in each node must be in "SeedList".
-- To have access to Neo-Cli and to have access to GAS and NEO, you can set a non-consensus node. The protocol is the same as the consensus nodes but the config.json is a bit different.
+- To access GAS and NEO, you can set a non-consensus node. The protocol is the same as the consensus nodes but the config.json is a bit different. You must set the "StartConsensus" inside the "UnlockWallet" to false.
+- The ports also must be different from the other config files.
 
 config.json (non-consensus node):
 ```json
 {
   "ApplicationConfiguration": {
-    "Paths": {
-      "Chain": "Chain_{0}"
-    },
     "P2P": {
       "Port": 10003,
       "WsPort": 10004
@@ -77,14 +76,20 @@ config.json (non-consensus node):
       "SslCertPassword": "",
       "MaxGasInvoke": 10
     },
+    "UnlockWallet": {
+      "Path": "node.json",
+      "Password": "one", 
+      "StartConsensus": false,
+      "IsActive": true
+     },
     "PluginURL": "https://github.com/neo-project/neo-plugins/releases/download/v{1}/{0}.zip"
   }
 }
 
 ```
-4. Run each consensus node first and then the non-consensus. Run the command `show stats` in the non-consensus node terminal and wait. All the nodes started before should connect like the image below:
+4. Run each consensus node first and then the non-consensus. Enter the command `show stats` in the non-consensus node terminal and wait. All the nodes started before should connect like the image below:
  
-![](screenshots/01.png)
+![](Screenshots/01.png)
 
 ## Retrieving NEO and GAS in the privatenet using Neo-Cli
 
@@ -94,18 +99,18 @@ The following steps are to transfer some GAS or NEO in a wallet. If you won't ma
   
  2. Open a wallet from a consensus node and create a multi-signature address using the command `import multisigaddress m pubkeys` with the minimal number of signatures needed to complete the transaction and the public keys in Standby Validators in all consensus node wallets.
  
-![](screenshots/02.png) 
+![](Screenshots/02.png) 
 
 3. Use the command `send <id|alias> <address> <value>` with the address of the wallet created on step 1, copy the SignatureContext and close the wallet.
 
-![](screenshots/03.png)
+![](Screenshots/03.png)
 
 4. Open another wallet listed on the multi-signature, use the command `sign <jsonObjectToSign>` with the object copied in step 3, copy the object in Signed Output and close the wallet.
 
-![](screenshots/04.png)
+![](Screenshots/04.png)
  
  5. Repeat the previous step the number of times put as minimal in step 2. Then you can use `relay <jsonObjectToSign>` and your wallet is ready.
  
-![](screenshots/05.png)
+![](Screenshots/05.png)
 
-![](screenshots/06.png)
+![](Screenshots/06.png)
