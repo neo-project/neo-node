@@ -112,7 +112,11 @@ namespace Neo.Services
                     }
                 default:
                     {
-                        throw new ArgumentException("Ambiguous calls for: " + string.Join(',', availableCommands.Select(u => u.Command.Key).Distinct()));
+                        var command = availableCommands[0];
+                        command.Command.Method.Invoke(command.Command.Instance, command.Arguments);
+                        return true;
+
+                        // throw new ArgumentException("Ambiguous calls for: " + string.Join(',', availableCommands.Select(u => u.Command.Key).Distinct()));
                     }
             }
         }
