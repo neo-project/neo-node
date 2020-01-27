@@ -14,8 +14,9 @@ namespace Neo.CLI.CommandParser
         /// <summary>
         /// Constructor
         /// </summary>
+        /// <param name="offset">Offset</param>
         /// <param name="count">Count</param>
-        public CommandSpaceToken(int count) : base(CommandTokenType.Space)
+        public CommandSpaceToken(int offset, int count) : base(CommandTokenType.Space, offset)
         {
             Value = "".PadLeft(count, ' ');
             Count = count;
@@ -29,6 +30,7 @@ namespace Neo.CLI.CommandParser
         /// <returns>CommandSpaceToken</returns>
         internal static CommandSpaceToken Parse(string commandLine, ref int index)
         {
+            int offset = index;
             int count = 0;
 
             for (int ix = index, max = commandLine.Length; ix < max; ix++)
@@ -46,7 +48,7 @@ namespace Neo.CLI.CommandParser
             if (count == 0) throw new ArgumentException("No spaces found");
 
             index += count;
-            return new CommandSpaceToken(count);
+            return new CommandSpaceToken(offset, count);
         }
     }
 }

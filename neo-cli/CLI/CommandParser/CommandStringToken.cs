@@ -14,9 +14,10 @@ namespace Neo.CLI.CommandParser
         /// <summary>
         /// Constructor
         /// </summary>
+        /// <param name="offset">Offset</param>
         /// <param name="value">Value</param>
         /// <param name="requireQuotes">Require quotes</param>
-        public CommandStringToken(string value, bool requireQuotes = false) : base(CommandTokenType.String)
+        public CommandStringToken(int offset, string value, bool requireQuotes = false) : base(CommandTokenType.String, offset)
         {
             Value = value;
             RequireQuotes = requireQuotes || value.Contains("\"");
@@ -31,6 +32,7 @@ namespace Neo.CLI.CommandParser
         internal static CommandStringToken Parse(string commandLine, ref int index)
         {
             int end;
+            int offset = index;
             bool startWithQuotes = commandLine[index] == '\"';
 
             if (startWithQuotes)
@@ -39,7 +41,7 @@ namespace Neo.CLI.CommandParser
 
                 do
                 {
-                    end = commandLine.IndexOf('\"', ix);
+                    end = commandLine.IndexOf('\"', ix + 1);
 
                     if (end == -1)
                     {
@@ -68,7 +70,7 @@ namespace Neo.CLI.CommandParser
                 end = commandLine.Length;
             }
 
-            var ret = new CommandStringToken(commandLine.Substring(index, end - index), startWithQuotes);
+            var ret = new CommandStringToken(offset, commandLine.Substring(index, end - index), startWithQuotes);
             index += end - index;
             if (startWithQuotes) index++;
             return ret;

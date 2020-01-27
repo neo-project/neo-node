@@ -7,6 +7,11 @@ namespace Neo.CLI.CommandParser
     public abstract class CommandToken
     {
         /// <summary>
+        /// Offset
+        /// </summary>
+        public int Offset { get; }
+
+        /// <summary>
         /// Type
         /// </summary>
         public CommandTokenType Type { get; }
@@ -20,9 +25,11 @@ namespace Neo.CLI.CommandParser
         /// Constructor
         /// </summary>
         /// <param name="type">Type</param>
-        protected CommandToken(CommandTokenType type)
+        /// <param name="offset">Offset</param>
+        protected CommandToken(CommandTokenType type, int offset)
         {
             Type = type;
+            Offset = offset;
         }
 
         /// <summary>

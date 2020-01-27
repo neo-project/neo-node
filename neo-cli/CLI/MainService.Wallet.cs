@@ -197,27 +197,20 @@ namespace Neo.CLI
         /// <summary>
         /// Process "import multisigaddress" command
         /// </summary>
+        /// <param name="m">Required signatures</param>
+        /// <param name="publicKeys">Public keys</param>
         [ConsoleCommand("import", "multisigaddress", HelpCategory = "Wallet Commands")]
-        private void OnImportMultisigAddress(string[] args)
+        private void OnImportMultisigAddress(ushort m, ECPoint[] publicKeys)
         {
             if (NoWallet()) return;
 
-            if (args.Length < 4)
-            {
-                Console.WriteLine("Error. Invalid parameters.");
-                return;
-            }
-
-            int m = int.Parse(args[2]);
-            int n = args.Length - 3;
+            int n = publicKeys.Length;
 
             if (m < 1 || m > n || n > 1024)
             {
                 Console.WriteLine("Error. Invalid parameters.");
                 return;
             }
-
-            ECPoint[] publicKeys = args.Skip(3).Select(p => ECPoint.Parse(p, ECCurve.Secp256r1)).ToArray();
 
             Contract multiSignContract = Contract.CreateMultiSigContract(m, publicKeys);
             KeyPair keyPair = CurrentWallet.GetAccounts().FirstOrDefault(p => p.HasKey && publicKeys.Contains(p.GetKey().PublicKey))?.GetKey();

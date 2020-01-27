@@ -1,4 +1,5 @@
 using Neo.CLI.CommandParser;
+using Neo.Cryptography.ECC;
 using Neo.IO.Json;
 using Neo.VM;
 using System;
@@ -67,9 +68,23 @@ namespace Neo.Services
 
                                 // Parse argument
 
-                                var value = arg.HasDefaultValue ? arg.DefaultValue : null;
-                                value = ProcessValue(arg.ParameterType, args, value, false);
-                                arguments.Add(value);
+                                if (TryProcessValue(arg.ParameterType, args, arg.GetCustomAttribute<CaptureWholeArgumentAttribute>() != null, out var value))
+                                {
+                                    arguments.Add(value);
+                                }
+                                else
+                                {
+                                    if (arg.HasDefaultValue)
+                                    {
+                                        arguments.Add(arg.DefaultValue);
+                                    }
+                                    else
+                                    {
+                                        // Some arguments are wrong, we must show the help
+
+                                        return OnCommand($"help \"{ command.Key}\"");
+                                    }
+                                }
                             }
 
                             availableCommands.Add(new SelectedCommand()
@@ -102,11 +117,12 @@ namespace Neo.Services
             }
         }
 
-        private object ProcessValue(Type parameterType, List<CommandToken> args, object defaultValue, bool canConsumeAll)
+        private bool TryProcessValue(Type parameterType, List<CommandToken> args, bool canConsumeAll, out object value)
         {
             if (args.Count > 0 && _handlers.TryGetValue(parameterType, out var handler))
             {
-                return handler(args, canConsumeAll);
+                value = handler(args, canConsumeAll);
+                return true;
             }
 
             if (args.Count > 0 && parameterType.IsEnum)
@@ -116,10 +132,12 @@ namespace Neo.Services
                 var token = args[0];
                 args.RemoveAt(0);
 
-                return Enum.Parse(parameterType, token.Value, true);
+                value = Enum.Parse(parameterType, token.Value, true);
+                return true;
             }
 
-            return defaultValue;
+            value = null;
+            return false;
         }
 
         #region Commands
@@ -128,7 +146,7 @@ namespace Neo.Services
         /// Process "help" command
         /// </summary>
         [ConsoleCommand("help", HelpCategory = "Normal Commands")]
-        protected void OnHelpCommand(string key)
+        protected void OnHelpCommand([CaptureWholeArgument] string key)
         {
             var withHelp = new List<ConsoleCommandAttribute>();
 
@@ -170,7 +188,9 @@ namespace Neo.Services
                 // Show help for this specific command
 
                 string last = null;
+                string lastKey = null;
                 bool found = false;
+
                 foreach (var command in withHelp.Where(u => u.Key == key))
                 {
                     found = true;
@@ -181,7 +201,12 @@ namespace Neo.Services
                         last = command.HelpMessage;
                     }
 
-                    Console.WriteLine($"You can call this command like this:");
+                    if (lastKey != command.Key)
+                    {
+                        Console.WriteLine($"You can call this command like this:");
+                        lastKey = command.Key;
+                    }
+
                     Console.Write($"\t{command.Key}");
                     Console.WriteLine(" " + string.Join(' ',
                         command.Method.GetParameters()
@@ -370,12 +395,6 @@ namespace Neo.Services
                 return token.Value;
             });
 
-            RegisterCommandHander(typeof(string[]), (args, canConsumeAll) =>
-            {
-                var str = (string)_handlers[typeof(string)](args, false);
-                return str.Split(',', ' ');
-            });
-
             RegisterCommandHander(typeof(byte), (args, canConsumeAll) =>
             {
                 var str = (string)_handlers[typeof(string)](args, false);
@@ -416,6 +435,12 @@ namespace Neo.Services
             {
                 var str = (string)_handlers[typeof(string)](args, canConsumeAll);
                 return str.Split(',', ' ').Select(u => UInt256.Parse(u)).ToArray();
+            });
+
+            RegisterCommandHander(typeof(ECPoint[]), (args, canConsumeAll) =>
+            {
+                var str = (string)_handlers[typeof(string)](args, canConsumeAll);
+                return str.Split(',', ' ').Select(u => ECPoint.Parse(str, ECCurve.Secp256r1)).ToArray();
             });
 
             RegisterCommandHander(typeof(JObject), (args, canConsumeAll) =>
@@ -583,8 +608,12 @@ namespace Neo.Services
                 {
                     if (!OnCommand(line))
                     {
-                        Console.WriteLine("error: command not found");
+                        Console.WriteLine("error: Command not found");
                     }
+                }
+                catch (TargetInvocationException ex)
+                {
+                    Console.WriteLine($"error: {ex.InnerException.Message}");
                 }
                 catch (Exception ex)
                 {
