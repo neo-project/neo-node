@@ -20,7 +20,6 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="command">Command</param>
         /// <param name="payload">Payload</param>
-        /// <param name="hashes">Hashes</param>
         [ConsoleCommand("broadcast", HelpCategory = "Network Commands")]
         private void OnBroadcastCommand(MessageCommand command, string payload)
         {

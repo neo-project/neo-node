@@ -226,7 +226,7 @@ namespace Neo.Services
         }
 
         /// <summary>
-        /// Process "help" command
+        /// Process "clear" command
         /// </summary>
         [ConsoleCommand("clear", HelpCategory = "Normal Commands", HelpMessage = "Clear is used in order to clean the console output.")]
         protected void OnClear()
