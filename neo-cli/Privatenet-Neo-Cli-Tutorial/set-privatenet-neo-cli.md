@@ -1,7 +1,7 @@
 ## Setting a private net with neo-cli
 
-1. [Clone](https://docs.neo.org/docs/en-us/node/cli/setup.html#publishing-from-neo-cli-source-code) the newer version of [Neo-Node](https://github.com/neo-project/neo-node) for each node you desire to set in your privatenet and another one that will be used for access the Neo-Cli and for transfer GAS or NEO. It is necessary to have copies of the Neo-Node project because each copy will receive a different configuration file.
-2. Run neo-cli.exe inside the path "neo-cli\bin\Debug\netcoreapp3.0" of each copy of the Project and enter the command `create wallet <path>` with the name of the wallet with a JSON file extension inside the prompt that will appear to create a wallet for each consensus node and write down every public key, name of the wallet and password for the next step.
+1. [Clone](https://docs.neo.org/docs/en-us/node/cli/setup.html#publishing-from-neo-cli-source-code) the newer version of [Neo-Node](https://github.com/neo-project/neo-node) for each consensus node you desire to set on your privatenet and another that will be used to access the Neo-Cli and to transfer GAS or NEO. It is necessary to have multiples copies of the Neo-Node project because each copy will receive a different configuration file.
+2. Run the neo-cli.exe inside the path "neo-cli\bin\Debug\netcoreapp3.0" of each copy of the Project and enter the command `create wallet <path>` with the name of the wallet with a JSON file extension inside the prompt that will appear to create a wallet for each consensus node and write down every public key, name of the wallet and password for the next step.
 3. Set the config.json and protocol.json that are located inside the folder neo-cli as the example below:
 
 config.json (consensus node):
@@ -58,8 +58,7 @@ protocol.json:
 - The "Magic" is the ID of the chain and can be any integer in the range of [0 - 4294967295]. It must be the same number in all nodes.
 - Standby Validators are the public keys of each wallet set in the "UnlockWallet" on "config.json".
 - The number of the port set in P2P in each node must be in "SeedList".
-- To access GAS and NEO, you can set a non-consensus node. The protocol is the same as the consensus nodes but the config.json is a bit different. You must set the "StartConsensus" inside the "UnlockWallet" to false.
-- The ports also must be different from the other config files.
+- To access GAS and NEO, you can set a non-consensus node. The protocol is the same as the consensus nodes, you also need to create a wallet, write the path and the password in the field "Unlockwallet" but you must set the "StartConsensus" to false. The ports in "P2P" and "RPC" also must be different from the other config files.
 
 config.json (non-consensus node):
 ```json

@@ -105,6 +105,6 @@ In order to synchronize the network faster, please check [here](https://docs.neo
 See [documentation](https://docs.neo.org/en-us/node/cli/cli.html). E.g. try `show state` or `create wallet wallet.json`.
 
 
-## Seting a privatenet using Neo-Cli
+## Seting up a privatenet using Neo-Cli
 
-To set a privatenet please check [this tutorial](neo-cli\Privatenet-Neo-Cli-Tutorial\set-privatenet-neo-cli.md).
+Check out [this tutorial](neo-cli/Privatenet-Neo-Cli-Tutorial/set-privatenet-neo-cli.md) to create a privatenet.
