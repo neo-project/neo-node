@@ -262,6 +262,16 @@ namespace Neo.CLI
                     case "script":
                     case "scripthash":
                         return ParseScriptHash(to, value);
+                    case "bigend":
+                    case "bigendscript":
+                    case "bigendscripthash":
+                        return ParseBigEndScriptHash(to, value);
+                    case "littleend":
+                    case "littleendscript":
+                    case "littleendscripthash":
+                        return ParseLittleEndScriptHash(to, value);
+                    case "base64":
+                        return ParseBase64(to, value);
                 }
             }
             return true;
@@ -343,6 +353,8 @@ namespace Neo.CLI
                 case "hexstr":
                 case "hexstring":
                     return OnStringToHex(value);
+                case "base64":
+                    return OnStringToBase64(value);
             }
 
             Console.WriteLine("Invalid Parameters");
@@ -363,6 +375,20 @@ namespace Neo.CLI
         }
 
         /// <summary>
+        /// Prints a string in Base64 hex string (transfer -> dHJhbnNmZXI=)
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private bool OnStringToBase64(string strParam)
+        {
+            byte[] bytearray = Encoding.ASCII.GetBytes(strParam);
+            string base64 = Convert.ToBase64String(bytearray.AsSpan());
+            Console.WriteLine($"String to Base64: {base64}");
+
+            return true;
+        }
+
+        /// <summary>
         /// Process "tool parse number" command
         /// </summary>
         private bool ParseNumber(string to, string value)
@@ -373,6 +399,8 @@ namespace Neo.CLI
                 case "hexstr":
                 case "hexstring":
                     return OnNumberToHex(value);
+                case "base64":
+                    return OnNumberToBase64(value);
             }
 
             Console.WriteLine("Invalid Parameters");
@@ -400,6 +428,25 @@ namespace Neo.CLI
         }
 
         /// <summary>
+        /// Prints the desired number in Base64 byte array (42 -> Kg==)
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private bool OnNumberToBase64(string strParam)
+        {
+            if (!BigInteger.TryParse(strParam, out var number))
+            {
+                Console.WriteLine("Input parameter is not a number");
+            }
+
+            byte[] bytearray = number.ToByteArray();
+            string base64 = Convert.ToBase64String(bytearray.AsSpan());
+            Console.WriteLine($"Number to Base64: {base64}");
+
+            return true;
+        }
+
+        /// <summary>
         /// Process "tool parse address" command
         /// </summary>
         private bool ParseAddress(string to, string value)
@@ -409,6 +456,8 @@ namespace Neo.CLI
                 case "script":
                 case "scripthash":
                     return OnAddressToScript(value);
+                case "base64":
+                    return OnAddressToBase64(value);
             }
 
             Console.WriteLine("Invalid Parameters");
@@ -416,13 +465,34 @@ namespace Neo.CLI
         }
 
         /// <summary>
-        /// Converts an address to its script hash (Nfo8Ncof8QJsfkjLt1uXSEkkd29cZQcCgf -> 0x4b5acd30ba7ec77199561afa0bbd49b5e94517da)
+        /// Converts an address to its script hashes:
+        /// Big end script hash    (AGLMaAqQCW9ncp2MpWLoWX6MTZvyiBxdGE -> 0x7236aa6490d58d6e6462d3c7c4146b6e289f2406)
+        /// Little end script hash (AGLMaAqQCW9ncp2MpWLoWX6MTZvyiBxdGE -> 06249f286e6b14c4c7d362646e8dd59064aa3672)
         /// </summary>
         /// <param name="args"></param>
         /// <returns></returns>
         private bool OnAddressToScript(string address)
         {
-            Console.WriteLine($"Address to ScriptHash: {address.ToScriptHash()}");
+            var bigEndScript = address.ToScriptHash();
+            var littleEndScript = bigEndScript.ToArray().ToHexString();
+
+            Console.WriteLine($"Address to Big End ScriptHash:    {bigEndScript}");
+            Console.WriteLine($"Address to Little End ScriptHash: {littleEndScript}");
+
+            return true;
+        }
+
+        /// <summary>
+        /// Converts an address to Base64 byte array (AGLMaAqQCW9ncp2MpWLoWX6MTZvyiBxdGE -> BiSfKG5rFMTH02Jkbo3VkGSqNnI=)
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private bool OnAddressToBase64(string address)
+        {
+            var script = address.ToScriptHash();
+            string base64 = Convert.ToBase64String(script.ToArray().AsSpan());
+
+            Console.WriteLine($"Address to Base64: {base64}");
 
             return true;
         }
@@ -444,11 +514,50 @@ namespace Neo.CLI
         }
 
         /// <summary>
-        /// Converts an script hash to its equivalent address (0x4b5acd30ba7ec77199561afa0bbd49b5e94517da -> Nfo8Ncof8QJsfkjLt1uXSEkkd29cZQcCgf)
+        /// Converts an script hash to its equivalent address
+        ///     (0x7236aa6490d58d6e6462d3c7c4146b6e289f2406 -> AGLMaAqQCW9ncp2MpWLoWX6MTZvyiBxdGE)
+        ///     (06249f286e6b14c4c7d362646e8dd59064aa3672 -> AGLMaAqQCW9ncp2MpWLoWX6MTZvyiBxdGE)
         /// </summary>
         /// <param name="args"></param>
         /// <returns></returns>
         private bool OnScripthashToAddress(string script)
+        {
+            if (script.StartsWith("0x"))
+            {
+                return OnBigEndScripthashToAddress(script);
+            }
+            else
+            {
+                return OnLittleEndScripthashToAddress(script);
+            }
+        }
+
+        /// <summary>
+        /// Process "tool parse bigendscript" command
+        /// </summary>
+        private bool ParseBigEndScriptHash(string to, string value)
+        {
+            switch (to)
+            {
+                case "addr":
+                case "address":
+                    return OnBigEndScripthashToAddress(value);
+                case "littleend":
+                case "littleendscript":
+                case "littleendscripthash":
+                    return OnScriptHashExchange(value);
+            }
+
+            Console.WriteLine("Invalid Parameters");
+            return true;
+        }
+
+        /// <summary>
+        /// Converts a big end script hash to its equivalent address (0x7236aa6490d58d6e6462d3c7c4146b6e289f2406 -> AGLMaAqQCW9ncp2MpWLoWX6MTZvyiBxdGE)
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private bool OnBigEndScripthashToAddress(string script)
         {
             try
             {
@@ -459,6 +568,175 @@ namespace Neo.CLI
             catch (FormatException)
             {
                 Console.WriteLine("Input parameter is not a valid scripthash");
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Converts a big end script hash to a little end and vice versa
+        /// (0x7236aa6490d58d6e6462d3c7c4146b6e289f2406 <-> 06249f286e6b14c4c7d362646e8dd59064aa3672)
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private bool OnScriptHashExchange(string script)
+        {
+            string bigEnd;
+            string littleEnd;
+            if (script.StartsWith("0x"))
+            {
+                bigEnd = script.Substring(2);
+                littleEnd = bigEnd.HexToBytes().Reverse().ToArray().ToHexString();
+            }
+            else
+            {
+                littleEnd = script;
+                bigEnd = littleEnd.HexToBytes().Reverse().ToArray().ToHexString();
+            }
+
+            Console.WriteLine($"ScriptHash Exchange: 0x{bigEnd} <=> {littleEnd}");
+
+            return true;
+        }
+
+        /// <summary>
+        /// Process "tool parse bigendscript" command
+        /// </summary>
+        private bool ParseLittleEndScriptHash(string to, string value)
+        {
+            switch (to)
+            {
+                case "addr":
+                case "address":
+                    return OnLittleEndScripthashToAddress(value);
+                case "bigend":
+                case "bigendscript":
+                case "bigendscripthash":
+                    return OnScriptHashExchange(value);
+            }
+
+            Console.WriteLine("Invalid Parameters");
+            return true;
+        }
+
+        /// <summary>
+        /// Converts a little end script hash to its equivalent address (06249f286e6b14c4c7d362646e8dd59064aa3672 -> AGLMaAqQCW9ncp2MpWLoWX6MTZvyiBxdGE)
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private bool OnLittleEndScripthashToAddress(string script)
+        {
+            try
+            {
+                UInt160 littleEndScript = UInt160.Parse(script);
+                string bigEndScript = littleEndScript.ToArray().ToHexString();
+                var scriptHash = UInt160.Parse(bigEndScript);
+                var hexScript = scriptHash.ToAddress();
+                Console.WriteLine($"ScriptHash to Address: {hexScript}");
+            }
+            catch (FormatException)
+            {
+                Console.WriteLine("Input parameter is not a valid scripthash");
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Process "tool parse base64" command
+        /// </summary>
+        private bool ParseBase64(string to, string value)
+        {
+            switch (to)
+            {
+                case "addr":
+                case "address":
+                    return OnBase64ToAddress(value);
+                case "str":
+                case "string":
+                    return OnBase64ToStr(value);
+                case "num":
+                case "number":
+                    return OnBase64ToNumber(value);
+            }
+
+            Console.WriteLine("Invalid Parameters");
+            return true;
+        }
+
+        /// <summary>
+        /// Converts an Base64 byte array to address (BiSfKG5rFMTH02Jkbo3VkGSqNnI -> AGLMaAqQCW9ncp2MpWLoWX6MTZvyiBxdGE=)
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private bool OnBase64ToAddress(string bytearray)
+        {
+            try
+            {
+                byte[] result = Convert.FromBase64String(bytearray).Reverse().ToArray();
+                string hex = result.ToHexString();
+
+                if (!UInt160.TryParse(hex, out var scripthash))
+                {
+                    Console.WriteLine("Input parameter is not a valid base64 string");
+                }
+
+                string address = scripthash.ToAddress();
+                Console.WriteLine($"Base64 to Address: {address}");
+            }
+            catch (FormatException)
+            {
+                Console.WriteLine("Input parameter is not a valid base64 string");
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Converts an Base64 hex string to string (dHJhbnNmZXI= -> transfer)
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private bool OnBase64ToStr(string bytearray)
+        {
+            try
+            {
+                byte[] result = Convert.FromBase64String(bytearray);
+                string str = Encoding.ASCII.GetString(result);
+                Console.WriteLine($"Base64 to String: {str}");
+            }
+            catch (FormatException)
+            {
+                Console.WriteLine("Input parameter is not a valid base64 string");
+            }
+            catch (ArgumentException)
+            {
+                Console.WriteLine("Input parameter is not a valid base64 string");
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Converts an Base64 hex string to number (Kg== -> 42)
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        private bool OnBase64ToNumber(string bytearray)
+        {
+            try
+            {
+                var bytes = Convert.FromBase64String(bytearray).Reverse().ToArray();
+                var number = new BigInteger(bytes);
+                Console.WriteLine($"Base64 to Number: {number}");
+            }
+            catch (FormatException)
+            {
+                Console.WriteLine("Input parameter is not a valid base64 string");
+            }
+            catch (ArgumentException)
+            {
+                Console.WriteLine("Input parameter is not a valid base64 string");
             }
 
             return true;
@@ -990,11 +1268,14 @@ namespace Neo.CLI
             Console.WriteLine("\tinstall <pluginName>");
             Console.WriteLine("\tuninstall <pluginName>");
             Console.WriteLine("Tool Commands:");
-            Console.WriteLine("\ttool parse address script <address>");
+            Console.WriteLine("\ttool parse address <script|base64> <address>");
             Console.WriteLine("\ttool parse script address <scriptHash>");
+            Console.WriteLine("\ttool parse bigend <address|littleend> <bigendscriptHash>");
+            Console.WriteLine("\ttool parse littleend <address|bigend> <scriptHash>");
             Console.WriteLine("\ttool parse hex <string|number> <hex string>");
-            Console.WriteLine("\ttool parse string hex <text>");
-            Console.WriteLine("\ttool parse number hex <number>");
+            Console.WriteLine("\ttool parse string <hex|base64> <text>");
+            Console.WriteLine("\ttool parse number <string|base64> <number>");
+            Console.WriteLine("\ttool parse base64 <adress|string|number> <base64string>");
             Console.WriteLine("Advanced Commands:");
             Console.WriteLine("\texport blocks <index>");
             Console.WriteLine("\tstart consensus");
