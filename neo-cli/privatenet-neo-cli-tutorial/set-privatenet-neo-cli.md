@@ -95,7 +95,7 @@ config.json (non-consensus node):
 
 7. Enter the command `show stats` in the non-consensus node terminal and wait. All the nodes started before should connect like the image below:
  
-![](Screenshots/01.png)
+![](screenshots/01.png)
 
 ## Retrieving NEO and GAS in the privatenet using Neo-Cli
 
@@ -105,18 +105,18 @@ The following steps are to transfer some GAS or NEO in a wallet. If you won't ma
   
 2. Open a wallet from a consensus node and create a multi-signature address using the command `import multisigaddress m pubkeys` with the minimal number of signatures needed to complete the transaction and the public keys in Standby Validators in all consensus node wallets.
  
-![](Screenshots/02.png) 
+![](screenshots/02.png) 
 
 3. Use the command `send <id|alias> <address> <value>` with the address of the wallet created on step 1, copy the SignatureContext and close the wallet.
 
-![](Screenshots/03.png)
+![](screenshots/03.png)
 
 4. Open another wallet listed on the multi-signature, use the command `sign <jsonObjectToSign>` with the object copied in step 3, copy the object in Signed Output and close the wallet.
 
-![](Screenshots/04.png)
+![](screenshots/04.png)
  
  5. Repeat the previous step the number of times put as minimal in step 2. Then you can use `relay <jsonObjectToSign>` and your wallet is ready.
  
-![](Screenshots/05.png)
+![](screenshots/05.png)
 
-![](Screenshots/06.png)
+![](screenshots/06.png)

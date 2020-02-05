@@ -107,4 +107,4 @@ For more information about these two nodes, you can refer to [documentation](htt
 
 ## Seting up a privatenet using Neo-Cli
 
-Check out [this tutorial](neo-cli/Privatenet-Neo-Cli-Tutorial/set-privatenet-neo-cli.md) to create a privatenet.
+Check out [this tutorial](neo-cli/privatenet-neo-cli-tutorial/set-privatenet-neo-cli.md) to create a privatenet.
