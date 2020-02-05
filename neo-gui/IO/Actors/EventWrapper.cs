@@ -1,4 +1,4 @@
-﻿using Akka.Actor;
+using Akka.Actor;
 using System;
 
 namespace Neo.IO.Actors
