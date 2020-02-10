@@ -68,7 +68,14 @@ namespace Neo.CLI.CommandParser
 
             foreach (var token in tokens)
             {
-                sb.Append(token.Value);
+                if (token is CommandStringToken str && str.RequireQuotes)
+                {
+                    sb.Append("\"" + token.Value + "\"");
+                }
+                else
+                {
+                    sb.Append(token.Value);
+                }
             }
 
             return sb.ToString();
