@@ -82,7 +82,7 @@ namespace Neo.Services
                                     {
                                         // Some arguments are wrong, we must show the help
 
-                                        return OnCommand($"help \"{ command.Key}\"");
+                                        return OnCommand($"help \"{command.Key}\"");
                                     }
                                 }
                             }
@@ -112,11 +112,7 @@ namespace Neo.Services
                     }
                 default:
                     {
-                        var command = availableCommands[0];
-                        command.Command.Method.Invoke(command.Command.Instance, command.Arguments);
-                        return true;
-
-                        // throw new ArgumentException("Ambiguous calls for: " + string.Join(',', availableCommands.Select(u => u.Command.Key).Distinct()));
+                        throw new ArgumentException("Ambiguous calls for: " + string.Join(',', availableCommands.Select(u => u.Command.Key).Distinct()));
                     }
             }
         }
@@ -150,7 +146,7 @@ namespace Neo.Services
         /// Process "help" command
         /// </summary>
         [ConsoleCommand("help", HelpCategory = "Normal Commands")]
-        protected void OnHelpCommand([CaptureWholeArgument] string key)
+        protected void OnHelpCommand([CaptureWholeArgument] string key = "")
         {
             var withHelp = new List<ConsoleCommandAttribute>();
 
