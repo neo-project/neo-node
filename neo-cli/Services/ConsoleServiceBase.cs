@@ -119,21 +119,24 @@ namespace Neo.Services
 
         private bool TryProcessValue(Type parameterType, List<CommandToken> args, bool canConsumeAll, out object value)
         {
-            if (args.Count > 0 && _handlers.TryGetValue(parameterType, out var handler))
+            if (args.Count > 0)
             {
-                value = handler(args, canConsumeAll);
-                return true;
-            }
+                if (_handlers.TryGetValue(parameterType, out var handler))
+                {
+                    value = handler(args, canConsumeAll);
+                    return true;
+                }
 
-            if (args.Count > 0 && parameterType.IsEnum)
-            {
-                // Default conversion for enums
+                if (parameterType.IsEnum)
+                {
+                    // Default conversion for enums
 
-                var token = args[0];
-                args.RemoveAt(0);
+                    var token = args[0];
+                    args.RemoveAt(0);
 
-                value = Enum.Parse(parameterType, token.Value, true);
-                return true;
+                    value = Enum.Parse(parameterType, token.Value, true);
+                    return true;
+                }
             }
 
             value = null;
