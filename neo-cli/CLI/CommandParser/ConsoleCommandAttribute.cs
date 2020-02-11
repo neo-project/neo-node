@@ -4,7 +4,7 @@ using System.Reflection;
 
 namespace Neo.CLI.CommandParser
 {
-	[DebuggerDisplay("Key={Key}")]
+    [DebuggerDisplay("Key={Key}")]
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
     public class ConsoleCommandAttribute : Attribute
     {
