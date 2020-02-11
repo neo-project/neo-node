@@ -13,7 +13,7 @@ using System.Net;
 
 namespace Neo.CLI
 {
-    public partial class MainService : ConsoleServiceBase
+    partial class MainService : ConsoleServiceBase
     {
         /// <summary>
         /// Process "broadcast" command

@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace Neo.CLI
 {
-    public partial class MainService : ConsoleServiceBase
+    partial class MainService : ConsoleServiceBase
     {
         /// <summary>
         /// Process "deploy" command

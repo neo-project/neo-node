@@ -1,6 +1,5 @@
 using Neo.CLI.CommandParser;
 using Neo.Ledger;
-using Neo.Services;
 using System;
 
 namespace Neo.CLI

@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace Neo.CLI
 {
-    public partial class MainService : ConsoleServiceBase
+    partial class MainService : ConsoleServiceBase
     {
         /// <summary>
         /// Process "show pool" command

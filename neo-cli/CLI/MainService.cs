@@ -25,7 +25,7 @@ using System.Threading;
 
 namespace Neo.CLI
 {
-    public partial class MainService : ConsoleServiceBase
+    partial class MainService : ConsoleServiceBase
     {
         public event EventHandler WalletChanged;
 
