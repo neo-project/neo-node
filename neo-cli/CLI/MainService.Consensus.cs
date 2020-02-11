@@ -5,7 +5,7 @@ using Neo.Services;
 
 namespace Neo.CLI
 {
-    partial class MainService : ConsoleServiceBase
+    partial class MainService
     {
         /// <summary>
         /// Process "change view" command
