@@ -5,7 +5,7 @@ using System;
 
 namespace Neo.CLI
 {
-    public partial class MainService : ConsoleServiceBase
+    partial class MainService
     {
         /// <summary>
         /// Process "export block" command
