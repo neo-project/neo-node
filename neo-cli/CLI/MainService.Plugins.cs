@@ -1,6 +1,5 @@
 using Neo.CLI.CommandParser;
 using Neo.Plugins;
-using Neo.Services;
 using System;
 using System.IO;
 using System.IO.Compression;
@@ -9,7 +8,7 @@ using System.Net;
 
 namespace Neo.CLI
 {
-    partial class MainService : ConsoleServiceBase
+    partial class MainService
     {
         /// <summary>
         /// Process "install" command

@@ -6,14 +6,13 @@ using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Capabilities;
 using Neo.Network.P2P.Payloads;
-using Neo.Services;
 using Neo.SmartContract;
 using System;
 using System.Net;
 
 namespace Neo.CLI
 {
-    partial class MainService : ConsoleServiceBase
+    partial class MainService
     {
         /// <summary>
         /// Process "broadcast" command

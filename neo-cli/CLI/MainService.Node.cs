@@ -3,7 +3,6 @@ using Neo.CLI.CommandParser;
 using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
-using Neo.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Neo.CLI
 {
-    partial class MainService : ConsoleServiceBase
+    partial class MainService
     {
         /// <summary>
         /// Process "show pool" command

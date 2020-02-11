@@ -1,7 +1,6 @@
 using Neo.CLI.CommandParser;
 using Neo.IO.Json;
 using Neo.Network.P2P.Payloads;
-using Neo.Services;
 using Neo.SmartContract;
 using Neo.VM;
 using System;
@@ -10,7 +9,7 @@ using System.Linq;
 
 namespace Neo.CLI
 {
-    partial class MainService : ConsoleServiceBase
+    partial class MainService
     {
         /// <summary>
         /// Process "deploy" command
