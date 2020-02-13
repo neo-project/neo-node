@@ -56,8 +56,9 @@ namespace Neo.CLI
             Transaction tx = new Transaction
             {
                 Sender = UInt160.Zero,
-                Attributes = new TransactionAttribute[0],
-                Witnesses = new Witness[0]
+                Attributes = Array.Empty<TransactionAttribute>(),
+                Witnesses = Array.Empty<Witness>(),
+                Cosigners = Array.Empty<Cosigner>()
             };
 
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
