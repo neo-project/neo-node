@@ -211,36 +211,25 @@ namespace Neo.CLI
                     return OnInstallCommand(args);
                 case "uninstall":
                     return OnUnInstallCommand(args);
-                case "tool":
-                    return OnToolCommand(args);
-                default:
-                    return base.OnCommand(args);
-            }
-        }
-
-        private bool OnToolCommand(string[] args)
-        {
-            switch (args[1].ToLower())
-            {
                 case "parse":
-                    return OnToolParseCommand(args);
+                    return OnParseCommand(args);
                 default:
                     return base.OnCommand(args);
             }
         }
 
         /// <summary>
-        /// Process "tool parse" command
+        /// Process "parse" command
         /// </summary>
-        private bool OnToolParseCommand(string[] args)
+        private bool OnParseCommand(string[] args)
         {
-            if (args.Length != 3)
+            if (args.Length != 2)
             {
                 Console.WriteLine("Invalid Parameters");
             }
             else
             {
-                var input = args[2];
+                var input = args[1];
                 var parseFunctions = new Dictionary<string, Func<string, string>>()
                 {
                     { "Address to BigEnd ScriptHash", AddressToBigEndScripthash },
@@ -1258,6 +1247,7 @@ namespace Neo.CLI
             Console.WriteLine("Normal Commands:");
             Console.WriteLine("\tversion");
             Console.WriteLine("\thelp [plugin-name]");
+            Console.WriteLine("\tparse <value>");
             Console.WriteLine("\tclear");
             Console.WriteLine("\texit");
             Console.WriteLine("Wallet Commands:");
@@ -1286,8 +1276,6 @@ namespace Neo.CLI
             Console.WriteLine("\tplugins");
             Console.WriteLine("\tinstall <pluginName>");
             Console.WriteLine("\tuninstall <pluginName>");
-            Console.WriteLine("Tool Commands:");
-            Console.WriteLine("\ttool parse <value>");
             Console.WriteLine("Advanced Commands:");
             Console.WriteLine("\texport blocks <index>");
             Console.WriteLine("\tstart consensus");
