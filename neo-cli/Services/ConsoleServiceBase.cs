@@ -406,7 +406,7 @@ namespace Neo.Services
 
             RegisterCommandHander(typeof(bool), (args, canConsumeAll) =>
             {
-                var str = ((string)_handlers[typeof(bool)](args, false)).ToLowerInvariant();
+                var str = ((string)_handlers[typeof(string)](args, false)).ToLowerInvariant();
                 return str == "1" || str == "yes" || str == "y" || bool.Parse(str);
             });
 
