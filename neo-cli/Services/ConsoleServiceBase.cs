@@ -2,6 +2,7 @@ using Neo.CLI.CommandParser;
 using Neo.Cryptography.ECC;
 using Neo.IO.Json;
 using Neo.VM;
+using Neo.Wallets;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -425,7 +426,17 @@ namespace Neo.Services
             RegisterCommandHander(typeof(UInt160), (args, canConsumeAll) =>
             {
                 var str = (string)_handlers[typeof(string)](args, false);
-                return UInt160.Parse(str);
+
+                // Try to parse as UInt160
+
+                if (UInt160.TryParse(str, out var addr))
+                {
+                    return addr;
+                }
+
+                // Accept wallet format
+
+                return str.ToScriptHash();
             });
 
             RegisterCommandHander(typeof(UInt256), (args, canConsumeAll) =>
