@@ -48,9 +48,9 @@ namespace Neo.CLI
         private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters)
         {
             List<ContractParameter> parameters = new List<ContractParameter>();
-            for (int i = 3; i < contractParameters.Count; i++)
+            foreach (var contractParameter in contractParameters)
             {
-                parameters.Add(ContractParameter.FromJson(contractParameters[i]));
+                parameters.Add(ContractParameter.FromJson(contractParameter));
             }
 
             Transaction tx = new Transaction
