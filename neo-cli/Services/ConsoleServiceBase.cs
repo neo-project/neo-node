@@ -447,14 +447,14 @@ namespace Neo.Services
 
             RegisterCommandHander(typeof(UInt256[]), (args, canConsumeAll) =>
             {
-                var str = (string)_handlers[typeof(string)](args, canConsumeAll);
-                return str.Split(',', ' ').Select(u => UInt256.Parse(u)).ToArray();
+                var str = (string)_handlers[typeof(string)](args, true);
+                return str.Split(',', ' ').Select(u => UInt256.Parse(u.Trim())).ToArray();
             });
 
             RegisterCommandHander(typeof(ECPoint[]), (args, canConsumeAll) =>
             {
-                var str = (string)_handlers[typeof(string)](args, canConsumeAll);
-                return str.Split(',', ' ').Select(u => ECPoint.Parse(str, ECCurve.Secp256r1)).ToArray();
+                var str = (string)_handlers[typeof(string)](args, true);
+                return str.Split(',', ' ').Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray();
             });
 
             RegisterCommandHander(typeof(JObject), (args, canConsumeAll) =>
