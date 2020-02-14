@@ -39,6 +39,11 @@ namespace Neo.CLI.CommandParser
         internal MethodInfo Method { get; private set; }
 
         /// <summary>
+        /// Exclude this command if it's an ambiguous call
+        /// </summary>
+        public bool ExcludeIfAmbiguous { get; set; }
+
+        /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="verbs">Verbs</param>

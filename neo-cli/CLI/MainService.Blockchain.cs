@@ -27,8 +27,8 @@ namespace Neo.CLI
         /// Process "export block" command
         /// Process "export blocks" command
         /// </summary>
-        [ConsoleCommand("export", "block", HelpCategory = "Blockchain Commands")]
-        [ConsoleCommand("export", "blocks", HelpCategory = "Blockchain Commands")]
+        [ConsoleCommand("export", "block", HelpCategory = "Blockchain Commands", ExcludeIfAmbiguous = true)]
+        [ConsoleCommand("export", "blocks", HelpCategory = "Blockchain Commands", ExcludeIfAmbiguous = true)]
         private void OnExportBlocksCommand(string path, uint start)
         {
             var writeStart = false;

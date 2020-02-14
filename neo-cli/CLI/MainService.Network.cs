@@ -19,7 +19,7 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="command">Command</param>
         /// <param name="payload">Payload</param>
-        [ConsoleCommand("broadcast", HelpCategory = "Network Commands")]
+        [ConsoleCommand("broadcast", HelpCategory = "Network Commands", ExcludeIfAmbiguous = true)]
         private void OnBroadcastCommand(MessageCommand command, string payload)
         {
             if (string.IsNullOrEmpty(payload))

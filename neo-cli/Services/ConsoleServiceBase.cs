@@ -38,7 +38,6 @@ namespace Neo.Services
         {
             public ConsoleCommandAttribute Command { get; set; }
             public object[] Arguments { get; set; }
-            public int ExtraArguments { get; set; }
         }
 
         protected virtual bool OnCommand(string commandLine)
@@ -92,8 +91,7 @@ namespace Neo.Services
                             availableCommands.Add(new SelectedCommand()
                             {
                                 Arguments = arguments.ToArray(),
-                                Command = command,
-                                ExtraArguments = args.Count
+                                Command = command
                             });
                         }
                         catch
@@ -115,16 +113,19 @@ namespace Neo.Services
                     }
                 default:
                     {
-                        // Check if one of them have 0 extra arguments
+                        // Check if one of them must be excluded
 
-                        var commandsWithoutExtraArgs = availableCommands.Where(u => u.ExtraArguments == 0).ToList();
+                        var commandsWithoutExtraArgs = availableCommands
+                            .Where(u => !u.Command.ExcludeIfAmbiguous).ToList();
 
                         if (commandsWithoutExtraArgs.Count == 1)
                         {
-                            var command = availableCommands[0];
+                            var command = commandsWithoutExtraArgs[0];
                             command.Command.Method.Invoke(command.Command.Instance, command.Arguments);
                             return true;
                         }
+
+                        // Show Ambiguous call
 
                         throw new ArgumentException("Ambiguous calls for: " + string.Join(',', availableCommands.Select(u => u.Command.Key).Distinct()));
                     }
