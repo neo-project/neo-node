@@ -16,11 +16,10 @@ namespace Neo.CLI.CommandParser
         /// </summary>
         /// <param name="offset">Offset</param>
         /// <param name="value">Value</param>
-        /// <param name="requireQuotes">Require quotes</param>
-        public CommandStringToken(int offset, string value, bool requireQuotes = false) : base(CommandTokenType.String, offset)
+        public CommandStringToken(int offset, string value) : base(CommandTokenType.String, offset)
         {
             Value = value;
-            RequireQuotes = requireQuotes || value.Contains("\"");
+            RequireQuotes = value.IndexOfAny(new char[] { '\'', '"' }) != -1;
         }
 
         /// <summary>
@@ -28,34 +27,30 @@ namespace Neo.CLI.CommandParser
         /// </summary>
         /// <param name="commandLine">Command line</param>
         /// <param name="index">Index</param>
+        /// <param name="quote">Quote (could be null)</param>
         /// <returns>CommandSpaceToken</returns>
-        internal static CommandStringToken Parse(string commandLine, ref int index)
+        internal static CommandStringToken Parse(string commandLine, ref int index, CommandQuoteToken quote)
         {
             int end;
             int offset = index;
-            bool startWithQuotes = commandLine[index] == '\"';
 
-            if (startWithQuotes)
+            if (quote != null)
             {
-                var ix = index++;
+                var ix = index;
 
                 do
                 {
-                    end = commandLine.IndexOf('\"', ix + 1);
+                    end = commandLine.IndexOf(quote.Value[0], ix + 1);
 
                     if (end == -1)
                     {
                         throw new ArgumentException("String not closed");
                     }
 
-                    if (IsScaped(commandLine, end))
+                    if (IsScaped(commandLine, end - 1))
                     {
-                        ix = end + 1;
+                        ix = end;
                         end = -1;
-                    }
-                    else
-                    {
-                        //count -= index;
                     }
                 }
                 while (end < 0);
@@ -70,21 +65,16 @@ namespace Neo.CLI.CommandParser
                 end = commandLine.Length;
             }
 
-            var ret = new CommandStringToken(offset, commandLine.Substring(index, end - index), startWithQuotes);
+            var ret = new CommandStringToken(offset, commandLine.Substring(index, end - index));
             index += end - index;
-            if (startWithQuotes) index++;
             return ret;
         }
 
         private static bool IsScaped(string commandLine, int index)
         {
-            while (index >= 0)
-            {
-                if (commandLine[index] != '\\') return false;
-                index--;
-            }
+            // TODO: Scape the scape
 
-            return true;
+            return (commandLine[index] == '\\');
         }
     }
 }

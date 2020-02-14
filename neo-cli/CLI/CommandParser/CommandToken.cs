@@ -39,22 +39,79 @@ namespace Neo.CLI.CommandParser
         /// <returns></returns>
         public static IEnumerable<CommandToken> Parse(string commandLine)
         {
-            for (int x = 0, count = commandLine.Length; x < count;)
+            CommandToken lastToken = null;
+
+            for (int index = 0, count = commandLine.Length; index < count;)
             {
-                switch (commandLine[x])
+                switch (commandLine[index])
                 {
                     case ' ':
                         {
-                            yield return CommandSpaceToken.Parse(commandLine, ref x);
+                            lastToken = CommandSpaceToken.Parse(commandLine, ref index);
+                            yield return lastToken;
+                            break;
+                        }
+                    case '"':
+                    case '\'':
+                        {
+                            if (lastToken is CommandQuoteToken quote)
+                            {
+                                // "'"
+
+                                if (quote.Value[0] != commandLine[index])
+                                {
+                                    goto default;
+                                }
+                            }
+
+                            lastToken = CommandQuoteToken.Parse(commandLine, ref index);
+                            yield return lastToken;
                             break;
                         }
                     default:
                         {
-                            yield return CommandStringToken.Parse(commandLine, ref x);
+                            lastToken = CommandStringToken.Parse(commandLine, ref index,
+                                lastToken is CommandQuoteToken quote ? quote : null);
+
+                            yield return lastToken;
                             break;
                         }
                 }
             }
+        }
+
+        /// <summary>
+        /// Create string arguments
+        /// </summary>
+        /// <param name="tokens">Tokens</param>
+        /// <param name="removeEscape">Remove escape</param>
+        /// <returns>Arguments</returns>
+        public static string[] ToArguments(IEnumerable<CommandToken> tokens, bool removeEscape = true)
+        {
+            var list = new List<string>();
+
+            CommandToken lastToken = null;
+
+            foreach (var token in tokens)
+            {
+                if (token is CommandStringToken str)
+                {
+                    if (removeEscape && lastToken is CommandQuoteToken quote)
+                    {
+                        // Remove escape
+
+                        list.Add(str.Value.Replace("\\" + quote.Value, quote.Value));
+                    }
+                    else
+                    {
+                        list.Add(str.Value);
+                    }
+                }
+
+                lastToken = token;
+            }
+
+            return list.ToArray();
         }
 
         /// <summary>
@@ -68,9 +125,9 @@ namespace Neo.CLI.CommandParser
 
             foreach (var token in tokens)
             {
-                if (token is CommandStringToken str && str.RequireQuotes)
+                if (token is CommandStringToken str)
                 {
-                    sb.Append("\"" + token.Value + "\"");
+                    sb.Append(token.Value);
                 }
                 else
                 {

@@ -33,7 +33,45 @@ namespace neo_cli.Tests
             var cmd = "show \"hello world\"";
             var args = CommandToken.Parse(cmd).ToArray();
 
-            AreEqual(args, new CommandStringToken(0, "show"), new CommandSpaceToken(4, 1), new CommandStringToken(5, "hello world", true));
+            AreEqual(args,
+                new CommandStringToken(0, "show"),
+                new CommandSpaceToken(4, 1),
+                new CommandQuoteToken(5, '"'),
+                new CommandStringToken(6, "hello world"),
+                new CommandQuoteToken(17, '"')
+                );
+            Assert.AreEqual(cmd, CommandToken.ToString(args));
+        }
+
+        [TestMethod]
+        public void Test4()
+        {
+            var cmd = "show \"'\"";
+            var args = CommandToken.Parse(cmd).ToArray();
+
+            AreEqual(args,
+                new CommandStringToken(0, "show"),
+                new CommandSpaceToken(4, 1),
+                new CommandQuoteToken(5, '"'),
+                new CommandStringToken(6, "'"),
+                new CommandQuoteToken(7, '"')
+                );
+            Assert.AreEqual(cmd, CommandToken.ToString(args));
+        }
+
+        [TestMethod]
+        public void Test5()
+        {
+            var cmd = "show \"123\\\"456\"";
+            var args = CommandToken.Parse(cmd).ToArray();
+
+            AreEqual(args,
+                new CommandStringToken(0, "show"),
+                new CommandSpaceToken(4, 1),
+                new CommandQuoteToken(5, '"'),
+                new CommandStringToken(6, "123\\\"456"),
+                new CommandQuoteToken(14, '"')
+                );
             Assert.AreEqual(cmd, CommandToken.ToString(args));
         }
 

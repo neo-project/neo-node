@@ -32,7 +32,7 @@ namespace Neo.Services
         private readonly CancellationTokenSource _shutdownTokenSource = new CancellationTokenSource();
         private readonly CountdownEvent _shutdownAcknowledged = new CountdownEvent(1);
         private readonly Dictionary<string, List<ConsoleCommandAttribute>> _verbs = new Dictionary<string, List<ConsoleCommandAttribute>>();
-        private readonly Dictionary<Type, Func<List<CommandToken>, bool, object>> _handlers = new Dictionary<Type, Func<List<CommandToken>, bool, object>>();
+        private readonly Dictionary<Type, Func<List<string>, bool, object>> _handlers = new Dictionary<Type, Func<List<string>, bool, object>>();
 
         class SelectedCommand
         {
@@ -48,25 +48,22 @@ namespace Neo.Services
             }
 
             var tokens = CommandToken.Parse(commandLine).ToArray();
+            var commandArgs = CommandToken.ToArguments(tokens);
             var availableCommands = new List<SelectedCommand>();
 
             foreach (var entries in _verbs.Values)
             {
                 foreach (var command in entries)
                 {
-                    if (command.IsThisCommand(tokens, out var consumedTokens))
+                    if (command.IsThisCommand(commandArgs, out var consumedArgs))
                     {
                         var arguments = new List<object>();
-                        var args = new List<CommandToken>(tokens.Skip(consumedTokens));
+                        var args = commandArgs.Skip(consumedArgs).ToList();
 
                         try
                         {
                             foreach (var arg in command.Method.GetParameters())
                             {
-                                // Trim start
-
-                                while (args.FirstOrDefault() is CommandSpaceToken) args.RemoveAt(0);
-
                                 // Parse argument
 
                                 if (TryProcessValue(arg.ParameterType, args, arg.GetCustomAttribute<CaptureWholeArgumentAttribute>() != null, out var value))
@@ -132,7 +129,7 @@ namespace Neo.Services
             }
         }
 
-        private bool TryProcessValue(Type parameterType, List<CommandToken> args, bool canConsumeAll, out object value)
+        private bool TryProcessValue(Type parameterType, List<string> args, bool canConsumeAll, out object value)
         {
             if (args.Count > 0)
             {
@@ -146,10 +143,10 @@ namespace Neo.Services
                 {
                     // Default conversion for enums
 
-                    var token = args[0];
+                    var arg = args[0];
                     args.RemoveAt(0);
 
-                    value = Enum.Parse(parameterType, token.Value, true);
+                    value = Enum.Parse(parameterType, arg, true);
                     return true;
                 }
             }
@@ -402,15 +399,14 @@ namespace Neo.Services
             {
                 if (canConsumeAll)
                 {
-                    var str = CommandToken.ToString(args);
                     args.Clear();
-                    return str;
+                    return string.Join(' ', args);
                 }
 
-                var token = args[0];
+                var arg = args[0];
                 args.RemoveAt(0);
 
-                return token.Value;
+                return arg;
             });
 
             RegisterCommandHander(typeof(byte), (args, canConsumeAll) =>
@@ -491,7 +487,7 @@ namespace Neo.Services
         /// </summary>
         /// <param name="type">Type</param>
         /// <param name="handler">Handler</param>
-        public void RegisterCommandHander(Type type, Func<List<CommandToken>, bool, object> handler)
+        public void RegisterCommandHander(Type type, Func<List<string>, bool, object> handler)
         {
             _handlers[type] = handler;
         }

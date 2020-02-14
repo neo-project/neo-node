@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
 
 namespace Neo.CLI.CommandParser
@@ -49,7 +50,7 @@ namespace Neo.CLI.CommandParser
         /// <param name="verbs">Verbs</param>
         public ConsoleCommandAttribute(params string[] verbs)
         {
-            Verbs = verbs;
+            Verbs = verbs.Select(u => u.ToLowerInvariant()).ToArray();
         }
 
         /// <summary>
@@ -67,56 +68,12 @@ namespace Neo.CLI.CommandParser
         /// Is this command
         /// </summary>
         /// <param name="tokens">Tokens</param>
-        /// <param name="consumedTokens">Consumed tokens</param>
+        /// <param name="consumedArgs">Consumed Arguments</param>
         /// <returns>True if is this command</returns>
-        public bool IsThisCommand(CommandToken[] tokens, out int consumedTokens)
+        public bool IsThisCommand(string[] tokens, out int consumedArgs)
         {
-            var verbsFound = 0;
-            var tokenIndex = 0;
-            consumedTokens = 0;
-
-            for (int x = 0; x < tokens.Length; x++)
-            {
-                consumedTokens++;
-
-                switch (tokens[x])
-                {
-                    case CommandStringToken str:
-                        {
-                            if (tokenIndex < Verbs.Length &&
-                                str.Value.Equals(Verbs[tokenIndex], StringComparison.InvariantCultureIgnoreCase))
-                            {
-                                verbsFound++;
-                                tokenIndex++;
-
-                                if (verbsFound == Verbs.Length)
-                                {
-                                    for (int i = x + 1; i < tokens.Length; i++)
-                                    {
-                                        if (tokens[i] is CommandSpaceToken)
-                                        {
-                                            consumedTokens++;
-                                        }
-                                        else
-                                        {
-                                            break;
-                                        }
-                                    }
-
-                                    return true;
-                                }
-                            }
-                            else
-                            {
-                                return false;
-                            }
-
-                            break;
-                        }
-                }
-            }
-
-            return false;
+            consumedArgs = Verbs.Length;
+            return Verbs.SequenceEqual(tokens.Take(consumedArgs).Select(u => u.ToLowerInvariant()));
         }
     }
 }

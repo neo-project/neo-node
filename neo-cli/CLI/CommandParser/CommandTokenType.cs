@@ -2,7 +2,8 @@ namespace Neo.CLI.CommandParser
 {
     public enum CommandTokenType : byte
     {
-        String = 0x00,
-        Space = 0x01
+        String = 0x01,
+        Space = 0x02,
+        Quote = 0x03,
     }
 }
