@@ -17,7 +17,7 @@ namespace Neo.CLI
         /// <param name="filePath">File path</param>
         /// <param name="manifestPath">Manifest path</param>
         [ConsoleCommand("deploy", HelpCategory = "Contract Commands")]
-        private void OnDeployCommand(string filePath, string manifestPath)
+        private void OnDeployCommand(string filePath, string manifestPath = null)
         {
             if (NoWallet()) return;
             byte[] script = LoadDeploymentScript(filePath, manifestPath, out var scriptHash);
