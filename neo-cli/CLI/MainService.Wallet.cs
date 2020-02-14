@@ -225,17 +225,17 @@ namespace Neo.CLI
         /// Process "import key" command
         /// </summary>
         [ConsoleCommand("import", "key", HelpCategory = "Wallet Commands")]
-        private void OnImportKeyCommand(string wif, string file)
+        private void OnImportKeyCommand(string wifOrFile)
         {
             byte[] prikey = null;
             try
             {
-                prikey = Wallet.GetPrivateKeyFromWIF(wif);
+                prikey = Wallet.GetPrivateKeyFromWIF(wifOrFile);
             }
             catch (FormatException) { }
             if (prikey == null)
             {
-                var fileInfo = new FileInfo(file);
+                var fileInfo = new FileInfo(wifOrFile);
 
                 if (!fileInfo.Exists)
                 {
@@ -243,7 +243,7 @@ namespace Neo.CLI
                     return;
                 }
 
-                if (file.Length > 1024 * 1024)
+                if (wifOrFile.Length > 1024 * 1024)
                 {
                     if (!ReadUserInput($"The file '{fileInfo.FullName}' is too big, do you want to continue? (yes|no)", false).IsYes())
                     {
