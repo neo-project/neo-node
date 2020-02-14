@@ -38,6 +38,7 @@ namespace Neo.Services
         {
             public ConsoleCommandAttribute Command { get; set; }
             public object[] Arguments { get; set; }
+            public int ExtraArguments { get; set; }
         }
 
         protected virtual bool OnCommand(string commandLine)
@@ -92,6 +93,7 @@ namespace Neo.Services
                             {
                                 Arguments = arguments.ToArray(),
                                 Command = command,
+                                ExtraArguments = args.Count
                             });
                         }
                         catch
@@ -113,6 +115,17 @@ namespace Neo.Services
                     }
                 default:
                     {
+                        // Check if one of them have 0 extra arguments
+
+                        var commandsWithoutExtraArgs = availableCommands.Where(u => u.ExtraArguments == 0).ToList();
+
+                        if (commandsWithoutExtraArgs.Count == 1)
+                        {
+                            var command = availableCommands[0];
+                            command.Command.Method.Invoke(command.Command.Instance, command.Arguments);
+                            return true;
+                        }
+
                         throw new ArgumentException("Ambiguous calls for: " + string.Join(',', availableCommands.Select(u => u.Command.Key).Distinct()));
                     }
             }
