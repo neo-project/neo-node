@@ -140,7 +140,7 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="path">Path</param>
         /// <param name="scriptHash">ScriptHash</param>
-        [ConsoleCommand("create", "address", HelpCategory = "Wallet Commands")]
+        [ConsoleCommand("export", "key", HelpCategory = "Wallet Commands")]
         private void OnExportKeyCommand(string path, UInt160 scriptHash = null)
         {
             if (NoWallet()) return;

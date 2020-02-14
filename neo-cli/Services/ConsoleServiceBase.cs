@@ -213,7 +213,7 @@ namespace Neo.Services
                     Console.Write($"\t{command.Key}");
                     Console.WriteLine(" " + string.Join(' ',
                         command.Method.GetParameters()
-                        .Select(u => u.HasDefaultValue ? $"[{u.Name}={u.DefaultValue.ToString()}]" : $"<{u.Name}>"))
+                        .Select(u => u.HasDefaultValue ? $"[{u.Name}={u.DefaultValue?.ToString() ?? "null"}]" : $"<{u.Name}>"))
                         );
                 }
 
