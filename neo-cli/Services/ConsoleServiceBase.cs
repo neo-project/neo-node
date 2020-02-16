@@ -40,7 +40,7 @@ namespace Neo.Services
             public object[] Arguments { get; set; }
         }
 
-        protected virtual bool OnCommand(string commandLine)
+        private bool OnCommand(string commandLine)
         {
             if (string.IsNullOrEmpty(commandLine))
             {
