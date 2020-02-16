@@ -1,8 +1,7 @@
-using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Neo.CLI.CommandParser
+namespace Neo.CommandParser
 {
     public abstract class CommandToken
     {

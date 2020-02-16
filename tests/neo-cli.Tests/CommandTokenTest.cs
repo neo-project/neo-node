@@ -1,5 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Neo.CLI.CommandParser;
+using Neo.CommandParser;
 using System.Linq;
 
 namespace neo_cli.Tests

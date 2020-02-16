@@ -1,7 +1,7 @@
 using System;
 using System.Diagnostics;
 
-namespace Neo.CLI.CommandParser
+namespace Neo.CommandParser
 {
     [DebuggerDisplay("Value={Value}, RequireQuotes={RequireQuotes}")]
     public class CommandStringToken : CommandToken

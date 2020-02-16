@@ -1,4 +1,4 @@
-namespace Neo.CLI.CommandParser
+namespace Neo.CommandParser
 {
     public enum CommandTokenType : byte
     {

@@ -1,5 +1,5 @@
 using Akka.Actor;
-using Neo.CLI.CommandParser;
+using Neo.CommandParser;
 using Neo.IO;
 using Neo.IO.Json;
 using Neo.Ledger;

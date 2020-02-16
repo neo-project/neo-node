@@ -1,7 +1,6 @@
 using Akka.Actor;
-using Neo.CLI.CommandParser;
+using Neo.CommandParser;
 using Neo.Consensus;
-using Neo.Services;
 
 namespace Neo.CLI
 {

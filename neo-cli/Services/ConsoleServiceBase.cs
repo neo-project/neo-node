@@ -1,4 +1,4 @@
-using Neo.CLI.CommandParser;
+using Neo.CommandParser;
 using Neo.Cryptography.ECC;
 using Neo.IO.Json;
 using Neo.VM;

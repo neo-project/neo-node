@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 
-namespace Neo.CLI.CommandParser
+namespace Neo.CommandParser
 {
     [DebuggerDisplay("Key={Key}")]
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]

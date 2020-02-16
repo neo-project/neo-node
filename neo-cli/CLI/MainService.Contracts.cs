@@ -1,4 +1,4 @@
-using Neo.CLI.CommandParser;
+using Neo.CommandParser;
 using Neo.IO.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.SmartContract;

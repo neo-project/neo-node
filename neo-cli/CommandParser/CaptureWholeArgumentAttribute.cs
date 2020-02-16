@@ -1,6 +1,6 @@
 using System;
 
-namespace Neo.CLI.CommandParser
+namespace Neo.CommandParser
 {
     /// <summary>
     /// It's required if we don't require to use quotes for capture the argument.
