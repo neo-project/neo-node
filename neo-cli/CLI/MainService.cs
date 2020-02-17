@@ -232,12 +232,9 @@ namespace Neo.CLI
                 var input = args[1];
                 var parseFunctions = new Dictionary<string, Func<string, string>>()
                 {
-                    { "Address to BigEnd ScriptHash", AddressToBigEndScripthash },
-                    { "Address to LittleEnd ScriptHash", AddressToLittleEndScripthash },
+                    { "Address to ScriptHash", AddressToScripthash },
                     { "Address to Base64", AddressToBase64 },
-                    { "BigEnd ScriptHash to Address", BigEndScripthashToAddress },
-                    { "LittleEnd ScriptHash to Address", LittleEndScripthashToAddress },
-                    { "BigEnd and LittleEnd Exchange", ScriptHashExchange },
+                    { "ScriptHash to Address", ScripthashToAddress },
                     { "Base64 to Address", Base64ToAddress },
                     { "Base64 to String", Base64ToStr },
                     { "Base64 to Big Integer", Base64ToNumber },
@@ -268,7 +265,7 @@ namespace Neo.CLI
         }
 
         /// <summary>
-        /// Converts an hexadecimal value to an UTF-8 string (7472616e73666572 -> transfer)
+        /// Converts an hexadecimal value to an UTF-8 string
         /// </summary>
         /// <param name="hexString">
         /// Hexadecimal value to be converted
@@ -303,7 +300,7 @@ namespace Neo.CLI
         }
 
         /// <summary>
-        /// Converts an hex value to a big integer (10a400 -> 42000)
+        /// Converts an hex value to a big integer
         /// </summary>
         /// <param name="hexString">
         /// Hexadecimal value to be converted
@@ -338,7 +335,7 @@ namespace Neo.CLI
         }
 
         /// <summary>
-        /// Converts a string in a hexadecimal value (transfer -> 7472616e73666572)
+        /// Converts a string in a hexadecimal value
         /// </summary>
         /// <param name="strParam">
         /// String value to be converted
@@ -367,7 +364,7 @@ namespace Neo.CLI
         }
 
         /// <summary>
-        /// Converts a string in Base64 string (transfer -> dHJhbnNmZXI=)
+        /// Converts a string in Base64 string
         /// </summary>
         /// <param name="strParam">
         /// String value to be converted
@@ -397,7 +394,7 @@ namespace Neo.CLI
         }
 
         /// <summary>
-        /// Converts a string number in hexadecimal format (42000 -> 10a400)
+        /// Converts a string number in hexadecimal format
         /// </summary>
         /// <param name="strParam">
         /// String that represents the number to be converted
@@ -431,7 +428,7 @@ namespace Neo.CLI
         }
 
         /// <summary>
-        /// Prints the desired number in Base64 byte array (42000 -> EKQA)
+        /// Prints the desired number in Base64 byte array
         /// </summary>
         /// <param name="strParam">
         /// String that represents the number to be converted
@@ -464,7 +461,7 @@ namespace Neo.CLI
         }
 
         /// <summary>
-        /// Converts an address to its corresponding big end scripthash (AGLMaAqQCW9ncp2MpWLoWX6MTZvyiBxdGE -> 0x7236aa6490d58d6e6462d3c7c4146b6e289f2406)
+        /// Converts an address to its corresponding scripthash
         /// </summary>
         /// <param name="address">
         /// String that represents the address to be converted
@@ -476,7 +473,7 @@ namespace Neo.CLI
         /// Throw when the string does not represent an address or when
         /// it is not possible to parse the address to scripthash.
         /// </exception>
-        private string AddressToBigEndScripthash(string address)
+        private string AddressToScripthash(string address)
         {
             try
             {
@@ -491,35 +488,7 @@ namespace Neo.CLI
         }
 
         /// <summary>
-        /// Converts an address to its corresponding little end scripthash (AGLMaAqQCW9ncp2MpWLoWX6MTZvyiBxdGE -> 06249f286e6b14c4c7d362646e8dd59064aa3672)
-        /// </summary>
-        /// <param name="address">
-        /// String that represents the address to be converted
-        /// </param>
-        /// <returns>
-        /// The string that represents the converted scripthash
-        /// </returns>
-        /// <exception cref="ArgumentException">
-        /// Throw when the string does not represent an address or when
-        /// it is not possible to parse the address to scripthash.
-        /// </exception>
-        private string AddressToLittleEndScripthash(string address)
-        {
-            try
-            {
-                var bigEndScript = address.ToScriptHash();
-                var littleEndScript = bigEndScript.ToArray().ToHexString();
-
-                return littleEndScript;
-            }
-            catch (FormatException)
-            {
-                throw new ArgumentException();
-            }
-        }
-
-        /// <summary>
-        /// Converts an address to Base64 byte array (AGLMaAqQCW9ncp2MpWLoWX6MTZvyiBxdGE -> BiSfKG5rFMTH02Jkbo3VkGSqNnI=)
+        /// Converts an address to Base64 byte array
         /// </summary>
         /// <param name="address">
         /// String that represents the address to be converted
@@ -547,7 +516,7 @@ namespace Neo.CLI
         }
 
         /// <summary>
-        /// Converts a big end script hash to its equivalent address (0x7236aa6490d58d6e6462d3c7c4146b6e289f2406 -> AGLMaAqQCW9ncp2MpWLoWX6MTZvyiBxdGE)
+        /// Converts a big end script hash to its equivalent address
         /// </summary>
         /// <param name="script">
         /// String that represents the scripthash to be converted
@@ -558,104 +527,38 @@ namespace Neo.CLI
         /// <exception cref="ArgumentException">
         /// Throw when the string does not represent an scripthash.
         /// </exception>
-        private string BigEndScripthashToAddress(string script)
-        {
-            if (!script.StartsWith("0x"))
-            {
-                // it's not big end scripthash
-                throw new ArgumentException();
-            }
-
-            try
-            {
-                var scriptHash = UInt160.Parse(script);
-                var hexScript = scriptHash.ToAddress();
-                return hexScript;
-            }
-            catch (FormatException)
-            {
-                throw new ArgumentException();
-            }
-            catch (ArgumentNullException)
-            {
-                throw new ArgumentException();
-            }
-        }
-
-        /// <summary>
-        /// Converts a little end script hash to its equivalent address (06249f286e6b14c4c7d362646e8dd59064aa3672 -> AGLMaAqQCW9ncp2MpWLoWX6MTZvyiBxdGE)
-        /// </summary>
-        /// <param name="script">
-        /// String that represents the scripthash to be converted
-        /// </param>
-        /// <returns>
-        /// The string that represents the converted address
-        /// </returns>
-        /// <exception cref="ArgumentException">
-        /// Throw when the string does not represent an scripthash.
-        private string LittleEndScripthashToAddress(string script)
-        {
-            if (script.StartsWith("0x"))
-            {
-                // it's not little end scripthash
-                throw new ArgumentException();
-            }
-
-            try
-            {
-                UInt160 littleEndScript = UInt160.Parse(script);
-                string bigEndScript = littleEndScript.ToArray().ToHexString();
-                var scriptHash = UInt160.Parse(bigEndScript);
-                var hexScript = scriptHash.ToAddress();
-                return hexScript;
-            }
-            catch (FormatException)
-            {
-                throw new ArgumentException();
-            }
-            catch (ArgumentNullException)
-            {
-                throw new ArgumentException();
-            }
-        }
-
-        /// <summary>
-        /// Converts a big end script hash to a little end and vice versa
-        /// (0x7236aa6490d58d6e6462d3c7c4146b6e289f2406 <-> 06249f286e6b14c4c7d362646e8dd59064aa3672)
-        /// </summary>
-        /// <param name="script">
-        /// String that represents the scripthash to be converted
-        /// </param>
-        /// <returns>
-        /// The string that represents the converted scripthash
-        /// </returns>
-        /// <exception cref="ArgumentException">
-        /// Throw when the string does not represent an scripthash.
-        private string ScriptHashExchange(string script)
+        private string ScripthashToAddress(string script)
         {
             try
             {
-                var scripthash = UInt160.Parse(script);
-                string bigEndScript = scripthash.ToArray().ToHexString();
-
+                UInt160 scriptHash;
                 if (script.StartsWith("0x"))
                 {
-                    return bigEndScript;
+                    scriptHash = UInt160.Parse(script);
                 }
                 else
                 {
-                    var bigend = UInt160.Parse(bigEndScript);
-                    return bigend.ToString();
+                    UInt160 littleEndScript = UInt160.Parse(script);
+                    string bigEndScript = littleEndScript.ToArray().ToHexString();
+                    scriptHash = UInt160.Parse(bigEndScript);
                 }
+
+                var hexScript = scriptHash.ToAddress();
+                return hexScript;
             }
             catch (FormatException)
             {
                 throw new ArgumentException();
             }
+            catch (ArgumentNullException)
+            {
+                throw new ArgumentException();
+            }
         }
 
+
         /// <summary>
-        /// Converts an Base64 byte array to address (BiSfKG5rFMTH02Jkbo3VkGSqNnI= -> AGLMaAqQCW9ncp2MpWLoWX6MTZvyiBxdGE)
+        /// Converts an Base64 byte array to address
         /// </summary>
         /// <param name="bytearray">
         /// String that represents the Base64 value
@@ -687,7 +590,7 @@ namespace Neo.CLI
         }
 
         /// <summary>
-        /// Converts an Base64 hex string to string (dHJhbnNmZXI= -> transfer)
+        /// Converts an Base64 hex string to string
         /// </summary>
         /// <param name="bytearray">
         /// String that represents the Base64 value
@@ -721,7 +624,7 @@ namespace Neo.CLI
         }
 
         /// <summary>
-        /// Converts an Base64 hex string to big integer value (EKQA -> 42000)
+        /// Converts an Base64 hex string to big integer value
         /// </summary>
         /// <param name="bytearray">
         /// String that represents the Base64 value
