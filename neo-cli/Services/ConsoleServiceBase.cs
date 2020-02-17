@@ -399,8 +399,9 @@ namespace Neo.Services
             {
                 if (canConsumeAll)
                 {
+                    var ret = string.Join(' ', args);
                     args.Clear();
-                    return string.Join(' ', args);
+                    return ret;
                 }
 
                 var arg = args[0];
