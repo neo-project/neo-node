@@ -556,7 +556,6 @@ namespace Neo.CLI
             }
         }
 
-
         /// <summary>
         /// Converts an Base64 byte array to address
         /// </summary>
