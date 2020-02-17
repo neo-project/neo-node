@@ -15,87 +15,102 @@ namespace Neo.CLI
     partial class MainService
     {
         /// <summary>
-        /// Process "broadcast" command
+        /// Process "broadcast addr" command
         /// </summary>
-        /// <param name="command">Command</param>
-        /// <param name="payload">Payload</param>
-        [ConsoleCommand("broadcast", HelpCategory = "Network Commands", ExcludeIfAmbiguous = true)]
-        private void OnBroadcastCommand(MessageCommand command, string payload)
-        {
-            if (string.IsNullOrEmpty(payload))
-            {
-                Console.WriteLine("You must input the payload to relay.");
-                return;
-            }
-
-            OnBroadcastCommandInternal(command, payload, null);
-        }
-
-        /// <summary>
-        /// Process "broadcast" command (GetData/Inv)
-        /// </summary>
-        /// <param name="command">Command</param>
-        /// <param name="payload">Payload</param>
-        /// <param name="hashes">Hashes</param>
-        [ConsoleCommand("broadcast", HelpCategory = "Network Commands")]
-        private void OnBroadcastCommand(MessageCommand command, string payload, params UInt256[] hashes)
-        {
-            if (string.IsNullOrEmpty(payload))
-            {
-                Console.WriteLine("You must input the payload to relay.");
-                return;
-            }
-
-            OnBroadcastCommandInternal(command, payload, hashes);
-        }
-
-        /// <summary>
-        /// Process "broadcast" command (Addr)
-        /// </summary>
-        /// <param name="command">Command</param>
         /// <param name="payload">Payload</param>
         /// <param name="port">Port</param>
-        [ConsoleCommand("broadcast", HelpCategory = "Network Commands")]
-        private void OnBroadcastCommand(MessageCommand command, string payload, ushort port)
+        [ConsoleCommand("broadcast", "addr", HelpCategory = "Network Commands")]
+        private void OnBroadcastAddressCommand(IPAddress payload, ushort port)
         {
-            if (string.IsNullOrEmpty(payload))
+            if (payload == null)
             {
                 Console.WriteLine("You must input the payload to relay.");
                 return;
             }
 
-            OnBroadcastCommandInternal(command, payload, port);
+            OnBroadcastCommand(MessageCommand.Addr,
+                AddrPayload.Create(
+                    NetworkAddressWithTime.Create(
+                        payload, DateTime.UtcNow.ToTimestamp(),
+                        new FullNodeCapability(),
+                        new ServerCapability(NodeCapabilityType.TcpServer, port))
+                    ));
         }
 
-        private void OnBroadcastCommandInternal(MessageCommand command, string payload, object extraPayload)
+        /// <summary>
+        /// Process "broadcast block" command
+        /// </summary>
+        /// <param name="hash">Hash</param>
+        [ConsoleCommand("broadcast", "block", HelpCategory = "Network Commands")]
+        private void OnBroadcastGetBlocksByHashCommand(UInt256 hash)
         {
-            ISerializable ret = null;
-            switch (command)
-            {
-                case MessageCommand.Addr:
-                    ret = AddrPayload.Create(NetworkAddressWithTime.Create(IPAddress.Parse(payload), DateTime.UtcNow.ToTimestamp(), new FullNodeCapability(), new ServerCapability(NodeCapabilityType.TcpServer, (ushort)extraPayload)));
-                    break;
-                case MessageCommand.Block:
-                    if (payload.Length == 64 || payload.Length == 66)
-                        ret = Blockchain.Singleton.GetBlock(UInt256.Parse(payload));
-                    else
-                        ret = Blockchain.Singleton.GetBlock(uint.Parse(payload));
-                    break;
-                case MessageCommand.GetBlocks:
-                case MessageCommand.GetHeaders:
-                    ret = GetBlocksPayload.Create(UInt256.Parse(payload));
-                    break;
-                case MessageCommand.GetData:
-                case MessageCommand.Inv:
-                    ret = InvPayload.Create(Enum.Parse<InventoryType>(payload, true), (UInt256[])extraPayload);
-                    break;
-                case MessageCommand.Transaction:
-                    ret = Blockchain.Singleton.GetTransaction(UInt256.Parse(payload));
-                    break;
-                default:
-                    Console.WriteLine($"Command \"{command}\" is not supported.");
-                    return;
-            }
+            OnBroadcastCommand(MessageCommand.Block, Blockchain.Singleton.GetBlock(hash));
+        }
+
+        /// <summary>
+        /// Process "broadcast block" command
+        /// </summary>
+        /// <param name="block">Block</param>
+        [ConsoleCommand("broadcast", "block", HelpCategory = "Network Commands")]
+        private void OnBroadcastGetBlocksByHeightCommand(uint block)
+        {
+            OnBroadcastCommand(MessageCommand.Block, Blockchain.Singleton.GetBlock(block));
+        }
+
+        /// <summary>
+        /// Process "broadcast getblocks" command
+        /// </summary>
+        /// <param name="hash">Hash</param>
+        [ConsoleCommand("broadcast", "getblocks", HelpCategory = "Network Commands")]
+        private void OnBroadcastGetBlocksCommand(UInt256 hash)
+        {
+            OnBroadcastCommand(MessageCommand.GetBlocks, GetBlocksPayload.Create(hash));
+        }
+
+        /// <summary>
+        /// Process "broadcast getheaders" command
+        /// </summary>
+        /// <param name="hash">Hash</param>
+        [ConsoleCommand("broadcast", "getheaders", HelpCategory = "Network Commands")]
+        private void OnBroadcastGetHeadersCommand(UInt256 hash)
+        {
+            OnBroadcastCommand(MessageCommand.GetHeaders, GetBlocksPayload.Create(hash));
+        }
+
+        /// <summary>
+        /// Process "broadcast getdata" command
+        /// </summary>
+        /// <param name="type">Type</param>
+        /// <param name="payload">Payload</param>
+        [ConsoleCommand("broadcast", "getdata", HelpCategory = "Network Commands")]
+        private void OnBroadcastGetDataCommand(InventoryType type, UInt256[] payload)
+        {
+            OnBroadcastCommand(MessageCommand.GetData, InvPayload.Create(type, payload));
+        }
+
+        /// <summary>
+        /// Process "broadcast inv" command
+        /// </summary>
+        /// <param name="type">Type</param>
+        /// <param name="payload">Payload</param>
+        [ConsoleCommand("broadcast", "inv", HelpCategory = "Network Commands")]
+        private void OnBroadcastInvCommand(InventoryType type, UInt256[] payload)
+        {
+            OnBroadcastCommand(MessageCommand.Inv, InvPayload.Create(type, payload));
+        }
+
+        /// <summary>
+        /// Process "broadcast transaction" command
+        /// </summary>
+        /// <param name="hash">Hash</param>
+        [ConsoleCommand("broadcast", "transaction", HelpCategory = "Network Commands")]
+        private void OnBroadcastTransactionCommand(UInt256 hash)
+        {
+            OnBroadcastCommand(MessageCommand.Transaction, Blockchain.Singleton.GetTransaction(hash));
+        }
+
+        private void OnBroadcastCommand(MessageCommand command, ISerializable ret)
+        {
             NeoSystem.LocalNode.Tell(Message.Create(command, ret));
         }
 

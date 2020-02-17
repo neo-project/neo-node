@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Runtime.Loader;
 using System.Security;
@@ -478,6 +479,12 @@ namespace Neo.Services
             {
                 var obj = (JObject)_handlers[typeof(JObject)](args, canConsumeAll);
                 return (JArray)obj;
+            });
+
+            RegisterCommandHander(typeof(IPAddress), (args, canConsumeAll) =>
+            {
+                var str = (string)_handlers[typeof(string)](args, canConsumeAll);
+                return IPAddress.Parse(str);
             });
 
             RegisterCommand(this);
