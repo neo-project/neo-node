@@ -48,6 +48,7 @@ namespace Neo.Services
                 return true;
             }
 
+            string possibleHelp = null;
             var tokens = CommandToken.Parse(commandLine).ToArray();
             var commandArgs = CommandToken.ToArguments(tokens);
             var availableCommands = new List<SelectedCommand>();
@@ -79,9 +80,7 @@ namespace Neo.Services
                                     }
                                     else
                                     {
-                                        // Some arguments are wrong, we must show the help
-
-                                        return OnCommand($"help \"{command.Key}\"");
+                                        throw new ArgumentException(arg.Name);
                                     }
                                 }
                             }
@@ -95,6 +94,7 @@ namespace Neo.Services
                         catch
                         {
                             // Skip parse errors
+                            possibleHelp = command.Key;
                         }
                     }
                 }
@@ -102,7 +102,16 @@ namespace Neo.Services
 
             switch (availableCommands.Count)
             {
-                case 0: return false;
+                case 0:
+                    {
+                        if (!string.IsNullOrEmpty(possibleHelp))
+                        {
+                            OnHelpCommand(possibleHelp);
+                            return true;
+                        }
+
+                        return false;
+                    }
                 case 1:
                     {
                         var command = availableCommands[0];

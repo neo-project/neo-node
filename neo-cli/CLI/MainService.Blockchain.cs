@@ -7,33 +7,35 @@ namespace Neo.CLI
     partial class MainService
     {
         /// <summary>
-        /// Process "export block" command
         /// Process "export blocks" command
         /// </summary>
-        [ConsoleCommand("export", "block", HelpCategory = "Blockchain Commands")]
+        /// <param name="count">Number of blocks</param>
+        /// <param name="path">Path</param>
         [ConsoleCommand("export", "blocks", HelpCategory = "Blockchain Commands")]
-        private void OnExportBlocksCommand(uint start, uint count = uint.MaxValue)
+        private void OnExportBlocksCommand(uint count, string path = null)
+        {
+            OnExportBlocksStartCountCommand(0, count, path);
+        }
+
+        /// <summary>
+        /// Process "export blocks" command
+        /// </summary>
+        /// <param name="start">Start</param>
+        /// <param name="count">Number of blocks</param>
+        /// <param name="path">Path</param>
+        [ConsoleCommand("export", "blocks", HelpCategory = "Blockchain Commands")]
+        private void OnExportBlocksStartCountCommand(uint start, uint count, string path = null)
         {
             if (Blockchain.Singleton.Height < start) return;
 
             count = Math.Min(count, Blockchain.Singleton.Height - start + 1);
-            var path = $"chain.{start}.acc";
+
+            if (string.IsNullOrEmpty(path))
+            {
+                path = $"chain.{start}.acc";
+            }
+
             var writeStart = true;
-
-            WriteBlocks(start, count, path, writeStart);
-        }
-
-        /// <summary>
-        /// Process "export block" command
-        /// Process "export blocks" command
-        /// </summary>
-        [ConsoleCommand("export", "block", HelpCategory = "Blockchain Commands", ExcludeIfAmbiguous = true)]
-        [ConsoleCommand("export", "blocks", HelpCategory = "Blockchain Commands", ExcludeIfAmbiguous = true)]
-        private void OnExportBlocksCommand(string path, uint start)
-        {
-            var writeStart = false;
-            var count = Blockchain.Singleton.Height - start + 1;
-            path = string.IsNullOrEmpty(path) ? "chain.acc" : path;
 
             WriteBlocks(start, count, path, writeStart);
         }
