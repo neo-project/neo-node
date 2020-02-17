@@ -379,7 +379,7 @@ namespace Neo.CLI
         /// <param name="assetName">Asset name</param>
         /// <param name="to">To</param>
         /// <param name="amount">Amount</param>
-        [ConsoleCommand("send", HelpCategory = "Wallet Commands")]
+        [ConsoleCommand("send", HelpCategory = "Wallet Commands", ExcludeIfAmbiguous = true)]
         private void OnSendCommand(string assetName, UInt160 to, string amount)
         {
             UInt160 assetId;
