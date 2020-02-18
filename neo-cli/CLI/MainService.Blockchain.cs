@@ -9,17 +9,6 @@ namespace Neo.CLI
         /// <summary>
         /// Process "export blocks" command
         /// </summary>
-        /// <param name="count">Number of blocks</param>
-        /// <param name="path">Path</param>
-        [ConsoleCommand("export", "blocks", HelpCategory = "Blockchain Commands")]
-        private void OnExportBlocksCommand(uint count, string path = null)
-        {
-            OnExportBlocksStartCountCommand(0, count, path);
-        }
-
-        /// <summary>
-        /// Process "export blocks" command
-        /// </summary>
         /// <param name="start">Start</param>
         /// <param name="count">Number of blocks</param>
         /// <param name="path">Path</param>
