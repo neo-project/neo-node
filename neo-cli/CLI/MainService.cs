@@ -410,12 +410,11 @@ namespace Neo.CLI
         {
             try
             {
-                var numberParam = BigInteger.Parse(strParam);
+                if (!BigInteger.TryParse(strParam, out var numberParam))
+                {
+                    throw new ArgumentException();
+                }
                 return numberParam.ToByteArray().ToHexString();
-            }
-            catch (FormatException)
-            {
-                throw new ArgumentException();
             }
             catch (ArgumentNullException)
             {
@@ -444,7 +443,10 @@ namespace Neo.CLI
         {
             try
             {
-                var number = BigInteger.Parse(strParam);
+                if (!BigInteger.TryParse(strParam, out var number))
+                {
+                    throw new ArgumentException();
+                }
                 byte[] bytearray = number.ToByteArray();
                 string base64 = Convert.ToBase64String(bytearray.AsSpan());
 
@@ -534,21 +536,26 @@ namespace Neo.CLI
                 UInt160 scriptHash;
                 if (script.StartsWith("0x"))
                 {
-                    scriptHash = UInt160.Parse(script);
+                    if (!UInt160.TryParse(script, out scriptHash))
+                    {
+                        throw new ArgumentException();
+                    }
                 }
                 else
                 {
-                    UInt160 littleEndScript = UInt160.Parse(script);
+                    if (!UInt160.TryParse(script, out UInt160 littleEndScript))
+                    {
+                        throw new ArgumentException();
+                    }
                     string bigEndScript = littleEndScript.ToArray().ToHexString();
-                    scriptHash = UInt160.Parse(bigEndScript);
+                    if (!UInt160.TryParse(bigEndScript, out scriptHash))
+                    {
+                        throw new ArgumentException();
+                    }
                 }
 
                 var hexScript = scriptHash.ToAddress();
                 return hexScript;
-            }
-            catch (FormatException)
-            {
-                throw new ArgumentException();
             }
             catch (ArgumentNullException)
             {
@@ -574,7 +581,12 @@ namespace Neo.CLI
             {
                 byte[] result = Convert.FromBase64String(bytearray).Reverse().ToArray();
                 string hex = result.ToHexString();
-                var scripthash = UInt160.Parse(hex);
+
+                if (!UInt160.TryParse(hex, out var scripthash))
+                {
+                    throw new ArgumentException();
+                }
+
                 string address = scripthash.ToAddress();
                 return address;
             }
