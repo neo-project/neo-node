@@ -245,6 +245,8 @@ namespace Neo.CLI
                     { "String to Hex String", StringToHex },
                     { "String to Base64", StringToBase64 }
                 };
+                
+                bool any = false;
 
                 foreach (var pair in parseFunctions)
                 {
@@ -254,11 +256,17 @@ namespace Neo.CLI
                         var result = parseMethod(input);
 
                         Console.WriteLine($"{pair.Key,-30}\t{result}");
+                        any = true;
                     }
                     catch (ArgumentException)
                     {
                         // couldn't parse the value
                     }
+                }
+                
+                if (!any)
+                {
+                    Console.WriteLine($"Was not possible to convert: '{input}'");
                 }
             }
             return true;
