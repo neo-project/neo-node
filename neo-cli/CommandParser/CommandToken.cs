@@ -124,14 +124,7 @@ namespace Neo.CommandParser
 
             foreach (var token in tokens)
             {
-                if (token is CommandStringToken str)
-                {
-                    sb.Append(token.Value);
-                }
-                else
-                {
-                    sb.Append(token.Value);
-                }
+                sb.Append(token.Value);
             }
 
             return sb.ToString();

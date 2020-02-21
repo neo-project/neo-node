@@ -119,7 +119,7 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="jsonObjectToRelay">Json object</param>
         [ConsoleCommand("relay", HelpCategory = "Network Commands")]
-        private void OnRelayCommand(JObject jsonObjectToRelay)
+        private void OnRelayCommand([CaptureWholeArgument] JObject jsonObjectToRelay)
         {
             if (jsonObjectToRelay == null)
             {
