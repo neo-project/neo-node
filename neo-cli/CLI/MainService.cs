@@ -301,7 +301,7 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="args"></param>
         /// <returns></returns>
-		private bool OnShowContract(string[] args)
+        private bool OnShowContract(string[] args)
         {
             if (args.Length != 3)
             {
@@ -335,7 +335,7 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="args"></param>
         /// <returns></returns>
-		private bool OnShowTransaction(string[] args)
+        private bool OnShowTransaction(string[] args)
         {
             if (args.Length != 3)
             {
