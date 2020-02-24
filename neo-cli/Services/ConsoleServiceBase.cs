@@ -165,10 +165,30 @@ namespace Neo.Services
         {
             var withHelp = new List<ConsoleCommandAttribute>();
 
+            // Try to find a plugin with this name
+
+            var plugin = Plugins.Plugin.Plugins
+                            .Where(u => u.Name.Equals(key.Trim(), StringComparison.InvariantCultureIgnoreCase))
+                            .FirstOrDefault();
+
+            // Fetch commands
+
             foreach (var commands in _verbs.Values.Select(u => u))
             {
                 withHelp.AddRange(commands.Where(u => !string.IsNullOrEmpty(u.HelpCategory)));
             }
+
+            if (plugin != null)
+            {
+                // Filter only the help of this plugin
+
+                key = "";
+                withHelp = withHelp
+                    .Where(u => u.Instance is Plugins.Plugin pl && pl.Name == plugin.Name)
+                    .ToList();
+            }
+
+            // Sort and show
 
             withHelp.Sort((a, b) =>
             {
