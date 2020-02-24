@@ -35,12 +35,6 @@ namespace Neo.Services
         private readonly Dictionary<string, List<ConsoleCommandAttribute>> _verbs = new Dictionary<string, List<ConsoleCommandAttribute>>();
         private readonly Dictionary<Type, Func<List<string>, bool, object>> _handlers = new Dictionary<Type, Func<List<string>, bool, object>>();
 
-        class SelectedCommand
-        {
-            public ConsoleCommandAttribute Command { get; set; }
-            public object[] Arguments { get; set; }
-        }
-
         private bool OnCommand(string commandLine)
         {
             if (string.IsNullOrEmpty(commandLine))
@@ -51,7 +45,7 @@ namespace Neo.Services
             string possibleHelp = null;
             var tokens = CommandToken.Parse(commandLine).ToArray();
             var commandArgs = CommandToken.ToArguments(tokens);
-            var availableCommands = new List<SelectedCommand>();
+            var availableCommands = new List<(ConsoleCommandAttribute Command, object[] Arguments)>();
 
             foreach (var entries in _verbs.Values)
             {
@@ -85,11 +79,7 @@ namespace Neo.Services
                                 }
                             }
 
-                            availableCommands.Add(new SelectedCommand()
-                            {
-                                Arguments = arguments.ToArray(),
-                                Command = command
-                            });
+                            availableCommands.Add((command, arguments.ToArray()));
                         }
                         catch
                         {
@@ -114,8 +104,8 @@ namespace Neo.Services
                     }
                 case 1:
                     {
-                        var command = availableCommands[0];
-                        command.Command.Method.Invoke(command.Command.Instance, command.Arguments);
+                        var (command, arguments) = availableCommands[0];
+                        command.Method.Invoke(command.Instance, arguments);
                         return true;
                     }
                 default:
@@ -127,8 +117,8 @@ namespace Neo.Services
 
                         if (commandsWithoutExtraArgs.Count == 1)
                         {
-                            var command = commandsWithoutExtraArgs[0];
-                            command.Command.Method.Invoke(command.Command.Instance, command.Arguments);
+                            var (command, arguments) = commandsWithoutExtraArgs[0];
+                            command.Method.Invoke(command.Instance, arguments);
                             return true;
                         }
 
