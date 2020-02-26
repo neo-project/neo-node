@@ -283,10 +283,13 @@ namespace Neo.CLI
             var scriptHash = UInt160.Parse(args[1]);
 
             List<Cosigner> signCollection = new List<Cosigner>();
-            var accounts = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly).Select(p => p.ScriptHash).ToArray();
-            foreach (var signAccount in accounts)
+            using (SnapshotView snapshot = Blockchain.Singleton.GetSnapshot())
             {
-                signCollection.Add(new Cosigner() { Account = signAccount });
+                UInt160[] accounts = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly).Select(p => p.ScriptHash).Where(p => NativeContract.GAS.BalanceOf(snapshot, p).Sign > 0).ToArray();
+                foreach (var signAccount in accounts)
+                {
+                    signCollection.Add(new Cosigner() { Account = signAccount });
+                }
             }
 
             List<ContractParameter> contractParameters = new List<ContractParameter>();
