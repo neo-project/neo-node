@@ -282,6 +282,13 @@ namespace Neo.CLI
         {
             var scriptHash = UInt160.Parse(args[1]);
 
+            List<Cosigner> signCollection = new List<Cosigner>();
+            var accounts = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly).Select(p => p.ScriptHash).ToArray();
+            foreach (var signAccount in accounts)
+            {
+                signCollection.Add(new Cosigner() { Account = signAccount });
+            }
+
             List<ContractParameter> contractParameters = new List<ContractParameter>();
             for (int i = 3; i < args.Length; i++)
             {
@@ -293,11 +300,12 @@ namespace Neo.CLI
                 });
             }
 
+
             Transaction tx = new Transaction
             {
                 Sender = UInt160.Zero,
                 Attributes = new TransactionAttribute[0],
-                Cosigners = new Cosigner[0],
+                Cosigners = signCollection.ToArray(),
                 Witnesses = new Witness[0]
             };
 
