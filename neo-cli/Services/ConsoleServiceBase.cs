@@ -168,8 +168,7 @@ namespace Neo.Services
             // Try to find a plugin with this name
 
             var plugin = Plugins.Plugin.Plugins
-                            .Where(u => u.Name.Equals(key.Trim(), StringComparison.InvariantCultureIgnoreCase))
-                            .FirstOrDefault();
+                .FirstOrDefault(u => u.Name.Equals(key.Trim(), StringComparison.InvariantCultureIgnoreCase));
 
             // Fetch commands
 
