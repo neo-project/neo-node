@@ -50,11 +50,11 @@ namespace Neo.CLI
         /// <summary>
         /// Process "broadcast block" command
         /// </summary>
-        /// <param name="block">Block</param>
+        /// <param name="height">Block index</param>
         [ConsoleCommand("broadcast", "block", HelpCategory = "Network Commands")]
-        private void OnBroadcastGetBlocksByHeightCommand(uint block)
+        private void OnBroadcastGetBlocksByHeightCommand(uint height)
         {
-            OnBroadcastCommand(MessageCommand.Block, Blockchain.Singleton.GetBlock(block));
+            OnBroadcastCommand(MessageCommand.Block, Blockchain.Singleton.GetBlock(height));
         }
 
         /// <summary>

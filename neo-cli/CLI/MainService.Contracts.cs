@@ -45,12 +45,15 @@ namespace Neo.CLI
         /// <param name="operation">Operation</param>
         /// <param name="contractParameters">Contract parameters</param>
         [ConsoleCommand("invoke", HelpCategory = "Contract Commands")]
-        private void OnInvokeCommand(UInt160 scriptHash, string operation, [CaptureWholeArgument] JArray contractParameters)
+        private void OnInvokeCommand(UInt160 scriptHash, string operation, [CaptureWholeArgument] JArray contractParameters = null)
         {
             List<ContractParameter> parameters = new List<ContractParameter>();
-            foreach (var contractParameter in contractParameters)
+            if (contractParameters != null)
             {
-                parameters.Add(ContractParameter.FromJson(contractParameter));
+                foreach (var contractParameter in contractParameters)
+                {
+                    parameters.Add(ContractParameter.FromJson(contractParameter));
+                }
             }
 
             Transaction tx = new Transaction

@@ -141,10 +141,10 @@ namespace Neo.CLI
         /// <param name="path">Path</param>
         /// <param name="scriptHash">ScriptHash</param>
         [ConsoleCommand("export", "key", HelpCategory = "Wallet Commands")]
-        private void OnExportKeyCommand(string path, UInt160 scriptHash = null)
+        private void OnExportKeyCommand(string path = null, UInt160 scriptHash = null)
         {
             if (NoWallet()) return;
-            if (File.Exists(path))
+            if (path != null && File.Exists(path))
             {
                 Console.WriteLine($"Error: File '{path}' already exists");
                 return;

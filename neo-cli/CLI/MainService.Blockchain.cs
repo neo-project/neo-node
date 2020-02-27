@@ -24,9 +24,7 @@ namespace Neo.CLI
                 path = $"chain.{start}.acc";
             }
 
-            var writeStart = true;
-
-            WriteBlocks(start, count, path, writeStart);
+            WriteBlocks(start, count, path, true);
         }
     }
 }
