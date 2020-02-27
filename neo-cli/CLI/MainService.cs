@@ -292,7 +292,7 @@ namespace Neo.CLI
                 {
                     if (specifyAddress.Contains(signAccount.ToAddress()))
                     {
-                        signCollection.Add(new Cosigner() { Account = signAccount });
+                        signCollection.Add(new Cosigner() { Account = signAccount, Scopes = WitnessScope.CalledByEntry });
                     }
                 }
             }
