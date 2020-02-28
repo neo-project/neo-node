@@ -13,7 +13,7 @@ namespace Neo.CLI
         /// <param name="count">Number of blocks</param>
         /// <param name="path">Path</param>
         [ConsoleCommand("export", "blocks", HelpCategory = "Blockchain Commands")]
-        private void OnExportBlocksStartCountCommand(uint start, uint count, string path = null)
+        private void OnExportBlocksStartCountCommand(uint start, uint count = uint.MaxValue, string path = null)
         {
             if (Blockchain.Singleton.Height < start) return;
 
