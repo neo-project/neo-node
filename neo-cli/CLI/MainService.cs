@@ -281,25 +281,34 @@ namespace Neo.CLI
         private bool OnInvokeCommand(string[] args)
         {
             var scriptHash = UInt160.Parse(args[1]);
-            var specifyAddress = new String[args.Length - 2];
-            Array.ConstrainedCopy(args, 2, specifyAddress, 0, args.Length - 2);
-
             List<Cosigner> signCollection = new List<Cosigner>();
-            using (SnapshotView snapshot = Blockchain.Singleton.GetSnapshot())
+            if (CurrentWallet != null)
             {
-                UInt160[] accounts = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly).Select(p => p.ScriptHash).Where(p => NativeContract.GAS.BalanceOf(snapshot, p).Sign > 0).ToArray();
-                foreach (var signAccount in accounts)
+                var witnessAddress = args.Last();
+                try
                 {
-                    if (specifyAddress.Contains(signAccount.ToAddress()))
+                    witnessAddress.ToScriptHash();
+                }
+                catch
+                {
+                    witnessAddress = null;
+                }
+
+                using (SnapshotView snapshot = Blockchain.Singleton.GetSnapshot())
+                {
+                    UInt160[] accounts = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly).Select(p => p.ScriptHash).Where(p => NativeContract.GAS.BalanceOf(snapshot, p).Sign > 0).ToArray();
+                    foreach (var signAccount in accounts)
                     {
-                        signCollection.Add(new Cosigner() { Account = signAccount, Scopes = WitnessScope.CalledByEntry });
+                        if (witnessAddress is null)
+                        {
+                            break;
+                        }
+                        if (witnessAddress.Equals(signAccount.ToAddress()))
+                        {
+                            signCollection.Add(new Cosigner() { Account = signAccount });
+                        }
                     }
                 }
-            }
-            if (specifyAddress.Length != signCollection.Count)
-            {
-                Console.WriteLine("Error: Invalid address");
-                return true;
             }
 
             List<ContractParameter> contractParameters = new List<ContractParameter>();
