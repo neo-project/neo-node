@@ -291,7 +291,7 @@ namespace Neo.CLI
                 {
                     var type = "Nonstandard";
 
-                    if (contract.Script.IsMultiSigContract(out _, out ECPoint[] points))
+                    if (contract.Script.IsMultiSigContract())
                     {
                         type = "MultiSignature";
                     }
