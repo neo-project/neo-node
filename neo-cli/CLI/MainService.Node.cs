@@ -5,6 +5,7 @@ using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,7 +17,9 @@ namespace Neo.CLI
         /// <summary>
         /// Process "show pool" command
         /// </summary>
-        [ConsoleCommand("show", "pool", HelpCategory = "Node Commands", HelpMessage = "Show the current state of the mempool")]
+        [Category("Node Commands")]
+        [Description("Show the current state of the mempool")]
+        [ConsoleCommand("show", "pool")]
         private void OnShowPoolCommand(bool verbose = false)
         {
             if (verbose)
@@ -37,7 +40,9 @@ namespace Neo.CLI
         /// <summary>
         /// Process "show state" command
         /// </summary>
-        [ConsoleCommand("show", "state", HelpCategory = "Node Commands", HelpMessage = "Show the current state of the node")]
+        [Category("Node Commands")]
+        [Description("Show the current state of the node")]
+        [ConsoleCommand("show", "state")]
         private void OnShowStateCommand()
         {
             var cancel = new CancellationTokenSource();

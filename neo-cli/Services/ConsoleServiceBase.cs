@@ -5,6 +5,7 @@ using Neo.VM;
 using Neo.Wallets;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -32,7 +33,7 @@ namespace Neo.Services
         private bool _running;
         private readonly CancellationTokenSource _shutdownTokenSource = new CancellationTokenSource();
         private readonly CountdownEvent _shutdownAcknowledged = new CountdownEvent(1);
-        private readonly Dictionary<string, List<ConsoleCommandAttribute>> _verbs = new Dictionary<string, List<ConsoleCommandAttribute>>();
+        private readonly Dictionary<string, List<ConsoleCommandMethod>> _verbs = new Dictionary<string, List<ConsoleCommandMethod>>();
         private readonly Dictionary<Type, Func<List<string>, bool, object>> _handlers = new Dictionary<Type, Func<List<string>, bool, object>>();
 
         private bool OnCommand(string commandLine)
@@ -45,7 +46,7 @@ namespace Neo.Services
             string possibleHelp = null;
             var tokens = CommandToken.Parse(commandLine).ToArray();
             var commandArgs = CommandToken.ToArguments(tokens);
-            var availableCommands = new List<(ConsoleCommandAttribute Command, object[] Arguments)>();
+            var availableCommands = new List<(ConsoleCommandMethod Command, object[] Arguments)>();
 
             foreach (var entries in _verbs.Values)
             {
@@ -110,18 +111,6 @@ namespace Neo.Services
                     }
                 default:
                     {
-                        // Check if one of them must be excluded
-
-                        var commandsWithoutExtraArgs = availableCommands
-                            .Where(u => !u.Command.ExcludeIfAmbiguous).ToList();
-
-                        if (commandsWithoutExtraArgs.Count == 1)
-                        {
-                            var (command, arguments) = commandsWithoutExtraArgs[0];
-                            command.Method.Invoke(command.Instance, arguments);
-                            return true;
-                        }
-
                         // Show Ambiguous call
 
                         throw new ArgumentException("Ambiguous calls for: " + string.Join(',', availableCommands.Select(u => u.Command.Key).Distinct()));
@@ -160,10 +149,11 @@ namespace Neo.Services
         /// <summary>
         /// Process "help" command
         /// </summary>
-        [ConsoleCommand("help", HelpCategory = "Normal Commands")]
+        [Category("Base Commands")]
+        [ConsoleCommand("help")]
         protected void OnHelpCommand([CaptureWholeArgument] string key = "")
         {
-            var withHelp = new List<ConsoleCommandAttribute>();
+            var withHelp = new List<ConsoleCommandMethod>();
 
             // Try to find a plugin with this name
 
@@ -264,7 +254,9 @@ namespace Neo.Services
         /// <summary>
         /// Process "clear" command
         /// </summary>
-        [ConsoleCommand("clear", HelpCategory = "Normal Commands", HelpMessage = "Clear is used in order to clean the console output.")]
+        [Category("Base Commands")]
+        [Description("Clear is used in order to clean the console output.")]
+        [ConsoleCommand("clear")]
         protected void OnClear()
         {
             Console.Clear();
@@ -273,7 +265,9 @@ namespace Neo.Services
         /// <summary>
         /// Process "version" command
         /// </summary>
-        [ConsoleCommand("version", HelpCategory = "Normal Commands", HelpMessage = "Show the current version.")]
+        [Category("Base Commands")]
+        [Description("Show the current version.")]
+        [ConsoleCommand("version")]
         protected void OnVersion()
         {
             Console.WriteLine(Assembly.GetEntryAssembly().GetVersion());
@@ -282,7 +276,9 @@ namespace Neo.Services
         /// <summary>
         /// Process "exit" command
         /// </summary>
-        [ConsoleCommand("exit", HelpCategory = "Normal Commands", HelpMessage = "Exit the node.")]
+        [Category("Base Commands")]
+        [Description("Exit the node.")]
+        [ConsoleCommand("exit")]
         protected void OnExit()
         {
             _running = false;
@@ -463,6 +459,12 @@ namespace Neo.Services
             {
                 var str = (string)_handlers[typeof(string)](args, false);
 
+                switch (str.ToLowerInvariant())
+                {
+                    case "neo": return SmartContract.Native.NativeContract.NEO.Hash;
+                    case "gas": return SmartContract.Native.NativeContract.GAS.Hash;
+                }
+
                 // Try to parse as UInt160
 
                 if (UInt160.TryParse(str, out var addr))
@@ -532,7 +534,7 @@ namespace Neo.Services
         {
             foreach (var method in instance.GetType().GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
             {
-                foreach (var command in method.GetCustomAttributes<ConsoleCommandAttribute>())
+                foreach (var attribute in method.GetCustomAttributes<ConsoleCommandAttribute>())
                 {
                     // Check handlers
 
@@ -543,11 +545,11 @@ namespace Neo.Services
 
                     // Add command
 
-                    command.SetInstance(instance, method);
+                    var command = new ConsoleCommandMethod(instance, method);
 
                     if (!_verbs.TryGetValue(command.Key, out var commands))
                     {
-                        _verbs.Add(command.Key, new List<ConsoleCommandAttribute>(new[] { command }));
+                        _verbs.Add(command.Key, new List<ConsoleCommandMethod>(new[] { command }));
                     }
                     else
                     {

@@ -1,24 +1,15 @@
-using Akka.Actor;
 using Neo.CommandParser;
-using Neo.Consensus;
+using System.ComponentModel;
 
 namespace Neo.CLI
 {
     partial class MainService
     {
         /// <summary>
-        /// Process "change view" command
-        /// </summary>
-        [ConsoleCommand("change", "view", HelpCategory = "Consensus Commands")]
-        private void OnChangeViewCommand(byte viewnumber)
-        {
-            NeoSystem.Consensus?.Tell(new ConsensusService.SetViewNumber { ViewNumber = viewnumber });
-        }
-
-        /// <summary>
         /// Process "start consensus" command
         /// </summary>
-        [ConsoleCommand("start", "consensus", HelpCategory = "Consensus Commands")]
+        [Category("Consensus Commands")]
+        [ConsoleCommand("start", "consensus")]
         private void OnStartConsensusCommand()
         {
             if (NoWallet()) return;

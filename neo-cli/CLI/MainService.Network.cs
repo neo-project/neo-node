@@ -8,6 +8,7 @@ using Neo.Network.P2P.Capabilities;
 using Neo.Network.P2P.Payloads;
 using Neo.SmartContract;
 using System;
+using System.ComponentModel;
 using System.Net;
 
 namespace Neo.CLI
@@ -19,7 +20,8 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="payload">Payload</param>
         /// <param name="port">Port</param>
-        [ConsoleCommand("broadcast", "addr", HelpCategory = "Network Commands")]
+        [Category("Network Commands")]
+        [ConsoleCommand("broadcast", "addr")]
         private void OnBroadcastAddressCommand(IPAddress payload, ushort port)
         {
             if (payload == null)
@@ -41,7 +43,8 @@ namespace Neo.CLI
         /// Process "broadcast block" command
         /// </summary>
         /// <param name="hash">Hash</param>
-        [ConsoleCommand("broadcast", "block", HelpCategory = "Network Commands")]
+        [Category("Network Commands")]
+        [ConsoleCommand("broadcast", "block")]
         private void OnBroadcastGetBlocksByHashCommand(UInt256 hash)
         {
             OnBroadcastCommand(MessageCommand.Block, Blockchain.Singleton.GetBlock(hash));
@@ -51,7 +54,8 @@ namespace Neo.CLI
         /// Process "broadcast block" command
         /// </summary>
         /// <param name="height">Block index</param>
-        [ConsoleCommand("broadcast", "block", HelpCategory = "Network Commands")]
+        [Category("Network Commands")]
+        [ConsoleCommand("broadcast", "block")]
         private void OnBroadcastGetBlocksByHeightCommand(uint height)
         {
             OnBroadcastCommand(MessageCommand.Block, Blockchain.Singleton.GetBlock(height));
@@ -61,7 +65,8 @@ namespace Neo.CLI
         /// Process "broadcast getblocks" command
         /// </summary>
         /// <param name="hash">Hash</param>
-        [ConsoleCommand("broadcast", "getblocks", HelpCategory = "Network Commands")]
+        [Category("Network Commands")]
+        [ConsoleCommand("broadcast", "getblocks")]
         private void OnBroadcastGetBlocksCommand(UInt256 hash)
         {
             OnBroadcastCommand(MessageCommand.GetBlocks, GetBlocksPayload.Create(hash));
@@ -71,7 +76,8 @@ namespace Neo.CLI
         /// Process "broadcast getheaders" command
         /// </summary>
         /// <param name="hash">Hash</param>
-        [ConsoleCommand("broadcast", "getheaders", HelpCategory = "Network Commands")]
+        [Category("Network Commands")]
+        [ConsoleCommand("broadcast", "getheaders")]
         private void OnBroadcastGetHeadersCommand(UInt256 hash)
         {
             OnBroadcastCommand(MessageCommand.GetHeaders, GetBlocksPayload.Create(hash));
@@ -82,7 +88,8 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="type">Type</param>
         /// <param name="payload">Payload</param>
-        [ConsoleCommand("broadcast", "getdata", HelpCategory = "Network Commands")]
+        [Category("Network Commands")]
+        [ConsoleCommand("broadcast", "getdata")]
         private void OnBroadcastGetDataCommand(InventoryType type, UInt256[] payload)
         {
             OnBroadcastCommand(MessageCommand.GetData, InvPayload.Create(type, payload));
@@ -93,7 +100,8 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="type">Type</param>
         /// <param name="payload">Payload</param>
-        [ConsoleCommand("broadcast", "inv", HelpCategory = "Network Commands")]
+        [Category("Network Commands")]
+        [ConsoleCommand("broadcast", "inv")]
         private void OnBroadcastInvCommand(InventoryType type, UInt256[] payload)
         {
             OnBroadcastCommand(MessageCommand.Inv, InvPayload.Create(type, payload));
@@ -103,7 +111,8 @@ namespace Neo.CLI
         /// Process "broadcast transaction" command
         /// </summary>
         /// <param name="hash">Hash</param>
-        [ConsoleCommand("broadcast", "transaction", HelpCategory = "Network Commands")]
+        [Category("Network Commands")]
+        [ConsoleCommand("broadcast", "transaction")]
         private void OnBroadcastTransactionCommand(UInt256 hash)
         {
             OnBroadcastCommand(MessageCommand.Transaction, Blockchain.Singleton.GetTransaction(hash));
@@ -118,7 +127,8 @@ namespace Neo.CLI
         /// Process "relay" command
         /// </summary>
         /// <param name="jsonObjectToRelay">Json object</param>
-        [ConsoleCommand("relay", HelpCategory = "Network Commands")]
+        [Category("Network Commands")]
+        [ConsoleCommand("relay")]
         private void OnRelayCommand([CaptureWholeArgument] JObject jsonObjectToRelay)
         {
             if (jsonObjectToRelay == null)

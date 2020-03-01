@@ -1,6 +1,7 @@
 using Neo.CommandParser;
 using Neo.Plugins;
 using System;
+using System.ComponentModel;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -14,7 +15,8 @@ namespace Neo.CLI
         /// Process "install" command
         /// </summary>
         /// <param name="pluginName">Plugin name</param>
-        [ConsoleCommand("install", HelpCategory = "Plugin Commands")]
+        [Category("Plugin Commands")]
+        [ConsoleCommand("install")]
         private void OnInstallCommand(string pluginName)
         {
             bool isTemp;
@@ -68,7 +70,8 @@ namespace Neo.CLI
         /// Process "uninstall" command
         /// </summary>
         /// <param name="pluginName">Plugin name</param>
-        [ConsoleCommand("uninstall", HelpCategory = "Plugin Commands")]
+        [Category("Plugin Commands")]
+        [ConsoleCommand("uninstall")]
         private void OnUnInstallCommand(string pluginName)
         {
             var plugin = Plugin.Plugins.FirstOrDefault(p => p.Name == pluginName);
@@ -93,7 +96,8 @@ namespace Neo.CLI
         /// <summary>
         /// Process "plugins" command
         /// </summary>
-        [ConsoleCommand("plugins", HelpCategory = "Plugin Commands")]
+        [Category("Plugin Commands")]
+        [ConsoleCommand("plugins")]
         private void OnPluginsCommand()
         {
             if (Plugin.Plugins.Count > 0)
