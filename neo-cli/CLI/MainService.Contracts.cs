@@ -53,25 +53,13 @@ namespace Neo.CLI
         /// <param name="witnessAddress">Witness address</param>
         [Category("Contract Commands")]
         [ConsoleCommand("invoke")]
-        private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null,  string[] witnessAddress = null)
+        private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160[] witnessAddress = null)
         {
             List<ContractParameter> parameters = new List<ContractParameter>();
             List<Cosigner> signCollection = new List<Cosigner>();
 
             if (!NoWallet() && witnessAddress != null)
             {
-                try
-                {
-                    foreach (var witness in witnessAddress)
-                    {
-                        witness.ToScriptHash();
-                    }
-                }
-                catch
-                {
-                    witnessAddress = null;
-                }
-
                 using (SnapshotView snapshot = Blockchain.Singleton.GetSnapshot())
                 {
                     UInt160[] accounts = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly).Select(p => p.ScriptHash).Where(p => NativeContract.GAS.BalanceOf(snapshot, p).Sign > 0).ToArray();
@@ -83,15 +71,16 @@ namespace Neo.CLI
                         }
                         foreach (var witness in witnessAddress)
                         {
-                            if (witness.Equals(signAccount.ToAddress()))
+                            if (witness.Equals(signAccount))
                             {
                                 signCollection.Add(new Cosigner() { Account = signAccount });
+                                break;
                             }
-                        } 
+                        }
                     }
                 }
             }
-            
+
             if (contractParameters != null)
             {
                 foreach (var contractParameter in contractParameters)
