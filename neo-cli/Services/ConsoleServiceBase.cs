@@ -489,6 +489,12 @@ namespace Neo.Services
                 return str.Split(',', ' ').Select(u => UInt256.Parse(u.Trim())).ToArray();
             });
 
+            RegisterCommandHander(typeof(UInt160[]), (args, canConsumeAll) =>
+            {
+                var str = (string)_handlers[typeof(string)](args, true);
+                return str.Split(',', ' ').Select(u => UInt160.Parse(u.Trim())).ToArray();
+            });
+
             RegisterCommandHander(typeof(ECPoint[]), (args, canConsumeAll) =>
             {
                 var str = (string)_handlers[typeof(string)](args, true);
