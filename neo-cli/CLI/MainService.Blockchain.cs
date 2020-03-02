@@ -17,7 +17,11 @@ namespace Neo.CLI
         [ConsoleCommand("export", "blocks")]
         private void OnExportBlocksStartCountCommand(uint start, uint count = uint.MaxValue, string path = null)
         {
-            if (Blockchain.Singleton.Height < start) return;
+            if (Blockchain.Singleton.Height < start)
+            {
+                Console.WriteLine("error: invalid start height.");
+                return;
+            }
 
             count = Math.Min(count, Blockchain.Singleton.Height - start + 1);
 
