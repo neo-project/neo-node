@@ -396,12 +396,12 @@ namespace Neo.CLI
         /// <summary>
         /// Process "send" command
         /// </summary>
-        /// <param name="assetId">Asset id</param>
+        /// <param name="asset">Asset id</param>
         /// <param name="to">To</param>
         /// <param name="amount">Amount</param>
         [Category("Wallet Commands")]
         [ConsoleCommand("send")]
-        private void OnSendCommand(UInt160 assetId, UInt160 to, string amount)
+        private void OnSendCommand(UInt160 asset, UInt160 to, string amount)
         {
             if (NoWallet()) return;
             string password = ReadUserInput("password", true);
@@ -417,7 +417,7 @@ namespace Neo.CLI
             }
 
             Transaction tx;
-            AssetDescriptor descriptor = new AssetDescriptor(assetId);
+            AssetDescriptor descriptor = new AssetDescriptor(asset);
             if (!BigDecimal.TryParse(amount, descriptor.Decimals, out BigDecimal decimalAmount) || decimalAmount.Sign <= 0)
             {
                 Console.WriteLine("Incorrect Amount Format");
@@ -427,7 +427,7 @@ namespace Neo.CLI
             {
                 new TransferOutput
                 {
-                    AssetId = assetId,
+                    AssetId = asset,
                     Value = decimalAmount,
                     ScriptHash = to
                 }
