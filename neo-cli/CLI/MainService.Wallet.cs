@@ -197,7 +197,14 @@ namespace Neo.CLI
                 Console.WriteLine("error");
                 return;
             }
-            CreateWallet(path, password);
+            if (!File.Exists(path))
+            {
+                CreateWallet(path, password);
+            }
+            else
+            {
+                Console.WriteLine("This wallet already exists, please create another one.");
+            }
         }
 
         /// <summary>
