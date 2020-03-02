@@ -512,6 +512,12 @@ namespace Neo.Services
                 var str = (string)_handlers[typeof(string)](args, canConsumeAll);
                 return IPAddress.Parse(str);
             });
+            
+            RegisterCommandHander(typeof(string[]), (args, canConsumeAll) =>
+            {
+                var str = (string)_handlers[typeof(string)](args, true);
+                return str.Split(',', ' ');
+            });
 
             RegisterCommand(this);
         }
