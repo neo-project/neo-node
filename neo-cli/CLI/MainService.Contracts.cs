@@ -47,7 +47,7 @@ namespace Neo.CLI
         /// <param name="operation">Operation</param>
         /// <param name="contractParameters">Contract parameters</param>
         /// <param name="witnessAddress">Witness address</param>
-        [ConsoleCommand("invoke", HelpCategory = "Contract Commands")]
+        [ConsoleCommand("invoke")]
         private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null,  string[] witnessAddress = null)
         {
             List<ContractParameter> parameters = new List<ContractParameter>();
