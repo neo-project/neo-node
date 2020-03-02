@@ -34,7 +34,7 @@ namespace Neo.Services
         private readonly CancellationTokenSource _shutdownTokenSource = new CancellationTokenSource();
         private readonly CountdownEvent _shutdownAcknowledged = new CountdownEvent(1);
         private readonly Dictionary<string, List<ConsoleCommandMethod>> _verbs = new Dictionary<string, List<ConsoleCommandMethod>>();
-        private readonly Dictionary<Type, Func<List<string>, bool, object>> _handlers = new Dictionary<Type, Func<List<string>, bool, object>>();
+        private readonly Dictionary<Type, Func<List<CommandToken>, bool, object>> _handlers = new Dictionary<Type, Func<List<CommandToken>, bool, object>>();
 
         private bool OnCommand(string commandLine)
         {
@@ -45,7 +45,7 @@ namespace Neo.Services
 
             string possibleHelp = null;
             var tokens = CommandToken.Parse(commandLine).ToArray();
-            var commandArgs = CommandToken.ToArguments(tokens);
+            var commandArgs = CommandToken.Parse(commandLine).ToArray();
             var availableCommands = new List<(ConsoleCommandMethod Command, object[] Arguments)>();
 
             foreach (var entries in _verbs.Values)
@@ -57,13 +57,17 @@ namespace Neo.Services
                         var arguments = new List<object>();
                         var args = commandArgs.Skip(consumedArgs).ToList();
 
+                        CommandSpaceToken.Trim(args);
+
                         try
                         {
-                            foreach (var arg in command.Method.GetParameters())
+                            var parameters = command.Method.GetParameters();
+
+                            foreach (var arg in parameters)
                             {
                                 // Parse argument
 
-                                if (TryProcessValue(arg.ParameterType, args, arg.GetCustomAttribute<CaptureWholeArgumentAttribute>() != null, out var value))
+                                if (TryProcessValue(arg.ParameterType, args, parameters.Length == 1, out var value))
                                 {
                                     arguments.Add(value);
                                 }
@@ -118,7 +122,7 @@ namespace Neo.Services
             }
         }
 
-        private bool TryProcessValue(Type parameterType, List<string> args, bool canConsumeAll, out object value)
+        private bool TryProcessValue(Type parameterType, List<CommandToken> args, bool canConsumeAll, out object value)
         {
             if (args.Count > 0)
             {
@@ -130,12 +134,8 @@ namespace Neo.Services
 
                 if (parameterType.IsEnum)
                 {
-                    // Default conversion for enums
-
-                    var arg = args[0];
-                    args.RemoveAt(0);
-
-                    value = Enum.Parse(parameterType, arg, true);
+                    var arg = CommandToken.ReadString(args, canConsumeAll);
+                    value = Enum.Parse(parameterType, arg.Trim(), true);
                     return true;
                 }
             }
@@ -151,7 +151,7 @@ namespace Neo.Services
         /// </summary>
         [Category("Base Commands")]
         [ConsoleCommand("help")]
-        protected void OnHelpCommand([CaptureWholeArgument] string key = "")
+        protected void OnHelpCommand(string key)
         {
             var withHelp = new List<ConsoleCommandMethod>();
 
@@ -418,17 +418,21 @@ namespace Neo.Services
 
             RegisterCommandHander(typeof(string), (args, canConsumeAll) =>
             {
+                return CommandToken.ReadString(args, canConsumeAll);
+            });
+
+            RegisterCommandHander(typeof(string[]), (args, canConsumeAll) =>
+            {
                 if (canConsumeAll)
                 {
-                    var ret = string.Join(' ', args);
+                    var ret = CommandToken.ToString(args);
                     args.Clear();
-                    return ret;
+                    return ret.Split(',', ' ');
                 }
-
-                var arg = args[0];
-                args.RemoveAt(0);
-
-                return arg;
+                else
+                {
+                    return CommandToken.ReadString(args, false).Split(',', ' ');
+                }
             });
 
             RegisterCommandHander(typeof(byte), (args, canConsumeAll) =>
@@ -485,20 +489,20 @@ namespace Neo.Services
 
             RegisterCommandHander(typeof(UInt256[]), (args, canConsumeAll) =>
             {
-                var str = (string)_handlers[typeof(string)](args, true);
-                return str.Split(',', ' ').Select(u => UInt256.Parse(u.Trim())).ToArray();
+                var str = (string[])_handlers[typeof(string[])](args, canConsumeAll);
+                return str.Select(u => UInt256.Parse(u.Trim())).ToArray();
             });
 
             RegisterCommandHander(typeof(UInt160[]), (args, canConsumeAll) =>
             {
-                var str = (string)_handlers[typeof(string)](args, true);
-                return str.Split(',', ' ').Select(u => UInt160.Parse(u.Trim())).ToArray();
+                var str = (string[])_handlers[typeof(string[])](args, canConsumeAll);
+                return str.Select(u => UInt160.Parse(u.Trim())).ToArray();
             });
 
             RegisterCommandHander(typeof(ECPoint[]), (args, canConsumeAll) =>
             {
-                var str = (string)_handlers[typeof(string)](args, true);
-                return str.Split(',', ' ').Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray();
+                var str = (string[])_handlers[typeof(string[])](args, canConsumeAll);
+                return str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray();
             });
 
             RegisterCommandHander(typeof(JObject), (args, canConsumeAll) =>
@@ -515,14 +519,8 @@ namespace Neo.Services
 
             RegisterCommandHander(typeof(IPAddress), (args, canConsumeAll) =>
             {
-                var str = (string)_handlers[typeof(string)](args, canConsumeAll);
+                var str = (string)_handlers[typeof(string)](args, false);
                 return IPAddress.Parse(str);
-            });
-            
-            RegisterCommandHander(typeof(string[]), (args, canConsumeAll) =>
-            {
-                var str = (string)_handlers[typeof(string)](args, true);
-                return str.Split(',', ' ');
             });
 
             RegisterCommand(this);
@@ -533,7 +531,7 @@ namespace Neo.Services
         /// </summary>
         /// <param name="type">Type</param>
         /// <param name="handler">Handler</param>
-        public void RegisterCommandHander(Type type, Func<List<string>, bool, object> handler)
+        public void RegisterCommandHander(Type type, Func<List<CommandToken>, bool, object> handler)
         {
             _handlers[type] = handler;
         }

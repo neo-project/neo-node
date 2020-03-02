@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -128,6 +129,91 @@ namespace Neo.CommandParser
             }
 
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Trim
+        /// </summary>
+        /// <param name="args">Args</param>
+        public static void Trim(List<CommandToken> args)
+        {
+            // Trim start
+
+            while (args.Count > 0 && args[0].Type == CommandTokenType.Space)
+            {
+                args.RemoveAt(0);
+            }
+
+            // Trim end
+
+            while (args.Count > 0 && args[args.Count - 1].Type == CommandTokenType.Space)
+            {
+                args.RemoveAt(args.Count - 1);
+            }
+        }
+
+        /// <summary>
+        /// Read String
+        /// </summary>
+        /// <param name="args">Args</param>
+        /// <param name="consumeAll">Consume all if not quoted</param>
+        /// <returns>String</returns>
+        public static string ReadString(List<CommandToken> args, bool consumeAll)
+        {
+            Trim(args);
+
+            var quoted = false;
+
+            if (args.Count > 0 && args[0].Type == CommandTokenType.Quote)
+            {
+                quoted = true;
+                args.RemoveAt(0);
+            }
+            else
+            {
+                if (consumeAll)
+                {
+                    // Return all if it's not quoted
+
+                    var ret = ToString(args);
+                    args.Clear();
+
+                    return ret;
+                }
+            }
+
+            if (args.Count > 0)
+            {
+                switch (args[0])
+                {
+                    case CommandQuoteToken _:
+                        {
+                            if (quoted)
+                            {
+                                args.RemoveAt(0);
+                                return "";
+                            }
+
+                            throw new ArgumentException();
+                        }
+                    case CommandSpaceToken _: throw new ArgumentException();
+                    case CommandStringToken str:
+                        {
+                            args.RemoveAt(0);
+
+                            if (quoted && args.Count > 0 && args[0].Type == CommandTokenType.Quote)
+                            {
+                                // Remove last quote
+
+                                args.RemoveAt(0);
+                            }
+
+                            return str.Value;
+                        }
+                }
+            }
+
+            return null;
         }
     }
 }
