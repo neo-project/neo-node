@@ -427,7 +427,7 @@ namespace Neo.Services
                 {
                     var ret = CommandToken.ToString(args);
                     args.Clear();
-                    return ret.Split(',', ' ');
+                    return ret.Split(new char[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 }
                 else
                 {
