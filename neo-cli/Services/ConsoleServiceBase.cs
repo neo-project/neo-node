@@ -67,7 +67,7 @@ namespace Neo.Services
                             {
                                 // Parse argument
 
-                                if (TryProcessValue(arg.ParameterType, args, parameters.Length == 1, out var value))
+                                if (TryProcessValue(arg.ParameterType, args, arg == parameters.Last(), out var value))
                                 {
                                     arguments.Add(value);
                                 }
