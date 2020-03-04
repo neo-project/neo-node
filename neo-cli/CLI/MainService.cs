@@ -288,7 +288,8 @@ namespace Neo.CLI
         {
             try
             {
-                var bytes = hexString.HexToBytes();
+                var clearHexString = ClearHexString(hexString);
+                var bytes = clearHexString.HexToBytes();
                 var utf8String = Encoding.UTF8.GetString(bytes);
 
                 return utf8String;
@@ -323,11 +324,8 @@ namespace Neo.CLI
         {
             try
             {
-                if (hexString.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    hexString = hexString.Substring(2);
-                }
-                var bytes = hexString.HexToBytes();
+                var clearHexString = ClearHexString(hexString);
+                var bytes = clearHexString.HexToBytes();
                 var number = new BigInteger(bytes);
 
                 return number.ToString();
@@ -340,6 +338,51 @@ namespace Neo.CLI
             {
                 throw new ArgumentException();
             }
+        }
+
+        /// <summary>
+        /// Formats a string value to a default hexadecimal representation of a byte array
+        /// </summary>
+        /// <param name="hexString">
+        /// The string value to be formatted
+        /// </param>
+        /// <returns>
+        /// Returns the formatted string.
+        /// </returns>
+        /// <exception cref="ArgumentException">
+        /// Throw when is the string is not a valid hex representation of a byte array.
+        /// </exception>
+        private string ClearHexString(string hexString)
+        {
+            bool hasHexPrefix = hexString.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase);
+
+            try
+            {
+                if (hasHexPrefix)
+                {
+                    hexString = hexString.Substring(2);
+                }
+
+                if (hexString.Length % 2 == 1)
+                {
+                    // if the length is an odd number, it cannot be parsed to a byte array
+                    // it may be a valid hex string, so include a leading zero to parse correctly
+                    hexString = "0" + hexString;
+                }
+
+                if (hasHexPrefix)
+                {
+                    // if the input value starts with '0x', the first byte is the less significant
+                    // to parse correctly, reverse the byte array
+                    return hexString.HexToBytes().Reverse().ToArray().ToHexString();
+                }
+            }
+            catch (FormatException)
+            {
+                throw new ArgumentException();
+            }
+
+            return hexString;
         }
 
         /// <summary>
