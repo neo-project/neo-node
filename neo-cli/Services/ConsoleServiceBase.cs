@@ -496,7 +496,26 @@ namespace Neo.Services
             RegisterCommandHander(typeof(UInt160[]), (args, canConsumeAll) =>
             {
                 var str = (string[])_handlers[typeof(string[])](args, canConsumeAll);
-                return str.Select(u => UInt160.Parse(u.Trim())).ToArray();
+                return str.Select(str =>
+                {
+                    switch (str.ToLowerInvariant())
+                    {
+                        case "neo": return SmartContract.Native.NativeContract.NEO.Hash;
+                        case "gas": return SmartContract.Native.NativeContract.GAS.Hash;
+                    }
+
+                    // Try to parse as UInt160
+
+                    if (UInt160.TryParse(str, out var addr))
+                    {
+                        return addr;
+                    }
+
+                    // Accept wallet format
+
+                    return str.ToScriptHash();
+                })
+                .ToArray();
             });
 
             RegisterCommandHander(typeof(ECPoint[]), (args, canConsumeAll) =>
