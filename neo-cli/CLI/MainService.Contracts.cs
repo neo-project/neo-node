@@ -39,7 +39,7 @@ namespace Neo.CLI
                 return;
             }
             Console.WriteLine($"Script hash: {scriptHash.ToString()}");
-            Console.WriteLine($"Gas: {tx.SystemFee}");
+            Console.WriteLine($"Gas: {new BigDecimal(tx.SystemFee, NativeContract.GAS.Decimals)}");
             Console.WriteLine();
             SignAndSendTx(tx);
         }
