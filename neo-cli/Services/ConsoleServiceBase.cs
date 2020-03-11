@@ -559,32 +559,43 @@ namespace Neo.Services
         /// Register commands
         /// </summary>
         /// <param name="instance">Instance</param>
-        public void RegisterCommand(object instance)
+        private void RegisterCommand(object instance)
         {
             foreach (var method in instance.GetType().GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
             {
                 foreach (var attribute in method.GetCustomAttributes<ConsoleCommandAttribute>())
                 {
-                    // Check handlers
-
-                    if (!method.GetParameters().All(u => u.ParameterType.IsEnum || _handlers.ContainsKey(u.ParameterType)))
-                    {
-                        throw new ArgumentException("Handler not found for the command: " + method.ToString());
-                    }
-
-                    // Add command
-
-                    var command = new ConsoleCommandMethod(instance, method);
-
-                    if (!_verbs.TryGetValue(command.Key, out var commands))
-                    {
-                        _verbs.Add(command.Key, new List<ConsoleCommandMethod>(new[] { command }));
-                    }
-                    else
-                    {
-                        commands.Add(command);
-                    }
+                    RegisterCommand(instance, method, attribute.Verbs);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Register command
+        /// </summary>
+        /// <param name="instance">Instance</param>
+        /// <param name="method">Method</param>
+        /// <param name="verbs">Verbs</param>
+        public void RegisterCommand(object instance, MethodInfo method, string[] verbs)
+        {
+            // Check handlers
+
+            if (!method.GetParameters().All(u => u.ParameterType.IsEnum || _handlers.ContainsKey(u.ParameterType)))
+            {
+                throw new ArgumentException("Handler not found for the command: " + method.ToString());
+            }
+
+            // Add command
+
+            var command = new ConsoleCommandMethod(instance, method, verbs);
+
+            if (!_verbs.TryGetValue(command.Key, out var commands))
+            {
+                _verbs.Add(command.Key, new List<ConsoleCommandMethod>(new[] { command }));
+            }
+            else
+            {
+                commands.Add(command);
             }
         }
 

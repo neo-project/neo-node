@@ -68,7 +68,7 @@ namespace Neo.CLI
             {
                 // Register plugins commands
 
-                RegisterCommand(plugin);
+                plugin.RegisterCommands((method, verbs) => RegisterCommand(plugin, method, verbs));
             }
         }
 

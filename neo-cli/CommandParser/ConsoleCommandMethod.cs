@@ -1,8 +1,6 @@
-using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Linq;
 using System.Reflection;
 
 namespace Neo.CommandParser
@@ -45,16 +43,12 @@ namespace Neo.CommandParser
         /// </summary>
         /// <param name="instance">Instance</param>
         /// <param name="method">Method</param>
-        public ConsoleCommandMethod(object instance, MethodInfo method)
+        /// <param name="verbs">Verbs</param>
+        public ConsoleCommandMethod(object instance, MethodInfo method, string[] verbs)
         {
             Method = method;
             Instance = instance;
-
-            var command = method.GetCustomAttribute<ConsoleCommandAttribute>();
-            if (command != null)
-            {
-                Verbs = command.Verbs;
-            }
+            Verbs = verbs;
 
             var category = method.GetCustomAttribute<CategoryAttribute>();
             if (category != null)
