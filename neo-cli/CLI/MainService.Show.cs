@@ -300,13 +300,15 @@ namespace Neo.CLI
 
         private string ToCLIString(Block block)
         {
+            var blockTime = UnixEpoch.AddMilliseconds(block.Timestamp);
+            blockTime = TimeZoneInfo.ConvertTimeFromUtc(blockTime, TimeZoneInfo.Local);
             string output = "";
             output += $"Hash: {block.Hash}\n";
             output += $"Index: {block.Index}\n";
             output += $"Size: {block.Size}\n";
             output += $"PreviousBlockHash: {block.PrevHash}\n";
             output += $"MerkleRoot: {block.MerkleRoot}\n";
-            output += $"Time: {block.Timestamp}\n";
+            output += $"Timestamp: {blockTime.ToShortDateString()} {blockTime.ToLongTimeString()}\n";
             output += $"NextConsensus: {block.NextConsensus}\n";
             output += $"Transactions:\n";
             foreach (Transaction t in block.Transactions)
