@@ -311,7 +311,7 @@ namespace Neo.CLI
             using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, testMode: true))
             {
                 Console.WriteLine($"VM State: {engine.State}");
-                Console.WriteLine($"Gas Consumed: {engine.GasConsumed}");
+                Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
                 Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
                 Console.WriteLine();
                 if (engine.State.HasFlag(VMState.FAULT))
