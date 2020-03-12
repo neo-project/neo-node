@@ -30,8 +30,7 @@ namespace Neo.ConsoleService
         private readonly CountdownEvent _shutdownAcknowledged = new CountdownEvent(1);
         private readonly Dictionary<string, List<ConsoleCommandMethod>> _verbs = new Dictionary<string, List<ConsoleCommandMethod>>();
         private readonly Dictionary<string, object> _instances = new Dictionary<string, object>();
-
-        protected readonly Dictionary<Type, Func<List<CommandToken>, bool, object>> Handlers = new Dictionary<Type, Func<List<CommandToken>, bool, object>>();
+        private readonly Dictionary<Type, Func<List<CommandToken>, bool, object>> _handlers = new Dictionary<Type, Func<List<CommandToken>, bool, object>>();
 
         private bool OnCommand(string commandLine)
         {
@@ -123,7 +122,7 @@ namespace Neo.ConsoleService
         {
             if (args.Count > 0)
             {
-                if (Handlers.TryGetValue(parameterType, out var handler))
+                if (_handlers.TryGetValue(parameterType, out var handler))
                 {
                     value = handler(args, canConsumeAll);
                     return true;
@@ -139,6 +138,11 @@ namespace Neo.ConsoleService
 
             value = null;
             return false;
+        }
+
+        protected T ParseArgs<T>(List<CommandToken> args, bool canConsumeAll)
+        {
+            return (T)_handlers[typeof(T)](args, canConsumeAll);
         }
 
         #region Commands
@@ -431,31 +435,31 @@ namespace Neo.ConsoleService
 
             RegisterCommandHander(typeof(byte), (args, canConsumeAll) =>
             {
-                var str = (string)Handlers[typeof(string)](args, false);
+                var str = (string)_handlers[typeof(string)](args, false);
                 return byte.Parse(str);
             });
 
             RegisterCommandHander(typeof(bool), (args, canConsumeAll) =>
             {
-                var str = ((string)Handlers[typeof(string)](args, false)).ToLowerInvariant();
+                var str = ((string)_handlers[typeof(string)](args, false)).ToLowerInvariant();
                 return str == "1" || str == "yes" || str == "y" || bool.Parse(str);
             });
 
             RegisterCommandHander(typeof(ushort), (args, canConsumeAll) =>
             {
-                var str = (string)Handlers[typeof(string)](args, false);
+                var str = (string)_handlers[typeof(string)](args, false);
                 return ushort.Parse(str);
             });
 
             RegisterCommandHander(typeof(uint), (args, canConsumeAll) =>
             {
-                var str = (string)Handlers[typeof(string)](args, false);
+                var str = (string)_handlers[typeof(string)](args, false);
                 return uint.Parse(str);
             });
 
             RegisterCommandHander(typeof(IPAddress), (args, canConsumeAll) =>
             {
-                var str = (string)Handlers[typeof(string)](args, false);
+                var str = (string)_handlers[typeof(string)](args, false);
                 return IPAddress.Parse(str);
             });
         }
@@ -467,7 +471,7 @@ namespace Neo.ConsoleService
         /// <param name="handler">Handler</param>
         public void RegisterCommandHander(Type type, Func<List<CommandToken>, bool, object> handler)
         {
-            Handlers[type] = handler;
+            _handlers[type] = handler;
         }
 
         /// <summary>
@@ -488,7 +492,7 @@ namespace Neo.ConsoleService
                 {
                     // Check handlers
 
-                    if (!method.GetParameters().All(u => u.ParameterType.IsEnum || Handlers.ContainsKey(u.ParameterType)))
+                    if (!method.GetParameters().All(u => u.ParameterType.IsEnum || _handlers.ContainsKey(u.ParameterType)))
                     {
                         throw new ArgumentException("Handler not found for the command: " + method.ToString());
                     }

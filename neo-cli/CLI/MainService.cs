@@ -68,7 +68,7 @@ namespace Neo.CLI
         {
             RegisterCommandHander(typeof(UInt160), (args, canConsumeAll) =>
             {
-                var str = (string)Handlers[typeof(string)](args, false);
+                var str = ParseArgs<string>(args, false);
 
                 switch (str.ToLowerInvariant())
                 {
@@ -90,19 +90,19 @@ namespace Neo.CLI
 
             RegisterCommandHander(typeof(UInt256), (args, canConsumeAll) =>
             {
-                var str = (string)Handlers[typeof(string)](args, false);
+                var str = ParseArgs<string>(args, false);
                 return UInt256.Parse(str);
             });
 
             RegisterCommandHander(typeof(UInt256[]), (args, canConsumeAll) =>
             {
-                var str = (string[])Handlers[typeof(string[])](args, canConsumeAll);
+                var str = ParseArgs<string[]>(args, canConsumeAll);
                 return str.Select(u => UInt256.Parse(u.Trim())).ToArray();
             });
 
             RegisterCommandHander(typeof(UInt160[]), (args, canConsumeAll) =>
             {
-                var str = (string[])Handlers[typeof(string[])](args, canConsumeAll);
+                var str = ParseArgs<string[]>(args, canConsumeAll);
                 return str.Select(str =>
                 {
                     switch (str.ToLowerInvariant())
@@ -127,19 +127,19 @@ namespace Neo.CLI
 
             RegisterCommandHander(typeof(ECPoint[]), (args, canConsumeAll) =>
             {
-                var str = (string[])Handlers[typeof(string[])](args, canConsumeAll);
+                var str = ParseArgs<string[]>(args, canConsumeAll);
                 return str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray();
             });
 
             RegisterCommandHander(typeof(JObject), (args, canConsumeAll) =>
             {
-                var str = (string)Handlers[typeof(string)](args, canConsumeAll);
+                var str = ParseArgs<string>(args, canConsumeAll);
                 return JObject.Parse(str);
             });
 
             RegisterCommandHander(typeof(JArray), (args, canConsumeAll) =>
             {
-                var obj = (JObject)Handlers[typeof(JObject)](args, canConsumeAll);
+                var obj = ParseArgs<JObject>(args, canConsumeAll);
                 return (JArray)obj;
             });
 
