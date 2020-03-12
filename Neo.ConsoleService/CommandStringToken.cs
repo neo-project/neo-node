@@ -4,7 +4,7 @@ using System.Diagnostics;
 namespace Neo.ConsoleService
 {
     [DebuggerDisplay("Value={Value}, RequireQuotes={RequireQuotes}")]
-    internal class CommandStringToken : CommandToken
+    public class CommandStringToken : CommandToken
     {
         /// <summary>
         /// Require quotes

@@ -29,7 +29,9 @@ namespace Neo.ConsoleService
         private readonly CancellationTokenSource _shutdownTokenSource = new CancellationTokenSource();
         private readonly CountdownEvent _shutdownAcknowledged = new CountdownEvent(1);
         private readonly Dictionary<string, List<ConsoleCommandMethod>> _verbs = new Dictionary<string, List<ConsoleCommandMethod>>();
-        private readonly Dictionary<Type, Func<List<CommandToken>, bool, object>> _handlers = new Dictionary<Type, Func<List<CommandToken>, bool, object>>();
+        private readonly Dictionary<string, object> _instances = new Dictionary<string, object>();
+
+        protected readonly Dictionary<Type, Func<List<CommandToken>, bool, object>> Handlers = new Dictionary<Type, Func<List<CommandToken>, bool, object>>();
 
         private bool OnCommand(string commandLine)
         {
@@ -121,7 +123,7 @@ namespace Neo.ConsoleService
         {
             if (args.Count > 0)
             {
-                if (_handlers.TryGetValue(parameterType, out var handler))
+                if (Handlers.TryGetValue(parameterType, out var handler))
                 {
                     value = handler(args, canConsumeAll);
                     return true;
@@ -152,12 +154,7 @@ namespace Neo.ConsoleService
 
             // Try to find a plugin with this name
 
-            var plugin = Plugins.Plugin.Plugins
-                .FirstOrDefault(u => u.Name.Equals(key.Trim(), StringComparison.InvariantCultureIgnoreCase));
-
-            // Fetch commands
-
-            if (plugin != null)
+            if (_instances.TryGetValue(key.Trim().ToLowerInvariant(), out var instance))
             {
                 // Filter only the help of this plugin
 
@@ -166,12 +163,14 @@ namespace Neo.ConsoleService
                 {
                     withHelp.AddRange
                         (
-                        commands.Where(u => !string.IsNullOrEmpty(u.HelpCategory) && u.Instance is Plugins.Plugin pl && pl.Name == plugin.Name)
+                        commands.Where(u => !string.IsNullOrEmpty(u.HelpCategory) && u.Instance == instance)
                         );
                 }
             }
             else
             {
+                // Fetch commands
+
                 foreach (var commands in _verbs.Values.Select(u => u))
                 {
                     withHelp.AddRange(commands.Where(u => !string.IsNullOrEmpty(u.HelpCategory)));
@@ -265,7 +264,7 @@ namespace Neo.ConsoleService
         [ConsoleCommand("version")]
         protected void OnVersion()
         {
-            Console.WriteLine(Assembly.GetEntryAssembly().GetVersion());
+            Console.WriteLine(Assembly.GetEntryAssembly().GetName().Version);
         }
 
         /// <summary>
@@ -281,7 +280,7 @@ namespace Neo.ConsoleService
 
         #endregion
 
-        protected internal virtual void OnStart(string[] args)
+        public virtual void OnStart(string[] args)
         {
             // Register sigterm event handler
             AssemblyLoadContext.Default.Unloading += SigTermEventHandler;
@@ -289,7 +288,7 @@ namespace Neo.ConsoleService
             Console.CancelKeyPress += CancelHandler;
         }
 
-        protected internal virtual void OnStop()
+        public virtual void OnStop()
         {
             _shutdownAcknowledged.Signal();
         }
@@ -432,35 +431,33 @@ namespace Neo.ConsoleService
 
             RegisterCommandHander(typeof(byte), (args, canConsumeAll) =>
             {
-                var str = (string)_handlers[typeof(string)](args, false);
+                var str = (string)Handlers[typeof(string)](args, false);
                 return byte.Parse(str);
             });
 
             RegisterCommandHander(typeof(bool), (args, canConsumeAll) =>
             {
-                var str = ((string)_handlers[typeof(string)](args, false)).ToLowerInvariant();
+                var str = ((string)Handlers[typeof(string)](args, false)).ToLowerInvariant();
                 return str == "1" || str == "yes" || str == "y" || bool.Parse(str);
             });
 
             RegisterCommandHander(typeof(ushort), (args, canConsumeAll) =>
             {
-                var str = (string)_handlers[typeof(string)](args, false);
+                var str = (string)Handlers[typeof(string)](args, false);
                 return ushort.Parse(str);
             });
 
             RegisterCommandHander(typeof(uint), (args, canConsumeAll) =>
             {
-                var str = (string)_handlers[typeof(string)](args, false);
+                var str = (string)Handlers[typeof(string)](args, false);
                 return uint.Parse(str);
             });
 
             RegisterCommandHander(typeof(IPAddress), (args, canConsumeAll) =>
             {
-                var str = (string)_handlers[typeof(string)](args, false);
+                var str = (string)Handlers[typeof(string)](args, false);
                 return IPAddress.Parse(str);
             });
-
-            RegisterCommand(this);
         }
 
         /// <summary>
@@ -470,50 +467,45 @@ namespace Neo.ConsoleService
         /// <param name="handler">Handler</param>
         public void RegisterCommandHander(Type type, Func<List<CommandToken>, bool, object> handler)
         {
-            _handlers[type] = handler;
+            Handlers[type] = handler;
         }
 
         /// <summary>
         /// Register commands
         /// </summary>
         /// <param name="instance">Instance</param>
-        private void RegisterCommand(object instance)
+        /// <param name="name">Name</param>
+        public void RegisterCommand(object instance, string name = null)
         {
+            if (!string.IsNullOrEmpty(name))
+            {
+                _instances.Add(name, instance);
+            }
+
             foreach (var method in instance.GetType().GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
             {
                 foreach (var attribute in method.GetCustomAttributes<ConsoleCommandAttribute>())
                 {
-                    RegisterCommand(instance, method, attribute.Verbs);
+                    // Check handlers
+
+                    if (!method.GetParameters().All(u => u.ParameterType.IsEnum || Handlers.ContainsKey(u.ParameterType)))
+                    {
+                        throw new ArgumentException("Handler not found for the command: " + method.ToString());
+                    }
+
+                    // Add command
+
+                    var command = new ConsoleCommandMethod(instance, method, attribute.Verbs);
+
+                    if (!_verbs.TryGetValue(command.Key, out var commands))
+                    {
+                        _verbs.Add(command.Key, new List<ConsoleCommandMethod>(new[] { command }));
+                    }
+                    else
+                    {
+                        commands.Add(command);
+                    }
                 }
-            }
-        }
-
-        /// <summary>
-        /// Register command
-        /// </summary>
-        /// <param name="instance">Instance</param>
-        /// <param name="method">Method</param>
-        /// <param name="verbs">Verbs</param>
-        public void RegisterCommand(object instance, MethodInfo method, string[] verbs)
-        {
-            // Check handlers
-
-            if (!method.GetParameters().All(u => u.ParameterType.IsEnum || _handlers.ContainsKey(u.ParameterType)))
-            {
-                throw new ArgumentException("Handler not found for the command: " + method.ToString());
-            }
-
-            // Add command
-
-            var command = new ConsoleCommandMethod(instance, method, verbs);
-
-            if (!_verbs.TryGetValue(command.Key, out var commands))
-            {
-                _verbs.Add(command.Key, new List<ConsoleCommandMethod>(new[] { command }));
-            }
-            else
-            {
-                commands.Add(command);
             }
         }
 
@@ -589,7 +581,7 @@ namespace Neo.ConsoleService
             return readLineTask.Result;
         }
 
-        public void RunConsole()
+        public virtual void RunConsole()
         {
             _running = true;
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
@@ -600,12 +592,6 @@ namespace Neo.ConsoleService
                 catch { }
 
             Console.ForegroundColor = ConsoleColor.DarkGreen;
-
-            var cliV = Assembly.GetAssembly(typeof(Program)).GetVersion();
-            var neoV = Assembly.GetAssembly(typeof(NeoSystem)).GetVersion();
-            var vmV = Assembly.GetAssembly(typeof(ExecutionEngine)).GetVersion();
-            Console.WriteLine($"{ServiceName} v{cliV}  -  NEO v{neoV}  -  NEO-VM v{vmV}");
-            Console.WriteLine();
 
             while (_running)
             {

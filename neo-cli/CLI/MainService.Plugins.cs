@@ -1,4 +1,4 @@
-using Neo.CommandParser;
+using Neo.ConsoleService;
 using Neo.Plugins;
 using System;
 using System.ComponentModel;

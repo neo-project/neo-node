@@ -4,7 +4,7 @@ using System.Diagnostics;
 namespace Neo.ConsoleService
 {
     [DebuggerDisplay("Value={Value}, Value={Value}")]
-    internal class CommandQuoteToken : CommandToken
+    public class CommandQuoteToken : CommandToken
     {
         /// <summary>
         /// Constructor

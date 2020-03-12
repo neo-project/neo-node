@@ -1,6 +1,7 @@
 using Akka.Actor;
 using Microsoft.Extensions.Configuration;
 using Neo.ConsoleService;
+using Neo.Cryptography.ECC;
 using Neo.IO;
 using Neo.IO.Json;
 using Neo.Ledger;
@@ -19,7 +20,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
-using System.Security.Cryptography;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -63,11 +64,11 @@ namespace Neo.CLI
         /// <summary>
         /// Constructor
         /// </summary>
-        public MainService()
+        public MainService() : base()
         {
             RegisterCommandHander(typeof(UInt160), (args, canConsumeAll) =>
             {
-                var str = (string)_handlers[typeof(string)](args, false);
+                var str = (string)Handlers[typeof(string)](args, false);
 
                 switch (str.ToLowerInvariant())
                 {
@@ -89,19 +90,19 @@ namespace Neo.CLI
 
             RegisterCommandHander(typeof(UInt256), (args, canConsumeAll) =>
             {
-                var str = (string)_handlers[typeof(string)](args, false);
+                var str = (string)Handlers[typeof(string)](args, false);
                 return UInt256.Parse(str);
             });
 
             RegisterCommandHander(typeof(UInt256[]), (args, canConsumeAll) =>
             {
-                var str = (string[])_handlers[typeof(string[])](args, canConsumeAll);
+                var str = (string[])Handlers[typeof(string[])](args, canConsumeAll);
                 return str.Select(u => UInt256.Parse(u.Trim())).ToArray();
             });
 
             RegisterCommandHander(typeof(UInt160[]), (args, canConsumeAll) =>
             {
-                var str = (string[])_handlers[typeof(string[])](args, canConsumeAll);
+                var str = (string[])Handlers[typeof(string[])](args, canConsumeAll);
                 return str.Select(str =>
                 {
                     switch (str.ToLowerInvariant())
@@ -126,28 +127,43 @@ namespace Neo.CLI
 
             RegisterCommandHander(typeof(ECPoint[]), (args, canConsumeAll) =>
             {
-                var str = (string[])_handlers[typeof(string[])](args, canConsumeAll);
+                var str = (string[])Handlers[typeof(string[])](args, canConsumeAll);
                 return str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray();
             });
 
             RegisterCommandHander(typeof(JObject), (args, canConsumeAll) =>
             {
-                var str = (string)_handlers[typeof(string)](args, canConsumeAll);
+                var str = (string)Handlers[typeof(string)](args, canConsumeAll);
                 return JObject.Parse(str);
             });
 
             RegisterCommandHander(typeof(JArray), (args, canConsumeAll) =>
             {
-                var obj = (JObject)_handlers[typeof(JObject)](args, canConsumeAll);
+                var obj = (JObject)Handlers[typeof(JObject)](args, canConsumeAll);
                 return (JArray)obj;
             });
+
+            RegisterCommand(this);
 
             foreach (var plugin in Plugin.Plugins)
             {
                 // Register plugins commands
 
-                plugin.RegisterCommands((method, verbs) => RegisterCommand(plugin, method, verbs));
+                RegisterCommand(plugin, plugin.Name);
             }
+        }
+
+        public override void RunConsole()
+        {
+            Console.ForegroundColor = ConsoleColor.DarkGreen;
+
+            var cliV = Assembly.GetAssembly(typeof(Program)).GetVersion();
+            var neoV = Assembly.GetAssembly(typeof(NeoSystem)).GetVersion();
+            var vmV = Assembly.GetAssembly(typeof(ExecutionEngine)).GetVersion();
+            Console.WriteLine($"{ServiceName} v{cliV}  -  NEO v{neoV}  -  NEO-VM v{vmV}");
+            Console.WriteLine();
+
+            base.RunConsole();
         }
 
         public void CreateWallet(string path, string password)
@@ -324,13 +340,13 @@ namespace Neo.CLI
             }
         }
 
-        protected internal override void OnStart(string[] args)
+        public override void OnStart(string[] args)
         {
             base.OnStart(args);
             Start(args);
         }
 
-        protected internal override void OnStop()
+        public override void OnStop()
         {
             base.OnStop();
             Stop();
@@ -417,7 +433,7 @@ namespace Neo.CLI
                 {
                     Console.WriteLine($"Warning: wallet file \"{Settings.Default.UnlockWallet.Path}\" not found.");
                 }
-                catch (CryptographicException)
+                catch (System.Security.Cryptography.CryptographicException)
                 {
                     Console.WriteLine($"failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
                 }

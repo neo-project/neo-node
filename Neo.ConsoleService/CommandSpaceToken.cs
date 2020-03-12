@@ -4,7 +4,7 @@ using System.Diagnostics;
 namespace Neo.ConsoleService
 {
     [DebuggerDisplay("Value={Value}, Count={Count}")]
-    internal class CommandSpaceToken : CommandToken
+    public class CommandSpaceToken : CommandToken
     {
         /// <summary>
         /// Count

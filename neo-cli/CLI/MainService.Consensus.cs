@@ -1,4 +1,4 @@
-using Neo.CommandParser;
+using Neo.ConsoleService;
 using System.ComponentModel;
 
 namespace Neo.CLI

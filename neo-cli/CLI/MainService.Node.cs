@@ -1,5 +1,5 @@
 using Akka.Actor;
-using Neo.CommandParser;
+using Neo.ConsoleService;
 using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
