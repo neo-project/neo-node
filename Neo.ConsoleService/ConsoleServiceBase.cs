@@ -1,8 +1,3 @@
-using Neo.CommandParser;
-using Neo.Cryptography.ECC;
-using Neo.IO.Json;
-using Neo.VM;
-using Neo.Wallets;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -18,7 +13,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Neo.Services
+namespace Neo.ConsoleService
 {
     public abstract class ConsoleServiceBase
     {
@@ -457,83 +452,6 @@ namespace Neo.Services
             {
                 var str = (string)_handlers[typeof(string)](args, false);
                 return uint.Parse(str);
-            });
-
-            RegisterCommandHander(typeof(UInt160), (args, canConsumeAll) =>
-            {
-                var str = (string)_handlers[typeof(string)](args, false);
-
-                switch (str.ToLowerInvariant())
-                {
-                    case "neo": return SmartContract.Native.NativeContract.NEO.Hash;
-                    case "gas": return SmartContract.Native.NativeContract.GAS.Hash;
-                }
-
-                // Try to parse as UInt160
-
-                if (UInt160.TryParse(str, out var addr))
-                {
-                    return addr;
-                }
-
-                // Accept wallet format
-
-                return str.ToScriptHash();
-            });
-
-            RegisterCommandHander(typeof(UInt256), (args, canConsumeAll) =>
-            {
-                var str = (string)_handlers[typeof(string)](args, false);
-                return UInt256.Parse(str);
-            });
-
-            RegisterCommandHander(typeof(UInt256[]), (args, canConsumeAll) =>
-            {
-                var str = (string[])_handlers[typeof(string[])](args, canConsumeAll);
-                return str.Select(u => UInt256.Parse(u.Trim())).ToArray();
-            });
-
-            RegisterCommandHander(typeof(UInt160[]), (args, canConsumeAll) =>
-            {
-                var str = (string[])_handlers[typeof(string[])](args, canConsumeAll);
-                return str.Select(str =>
-                {
-                    switch (str.ToLowerInvariant())
-                    {
-                        case "neo": return SmartContract.Native.NativeContract.NEO.Hash;
-                        case "gas": return SmartContract.Native.NativeContract.GAS.Hash;
-                    }
-
-                    // Try to parse as UInt160
-
-                    if (UInt160.TryParse(str, out var addr))
-                    {
-                        return addr;
-                    }
-
-                    // Accept wallet format
-
-                    return str.ToScriptHash();
-                })
-                .ToArray();
-            });
-
-            RegisterCommandHander(typeof(ECPoint[]), (args, canConsumeAll) =>
-            {
-                var str = (string[])_handlers[typeof(string[])](args, canConsumeAll);
-                return str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray();
-            });
-
-            RegisterCommandHander(typeof(JObject), (args, canConsumeAll) =>
-            {
-                var str = (string)_handlers[typeof(string)](args, canConsumeAll);
-                return JObject.Parse(str);
-            });
-
-            RegisterCommandHander(typeof(JArray), (args, canConsumeAll) =>
-            {
-                var obj = (JObject)_handlers[typeof(JObject)](args, canConsumeAll);
-                return (JArray)obj;
             });
 
             RegisterCommandHander(typeof(IPAddress), (args, canConsumeAll) =>

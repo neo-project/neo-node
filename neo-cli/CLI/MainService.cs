@@ -1,11 +1,12 @@
 using Akka.Actor;
 using Microsoft.Extensions.Configuration;
+using Neo.ConsoleService;
 using Neo.IO;
+using Neo.IO.Json;
 using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.Plugins;
-using Neo.Services;
 using Neo.SmartContract;
 using Neo.SmartContract.Manifest;
 using Neo.VM;
@@ -62,8 +63,85 @@ namespace Neo.CLI
         /// <summary>
         /// Constructor
         /// </summary>
-        public MainService() : base()
+        public MainService()
         {
+            RegisterCommandHander(typeof(UInt160), (args, canConsumeAll) =>
+            {
+                var str = (string)_handlers[typeof(string)](args, false);
+
+                switch (str.ToLowerInvariant())
+                {
+                    case "neo": return SmartContract.Native.NativeContract.NEO.Hash;
+                    case "gas": return SmartContract.Native.NativeContract.GAS.Hash;
+                }
+
+                // Try to parse as UInt160
+
+                if (UInt160.TryParse(str, out var addr))
+                {
+                    return addr;
+                }
+
+                // Accept wallet format
+
+                return str.ToScriptHash();
+            });
+
+            RegisterCommandHander(typeof(UInt256), (args, canConsumeAll) =>
+            {
+                var str = (string)_handlers[typeof(string)](args, false);
+                return UInt256.Parse(str);
+            });
+
+            RegisterCommandHander(typeof(UInt256[]), (args, canConsumeAll) =>
+            {
+                var str = (string[])_handlers[typeof(string[])](args, canConsumeAll);
+                return str.Select(u => UInt256.Parse(u.Trim())).ToArray();
+            });
+
+            RegisterCommandHander(typeof(UInt160[]), (args, canConsumeAll) =>
+            {
+                var str = (string[])_handlers[typeof(string[])](args, canConsumeAll);
+                return str.Select(str =>
+                {
+                    switch (str.ToLowerInvariant())
+                    {
+                        case "neo": return SmartContract.Native.NativeContract.NEO.Hash;
+                        case "gas": return SmartContract.Native.NativeContract.GAS.Hash;
+                    }
+
+                    // Try to parse as UInt160
+
+                    if (UInt160.TryParse(str, out var addr))
+                    {
+                        return addr;
+                    }
+
+                    // Accept wallet format
+
+                    return str.ToScriptHash();
+                })
+                .ToArray();
+            });
+
+            RegisterCommandHander(typeof(ECPoint[]), (args, canConsumeAll) =>
+            {
+                var str = (string[])_handlers[typeof(string[])](args, canConsumeAll);
+                return str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray();
+            });
+
+            RegisterCommandHander(typeof(JObject), (args, canConsumeAll) =>
+            {
+                var str = (string)_handlers[typeof(string)](args, canConsumeAll);
+                return JObject.Parse(str);
+            });
+
+            RegisterCommandHander(typeof(JArray), (args, canConsumeAll) =>
+            {
+                var obj = (JObject)_handlers[typeof(JObject)](args, canConsumeAll);
+                return (JArray)obj;
+            });
+
             foreach (var plugin in Plugin.Plugins)
             {
                 // Register plugins commands

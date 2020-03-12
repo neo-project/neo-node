@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Neo.CommandParser
+namespace Neo.ConsoleService
 {
-    public abstract class CommandToken
+    internal abstract class CommandToken
     {
         /// <summary>
         /// Offset

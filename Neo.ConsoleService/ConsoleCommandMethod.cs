@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
 
-namespace Neo.CommandParser
+namespace Neo.ConsoleService
 {
     [DebuggerDisplay("Key={Key}")]
     internal class ConsoleCommandMethod
@@ -92,7 +92,7 @@ namespace Neo.CommandParser
                         }
                     case CommandStringToken str:
                         {
-                            if (Verbs[Verbs.Length - checks] != str.Value.ToLowerInvariant())
+                            if (Verbs[^checks] != str.Value.ToLowerInvariant())
                             {
                                 consumedArgs = 0;
                                 return false;

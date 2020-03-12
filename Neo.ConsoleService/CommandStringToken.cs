@@ -1,10 +1,10 @@
 using System;
 using System.Diagnostics;
 
-namespace Neo.CommandParser
+namespace Neo.ConsoleService
 {
     [DebuggerDisplay("Value={Value}, RequireQuotes={RequireQuotes}")]
-    public class CommandStringToken : CommandToken
+    internal class CommandStringToken : CommandToken
     {
         /// <summary>
         /// Require quotes

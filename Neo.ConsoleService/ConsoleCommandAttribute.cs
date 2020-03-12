@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 
-namespace Neo.CommandParser
+namespace Neo.ConsoleService
 {
     [DebuggerDisplay("Verbs={string.Join(' ',Verbs)}")]
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]

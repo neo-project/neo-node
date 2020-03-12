@@ -29,7 +29,10 @@
 
   <ItemGroup>
     <PackageReference Include="Neo" Version="3.0.0-CI00860" />
-    <PackageReference Include="System.ServiceProcess.ServiceController" Version="4.6.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Neo.ConsoleService\Neo.ConsoleService.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,10 +1,10 @@
 using System;
 using System.Diagnostics;
 
-namespace Neo.CommandParser
+namespace Neo.ConsoleService
 {
     [DebuggerDisplay("Value={Value}, Value={Value}")]
-    public class CommandQuoteToken : CommandToken
+    internal class CommandQuoteToken : CommandToken
     {
         /// <summary>
         /// Constructor
