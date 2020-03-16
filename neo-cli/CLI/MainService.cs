@@ -668,7 +668,7 @@ namespace Neo.CLI
             {
                 try
                 {
-                    scriptHash = args[2].ToScriptHash();
+                    scriptHash = UInt160.Parse(args[2]);
                 }
                 catch (FormatException)
                 {
@@ -677,7 +677,7 @@ namespace Neo.CLI
             }
             else if (args.Length == 4)
             {
-                scriptHash = args[2].ToScriptHash();
+                scriptHash = UInt160.Parse(args[2]);
                 path = args[3];
             }
             if (File.Exists(path))
@@ -939,7 +939,7 @@ namespace Neo.CLI
             if (NoWallet()) return true;
             foreach (UInt160 account in CurrentWallet.GetAccounts().Select(p => p.ScriptHash))
             {
-                Console.WriteLine(account.ToAddress());
+                Console.WriteLine(account.ToString());
                 Console.WriteLine($"NEO: {CurrentWallet.GetBalance(NativeContract.NEO.Hash, account)}");
                 Console.WriteLine($"GAS: {CurrentWallet.GetBalance(NativeContract.GAS.Hash, account)}");
                 Console.WriteLine();
@@ -1061,7 +1061,7 @@ namespace Neo.CLI
                     assetId = UInt160.Parse(args[1]);
                     break;
             }
-            UInt160 to = args[2].ToScriptHash();
+            UInt160 to = UInt160.Parse(args[2]);
             Transaction tx;
             AssetDescriptor descriptor = new AssetDescriptor(assetId);
             if (!BigDecimal.TryParse(args[3], descriptor.Decimals, out BigDecimal amount) || amount.Sign <= 0)
