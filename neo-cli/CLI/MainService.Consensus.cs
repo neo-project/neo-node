@@ -1,5 +1,4 @@
 using Neo.ConsoleService;
-using System.ComponentModel;
 
 namespace Neo.CLI
 {
@@ -8,8 +7,7 @@ namespace Neo.CLI
         /// <summary>
         /// Process "start consensus" command
         /// </summary>
-        [Category("Consensus Commands")]
-        [ConsoleCommand("start", "consensus")]
+        [ConsoleCommand("start consensus", Category = "Consensus Commands")]
         private void OnStartConsensusCommand()
         {
             if (NoWallet()) return;

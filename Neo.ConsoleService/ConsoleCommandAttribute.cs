@@ -14,12 +14,22 @@ namespace Neo.ConsoleService
         public string[] Verbs { get; }
 
         /// <summary>
+        /// Category
+        /// </summary>
+        public string Category { get; set; }
+
+        /// <summary>
+        /// Description
+        /// </summary>
+        public string Description { get; set; }
+
+        /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="verbs">Verbs</param>
-        public ConsoleCommandAttribute(params string[] verbs)
+        public ConsoleCommandAttribute(string verbs)
         {
-            Verbs = verbs.Select(u => u.ToLowerInvariant()).ToArray();
+            Verbs = verbs.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(u => u.ToLowerInvariant()).ToArray();
         }
     }
 }

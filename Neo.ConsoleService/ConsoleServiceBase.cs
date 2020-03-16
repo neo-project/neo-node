@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -150,8 +149,7 @@ namespace Neo.ConsoleService
         /// <summary>
         /// Process "help" command
         /// </summary>
-        [Category("Base Commands")]
-        [ConsoleCommand("help")]
+        [ConsoleCommand("help", Category = "Base Commands")]
         protected void OnHelpCommand(string key)
         {
             var withHelp = new List<ConsoleCommandMethod>();
@@ -252,9 +250,7 @@ namespace Neo.ConsoleService
         /// <summary>
         /// Process "clear" command
         /// </summary>
-        [Category("Base Commands")]
-        [Description("Clear is used in order to clean the console output.")]
-        [ConsoleCommand("clear")]
+        [ConsoleCommand("clear", Category = "Base Commands", Description = "Clear is used in order to clean the console output.")]
         protected void OnClear()
         {
             Console.Clear();
@@ -263,9 +259,7 @@ namespace Neo.ConsoleService
         /// <summary>
         /// Process "version" command
         /// </summary>
-        [Category("Base Commands")]
-        [Description("Show the current version.")]
-        [ConsoleCommand("version")]
+        [ConsoleCommand("version", Category = "Base Commands", Description = "Show the current version.")]
         protected void OnVersion()
         {
             Console.WriteLine(Assembly.GetEntryAssembly().GetName().Version);
@@ -274,9 +268,7 @@ namespace Neo.ConsoleService
         /// <summary>
         /// Process "exit" command
         /// </summary>
-        [Category("Base Commands")]
-        [Description("Exit the node.")]
-        [ConsoleCommand("exit")]
+        [ConsoleCommand("exit", Category = "Base Commands", Description = "Exit the node.")]
         protected void OnExit()
         {
             _running = false;
@@ -499,7 +491,7 @@ namespace Neo.ConsoleService
 
                     // Add command
 
-                    var command = new ConsoleCommandMethod(instance, method, attribute.Verbs);
+                    var command = new ConsoleCommandMethod(instance, method, attribute);
 
                     if (!_verbs.TryGetValue(command.Key, out var commands))
                     {

@@ -8,7 +8,6 @@ using Neo.SmartContract.Native;
 using Neo.VM;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 
 namespace Neo.CLI
@@ -20,8 +19,7 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="filePath">File path</param>
         /// <param name="manifestPath">Manifest path</param>
-        [Category("Contract Commands")]
-        [ConsoleCommand("deploy")]
+        [ConsoleCommand("deploy", Category = "Contract Commands")]
         private void OnDeployCommand(string filePath, string manifestPath = null)
         {
             if (NoWallet()) return;
@@ -50,8 +48,7 @@ namespace Neo.CLI
         /// <param name="operation">Operation</param>
         /// <param name="contractParameters">Contract parameters</param>
         /// <param name="witnessAddress">Witness address</param>
-        [Category("Contract Commands")]
-        [ConsoleCommand("invoke")]
+        [ConsoleCommand("invoke", Category = "Contract Commands")]
         private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160[] witnessAddress = null)
         {
             List<ContractParameter> parameters = new List<ContractParameter>();

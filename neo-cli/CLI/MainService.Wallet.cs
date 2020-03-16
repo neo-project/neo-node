@@ -12,7 +12,6 @@ using Neo.Wallets;
 using Neo.Wallets.NEP6;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Numerics;
@@ -26,8 +25,7 @@ namespace Neo.CLI
         /// Process "open wallet" command
         /// </summary>
         /// <param name="path">Path</param>
-        [Category("Wallet Commands")]
-        [ConsoleCommand("open", "wallet")]
+        [ConsoleCommand("open wallet", Category = "Wallet Commands")]
         private void OnOpenWallet(string path)
         {
             if (!File.Exists(path))
@@ -54,8 +52,7 @@ namespace Neo.CLI
         /// <summary>
         /// Process "close wallet" command
         /// </summary>
-        [Category("Wallet Commands")]
-        [ConsoleCommand("close", "wallet")]
+        [ConsoleCommand("close wallet", Category = "Wallet Commands")]
         private void OnCloseWalletCommand()
         {
             if (CurrentWallet == null)
@@ -70,8 +67,7 @@ namespace Neo.CLI
         /// <summary>
         /// Process "upgrade wallet" command
         /// </summary>
-        [Category("Wallet Commands")]
-        [ConsoleCommand("upgrade", "wallet")]
+        [ConsoleCommand("upgrade wallet", Category = "Wallet Commands")]
         private void OnUpgradeWalletCommand(string path)
         {
             if (Path.GetExtension(path).ToLowerInvariant() != ".db3")
@@ -104,8 +100,7 @@ namespace Neo.CLI
         /// Process "create address" command
         /// </summary>
         /// <param name="count">Count</param>
-        [Category("Wallet Commands")]
-        [ConsoleCommand("create", "address")]
+        [ConsoleCommand("create address", Category = "Wallet Commands")]
         private void OnCreateAddressCommand(ushort count = 1)
         {
             if (NoWallet()) return;
@@ -145,8 +140,7 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="path">Path</param>
         /// <param name="scriptHash">ScriptHash</param>
-        [Category("Wallet Commands")]
-        [ConsoleCommand("export", "key")]
+        [ConsoleCommand("export key", Category = "Wallet Commands")]
         private void OnExportKeyCommand(string path = null, UInt160 scriptHash = null)
         {
             if (NoWallet()) return;
@@ -181,8 +175,7 @@ namespace Neo.CLI
         /// <summary>
         /// Process "create wallet" command
         /// </summary>
-        [Category("Wallet Commands")]
-        [ConsoleCommand("create", "wallet")]
+        [ConsoleCommand("create wallet", Category = "Wallet Commands")]
         private void OnCreateWalletCommand(string path)
         {
             string password = ReadUserInput("password", true);
@@ -212,8 +205,7 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="m">Required signatures</param>
         /// <param name="publicKeys">Public keys</param>
-        [Category("Wallet Commands")]
-        [ConsoleCommand("import", "multisigaddress")]
+        [ConsoleCommand("import multisigaddress", Category = "Wallet Commands")]
         private void OnImportMultisigAddress(ushort m, ECPoint[] publicKeys)
         {
             if (NoWallet()) return;
@@ -239,8 +231,7 @@ namespace Neo.CLI
         /// <summary>
         /// Process "import key" command
         /// </summary>
-        [Category("Wallet Commands")]
-        [ConsoleCommand("import", "key")]
+        [ConsoleCommand("import key", Category = "Wallet Commands")]
         private void OnImportKeyCommand(string wifOrFile)
         {
             byte[] prikey = null;
@@ -296,8 +287,7 @@ namespace Neo.CLI
         /// <summary>
         /// Process "list address" command
         /// </summary>
-        [Category("Wallet Commands")]
-        [ConsoleCommand("list", "address")]
+        [ConsoleCommand("list address", Category = "Wallet Commands")]
         private void OnListAddressCommand()
         {
             if (NoWallet()) return;
@@ -329,8 +319,7 @@ namespace Neo.CLI
         /// <summary>
         /// Process "list asset" command
         /// </summary>
-        [Category("Wallet Commands")]
-        [ConsoleCommand("list", "asset")]
+        [ConsoleCommand("list asset", Category = "Wallet Commands")]
         private void OnListAssetCommand()
         {
             if (NoWallet()) return;
@@ -351,8 +340,7 @@ namespace Neo.CLI
         /// <summary>
         /// Process "list key" command
         /// </summary>
-        [Category("Wallet Commands")]
-        [ConsoleCommand("list", "key")]
+        [ConsoleCommand("list key", Category = "Wallet Commands")]
         private void OnListKeyCommand()
         {
             if (NoWallet()) return;
@@ -366,8 +354,7 @@ namespace Neo.CLI
         /// Process "sign" command
         /// </summary>
         /// <param name="jsonObjectToSign">Json object to sign</param>
-        [Category("Wallet Commands")]
-        [ConsoleCommand("sign")]
+        [ConsoleCommand("sign", Category = "Wallet Commands")]
         private void OnSignCommand(JObject jsonObjectToSign)
         {
             if (NoWallet()) return;
@@ -399,8 +386,7 @@ namespace Neo.CLI
         /// <param name="asset">Asset id</param>
         /// <param name="to">To</param>
         /// <param name="amount">Amount</param>
-        [Category("Wallet Commands")]
-        [ConsoleCommand("send")]
+        [ConsoleCommand("send", Category = "Wallet Commands")]
         private void OnSendCommand(UInt160 asset, UInt160 to, string amount)
         {
             if (NoWallet()) return;
@@ -457,8 +443,7 @@ namespace Neo.CLI
         /// <summary>
         /// Process "show gas" command
         /// </summary>
-        [Category("Wallet Commands")]
-        [ConsoleCommand("show", "gas")]
+        [ConsoleCommand("show gas", Category = "Wallet Commands")]
         private void OnShowGasCommand()
         {
             if (NoWallet()) return;

@@ -1,7 +1,6 @@
 using Neo.ConsoleService;
 using Neo.Ledger;
 using System;
-using System.ComponentModel;
 
 namespace Neo.CLI
 {
@@ -13,8 +12,7 @@ namespace Neo.CLI
         /// <param name="start">Start</param>
         /// <param name="count">Number of blocks</param>
         /// <param name="path">Path</param>
-        [Category("Blockchain Commands")]
-        [ConsoleCommand("export", "blocks")]
+        [ConsoleCommand("export blocks", Category = "Blockchain Commands")]
         private void OnExportBlocksStartCountCommand(uint start, uint count = uint.MaxValue, string path = null)
         {
             if (Blockchain.Singleton.Height < start)

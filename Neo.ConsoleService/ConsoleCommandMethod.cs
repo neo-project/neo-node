@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
 
@@ -44,23 +43,13 @@ namespace Neo.ConsoleService
         /// <param name="instance">Instance</param>
         /// <param name="method">Method</param>
         /// <param name="verbs">Verbs</param>
-        public ConsoleCommandMethod(object instance, MethodInfo method, string[] verbs)
+        public ConsoleCommandMethod(object instance, MethodInfo method, ConsoleCommandAttribute attribute)
         {
             Method = method;
             Instance = instance;
-            Verbs = verbs;
-
-            var category = method.GetCustomAttribute<CategoryAttribute>();
-            if (category != null)
-            {
-                HelpCategory = category.Category;
-            }
-
-            var desc = method.GetCustomAttribute<DescriptionAttribute>();
-            if (desc != null)
-            {
-                HelpMessage = desc.Description;
-            }
+            Verbs = attribute.Verbs;
+            HelpCategory = attribute.Category;
+            HelpMessage = attribute.Description;
         }
 
         /// <summary>
