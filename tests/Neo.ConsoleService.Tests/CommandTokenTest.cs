@@ -1,8 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Neo.ConsoleService;
 using System.Linq;
 
-namespace neo_cli.Tests
+namespace Neo.ConsoleService.Tests
 {
     [TestClass]
     public class CommandTokenTest

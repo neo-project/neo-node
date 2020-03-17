@@ -1,3 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("neo-cli.Tests")]
+[assembly: InternalsVisibleTo("Neo.ConsoleService.Tests")]
