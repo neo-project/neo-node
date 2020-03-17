@@ -87,8 +87,8 @@ namespace Neo.CLI
             });
 
             RegisterCommandHander<string, UInt256>(false, (str) => UInt256.Parse(str));
-            RegisterCommandHander<string[], UInt256[]>(false, (str) => str.Select(u => UInt256.Parse(u.Trim())).ToArray());
-            RegisterCommandHander<string[], UInt160[]>(false, (arr) =>
+            RegisterCommandHander<string[], UInt256[]>((str) => str.Select(u => UInt256.Parse(u.Trim())).ToArray());
+            RegisterCommandHander<string[], UInt160[]>((arr) =>
             {
                 return arr.Select(str =>
                 {
@@ -112,9 +112,9 @@ namespace Neo.CLI
                 .ToArray();
             });
 
-            RegisterCommandHander<string[], ECPoint[]>(false, (str) => str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray());
-            RegisterCommandHander<string, JObject>(false, (str) => JObject.Parse(str));
-            RegisterCommandHander<JObject, JArray>(false, (obj) => (JArray)obj);
+            RegisterCommandHander<string[], ECPoint[]>((str) => str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray());
+            RegisterCommandHander<string, JObject>((str) => JObject.Parse(str));
+            RegisterCommandHander<JObject, JArray>((obj) => (JArray)obj);
 
             RegisterCommand(this);
 
