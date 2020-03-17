@@ -31,7 +31,7 @@ jobs:
     - name: Run Neo.ConsoleService Tests
       run: |
         find tests -name *.csproj | xargs -I % dotnet add % package coverlet.msbuild
-        dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:CoverletOutput=${GITHUB_WORKSPACE}/coverage/lcov
+        dotnet test tests/Neo.ConsoleService.Tests/Neo.ConsoleService.Tests.csproj /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:CoverletOutput=${GITHUB_WORKSPACE}/coverage/lcov
     - name: Coveralls
       uses: coverallsapp/github-action@master
       with:
