@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Neo.ConsoleService
 {
-    public abstract class CommandToken
+    internal abstract class CommandToken
     {
         /// <summary>
         /// Offset

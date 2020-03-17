@@ -1,6 +1,6 @@
 namespace Neo.ConsoleService
 {
-    public enum CommandTokenType : byte
+    internal enum CommandTokenType : byte
     {
         String,
         Space,

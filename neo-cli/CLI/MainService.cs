@@ -66,10 +66,8 @@ namespace Neo.CLI
         /// </summary>
         public MainService() : base()
         {
-            RegisterCommandHander(typeof(UInt160), (args, canConsumeAll) =>
+            RegisterCommandHander<string, UInt160>(false, (str) =>
             {
-                var str = ParseArgs<string>(args, false);
-
                 switch (str.ToLowerInvariant())
                 {
                     case "neo": return SmartContract.Native.NativeContract.NEO.Hash;
@@ -88,22 +86,11 @@ namespace Neo.CLI
                 return str.ToScriptHash();
             });
 
-            RegisterCommandHander(typeof(UInt256), (args, canConsumeAll) =>
+            RegisterCommandHander<string, UInt256>(false, (str) => UInt256.Parse(str));
+            RegisterCommandHander<string[], UInt256[]>(false, (str) => str.Select(u => UInt256.Parse(u.Trim())).ToArray());
+            RegisterCommandHander<string[], UInt160[]>(false, (arr) =>
             {
-                var str = ParseArgs<string>(args, false);
-                return UInt256.Parse(str);
-            });
-
-            RegisterCommandHander(typeof(UInt256[]), (args, canConsumeAll) =>
-            {
-                var str = ParseArgs<string[]>(args, canConsumeAll);
-                return str.Select(u => UInt256.Parse(u.Trim())).ToArray();
-            });
-
-            RegisterCommandHander(typeof(UInt160[]), (args, canConsumeAll) =>
-            {
-                var str = ParseArgs<string[]>(args, canConsumeAll);
-                return str.Select(str =>
+                return arr.Select(str =>
                 {
                     switch (str.ToLowerInvariant())
                     {
@@ -125,23 +112,9 @@ namespace Neo.CLI
                 .ToArray();
             });
 
-            RegisterCommandHander(typeof(ECPoint[]), (args, canConsumeAll) =>
-            {
-                var str = ParseArgs<string[]>(args, canConsumeAll);
-                return str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray();
-            });
-
-            RegisterCommandHander(typeof(JObject), (args, canConsumeAll) =>
-            {
-                var str = ParseArgs<string>(args, canConsumeAll);
-                return JObject.Parse(str);
-            });
-
-            RegisterCommandHander(typeof(JArray), (args, canConsumeAll) =>
-            {
-                var obj = ParseArgs<JObject>(args, canConsumeAll);
-                return (JArray)obj;
-            });
+            RegisterCommandHander<string[], ECPoint[]>(false, (str) => str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray());
+            RegisterCommandHander<string, JObject>(false, (str) => JObject.Parse(str));
+            RegisterCommandHander<JObject, JArray>(false, (obj) => (JArray)obj);
 
             RegisterCommand(this);
 

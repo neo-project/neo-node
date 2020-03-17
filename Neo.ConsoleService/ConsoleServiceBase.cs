@@ -139,11 +139,6 @@ namespace Neo.ConsoleService
             return false;
         }
 
-        protected T ParseArgs<T>(List<CommandToken> args, bool canConsumeAll)
-        {
-            return (T)_handlers[typeof(T)](args, canConsumeAll);
-        }
-
         #region Commands
 
         /// <summary>
@@ -406,12 +401,12 @@ namespace Neo.ConsoleService
         {
             // Register self commands
 
-            RegisterCommandHander(typeof(string), (args, canConsumeAll) =>
+            RegisterCommandHander<string>((args, canConsumeAll) =>
             {
                 return CommandToken.ReadString(args, canConsumeAll);
             });
 
-            RegisterCommandHander(typeof(string[]), (args, canConsumeAll) =>
+            RegisterCommandHander<string[]>((args, canConsumeAll) =>
             {
                 if (canConsumeAll)
                 {
@@ -425,45 +420,37 @@ namespace Neo.ConsoleService
                 }
             });
 
-            RegisterCommandHander(typeof(byte), (args, canConsumeAll) =>
-            {
-                var str = (string)_handlers[typeof(string)](args, false);
-                return byte.Parse(str);
-            });
-
-            RegisterCommandHander(typeof(bool), (args, canConsumeAll) =>
-            {
-                var str = ((string)_handlers[typeof(string)](args, false)).ToLowerInvariant();
-                return str == "1" || str == "yes" || str == "y" || bool.Parse(str);
-            });
-
-            RegisterCommandHander(typeof(ushort), (args, canConsumeAll) =>
-            {
-                var str = (string)_handlers[typeof(string)](args, false);
-                return ushort.Parse(str);
-            });
-
-            RegisterCommandHander(typeof(uint), (args, canConsumeAll) =>
-            {
-                var str = (string)_handlers[typeof(string)](args, false);
-                return uint.Parse(str);
-            });
-
-            RegisterCommandHander(typeof(IPAddress), (args, canConsumeAll) =>
-            {
-                var str = (string)_handlers[typeof(string)](args, false);
-                return IPAddress.Parse(str);
-            });
+            RegisterCommandHander<string, byte>(false, (str) => byte.Parse(str));
+            RegisterCommandHander<string, bool>(false, (str) => str == "1" || str == "yes" || str == "y" || bool.Parse(str));
+            RegisterCommandHander<string, ushort>(false, (str) => ushort.Parse(str));
+            RegisterCommandHander<string, uint>(false, (str) => uint.Parse(str));
+            RegisterCommandHander<string, IPAddress>(false, (str) => IPAddress.Parse(str));
         }
 
         /// <summary>
         /// Register command handler
         /// </summary>
-        /// <param name="type">Type</param>
+        /// <typeparam name="TRet">Return type</typeparam>
         /// <param name="handler">Handler</param>
-        public void RegisterCommandHander(Type type, Func<List<CommandToken>, bool, object> handler)
+        private void RegisterCommandHander<TRet>(Func<List<CommandToken>, bool, object> handler)
         {
-            _handlers[type] = handler;
+            _handlers[typeof(TRet)] = handler;
+        }
+
+        /// <summary>
+        /// Register command handler
+        /// </summary>
+        /// <typeparam name="T">Base type</typeparam>
+        /// <typeparam name="TRet">Return type</typeparam>
+        /// <param name="canConsumeAll">Can consume all</param>
+        /// <param name="handler">Handler</param>
+        public void RegisterCommandHander<T, TRet>(bool canConsumeAll, Func<T, object> handler)
+        {
+            _handlers[typeof(TRet)] = (args, cosumeAll) =>
+            {
+                var value = (T)_handlers[typeof(T)](args, canConsumeAll);
+                return handler(value);
+            };
         }
 
         /// <summary>
