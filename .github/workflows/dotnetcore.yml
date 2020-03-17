@@ -28,6 +28,14 @@ jobs:
       run: sudo apt-get install libleveldb-dev expect
     - name: Run tests with expect
       run: expect ./.github/workflows/test-neo-cli.expect
+    - name: Test
+      run: |
+        find tests -name *.csproj | xargs -I % dotnet add % package coverlet.msbuild
+        dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:CoverletOutput=${GITHUB_WORKSPACE}/coverage/lcov
+    - name: Coveralls
+      uses: coverallsapp/github-action@master
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
 
   Test_GUI:
     runs-on: windows-latest
