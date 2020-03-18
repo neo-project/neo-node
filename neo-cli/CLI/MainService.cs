@@ -728,7 +728,7 @@ namespace Neo.CLI
             Console.WriteLine("\tcreate address [n=1]");
             Console.WriteLine("\timport key <wif|path>");
             Console.WriteLine("\texport key [address] [path]");
-            Console.WriteLine("\timport multisigaddress m pubkeys...");
+            Console.WriteLine("\timport multisigaddress <m> <pubkey1 pubkey2 ...>");
             Console.WriteLine("\tsend <id|alias> <address> <value>");
             Console.WriteLine("\tsign <jsonObjectToSign>");
             Console.WriteLine("Contract Commands:");
