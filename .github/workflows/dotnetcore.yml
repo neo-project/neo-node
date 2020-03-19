@@ -17,31 +17,31 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
     - name: Check format
-      if: runner.os == "Linux"
+      if: runner.os == 'Linux'
       run: |
         dotnet tool install --version 3.2.111002 --tool-path ./ dotnet-format --add-source https://dotnet.myget.org/F/format/api/v3/index.json
         ./dotnet-format --check --dry-run -v diagnostic
     - name: Build CLI
-      if: runner.os == "Linux"
+      if: runner.os == 'Linux'
       run: |
         dotnet publish -o ./out -c Release neo-cli
         find ./out -name 'config.json' | xargs perl -pi -e 's|LevelDBStore|MemoryStore|g'
     - name: Build GUI
-      if: runner.os == "Windows"
+      if: runner.os == 'Windows'
       run: dotnet build -c Release neo-gui
     - name: Install dependencies
-      if: runner.os == "Linux"
+      if: runner.os == 'Linux'
       run: sudo apt-get install libleveldb-dev expect
     - name: Run tests with expect
-      if: runner.os == "Linux"
+      if: runner.os == 'Linux'
       run: expect ./.github/workflows/test-neo-cli.expect
     - name: Run Unit Tests
-      if: runner.os == "Windows"
+      if: runner.os == 'Windows'
       run: |
         find tests -name *.csproj | xargs -I % dotnet add % package coverlet.msbuild
         dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:CoverletOutput=${GITHUB_WORKSPACE}/coverage/lcov
     - name: Coveralls
-      if: runner.os == "Windows"
+      if: runner.os == 'Windows'
       uses: coverallsapp/github-action@master
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
