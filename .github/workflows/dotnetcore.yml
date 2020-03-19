@@ -41,7 +41,7 @@ jobs:
     - name: Run Unit Tests
       if: runner.os == 'Windows'
       run: |
-        forfiles /p tests /m *.csproj /s /c "dotnet add @FILE package coverlet.msbuild"
+        forfiles /p tests /m *.csproj /s /c "dotnet add @RELPATH package coverlet.msbuild"
         dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:CoverletOutput=${GITHUB_WORKSPACE}/coverage/lcov
     - name: Coveralls
       if: runner.os == 'Windows'
