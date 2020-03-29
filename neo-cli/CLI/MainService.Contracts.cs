@@ -6,14 +6,47 @@ using Neo.Persistence;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;
+using Neo.Wallets;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 
 namespace Neo.CLI
 {
     partial class MainService
     {
+        private class AttachAsset
+        {
+            public AssetDescriptor Asset;
+            public BigDecimal Amount;
+
+            /// <summary>
+            /// Parse from string
+            ///     Format: neo=1   gas=2.456   0x0..=123.5
+            /// </summary>
+            /// <param name="input">Input</param>
+            /// <returns></returns>
+            internal static AttachAsset Parse(string input)
+            {
+                var split = input.Split('=', StringSplitOptions.RemoveEmptyEntries);
+                if (split.Length != 2) throw new FormatException("Format expected: neo=1");
+
+                var ret = new AttachAsset
+                {
+                    Asset = (split[0].ToLowerInvariant()) switch
+                    {
+                        "neo" => new AssetDescriptor(NativeContract.NEO.Hash),
+                        "gas" => new AssetDescriptor(NativeContract.GAS.Hash),
+                        _ => new AssetDescriptor(UInt160.Parse(split[0])),
+                    }
+                };
+
+                ret.Amount = BigDecimal.Parse(split[1], ret.Asset.Decimals);
+                return ret;
+            }
+        }
+
         /// <summary>
         /// Process "deploy" command
         /// </summary>
@@ -48,8 +81,9 @@ namespace Neo.CLI
         /// <param name="operation">Operation</param>
         /// <param name="contractParameters">Contract parameters</param>
         /// <param name="witnessAddress">Witness address</param>
+        /// <param name="attach">Attach</param>
         [ConsoleCommand("invoke", Category = "Contract Commands")]
-        private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160[] witnessAddress = null)
+        private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160[] witnessAddress = null, AttachAsset[] attach = null)
         {
             List<ContractParameter> parameters = new List<ContractParameter>();
             List<Cosigner> signCollection = new List<Cosigner>();
@@ -95,6 +129,54 @@ namespace Neo.CLI
 
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
             {
+                if (attach != null)
+                {
+                    if (NoWallet()) return;
+
+                    foreach (var entry in attach.GroupBy(u => u.Asset.AssetId))
+                    {
+                        // Get amount
+
+                        var amount = BigInteger.Zero;
+                        foreach (var am in entry) amount += am.Amount.Value;
+                        
+                        // Find a valid sender
+
+                        var tempTx = CurrentWallet.MakeTransaction(new[]
+                        {
+                            new TransferOutput
+                            {
+                                AssetId = entry.Key,
+                                Value = new BigDecimal(amount, entry.First().Asset.Decimals),
+                                ScriptHash = scriptHash
+                            }
+                        });
+
+                        if (tempTx == null)
+                        {
+                            Console.WriteLine("Insufficient funds of: " + entry.First().Asset.AssetName);
+                            return;
+                        }
+
+                        // Append at the begining the right script
+
+                        scriptBuilder.EmitAppCall(entry.Key, "transfer", tempTx.Sender, scriptHash, amount);
+
+                        // Compute new cosigners
+
+                        signCollection.Add(new Cosigner()
+                        {
+                            Account = tempTx.Sender,
+                            AllowedContracts = new UInt160[] { entry.Key },
+                            Scopes = WitnessScope.CustomContracts
+                        });
+                    }
+
+                    // Add new cosigners
+
+                    tx.Cosigners = signCollection.ToArray();
+                }
+
                 scriptBuilder.EmitAppCall(scriptHash, operation, parameters.ToArray());
                 tx.Script = scriptBuilder.ToArray();
                 Console.WriteLine($"Invoking script with: '{tx.Script.ToHexString()}'");

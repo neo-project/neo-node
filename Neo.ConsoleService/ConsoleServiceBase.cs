@@ -416,7 +416,7 @@ namespace Neo.ConsoleService
                 }
                 else
                 {
-                    return CommandToken.ReadString(args, false).Split(',', ' ');
+                    return CommandToken.ReadString(args, false).Split(',', ' ', StringSplitOptions.RemoveEmptyEntries);
                 }
             });
 
