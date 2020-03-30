@@ -17,14 +17,13 @@ namespace Neo.CLI
         [ConsoleCommand("parse", Category = "Base Commands", Description = "Parse a value to its possible conversions.")]
         private void OnParseCommand(string value)
         {
-            var input = value;
             var parseFunctions = new Dictionary<string, Func<string, string>>()
             {
                 { "Address to ScriptHash", AddressToScripthash },
                 { "Address to Base64", AddressToBase64 },
                 { "ScriptHash to Address", ScripthashToAddress },
                 { "Base64 to Address", Base64ToAddress },
-                { "Base64 to String", Base64ToStr },
+                { "Base64 to String", Base64ToString },
                 { "Base64 to Big Integer", Base64ToNumber },
                 { "Big Integer to Hex String", NumberToHex },
                 { "Big Integer to Base64", NumberToBase64 },
@@ -41,7 +40,7 @@ namespace Neo.CLI
                 try
                 {
                     var parseMethod = pair.Value;
-                    var result = parseMethod(input);
+                    var result = parseMethod(value);
 
                     Console.WriteLine($"{pair.Key,-30}\t{result}");
                     any = true;
@@ -54,7 +53,7 @@ namespace Neo.CLI
 
             if (!any)
             {
-                Console.WriteLine($"Was not possible to convert: '{input}'");
+                Console.WriteLine($"Was not possible to convert: '{value}'");
             }
         }
 
@@ -77,6 +76,11 @@ namespace Neo.CLI
                 var clearHexString = ClearHexString(hexString);
                 var bytes = clearHexString.HexToBytes();
                 var utf8String = Encoding.UTF8.GetString(bytes);
+
+                if (IsNullOrBlank(utf8String) || !IsASCII(utf8String))
+                {
+                    throw new ArgumentException();
+                }
 
                 return utf8String;
             }
@@ -216,7 +220,7 @@ namespace Neo.CLI
         {
             try
             {
-                byte[] bytearray = Encoding.ASCII.GetBytes(strParam);
+                byte[] bytearray = Encoding.UTF8.GetBytes(strParam);
                 string base64 = Convert.ToBase64String(bytearray.AsSpan());
                 return base64;
             }
@@ -449,12 +453,18 @@ namespace Neo.CLI
         /// <exception cref="ArgumentException">
         /// Throw when the string does not represent an Base64 value or when
         /// it is not possible to parse the Base64 value to string value.
-        private string Base64ToStr(string bytearray)
+        private string Base64ToString(string bytearray)
         {
             try
             {
                 byte[] result = Convert.FromBase64String(bytearray);
-                string str = Encoding.ASCII.GetString(result);
+                string str = Encoding.UTF8.GetString(result);
+
+                if (IsNullOrBlank(str) || !IsASCII(str))
+                {
+                    throw new ArgumentException();
+                }
+
                 return str;
             }
             catch (FormatException)
@@ -499,6 +509,36 @@ namespace Neo.CLI
             {
                 throw new ArgumentException();
             }
+        }
+
+        /// <summary>
+        /// Checks if all characters in the string are ASCII encoded.
+        /// </summary>
+        /// <param name="value">
+        /// The string to test
+        /// </param>
+        /// <returns>
+        /// Returns false if the string contains at least one character that is not ASCII encoded;
+        /// otherwise, returns true.
+        /// </returns>
+        private bool IsASCII(string value)
+        {
+            return Encoding.UTF8.GetByteCount(value) == value.Length;
+        }
+
+        /// <summary>
+        /// Checks if the string is null or cannot be printed.
+        /// </summary>
+        /// <param name="value">
+        /// The string to test
+        /// </param>
+        /// <returns>
+        /// Returns false if the string is null, or is empty, or contains the character '\0' (null character);
+        /// otherwise, returns true.
+        /// </returns>
+        private bool IsNullOrBlank(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) || value.Contains('\0');
         }
     }
 }
