@@ -8,7 +8,10 @@ env:
 jobs:
 
   Test:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout
       uses: actions/checkout@v1
@@ -17,26 +20,29 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
     - name: Check format
+      if: runner.os == 'Linux'
       run: |
         dotnet tool install --version 3.2.111002 --tool-path ./ dotnet-format --add-source https://dotnet.myget.org/F/format/api/v3/index.json
         ./dotnet-format --check --dry-run -v diagnostic
-    - name: Build
+    - name: Build CLI
+      if: runner.os == 'Linux'
       run: |
         dotnet publish -o ./out -c Release neo-cli
         find ./out -name 'config.json' | xargs perl -pi -e 's|LevelDBStore|MemoryStore|g'
     - name: Install dependencies
+      if: runner.os == 'Linux'
       run: sudo apt-get install libleveldb-dev expect
     - name: Run tests with expect
+      if: runner.os == 'Linux'
       run: expect ./.github/workflows/test-neo-cli.expect
-
-  Test_GUI:
-    runs-on: windows-latest
-    steps:
-      - name: Chectout
-        uses: actions/checkout@v1
-      - name: Setup .NET Core
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-      - name: Build
-        run: dotnet build -c Release neo-gui
+    - name: Run Unit Tests
+      if: runner.os == 'Windows'
+      run: |
+        forfiles /p tests /m *.csproj /s /c "cmd /c dotnet add @PATH package coverlet.msbuild"
+        dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:CoverletOutput=${GITHUB_WORKSPACE}/coverage/lcov
+    - name: Coveralls
+      if: runner.os == 'Windows'
+      uses: coverallsapp/github-action@master
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        path-to-lcov: \coverage\lcov.info

@@ -1,10 +1,10 @@
 using System.ServiceProcess;
 
-namespace Neo.Services
+namespace Neo.ConsoleService
 {
     internal class ServiceProxy : ServiceBase
     {
-        private ConsoleServiceBase service;
+        private readonly ConsoleServiceBase service;
 
         public ServiceProxy(ConsoleServiceBase service)
         {
