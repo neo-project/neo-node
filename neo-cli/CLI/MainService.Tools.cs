@@ -77,7 +77,7 @@ namespace Neo.CLI
                 var bytes = clearHexString.HexToBytes();
                 var utf8String = Encoding.UTF8.GetString(bytes);
 
-                if (IsNullOrBlank(utf8String) || !IsASCII(utf8String))
+                if (!IsPrintable(utf8String))
                 {
                     throw new ArgumentException();
                 }
@@ -458,14 +458,14 @@ namespace Neo.CLI
             try
             {
                 byte[] result = Convert.FromBase64String(bytearray);
-                string str = Encoding.UTF8.GetString(result);
+                string utf8string = Encoding.UTF8.GetString(result);
 
-                if (IsNullOrBlank(str) || !IsASCII(str))
+                if (!IsPrintable(utf8string))
                 {
                     throw new ArgumentException();
                 }
 
-                return str;
+                return utf8string;
             }
             catch (FormatException)
             {
@@ -512,33 +512,18 @@ namespace Neo.CLI
         }
 
         /// <summary>
-        /// Checks if all characters in the string are ASCII encoded.
-        /// </summary>
-        /// <param name="value">
-        /// The string to test
-        /// </param>
-        /// <returns>
-        /// Returns false if the string contains at least one character that is not ASCII encoded;
-        /// otherwise, returns true.
-        /// </returns>
-        private bool IsASCII(string value)
-        {
-            return Encoding.UTF8.GetByteCount(value) == value.Length;
-        }
-
-        /// <summary>
         /// Checks if the string is null or cannot be printed.
         /// </summary>
         /// <param name="value">
         /// The string to test
         /// </param>
         /// <returns>
-        /// Returns false if the string is null, or is empty, or contains the character '\0' (null character);
+        /// Returns false if the string is null, or if it is empty, or if each character cannot be printed;
         /// otherwise, returns true.
         /// </returns>
-        private bool IsNullOrBlank(string value)
+        private bool IsPrintable(string value)
         {
-            return string.IsNullOrWhiteSpace(value) || value.Contains('\0');
+            return !string.IsNullOrWhiteSpace(value) && value.Any(c => !char.IsControl(c));
         }
     }
 }
