@@ -1,5 +1,5 @@
 using System;
-using Neo.CommandParser;
+using Neo.ConsoleService;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
 using Neo.SmartContract;
@@ -16,7 +16,7 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="desiredCount"></param>
         /// <returns></returns>
-        [ConsoleCommand("show", "last-transactions", HelpCategory = "Show Commands")]
+        [ConsoleCommand("show last-transactions", Category = "Show Commands")]
         private void OnShowLastTransactions(uint desiredCount)
         {
             if (desiredCount < 1)
@@ -71,7 +71,7 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="contractHash"></param>
         /// <returns></returns>
-        [ConsoleCommand("show", "contract", HelpCategory = "Show Commands")]
+        [ConsoleCommand("show contract", Category = "Show Commands")]
         private void OnShowContract(string contractHash)
         {
             if (knownSmartContracts.ContainsKey(contractHash))
@@ -148,7 +148,7 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="transactionHash"></param>
         /// <returns></returns>
-        [ConsoleCommand("show", "transaction", HelpCategory = "Show Commands")]
+        [ConsoleCommand("show transaction", Category = "Show Commands")]
         private void OnShowTransaction(UInt256 transactionHash)
         {
             using (var snapshot = Blockchain.Singleton.GetSnapshot())
@@ -200,7 +200,7 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="blockHashOrId"></param>
         /// <returns></returns>
-        [ConsoleCommand("show", "block", HelpCategory = "Show Commands")]
+        [ConsoleCommand("show block", Category = "Show Commands")]
         private void OnShowBlock(string blockHashOrId)
         {
             if (UInt256.TryParse(blockHashOrId, out var blockHash))

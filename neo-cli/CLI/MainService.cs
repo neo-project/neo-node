@@ -1,15 +1,15 @@
 using Akka.Actor;
 using Microsoft.Extensions.Configuration;
+using Neo.ConsoleService;
+using Neo.Cryptography.ECC;
 using Neo.IO;
+using Neo.IO.Json;
 using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.Plugins;
-using Neo.Services;
 using Neo.SmartContract;
 using Neo.SmartContract.Manifest;
-using Neo.SmartContract.Native;
-using Neo.SmartContract.Native.Tokens;
 using Neo.VM;
 using Neo.Wallets;
 using Neo.Wallets.NEP6;
@@ -20,7 +20,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
-using System.Security.Cryptography;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -75,12 +75,77 @@ namespace Neo.CLI
         /// </summary>
         public MainService() : base()
         {
+            RegisterCommandHander<string, UInt160>(false, (str) =>
+            {
+                switch (str.ToLowerInvariant())
+                {
+                    case "neo": return SmartContract.Native.NativeContract.NEO.Hash;
+                    case "gas": return SmartContract.Native.NativeContract.GAS.Hash;
+                }
+
+                // Try to parse as UInt160
+
+                if (UInt160.TryParse(str, out var addr))
+                {
+                    return addr;
+                }
+
+                // Accept wallet format
+
+                return str.ToScriptHash();
+            });
+
+            RegisterCommandHander<string, UInt256>(false, (str) => UInt256.Parse(str));
+            RegisterCommandHander<string[], UInt256[]>((str) => str.Select(u => UInt256.Parse(u.Trim())).ToArray());
+            RegisterCommandHander<string[], UInt160[]>((arr) =>
+            {
+                return arr.Select(str =>
+                {
+                    switch (str.ToLowerInvariant())
+                    {
+                        case "neo": return SmartContract.Native.NativeContract.NEO.Hash;
+                        case "gas": return SmartContract.Native.NativeContract.GAS.Hash;
+                    }
+
+                    // Try to parse as UInt160
+
+                    if (UInt160.TryParse(str, out var addr))
+                    {
+                        return addr;
+                    }
+
+                    // Accept wallet format
+
+                    return str.ToScriptHash();
+                })
+                .ToArray();
+            });
+
+            RegisterCommandHander<string[], ECPoint[]>((str) => str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray());
+            RegisterCommandHander<string, JObject>((str) => JObject.Parse(str));
+            RegisterCommandHander<JObject, JArray>((obj) => (JArray)obj);
+
+            RegisterCommand(this);
+
             foreach (var plugin in Plugin.Plugins)
             {
                 // Register plugins commands
 
-                RegisterCommand(plugin);
+                RegisterCommand(plugin, plugin.Name);
             }
+        }
+
+        public override void RunConsole()
+        {
+            Console.ForegroundColor = ConsoleColor.DarkGreen;
+
+            var cliV = Assembly.GetAssembly(typeof(Program)).GetVersion();
+            var neoV = Assembly.GetAssembly(typeof(NeoSystem)).GetVersion();
+            var vmV = Assembly.GetAssembly(typeof(ExecutionEngine)).GetVersion();
+            Console.WriteLine($"{ServiceName} v{cliV}  -  NEO v{neoV}  -  NEO-VM v{vmV}");
+            Console.WriteLine();
+
+            base.RunConsole();
         }
 
         public void CreateWallet(string path, string password)
@@ -331,13 +396,13 @@ namespace Neo.CLI
             }
         }
 
-        protected internal override void OnStart(string[] args)
+        public override void OnStart(string[] args)
         {
             base.OnStart(args);
             Start(args);
         }
 
-        protected internal override void OnStop()
+        public override void OnStop()
         {
             base.OnStop();
             Stop();
@@ -426,7 +491,7 @@ namespace Neo.CLI
                 {
                     Console.WriteLine($"Warning: wallet file \"{Settings.Default.UnlockWallet.Path}\" not found.");
                 }
-                catch (CryptographicException)
+                catch (System.Security.Cryptography.CryptographicException)
                 {
                     Console.WriteLine($"failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
                 }
