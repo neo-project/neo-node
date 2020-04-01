@@ -367,7 +367,7 @@ namespace Neo.CLI
             {
                 // Register plugins commands
 
-                RegisterCommand(plugin, plugin.Name);
+                RegisterCommand(plugin, plugin.Name.ToLowerInvariant());
             }
 
             using (IEnumerator<Block> blocksBeingImported = GetBlocksFromFile().GetEnumerator())
