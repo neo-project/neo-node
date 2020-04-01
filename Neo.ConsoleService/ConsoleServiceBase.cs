@@ -477,7 +477,7 @@ namespace Neo.ConsoleService
         {
             if (!string.IsNullOrEmpty(name))
             {
-                _instances.Add(name, instance);
+                _instances.Add(name.ToLowerInvariant(), instance);
             }
 
             foreach (var method in instance.GetType().GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
