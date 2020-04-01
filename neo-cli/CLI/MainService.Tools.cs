@@ -37,17 +37,13 @@ namespace Neo.CLI
 
             foreach (var pair in parseFunctions)
             {
-                try
-                {
-                    var parseMethod = pair.Value;
-                    var result = parseMethod(value);
+                var parseMethod = pair.Value;
+                var result = parseMethod(value);
 
+                if (result != null)
+                {
                     Console.WriteLine($"{pair.Key,-30}\t{result}");
                     any = true;
-                }
-                catch (ArgumentException)
-                {
-                    // couldn't parse the value
                 }
             }
 
@@ -64,11 +60,10 @@ namespace Neo.CLI
         /// Hexadecimal value to be converted
         /// </param>
         /// <returns>
-        /// The string represented by the hexadecimal value
+        /// Returns null when is not possible to parse the hexadecimal value to a UTF-8
+        /// string or when the converted string is not printable; otherwise, returns
+        /// the string represented by the hexadecimal value
         /// </returns>
-        /// <exception cref="ArgumentException">
-        /// Throw when is not possible to parse the hexadecimal value to a UTF-8 string.
-        /// </exception>
         private string HexToString(string hexString)
         {
             try
@@ -79,22 +74,14 @@ namespace Neo.CLI
 
                 if (!IsPrintable(utf8String))
                 {
-                    throw new ArgumentException();
+                    return null;
                 }
 
                 return utf8String;
             }
-            catch (FormatException)
+            catch
             {
-                throw new ArgumentException();
-            }
-            catch (DecoderFallbackException)
-            {
-                throw new ArgumentException();
-            }
-            catch (ArgumentNullException)
-            {
-                throw new ArgumentException();
+                return null;
             }
         }
 
@@ -105,11 +92,9 @@ namespace Neo.CLI
         /// Hexadecimal value to be converted
         /// </param>
         /// <returns>
-        /// The string that represents the converted big integer
+        /// Returns null when is not possible to parse the hex value to big integer value;
+        /// otherwise, returns the string that represents the converted big integer.
         /// </returns>
-        /// <exception cref="ArgumentException">
-        /// Throw when is not possible to parse the hex value to big integer value.
-        /// </exception>
         private string HexToNumber(string hexString)
         {
             try
@@ -120,13 +105,9 @@ namespace Neo.CLI
 
                 return number.ToString();
             }
-            catch (FormatException)
+            catch
             {
-                throw new ArgumentException();
-            }
-            catch (ArgumentNullException)
-            {
-                throw new ArgumentException();
+                return null;
             }
         }
 
@@ -182,11 +163,9 @@ namespace Neo.CLI
         /// String value to be converted
         /// </param>
         /// <returns>
-        /// The hexadecimal value that represents the converted string
+        /// Returns null when it is not possible to parse the string value to a hexadecimal
+        /// value; otherwise returns the hexadecimal value that represents the converted string
         /// </returns>
-        /// <exception cref="ArgumentException">
-        /// Throw when is not possible to parse the string value to a hexadecimal value.
-        /// </exception>
         private string StringToHex(string strParam)
         {
             try
@@ -194,13 +173,9 @@ namespace Neo.CLI
                 var bytesParam = Encoding.UTF8.GetBytes(strParam);
                 return bytesParam.ToHexString();
             }
-            catch (ArgumentNullException)
+            catch
             {
-                throw new ArgumentException();
-            }
-            catch (EncoderFallbackException)
-            {
-                throw new ArgumentException();
+                return null;
             }
         }
 
@@ -211,10 +186,11 @@ namespace Neo.CLI
         /// String value to be converted
         /// </param>
         /// <returns>
-        /// The Base64 value that represents the converted string
+        /// Returns null when is not possible to parse the string value to a Base64 value;
+        /// otherwise returns the Base64 value that represents the converted string
         /// </returns>
         /// <exception cref="ArgumentException">
-        /// Throw when is not possible to parse the string value to a Base64 value.
+        /// Throw .
         /// </exception>
         private string StringToBase64(string strParam)
         {
@@ -224,13 +200,9 @@ namespace Neo.CLI
                 string base64 = Convert.ToBase64String(bytearray.AsSpan());
                 return base64;
             }
-            catch (ArgumentNullException)
+            catch
             {
-                throw new ArgumentException();
-            }
-            catch (EncoderFallbackException)
-            {
-                throw new ArgumentException();
+                return null;
             }
         }
 
@@ -241,65 +213,53 @@ namespace Neo.CLI
         /// String that represents the number to be converted
         /// </param>
         /// <returns>
-        /// The string that represents the converted hexadecimal value
+        /// Returns null when the string does not represent a big integer value or when
+        /// it is not possible to parse the big integer value to hexadecimal; otherwise,
+        /// returns the string that represents the converted hexadecimal value
         /// </returns>
-        /// <exception cref="ArgumentException">
-        /// Throw when the string does not represent a big integer value or when
-        /// it is not possible to parse the big integer value to hexadecimal.
-        /// </exception>
         private string NumberToHex(string strParam)
         {
             try
             {
                 if (!BigInteger.TryParse(strParam, out var numberParam))
                 {
-                    throw new ArgumentException();
+                    return null;
                 }
                 return numberParam.ToByteArray().ToHexString();
             }
-            catch (ArgumentNullException)
+            catch
             {
-                throw new ArgumentException();
-            }
-            catch (EncoderFallbackException)
-            {
-                throw new ArgumentException();
+                return null;
             }
         }
 
         /// <summary>
-        /// Prints the desired number in Base64 byte array
+        /// Converts a string number in Base64 byte array
         /// </summary>
         /// <param name="strParam">
         /// String that represents the number to be converted
         /// </param>
         /// <returns>
-        /// The string that represents the converted Base64 value
+        /// Returns null when the string does not represent a big integer value or when
+        /// it is not possible to parse the big integer value to Base64 value; otherwise,
+        /// returns the string that represents the converted Base64 value
         /// </returns>
-        /// <exception cref="ArgumentException">
-        /// Throw when the string does not represent a big integer value or when
-        /// it is not possible to parse the big integer value to Base64 value.
-        /// </exception>
         private string NumberToBase64(string strParam)
         {
             try
             {
                 if (!BigInteger.TryParse(strParam, out var number))
                 {
-                    throw new ArgumentException();
+                    return null;
                 }
                 byte[] bytearray = number.ToByteArray();
                 string base64 = Convert.ToBase64String(bytearray.AsSpan());
 
                 return base64;
             }
-            catch (FormatException)
+            catch
             {
-                throw new ArgumentException();
-            }
-            catch (ArgumentNullException)
-            {
-                throw new ArgumentException();
+                return null;
             }
         }
 
@@ -310,12 +270,10 @@ namespace Neo.CLI
         /// String that represents the address to be converted
         /// </param>
         /// <returns>
-        /// The string that represents the converted scripthash
+        /// Returns null when the string does not represent an address or when
+        /// it is not possible to parse the address to scripthash; otherwise returns
+        /// the string that represents the converted scripthash
         /// </returns>
-        /// <exception cref="ArgumentException">
-        /// Throw when the string does not represent an address or when
-        /// it is not possible to parse the address to scripthash.
-        /// </exception>
         private string AddressToScripthash(string address)
         {
             try
@@ -324,9 +282,9 @@ namespace Neo.CLI
 
                 return bigEndScript.ToString();
             }
-            catch (FormatException)
+            catch
             {
-                throw new ArgumentException();
+                return null;
             }
         }
 
@@ -337,12 +295,10 @@ namespace Neo.CLI
         /// String that represents the address to be converted
         /// </param>
         /// <returns>
-        /// The string that represents the converted Base64 value
+        /// Returns null when the string does not represent an address or when it is 
+        /// not possible to parse the address to Base64 value; otherwise returns
+        /// the string that represents the converted Base64 value.
         /// </returns>
-        /// <exception cref="ArgumentException">
-        /// Throw when the string does not represent an address or when
-        /// it is not possible to parse the address to Base64 value.
-        /// </exception>
         private string AddressToBase64(string address)
         {
             try
@@ -352,9 +308,9 @@ namespace Neo.CLI
 
                 return base64;
             }
-            catch (FormatException)
+            catch
             {
-                throw new ArgumentException();
+                return null;
             }
         }
 
@@ -365,11 +321,9 @@ namespace Neo.CLI
         /// String that represents the scripthash to be converted
         /// </param>
         /// <returns>
-        /// The string that represents the converted address
+        /// Returns null when the string does not represent an scripthash;
+        /// otherwise, returns the string that represents the converted address
         /// </returns>
-        /// <exception cref="ArgumentException">
-        /// Throw when the string does not represent an scripthash.
-        /// </exception>
         private string ScripthashToAddress(string script)
         {
             try
@@ -379,28 +333,28 @@ namespace Neo.CLI
                 {
                     if (!UInt160.TryParse(script, out scriptHash))
                     {
-                        throw new ArgumentException();
+                        return null;
                     }
                 }
                 else
                 {
                     if (!UInt160.TryParse(script, out UInt160 littleEndScript))
                     {
-                        throw new ArgumentException();
+                        return null;
                     }
                     string bigEndScript = littleEndScript.ToArray().ToHexString();
                     if (!UInt160.TryParse(bigEndScript, out scriptHash))
                     {
-                        throw new ArgumentException();
+                        return null;
                     }
                 }
 
                 var hexScript = scriptHash.ToAddress();
                 return hexScript;
             }
-            catch (ArgumentNullException)
+            catch
             {
-                throw new ArgumentException();
+                return null;
             }
         }
 
@@ -411,11 +365,10 @@ namespace Neo.CLI
         /// String that represents the Base64 value
         /// </param>
         /// <returns>
-        /// The string that represents the converted address
+        /// Returns null when the string does not represent an Base64 value or when
+        /// it is not possible to parse the Base64 value to address; otherwise,
+        /// returns the string that represents the converted address
         /// </returns>
-        /// <exception cref="ArgumentException">
-        /// Throw when the string does not represent an Base64 value or when
-        /// it is not possible to parse the Base64 value to address.
         private string Base64ToAddress(string bytearray)
         {
             try
@@ -425,19 +378,15 @@ namespace Neo.CLI
 
                 if (!UInt160.TryParse(hex, out var scripthash))
                 {
-                    throw new ArgumentException();
+                    return null;
                 }
 
                 string address = scripthash.ToAddress();
                 return address;
             }
-            catch (FormatException)
+            catch
             {
-                throw new ArgumentException();
-            }
-            catch (ArgumentNullException)
-            {
-                throw new ArgumentException();
+                return null;
             }
         }
 
@@ -448,11 +397,11 @@ namespace Neo.CLI
         /// String that represents the Base64 value
         /// </param>
         /// <returns>
-        /// The string that represents the converted string
+        /// Returns null when the string does not represent an Base64 value or when
+        /// it is not possible to parse the Base64 value to string value or the converted
+        /// string is not printable; otherwise, returns the string that represents
+        /// the Base64 value.
         /// </returns>
-        /// <exception cref="ArgumentException">
-        /// Throw when the string does not represent an Base64 value or when
-        /// it is not possible to parse the Base64 value to string value.
         private string Base64ToString(string bytearray)
         {
             try
@@ -462,22 +411,14 @@ namespace Neo.CLI
 
                 if (!IsPrintable(utf8string))
                 {
-                    throw new ArgumentException();
+                    return null;
                 }
 
                 return utf8string;
             }
-            catch (FormatException)
+            catch
             {
-                throw new ArgumentException();
-            }
-            catch (ArgumentNullException)
-            {
-                throw new ArgumentException();
-            }
-            catch (DecoderFallbackException)
-            {
-                throw new ArgumentException();
+                return null;
             }
         }
 
@@ -488,11 +429,10 @@ namespace Neo.CLI
         /// String that represents the Base64 value
         /// </param>
         /// <returns>
-        /// The string that represents the converted big integer
+        /// Returns null when the string does not represent an Base64 value or when
+        /// it is not possible to parse the Base64 value to big integer value; otherwise
+        /// returns the string that represents the converted big integer
         /// </returns>
-        /// <exception cref="ArgumentException">
-        /// Throw when the string does not represent an Base64 value or when
-        /// it is not possible to parse the Base64 value to big integer value.
         private string Base64ToNumber(string bytearray)
         {
             try
@@ -501,13 +441,9 @@ namespace Neo.CLI
                 var number = new BigInteger(bytes);
                 return number.ToString();
             }
-            catch (FormatException)
+            catch
             {
-                throw new ArgumentException();
-            }
-            catch (ArgumentNullException)
-            {
-                throw new ArgumentException();
+                return null;
             }
         }
 
