@@ -39,7 +39,6 @@ namespace Neo.ConsoleService
             }
 
             string possibleHelp = null;
-            var tokens = CommandToken.Parse(commandLine).ToArray();
             var commandArgs = CommandToken.Parse(commandLine).ToArray();
             var availableCommands = new List<(ConsoleCommandMethod Command, object[] Arguments)>();
 
