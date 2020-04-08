@@ -10,6 +10,7 @@ using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.Wallets;
 using Neo.Wallets.NEP6;
+using Neo.Wallets.SQLite;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -454,6 +455,51 @@ namespace Neo.CLI
                     gas += NativeContract.NEO.UnclaimedGas(snapshot, account, snapshot.Height + 1);
                 }
             Console.WriteLine($"unclaimed gas: {new BigDecimal(gas, NativeContract.GAS.Decimals)}");
+        }
+
+        /// <summary>
+        /// Process "change password" command
+        /// </summary>
+        [ConsoleCommand("change password", Category = "Wallet Commands")]
+        private void OnChangePasswordCommand()
+        {
+            if (NoWallet()) return;
+            string oldPassword = ReadUserInput("password", true);
+            if (oldPassword.Length == 0)
+            {
+                Console.WriteLine("cancelled");
+                return;
+            }
+            if (!CurrentWallet.VerifyPassword(oldPassword))
+            {
+                Console.WriteLine("Incorrect password");
+                return;
+            }
+            string newPassword = ReadUserInput("New password", true);
+
+            bool succeed = false;
+            if (CurrentWallet is UserWallet userWallet)
+            {
+                succeed = userWallet.ChangePassword(oldPassword, newPassword);
+            }
+            else if (CurrentWallet is NEP6Wallet nep6Wallet)
+            {
+                succeed = nep6Wallet.ChangePassword(oldPassword, newPassword);
+                nep6Wallet.Save();
+            }
+            else
+            {
+                Console.WriteLine("Unsupported wallet type");
+            }
+
+            if (succeed)
+            {
+                Console.WriteLine("Password changed successfully");
+            }
+            else
+            {
+                Console.WriteLine("Failed to change password");
+            }
         }
 
         private void SignAndSendTx(Transaction tx)
