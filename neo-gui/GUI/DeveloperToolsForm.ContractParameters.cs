@@ -93,8 +93,8 @@ namespace Neo.GUI
                 return;
             }
             tx.Witnesses = context.GetWitnesses();
-            VerifyResult reason = Service.NeoSystem.Blockchain.Ask<VerifyResult>(tx).Result;
-            if (reason == VerifyResult.Succeed)
+            Blockchain.RelayResult reason = Service.NeoSystem.Blockchain.Ask<Blockchain.RelayResult>(tx).Result;
+            if (reason.Result == VerifyResult.Succeed)
             {
                 InformationBox.Show(tx.Hash.ToString(), Strings.RelaySuccessText, Strings.RelaySuccessTitle);
             }
