@@ -476,6 +476,12 @@ namespace Neo.CLI
                 return;
             }
             string newPassword = ReadUserInput("New password", true);
+            string newPasswordReEntered = ReadUserInput("Re-Enter Password", true);
+            if (!newPassword.Equals(newPasswordReEntered))
+            {
+                Console.WriteLine("Two passwords entered are inconsistent!");
+                return;
+            }
 
             bool succeed = false;
             if (CurrentWallet is UserWallet userWallet)
