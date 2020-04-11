@@ -10,7 +10,6 @@ using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.Wallets;
 using Neo.Wallets.NEP6;
-using Neo.Wallets.SQLite;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -483,21 +482,9 @@ namespace Neo.CLI
                 return;
             }
 
-            bool succeed = false;
-            if (CurrentWallet is UserWallet userWallet)
-            {
-                succeed = userWallet.ChangePassword(oldPassword, newPassword);
-            }
-            else if (CurrentWallet is NEP6Wallet nep6Wallet)
-            {
-                succeed = nep6Wallet.ChangePassword(oldPassword, newPassword);
+            bool succeed = CurrentWallet.ChangePassword(oldPassword, newPassword);
+            if (CurrentWallet is NEP6Wallet nep6Wallet)
                 nep6Wallet.Save();
-            }
-            else
-            {
-                Console.WriteLine("Unsupported wallet type");
-            }
-
             if (succeed)
             {
                 Console.WriteLine("Password changed successfully");
