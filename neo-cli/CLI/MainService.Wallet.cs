@@ -483,10 +483,10 @@ namespace Neo.CLI
             }
 
             bool succeed = CurrentWallet.ChangePassword(oldPassword, newPassword);
-            if (CurrentWallet is NEP6Wallet nep6Wallet)
-                nep6Wallet.Save();
             if (succeed)
             {
+                if (CurrentWallet is NEP6Wallet nep6Wallet)
+                    nep6Wallet.Save();
                 Console.WriteLine("Password changed successfully");
             }
             else
