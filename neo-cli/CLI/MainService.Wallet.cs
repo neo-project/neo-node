@@ -456,6 +456,45 @@ namespace Neo.CLI
             Console.WriteLine($"unclaimed gas: {new BigDecimal(gas, NativeContract.GAS.Decimals)}");
         }
 
+        /// <summary>
+        /// Process "change password" command
+        /// </summary>
+        [ConsoleCommand("change password", Category = "Wallet Commands")]
+        private void OnChangePasswordCommand()
+        {
+            if (NoWallet()) return;
+            string oldPassword = ReadUserInput("password", true);
+            if (oldPassword.Length == 0)
+            {
+                Console.WriteLine("cancelled");
+                return;
+            }
+            if (!CurrentWallet.VerifyPassword(oldPassword))
+            {
+                Console.WriteLine("Incorrect password");
+                return;
+            }
+            string newPassword = ReadUserInput("New password", true);
+            string newPasswordReEntered = ReadUserInput("Re-Enter Password", true);
+            if (!newPassword.Equals(newPasswordReEntered))
+            {
+                Console.WriteLine("Two passwords entered are inconsistent!");
+                return;
+            }
+
+            bool succeed = CurrentWallet.ChangePassword(oldPassword, newPassword);
+            if (succeed)
+            {
+                if (CurrentWallet is NEP6Wallet nep6Wallet)
+                    nep6Wallet.Save();
+                Console.WriteLine("Password changed successfully");
+            }
+            else
+            {
+                Console.WriteLine("Failed to change password");
+            }
+        }
+
         private void SignAndSendTx(Transaction tx)
         {
             ContractParametersContext context;
