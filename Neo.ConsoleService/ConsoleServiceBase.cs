@@ -39,7 +39,6 @@ namespace Neo.ConsoleService
             }
 
             string possibleHelp = null;
-            var tokens = CommandToken.Parse(commandLine).ToArray();
             var commandArgs = CommandToken.Parse(commandLine).ToArray();
             var availableCommands = new List<(ConsoleCommandMethod Command, object[] Arguments)>();
 
@@ -477,7 +476,7 @@ namespace Neo.ConsoleService
         {
             if (!string.IsNullOrEmpty(name))
             {
-                _instances.Add(name, instance);
+                _instances.Add(name.ToLowerInvariant(), instance);
             }
 
             foreach (var method in instance.GetType().GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
