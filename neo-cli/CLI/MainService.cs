@@ -252,7 +252,7 @@ namespace Neo.CLI
                 throw new ArgumentException(nameof(manifestFilePath));
             }
 
-            var manifest = ContractManifest.Parse(File.ReadAllText(manifestFilePath));
+            var manifest = ContractManifest.Parse(File.ReadAllBytes(manifestFilePath));
 
             // Read nef
 
