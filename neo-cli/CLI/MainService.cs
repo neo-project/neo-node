@@ -112,6 +112,7 @@ namespace Neo.CLI
                 .ToArray();
             });
 
+            RegisterCommandHander<string, ECPoint>((str) => ECPoint.Parse(str.Trim(), ECCurve.Secp256r1));
             RegisterCommandHander<string[], ECPoint[]>((str) => str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray());
             RegisterCommandHander<string, JObject>((str) => JObject.Parse(str));
             RegisterCommandHander<JObject, JArray>((obj) => (JArray)obj);
@@ -140,9 +141,9 @@ namespace Neo.CLI
                     {
                         UserWallet wallet = UserWallet.Create(path, password);
                         WalletAccount account = wallet.CreateAccount();
-                        Console.WriteLine($"    address: {account.Address}");
-                        Console.WriteLine($"     pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                        Console.WriteLine($"script hash: {account.ScriptHash}");
+                        Console.WriteLine($"    Address: {account.Address}");
+                        Console.WriteLine($"     Pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+                        Console.WriteLine($"Script hash: {account.ScriptHash}");
                         CurrentWallet = wallet;
                     }
                     break;
@@ -152,9 +153,9 @@ namespace Neo.CLI
                         wallet.Unlock(password);
                         WalletAccount account = wallet.CreateAccount();
                         wallet.Save();
-                        Console.WriteLine($"    address: {account.Address}");
-                        Console.WriteLine($"     pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                        Console.WriteLine($"script hash: {account.ScriptHash}");
+                        Console.WriteLine($"    Address: {account.Address}");
+                        Console.WriteLine($"     Pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+                        Console.WriteLine($"Script hash: {account.ScriptHash}");
                         CurrentWallet = wallet;
                     }
                     break;

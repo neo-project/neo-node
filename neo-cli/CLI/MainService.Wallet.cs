@@ -311,7 +311,8 @@ namespace Neo.CLI
                         type = "Deployed-Nonstandard";
                     }
 
-                    Console.WriteLine($"{contract.Address}\t{type}");
+                    Console.WriteLine($"{"   Address: "}{contract.Address}\t{type}");
+                    Console.WriteLine($"{"ScriptHash: "}{contract.ScriptHash}\n");
                 }
             }
         }
