@@ -112,6 +112,7 @@ namespace Neo.CLI
                 .ToArray();
             });
 
+            RegisterCommandHander<string, ECPoint>((str) => ECPoint.Parse(str.Trim(), ECCurve.Secp256r1));
             RegisterCommandHander<string[], ECPoint[]>((str) => str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray());
             RegisterCommandHander<string, JObject>((str) => JObject.Parse(str));
             RegisterCommandHander<JObject, JArray>((obj) => (JArray)obj);
