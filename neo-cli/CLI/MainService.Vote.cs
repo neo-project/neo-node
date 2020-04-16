@@ -1,15 +1,7 @@
 using Neo.ConsoleService;
-using Neo.IO.Json;
-using Neo.Ledger;
-using Neo.Network.P2P.Payloads;
-using Neo.Persistence;
-using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using Neo.IO;
 using Neo.Cryptography.ECC;
 
 namespace Neo.CLI
@@ -19,8 +11,8 @@ namespace Neo.CLI
         /// <summary>
         /// Process "register candidate" command
         /// </summary>
-        /// <param name="senderAccount"></param>
-        /// <param name="publicKey"></param>
+        /// <param name="senderAccount">Sender account</param>
+        /// <param name="publicKey">Register publicKey</param>
         [ConsoleCommand("register candidate", Category = "Vote Commands")]
         private void OnRegisterCandidateCommand(UInt160 senderAccount, ECPoint publicKey)
         {
@@ -59,8 +51,8 @@ namespace Neo.CLI
         /// <summary>
         /// Process "unregister candidate" command
         /// </summary>
-        /// <param name="senderAccount"></param>
-        /// <param name="publicKey"></param>
+        /// <param name="senderAccount">Sender account</param>
+        /// <param name="publicKey">Unregister publicKey</param>
         [ConsoleCommand("unregister candidate", Category = "Vote Commands")]
         private void OnUnregisterCandidateCommand(UInt160 senderAccount, ECPoint publicKey)
         {
@@ -83,8 +75,8 @@ namespace Neo.CLI
         /// <summary>
         /// Process "vote" command
         /// </summary>  
-        /// <param name="senderAccount"></param>
-        /// <param name="publicKey"></param>
+        /// <param name="senderAccount">Sender account</param>
+        /// <param name="publicKey">Voting publicKey</param>
         [ConsoleCommand("vote", Category = "Vote Commands")]
         private void OnVoteCommand(UInt160 senderAccount, ECPoint publicKey)
         {
@@ -150,61 +142,6 @@ namespace Neo.CLI
             }
 
             SendTransaction(script);
-        }
-
-        private void SendTransaction(byte[] script, UInt160 account = null)
-        {
-            List<Cosigner> signCollection = new List<Cosigner>();
-
-            if (account != null)
-            {
-                using (SnapshotView snapshot = Blockchain.Singleton.GetSnapshot())
-                {
-                    UInt160[] accounts = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly).Select(p => p.ScriptHash).Where(p => NativeContract.GAS.BalanceOf(snapshot, p).Sign > 0).ToArray();
-                    foreach (var signAccount in accounts)
-                    {
-
-                        if (account.Equals(signAccount))
-                        {
-                            signCollection.Add(new Cosigner() { Account = signAccount });
-                            break;
-                        }
-                    }
-                }
-            }
-
-            try
-            {
-                Transaction tx = CurrentWallet.MakeTransaction(script, account, null, signCollection?.ToArray());
-                Console.WriteLine($"Invoking script with: '{tx.Script.ToHexString()}'");
-
-                using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, null, testMode: true))
-                {
-                    Console.WriteLine($"VM State: {engine.State}");
-                    Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
-                    Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
-                    Console.WriteLine();
-                    if (engine.State.HasFlag(VMState.FAULT))
-                    {
-                        Console.WriteLine("Engine faulted.");
-                        return;
-                    }
-                }
-
-                if (!ReadUserInput("relay tx(no|yes)").IsYes())
-                {
-                    return;
-                }
-
-                SignAndSendTx(tx);
-            }
-            catch (InvalidOperationException)
-            {
-                Console.WriteLine("Error: insufficient balance.");
-                return;
-            }
-
-            return;
         }
     }
 }
