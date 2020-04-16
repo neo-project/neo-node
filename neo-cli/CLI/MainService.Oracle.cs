@@ -8,11 +8,11 @@ namespace Neo.CLI
         /// Process "start oracle" command
         /// </summary>
         [ConsoleCommand("start oracle", Category = "Oracle Commands")]
-        private void OnStartOracleCommand()
+        private void OnStartOracleCommand(byte numberOfTasks = 4)
         {
             if (NoWallet()) return;
             ShowPrompt = false;
-            NeoSystem.StartOracle(CurrentWallet);
+            NeoSystem.StartOracle(CurrentWallet, numberOfTasks);
         }
     }
 }

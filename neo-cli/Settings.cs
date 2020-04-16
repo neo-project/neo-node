@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Neo.Network.P2P;
+using System;
 using System.Threading;
 
 namespace Neo
@@ -76,9 +77,16 @@ namespace Neo
 
     public class UnlockWalletSettings
     {
+        public enum StratType : byte
+        {
+            None = 0,
+            Consensus = 1,
+            Oracle = 2
+        }
+
         public string Path { get; }
         public string Password { get; }
-        public bool StartConsensus { get; }
+        public StratType Start { get; }
         public bool IsActive { get; }
 
         public UnlockWalletSettings(IConfigurationSection section)
@@ -87,7 +95,7 @@ namespace Neo
             {
                 this.Path = section.GetSection("Path").Value;
                 this.Password = section.GetSection("Password").Value;
-                this.StartConsensus = bool.Parse(section.GetSection("StartConsensus").Value);
+                this.Start = Enum.Parse<StratType>(section.GetSection("Start").Value);
                 this.IsActive = bool.Parse(section.GetSection("IsActive").Value);
             }
         }

@@ -411,9 +411,21 @@ namespace Neo.CLI
                 {
                     Console.WriteLine($"failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
                 }
-                if (Settings.Default.UnlockWallet.StartConsensus && CurrentWallet != null)
+                if (CurrentWallet != null)
                 {
-                    OnStartConsensusCommand();
+                    switch (Settings.Default.UnlockWallet.Start)
+                    {
+                        case UnlockWalletSettings.StratType.Consensus:
+                            {
+                                OnStartConsensusCommand();
+                                break;
+                            }
+                        case UnlockWalletSettings.StratType.Oracle:
+                            {
+                                OnStartOracleCommand();
+                                break;
+                            }
+                    }
                 }
             }
         }
