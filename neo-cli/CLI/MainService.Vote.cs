@@ -57,7 +57,7 @@ namespace Neo.CLI
         }
 
         /// <summary>
-        /// Process "unregister validator" command
+        /// Process "unregister candidate" command
         /// </summary>
         /// <param name="senderAccount"></param>
         /// <param name="publicKey"></param>
