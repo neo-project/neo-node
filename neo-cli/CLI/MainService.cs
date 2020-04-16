@@ -141,7 +141,7 @@ namespace Neo.CLI
                     {
                         UserWallet wallet = UserWallet.Create(path, password);
                         WalletAccount account = wallet.CreateAccount();
-                        Console.WriteLine($"address: {account.Address}"); Console.WriteLine($"    Address: {account.Address}");
+                        Console.WriteLine($"address: {account.Address}");
                         Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
                         CurrentWallet = wallet;
                     }
@@ -152,7 +152,7 @@ namespace Neo.CLI
                         wallet.Unlock(password);
                         WalletAccount account = wallet.CreateAccount();
                         wallet.Save();
-                        Console.WriteLine($"address: {account.Address}"); Console.WriteLine($"    Address: {account.Address}");
+                        Console.WriteLine($"address: {account.Address}");
                         Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
                         CurrentWallet = wallet;
                     }
