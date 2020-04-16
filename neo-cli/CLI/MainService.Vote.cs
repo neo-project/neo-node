@@ -30,10 +30,14 @@ namespace Neo.CLI
                 return;
             }
 
-            ScriptBuilder scriptBuilder = new ScriptBuilder();
-            scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "registerCandidate", publicKey);
+            byte[] script;
+            using (ScriptBuilder scriptBuilder = new ScriptBuilder())
+            {
+                scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "registerCandidate", publicKey);
+                script = scriptBuilder.ToArray();
+            }
 
-            SendTransaction(scriptBuilder, senderAccount);
+            SendTransaction(script, senderAccount);
         }
 
         /// <summary>
@@ -42,10 +46,14 @@ namespace Neo.CLI
         [ConsoleCommand("get candidates", Category = "Vote Commands")]
         private void OnGetCandidatesCommand()
         {
-            ScriptBuilder scriptBuilder = new ScriptBuilder();
-            scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "getCandidates");
+            byte[] script;
+            using (ScriptBuilder scriptBuilder = new ScriptBuilder())
+            {
+                scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "getCandidates");
+                script = scriptBuilder.ToArray();
+            }
 
-            SendTransaction(scriptBuilder);
+            SendTransaction(script);
         }
 
         /// <summary>
@@ -62,10 +70,14 @@ namespace Neo.CLI
                 return;
             }
 
-            ScriptBuilder scriptBuilder = new ScriptBuilder();
-            scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "unregisterCandidate", publicKey);
+            byte[] script;
+            using (ScriptBuilder scriptBuilder = new ScriptBuilder())
+            {
+                scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "unregisterCandidate", publicKey);
+                script = scriptBuilder.ToArray();
+            }
 
-            SendTransaction(scriptBuilder, senderAccount);
+            SendTransaction(script, senderAccount);
         }
 
         /// <summary>
@@ -82,10 +94,14 @@ namespace Neo.CLI
                 return;
             }
 
-            ScriptBuilder scriptBuilder = new ScriptBuilder();
-            scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "vote", senderAccount, publicKey);
+            byte[] script;
+            using (ScriptBuilder scriptBuilder = new ScriptBuilder())
+            {
+                scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "vote", senderAccount, publicKey);
+                script = scriptBuilder.ToArray();
+            }
 
-            SendTransaction(scriptBuilder, senderAccount);
+            SendTransaction(script, senderAccount);
         }
 
         /// <summary>
@@ -94,10 +110,14 @@ namespace Neo.CLI
         [ConsoleCommand("get validators", Category = "Vote Commands")]
         private void OnGetValidatorsCommand()
         {
-            ScriptBuilder scriptBuilder = new ScriptBuilder();
-            scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "getValidators");
+            byte[] script;
+            using (ScriptBuilder scriptBuilder = new ScriptBuilder())
+            {
+                scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "getValidators");
+                script = scriptBuilder.ToArray();
+            }
 
-            SendTransaction(scriptBuilder);
+            SendTransaction(script);
         }
 
         /// <summary>
@@ -106,10 +126,14 @@ namespace Neo.CLI
         [ConsoleCommand("get committee", Category = "Vote Commands")]
         private void OnGetCommitteeCommand()
         {
-            ScriptBuilder scriptBuilder = new ScriptBuilder();
-            scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "getCommittee");
+            byte[] script;
+            using (ScriptBuilder scriptBuilder = new ScriptBuilder())
+            {
+                scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "getCommittee");
+                script = scriptBuilder.ToArray();
+            }
 
-            SendTransaction(scriptBuilder);
+            SendTransaction(script);
         }
 
         /// <summary>
@@ -118,13 +142,17 @@ namespace Neo.CLI
         [ConsoleCommand("get next validators", Category = "Vote Commands")]
         private void OnGetNextBlockValidatorsCommand()
         {
-            ScriptBuilder scriptBuilder = new ScriptBuilder();
-            scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "getNextBlockValidators");
+            byte[] script;
+            using (ScriptBuilder scriptBuilder = new ScriptBuilder())
+            {
+                scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "getNextBlockValidators");
+                script = scriptBuilder.ToArray();
+            }
 
-            SendTransaction(scriptBuilder);
+            SendTransaction(script);
         }
 
-        private void SendTransaction(ScriptBuilder scriptBuilder, UInt160 account = null)
+        private void SendTransaction(byte[] script, UInt160 account = null)
         {
             List<Cosigner> signCollection = new List<Cosigner>();
 
@@ -145,28 +173,37 @@ namespace Neo.CLI
                 }
             }
 
-            Transaction tx = CurrentWallet.MakeTransaction(scriptBuilder.ToArray(), CurrentWallet.GetAccounts().FirstOrDefault().ScriptHash, null, signCollection?.ToArray());
-            Console.WriteLine($"Invoking script with: '{tx.Script.ToHexString()}'");
-
-            using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, null, testMode: true))
+            try
             {
-                Console.WriteLine($"VM State: {engine.State}");
-                Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
-                Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
-                Console.WriteLine();
-                if (engine.State.HasFlag(VMState.FAULT))
+                Transaction tx = CurrentWallet.MakeTransaction(script, account, null, signCollection?.ToArray());
+                Console.WriteLine($"Invoking script with: '{tx.Script.ToHexString()}'");
+
+                using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, null, testMode: true))
                 {
-                    Console.WriteLine("Engine faulted.");
+                    Console.WriteLine($"VM State: {engine.State}");
+                    Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
+                    Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
+                    Console.WriteLine();
+                    if (engine.State.HasFlag(VMState.FAULT))
+                    {
+                        Console.WriteLine("Engine faulted.");
+                        return;
+                    }
+                }
+
+                if (!ReadUserInput("relay tx(no|yes)").IsYes())
+                {
                     return;
                 }
-            }
 
-            if (!ReadUserInput("relay tx(no|yes)").IsYes())
+                SignAndSendTx(tx);
+            }
+            catch (InvalidOperationException)
             {
+                Console.WriteLine("Error: insufficient balance.");
                 return;
             }
 
-            SignAndSendTx(tx);
             return;
         }
     }
