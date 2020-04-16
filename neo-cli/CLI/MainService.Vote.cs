@@ -41,7 +41,7 @@ namespace Neo.CLI
         }
 
         /// <summary>
-        /// Process "get validators"
+        /// Process "get candidates"
         /// </summary>
         [ConsoleCommand("get candidates", Category = "Vote Commands")]
         private void OnGetCandidatesCommand()
