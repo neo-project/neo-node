@@ -17,7 +17,7 @@ namespace Neo.CLI
     partial class MainService
     {
         /// <summary>
-        /// Process "register validator" command
+        /// Process "register candidate" command
         /// </summary>
         /// <param name="senderAccount"></param>
         /// <param name="publicKey"></param>
