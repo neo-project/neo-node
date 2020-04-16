@@ -10,7 +10,7 @@
     "UnlockWallet": {
       "Path": "",
       "Password": "",
-      "StartConsensus": false,
+      "Start": "Consensus",
       "IsActive": false
     },
     "PluginURL": "https://github.com/neo-project/neo-modules/releases/download/v{1}/{0}.zip"
