@@ -11,9 +11,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Neo.IO;
 using Neo.Cryptography.ECC;
-using System.IO;
-using Neo.SmartContract.Manifest;
-using System.Text;
 
 namespace Neo.CLI
 {
