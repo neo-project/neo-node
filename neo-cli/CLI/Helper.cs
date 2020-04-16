@@ -1,12 +1,3 @@
-using Neo.IO.Json;
-using Neo.VM.Types;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using Array = Neo.VM.Types.Array;
-using Boolean = Neo.VM.Types.Boolean;
-using Buffer = Neo.VM.Types.Buffer;
-
 namespace Neo.CLI
 {
     internal static class Helper
