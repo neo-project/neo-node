@@ -11,6 +11,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Neo.IO;
 using Neo.Cryptography.ECC;
+using System.IO;
+using Neo.SmartContract.Manifest;
+using System.Text;
 
 namespace Neo.CLI
 {
@@ -19,10 +22,10 @@ namespace Neo.CLI
         /// <summary>
         /// Process "register validator" command
         /// </summary>
-        /// <param name="account"></param>
+        /// <param name="senderAccount"></param>
         /// <param name="publicKey"></param>
         [ConsoleCommand("register candidate", Category = "Vote Commands")]
-        private void OnRegisterCandidateCommand(UInt160 account, ECPoint publicKey)
+        private void OnRegisterCandidateCommand(UInt160 senderAccount, ECPoint publicKey)
         {
             if (NoWallet())
             {
@@ -33,7 +36,7 @@ namespace Neo.CLI
             ScriptBuilder scriptBuilder = new ScriptBuilder();
             scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "registerCandidate", publicKey);
 
-            SendTransaction(scriptBuilder, account);
+            SendTransaction(scriptBuilder, senderAccount);
         }
 
         /// <summary>
@@ -51,10 +54,10 @@ namespace Neo.CLI
         /// <summary>
         /// Process "unregister validator" command
         /// </summary>
-        /// <param name="account"></param>
+        /// <param name="senderAccount"></param>
         /// <param name="publicKey"></param>
         [ConsoleCommand("unregister candidate", Category = "Vote Commands")]
-        private void OnUnregisterCandidateCommand(UInt160 account, ECPoint publicKey)
+        private void OnUnregisterCandidateCommand(UInt160 senderAccount, ECPoint publicKey)
         {
             if (NoWallet())
             {
@@ -65,16 +68,16 @@ namespace Neo.CLI
             ScriptBuilder scriptBuilder = new ScriptBuilder();
             scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "unregisterCandidate", publicKey);
 
-            SendTransaction(scriptBuilder, account);
+            SendTransaction(scriptBuilder, senderAccount);
         }
 
         /// <summary>
         /// Process "vote" command
         /// </summary>  
-        /// <param name="account"></param>
+        /// <param name="senderAccount"></param>
         /// <param name="publicKey"></param>
         [ConsoleCommand("vote", Category = "Vote Commands")]
-        private void OnVoteCommand(UInt160 account, ECPoint publicKey)
+        private void OnVoteCommand(UInt160 senderAccount, ECPoint publicKey)
         {
             if (NoWallet())
             {
@@ -83,9 +86,9 @@ namespace Neo.CLI
             }
 
             ScriptBuilder scriptBuilder = new ScriptBuilder();
-            scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "vote", account, publicKey);
+            scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "vote", senderAccount, publicKey);
 
-            SendTransaction(scriptBuilder, account);
+            SendTransaction(scriptBuilder, senderAccount);
         }
 
         /// <summary>
