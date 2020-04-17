@@ -38,7 +38,7 @@ namespace Neo.CLI
 
             using ScriptBuilder script = new ScriptBuilder();
 
-            script.EmitSysCall(InteropService.Oracle.Neo_Oracle_Get, url, null, null);
+            script.EmitSysCall(InteropService.Oracle.Neo_Oracle_Get, url, null, null, null);
             script.EmitSysCall(InteropService.Runtime.Log);
 
             var tx = CurrentWallet.MakeTransaction(script.ToArray(), sender: null, attributes: null, cosigners: null, oracle: type);
