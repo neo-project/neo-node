@@ -1,6 +1,7 @@
 FROM mcr.microsoft.com/dotnet/core/sdk:3.0 AS Build
 
 COPY neo-cli /neo-cli
+COPY Neo.ConsoleService /Neo.ConsoleService
 COPY NuGet.Config /neo-cli
 
 WORKDIR /neo-cli

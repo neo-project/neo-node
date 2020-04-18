@@ -1,5 +1,7 @@
 using Neo.ConsoleService;
+using Neo.Oracle;
 using Neo.SmartContract;
+using Neo.SmartContract.Native;
 using Neo.VM;
 using System;
 
@@ -31,17 +33,16 @@ namespace Neo.CLI
         /// Process "oracle test" command
         /// </summary>
         [ConsoleCommand("oracle test", Category = "Oracle Commands")]
-        private void OnOracleTest(string url)
+        private void OnOracleTest(string url, OracleWalletBehaviour type = OracleWalletBehaviour.OracleWithoutAssert)
         {
             if (NoWallet()) return;
 
             using ScriptBuilder script = new ScriptBuilder();
 
-            script.EmitSysCall(InteropService.Oracle.Neo_Oracle_Get, url, null, null);
+            script.EmitAppCall(NativeContract.Oracle.Hash, "get", url, null, null, null);
             script.EmitSysCall(InteropService.Runtime.Log);
 
-            var tx = CurrentWallet.MakeTransaction(script.ToArray(), sender: null, attributes: null, cosigners: null,
-                 oracle: Oracle.OracleWalletBehaviour.OracleWithoutAssert);
+            var tx = CurrentWallet.MakeTransaction(script.ToArray(), sender: null, attributes: null, cosigners: null, oracle: type);
 
             SignAndSendTx(tx);
         }
