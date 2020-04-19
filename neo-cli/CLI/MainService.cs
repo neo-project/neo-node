@@ -115,8 +115,35 @@ namespace Neo.CLI
             RegisterCommandHander<string[], ECPoint[]>((str) => str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray());
             RegisterCommandHander<string, JObject>((str) => JObject.Parse(str));
             RegisterCommandHander<JObject, JArray>((obj) => (JArray)obj);
-
+            RegisterCommandHander<JObject, ContractParameter[]>((obj) => ((JArray)obj).Select(u => ContractParameterFromJson(u)).ToArray());
             RegisterCommand(this);
+        }
+
+        private ContractParameter ContractParameterFromJson(JObject json)
+        {
+            // As string
+
+            if (json is JString)
+            {
+                // Is not an array
+                return new ContractParameter
+                {
+                    Type = ContractParameterType.String,
+                    Value = json.AsString()
+                };
+            }
+            else if (json is JBoolean)
+            {
+                return new ContractParameter
+                {
+                    Type = ContractParameterType.Boolean,
+                    Value = json.AsBoolean()
+                };
+            }
+
+            // As array format
+
+            return ContractParameter.FromJson(json);
         }
 
         public override void RunConsole()

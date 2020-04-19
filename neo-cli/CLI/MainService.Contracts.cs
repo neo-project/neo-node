@@ -48,13 +48,12 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="scriptHash">Script hash</param>
         /// <param name="operation">Operation</param>
-        /// <param name="contractParameters">Contract parameters</param>
+        /// <param name="parameters">Contract parameters</param>
         /// <param name="witnessAddress">Witness address</param>
         /// <param name="oracle">Oracle</param>
         [ConsoleCommand("invoke", Category = "Contract Commands")]
-        private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160[] witnessAddress = null, OracleWalletBehaviour oracle = OracleWalletBehaviour.OracleWithAssert)
+        private void OnInvokeCommand(UInt160 scriptHash, string operation, ContractParameter[] parameters = null, UInt160[] witnessAddress = null, OracleWalletBehaviour oracle = OracleWalletBehaviour.OracleWithAssert)
         {
-            List<ContractParameter> parameters = new List<ContractParameter>();
             List<Cosigner> signCollection = new List<Cosigner>();
 
             if (!NoWallet() && witnessAddress != null)
@@ -80,20 +79,12 @@ namespace Neo.CLI
                 }
             }
 
-            if (contractParameters != null)
-            {
-                foreach (var contractParameter in contractParameters)
-                {
-                    parameters.Add(ContractParameter.FromJson(contractParameter));
-                }
-            }
-
             byte[] script;
             Transaction tx;
 
             using ScriptBuilder scriptBuilder = new ScriptBuilder();
             {
-                scriptBuilder.EmitAppCall(scriptHash, operation, parameters.ToArray());
+                scriptBuilder.EmitAppCall(scriptHash, operation, parameters ?? Array.Empty<ContractParameter>());
                 script = scriptBuilder.ToArray();
                 Console.WriteLine($"Invoking script with: '{script.ToHexString()}'");
             }
