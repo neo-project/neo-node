@@ -115,7 +115,7 @@ namespace Neo.CLI
             RegisterCommandHander<string[], ECPoint[]>((str) => str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray());
             RegisterCommandHander<string, JObject>((str) => JObject.Parse(str));
             RegisterCommandHander<JObject, JArray>((obj) => (JArray)obj);
-            RegisterCommandHander<JObject, ContractParameter[]>((obj) => ((JArray)obj).Select(u => ContractParameterFromJson(u)).ToArray());
+            RegisterCommandHander<JArray, ContractParameter[]>((arr) => arr.Select(u => ContractParameterFromJson(u)).ToArray());
             RegisterCommand(this);
         }
 
