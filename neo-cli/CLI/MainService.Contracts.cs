@@ -100,27 +100,31 @@ namespace Neo.CLI
 
             try
             {
+                if (NoWallet())
+                {
+                    TestScript(script, signCollection.ToArray(), oracle);
+                    return;
+                }
+
                 tx = CurrentWallet.MakeTransaction(script, null, cosigners: signCollection.ToArray(), oracle: oracle);
                 script = tx.Script;
 
                 Console.WriteLine($"Tx Hash: {tx.Hash}");
                 Console.WriteLine($"Raw Tx: {tx.ToArray().ToHexString()}");
+                TestScript(tx.Script, signCollection.ToArray(), oracle);
+
+                if (!ReadUserInput("relay tx(no|yes)").IsYes())
+                {
+                    return;
+                }
+
+                SignAndSendTx(tx);
             }
             catch (InvalidOperationException error)
             {
                 TestScript(script, signCollection.ToArray(), oracle);
                 Console.WriteLine("Error: " + error.Message);
-                return;
             }
-
-            TestScript(tx.Script, signCollection.ToArray(), oracle);
-            if (NoWallet()) return;
-
-            if (!ReadUserInput("relay tx(no|yes)").IsYes())
-            {
-                return;
-            }
-            SignAndSendTx(tx);
         }
 
         private void TestScript(byte[] script, Cosigner[] cosigners, OracleWalletBehaviour oracle)
