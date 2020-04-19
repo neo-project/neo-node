@@ -107,10 +107,8 @@ namespace Neo.CLI
                 }
 
                 tx = CurrentWallet.MakeTransaction(script, null, cosigners: signCollection.ToArray(), oracle: oracle);
-                script = tx.Script;
 
                 Console.WriteLine($"Tx Hash: {tx.Hash}");
-                Console.WriteLine($"Raw Tx: {tx.ToArray().ToHexString()}");
                 TestScript(tx.Script, signCollection.ToArray(), oracle);
 
                 if (!ReadUserInput("relay tx(no|yes)").IsYes())
