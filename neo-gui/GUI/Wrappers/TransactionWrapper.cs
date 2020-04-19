@@ -9,7 +9,7 @@ namespace Neo.GUI.Wrappers
     internal class TransactionWrapper
     {
         [Category("Basic")]
-        public byte Version { get; set; }
+        public TransactionVersion Version { get; set; }
         [Category("Basic")]
         public uint Nonce { get; set; }
         [Category("Basic")]
