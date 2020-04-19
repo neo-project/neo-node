@@ -16,6 +16,8 @@ namespace Neo.CLI
             ShowPrompt = false;
             NeoSystem.StartOracle(CurrentWallet, numberOfTasks);
 
+            // TODO: Remove this before merge to master
+
             ApplicationEngine.Log += ApplicationEngine_Log;
         }
 
