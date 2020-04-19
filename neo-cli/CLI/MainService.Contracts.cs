@@ -1,7 +1,9 @@
 using Neo.ConsoleService;
+using Neo.IO;
 using Neo.IO.Json;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
+using Neo.Oracle;
 using Neo.Persistence;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
@@ -48,8 +50,9 @@ namespace Neo.CLI
         /// <param name="operation">Operation</param>
         /// <param name="contractParameters">Contract parameters</param>
         /// <param name="witnessAddress">Witness address</param>
+        /// <param name="oracle">Oracle</param>
         [ConsoleCommand("invoke", Category = "Contract Commands")]
-        private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160[] witnessAddress = null)
+        private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160[] witnessAddress = null, OracleWalletBehaviour oracle = OracleWalletBehaviour.OracleWithAssert)
         {
             List<ContractParameter> parameters = new List<ContractParameter>();
             List<Cosigner> signCollection = new List<Cosigner>();
@@ -85,49 +88,66 @@ namespace Neo.CLI
                 }
             }
 
-            Transaction tx = new Transaction
-            {
-                Sender = UInt160.Zero,
-                Attributes = Array.Empty<TransactionAttribute>(),
-                Witnesses = Array.Empty<Witness>(),
-                Cosigners = signCollection.ToArray()
-            };
+            byte[] script;
+            Transaction tx;
 
-            using (ScriptBuilder scriptBuilder = new ScriptBuilder())
+            using ScriptBuilder scriptBuilder = new ScriptBuilder();
             {
                 scriptBuilder.EmitAppCall(scriptHash, operation, parameters.ToArray());
-                tx.Script = scriptBuilder.ToArray();
-                Console.WriteLine($"Invoking script with: '{tx.Script.ToHexString()}'");
+                script = scriptBuilder.ToArray();
+                Console.WriteLine($"Invoking script with: '{script.ToHexString()}'");
             }
 
-            using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, testMode: true))
-            {
-                Console.WriteLine($"VM State: {engine.State}");
-                Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
-                Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
-                Console.WriteLine();
-                if (engine.State.HasFlag(VMState.FAULT))
-                {
-                    Console.WriteLine("Engine faulted.");
-                    return;
-                }
-            }
-
-            if (NoWallet()) return;
             try
             {
-                tx = CurrentWallet.MakeTransaction(tx.Script, null, tx.Attributes, tx.Cosigners);
+                if (NoWallet())
+                {
+                    TestScript(script, signCollection.ToArray(), oracle);
+                    return;
+                }
+
+                tx = CurrentWallet.MakeTransaction(script, null, cosigners: signCollection.ToArray(), oracle: oracle);
+
+                Console.WriteLine($"Tx Hash: {tx.Hash}");
+                TestScript(tx.Script, signCollection.ToArray(), oracle);
+
+                if (!ReadUserInput("relay tx(no|yes)").IsYes())
+                {
+                    return;
+                }
+
+                SignAndSendTx(tx);
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException error)
             {
-                Console.WriteLine("Error: insufficient balance.");
+                TestScript(script, signCollection.ToArray(), oracle);
+                Console.WriteLine("Error: " + error.Message);
+            }
+        }
+
+        private void TestScript(byte[] script, Cosigner[] cosigners, OracleWalletBehaviour oracle)
+        {
+            var tx = new Transaction()
+            {
+                Script = script,
+                Cosigners = cosigners,
+                Attributes = Array.Empty<TransactionAttribute>(),
+                Witnesses = Array.Empty<Witness>(),
+                Sender = cosigners.FirstOrDefault()?.Account ?? UInt160.Zero,
+            };
+
+            using ApplicationEngine engine = ApplicationEngine.Run(script, tx, testMode: true,
+                oracle: oracle != OracleWalletBehaviour.WithoutOracle ? new OracleExecutionCache(OracleService.Process) : null);
+
+            Console.WriteLine($"VM State: {engine.State}");
+            Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
+            Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
+            Console.WriteLine();
+            if (engine.State.HasFlag(VMState.FAULT))
+            {
+                Console.WriteLine("Engine faulted.");
                 return;
             }
-            if (!ReadUserInput("relay tx(no|yes)").IsYes())
-            {
-                return;
-            }
-            SignAndSendTx(tx);
         }
     }
 }
