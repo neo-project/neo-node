@@ -104,7 +104,7 @@ namespace Neo.CLI
             {
                 Console.WriteLine($"VM State: {engine.State}");
                 Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
-                Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
+                Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToJson()))}");
                 Console.WriteLine();
                 if (engine.State.HasFlag(VMState.FAULT))
                 {
