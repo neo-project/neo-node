@@ -1,6 +1,4 @@
 using Neo.ConsoleService;
-using Neo.SmartContract;
-using System;
 
 namespace Neo.CLI
 {
@@ -15,18 +13,16 @@ namespace Neo.CLI
             if (NoWallet()) return;
             ShowPrompt = false;
             NeoSystem.StartOracle(CurrentWallet, numberOfTasks);
-
-            // TODO: Remove this before merge to master
-
-            ApplicationEngine.Log += ApplicationEngine_Log;
         }
 
-        private void ApplicationEngine_Log(object sender, LogEventArgs e)
+        /// <summary>
+        /// Process "stop oracle" command
+        /// </summary>
+        [ConsoleCommand("stop oracle", Category = "Oracle Commands")]
+        private void OnStopOracleCommand(byte numberOfTasks = 4)
         {
-            var cl = Console.ForegroundColor;
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("log " + e.ScriptHash.ToString() + ":" + e.Message);
-            Console.ForegroundColor = cl;
+            if (!NeoSystem.StopOracle()) return;
+            ShowPrompt = true;
         }
     }
 }
