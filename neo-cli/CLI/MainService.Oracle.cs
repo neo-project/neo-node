@@ -19,7 +19,7 @@ namespace Neo.CLI
         /// Process "stop oracle" command
         /// </summary>
         [ConsoleCommand("stop oracle", Category = "Oracle Commands")]
-        private void OnStopOracleCommand(byte numberOfTasks = 4)
+        private void OnStopOracleCommand()
         {
             if (!NeoSystem.StopOracle()) return;
             ShowPrompt = true;
