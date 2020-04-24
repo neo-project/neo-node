@@ -54,14 +54,10 @@ namespace Neo.ConsoleService
                     case '"':
                     case '\'':
                         {
-                            if (lastToken is CommandQuoteToken quote)
+                            // "'"
+                            if (lastToken is CommandQuoteToken quote && quote.Value[0] != commandLine[index])
                             {
-                                // "'"
-
-                                if (quote.Value[0] != commandLine[index])
-                                {
-                                    goto default;
-                                }
+                                goto default;
                             }
 
                             lastToken = CommandQuoteToken.Parse(commandLine, ref index);

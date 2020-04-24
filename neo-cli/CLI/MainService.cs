@@ -117,13 +117,6 @@ namespace Neo.CLI
             RegisterCommandHander<JObject, JArray>((obj) => (JArray)obj);
 
             RegisterCommand(this);
-
-            foreach (var plugin in Plugin.Plugins)
-            {
-                // Register plugins commands
-
-                RegisterCommand(plugin, plugin.Name);
-            }
         }
 
         public override void RunConsole()
@@ -252,7 +245,7 @@ namespace Neo.CLI
                 throw new ArgumentException(nameof(manifestFilePath));
             }
 
-            var manifest = ContractManifest.Parse(File.ReadAllText(manifestFilePath));
+            var manifest = ContractManifest.Parse(File.ReadAllBytes(manifestFilePath));
 
             // Read nef
 
@@ -369,6 +362,14 @@ namespace Neo.CLI
                         break;
                 }
             NeoSystem = new NeoSystem(Settings.Default.Storage.Engine);
+
+            foreach (var plugin in Plugin.Plugins)
+            {
+                // Register plugins commands
+
+                RegisterCommand(plugin, plugin.Name);
+            }
+
             using (IEnumerator<Block> blocksBeingImported = GetBlocksFromFile().GetEnumerator())
             {
                 while (true)
