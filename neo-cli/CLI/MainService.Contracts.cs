@@ -74,7 +74,7 @@ namespace Neo.CLI
                 tx.Script = script;
             }
 
-            using (ApplicationEngine engine = ApplicationEngine.Run(script, testMode: true))
+            using (ApplicationEngine engine = ApplicationEngine.Run(script, verificable, testMode: true))
             {
                 Console.WriteLine($"VM State: {engine.State}");
                 Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
