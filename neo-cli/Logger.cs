@@ -6,7 +6,7 @@ namespace Neo
 {
     class Logger : Plugin, ILogPlugin
     {
-        static object _lock = new object();
+        private static readonly object _lock = new object();
 
         static Logger()
         {
