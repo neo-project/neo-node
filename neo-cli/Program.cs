@@ -1,5 +1,4 @@
 using Neo.CLI;
-using System;
 
 namespace Neo
 {
