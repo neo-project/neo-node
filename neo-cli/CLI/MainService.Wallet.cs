@@ -482,6 +482,15 @@ namespace Neo.CLI
                 return;
             }
 
+            if (CurrentWallet is NEP6Wallet wallet)
+            {
+                if (!wallet.Backup())
+                {
+                    Console.WriteLine("Wallet backup fail");
+                    return;
+                }
+            }
+
             bool succeed = CurrentWallet.ChangePassword(oldPassword, newPassword);
             if (succeed)
             {
