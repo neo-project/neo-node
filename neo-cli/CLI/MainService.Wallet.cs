@@ -484,15 +484,15 @@ namespace Neo.CLI
 
             if (CurrentWallet is NEP6Wallet wallet)
             {
-                string backupFile = wallet.path + ".bak";
-                if (!File.Exists(wallet.path) || File.Exists(backupFile))
+                string backupFile = wallet.Path + ".bak";
+                if (!File.Exists(wallet.Path) || File.Exists(backupFile))
                 {
                     Console.WriteLine("Wallet backup fail");
                     return;
                 }
                 try
                 {
-                    File.Copy(wallet.path, backupFile);
+                    File.Copy(wallet.Path, backupFile);
                 }
                 catch (IOException)
                 {
