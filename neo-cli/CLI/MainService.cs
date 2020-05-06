@@ -7,9 +7,11 @@ using Neo.IO.Json;
 using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
+using Neo.Persistence;
 using Neo.Plugins;
 using Neo.SmartContract;
 using Neo.SmartContract.Manifest;
+using Neo.SmartContract.Native;
 using Neo.VM;
 using Neo.Wallets;
 using Neo.Wallets.NEP6;
@@ -113,6 +115,7 @@ namespace Neo.CLI
                 .ToArray();
             });
 
+            RegisterCommandHander<string, ECPoint>((str) => ECPoint.Parse(str.Trim(), ECCurve.Secp256r1));
             RegisterCommandHander<string[], ECPoint[]>((str) => str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray());
             RegisterCommandHander<string, JObject>((str) => JObject.Parse(str));
             RegisterCommandHander<string, decimal>((str) => decimal.Parse(str, CultureInfo.InvariantCulture));
@@ -479,6 +482,60 @@ namespace Neo.CLI
             var spacesToErase = maxWidth - message.Length;
             if (spacesToErase < 0) spacesToErase = 0;
             Console.WriteLine(new string(' ', spacesToErase));
+        }
+
+        private void SendTransaction(byte[] script, UInt160 account = null)
+        {
+            List<Cosigner> signCollection = new List<Cosigner>();
+
+            if (account != null)
+            {
+                using (SnapshotView snapshot = Blockchain.Singleton.GetSnapshot())
+                {
+                    UInt160[] accounts = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly).Select(p => p.ScriptHash).Where(p => NativeContract.GAS.BalanceOf(snapshot, p).Sign > 0).ToArray();
+                    foreach (var signAccount in accounts)
+                    {
+                        if (account.Equals(signAccount))
+                        {
+                            signCollection.Add(new Cosigner() { Account = signAccount });
+                            break;
+                        }
+                    }
+                }
+            }
+
+            try
+            {
+                Transaction tx = CurrentWallet.MakeTransaction(script, account, null, signCollection?.ToArray());
+                Console.WriteLine($"Invoking script with: '{tx.Script.ToHexString()}'");
+
+                using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, null, testMode: true))
+                {
+                    Console.WriteLine($"VM State: {engine.State}");
+                    Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
+                    Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
+                    Console.WriteLine();
+                    if (engine.State.HasFlag(VMState.FAULT))
+                    {
+                        Console.WriteLine("Engine faulted.");
+                        return;
+                    }
+                }
+
+                if (!ReadUserInput("relay tx(no|yes)").IsYes())
+                {
+                    return;
+                }
+
+                SignAndSendTx(tx);
+            }
+            catch (InvalidOperationException)
+            {
+                Console.WriteLine("Error: insufficient balance.");
+                return;
+            }
+
+            return;
         }
     }
 }
