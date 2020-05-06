@@ -36,7 +36,7 @@ expect {
 }
 
 expect {
-    "address:" { }
+    "   Address:" { }
     "error" { exit 2 }
     timeout { exit 1 }
 }
