@@ -287,11 +287,16 @@ namespace Neo.GUI
         {
             using ChangePasswordDialog dialog = new ChangePasswordDialog();
             if (dialog.ShowDialog() != DialogResult.OK) return;
-            if (!(Service.CurrentWallet is UserWallet wallet)) return;
-            if (wallet.ChangePassword(dialog.OldPassword, dialog.NewPassword))
+            if (Service.CurrentWallet.ChangePassword(dialog.OldPassword, dialog.NewPassword))
+            {
+                if (Service.CurrentWallet is NEP6Wallet wallet)
+                    wallet.Save();
                 MessageBox.Show(Strings.ChangePasswordSuccessful);
+            }
             else
+            {
                 MessageBox.Show(Strings.PasswordIncorrect);
+            }
         }
 
         private void 退出XToolStripMenuItem_Click(object sender, EventArgs e)
