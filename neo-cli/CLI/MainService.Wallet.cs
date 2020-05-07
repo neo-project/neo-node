@@ -483,6 +483,25 @@ namespace Neo.CLI
                 return;
             }
 
+            if (CurrentWallet is NEP6Wallet wallet)
+            {
+                string backupFile = wallet.Path + ".bak";
+                if (!File.Exists(wallet.Path) || File.Exists(backupFile))
+                {
+                    Console.WriteLine("Wallet backup fail");
+                    return;
+                }
+                try
+                {
+                    File.Copy(wallet.Path, backupFile);
+                }
+                catch (IOException)
+                {
+                    Console.WriteLine("Wallet backup fail");
+                    return;
+                }
+            }
+
             bool succeed = CurrentWallet.ChangePassword(oldPassword, newPassword);
             if (succeed)
             {
