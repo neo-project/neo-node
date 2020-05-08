@@ -68,7 +68,7 @@ namespace Neo.CLI
             var balance = new BigDecimal(((PrimitiveType)balanceResult).GetBigInteger(), asset.Decimals);
 
             Console.WriteLine();
-            Console.WriteLine($"{asset.AssetName} balance : {balance}");
+            Console.WriteLine($"{asset.AssetName} balance: {balance}");
         }
 
         /// <summary>
