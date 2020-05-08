@@ -18,6 +18,7 @@ using Neo.Wallets.NEP6;
 using Neo.Wallets.SQLite;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -117,6 +118,7 @@ namespace Neo.CLI
             RegisterCommandHander<string, ECPoint>((str) => ECPoint.Parse(str.Trim(), ECCurve.Secp256r1));
             RegisterCommandHander<string[], ECPoint[]>((str) => str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray());
             RegisterCommandHander<string, JObject>((str) => JObject.Parse(str));
+            RegisterCommandHander<string, decimal>((str) => decimal.Parse(str, CultureInfo.InvariantCulture));
             RegisterCommandHander<JObject, JArray>((obj) => (JArray)obj);
 
             RegisterCommand(this);
