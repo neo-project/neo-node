@@ -128,9 +128,8 @@ namespace Neo.CLI
             Transaction tx = new Transaction
             {
                 Sender = UInt160.Zero,
-                Attributes = Array.Empty<TransactionAttribute>(),
+                Attributes = signCollection.ToArray(),
                 Witnesses = Array.Empty<Witness>(),
-                Cosigners = signCollection.ToArray()
             };
 
             _ = OnInvokeWithResult(scriptHash, operation, tx, contractParameters);
@@ -138,7 +137,7 @@ namespace Neo.CLI
             if (NoWallet()) return;
             try
             {
-                tx = CurrentWallet.MakeTransaction(tx.Script, null, tx.Attributes, tx.Cosigners);
+                tx = CurrentWallet.MakeTransaction(tx.Script, null, tx.Attributes);
             }
             catch (InvalidOperationException)
             {
