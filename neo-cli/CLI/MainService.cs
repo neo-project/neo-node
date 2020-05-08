@@ -506,7 +506,7 @@ namespace Neo.CLI
 
             try
             {
-                Transaction tx = CurrentWallet.MakeTransaction(script, account, null, signCollection?.ToArray());
+                Transaction tx = CurrentWallet.MakeTransaction(script, account, signCollection?.ToArray());
                 Console.WriteLine($"Invoking script with: '{tx.Script.ToHexString()}'");
 
                 using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, null, testMode: true))
