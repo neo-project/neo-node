@@ -105,7 +105,6 @@ namespace Neo.CLI
                     Console.WriteLine(((Integer)value?[1]).ToBigInteger());
                 }
             }
-
         }
 
         /// <summary>
