@@ -62,9 +62,13 @@ namespace Neo.CLI
             arg["type"] = "Hash160";
             arg["value"] = address.ToString();
 
-            var result = OnInvokeWithResult(tokenHash, "balanceOf", null, new JArray(arg));
+            var asset = new AssetDescriptor(tokenHash);
 
-            Console.WriteLine($"Result : {((PrimitiveType)result).GetBigInteger()}");
+            var balanceResult = OnInvokeWithResult(tokenHash, "balanceOf", null, new JArray(arg));
+            var balance = new BigDecimal(((PrimitiveType)balanceResult).GetBigInteger(), asset.Decimals);
+
+            Console.WriteLine();
+            Console.WriteLine($"{asset.AssetName} balance : {balance}");
         }
 
         /// <summary>

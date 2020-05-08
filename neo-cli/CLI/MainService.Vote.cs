@@ -3,6 +3,7 @@ using Neo.SmartContract.Native;
 using Neo.VM;
 using System;
 using Neo.Cryptography.ECC;
+using Neo.VM.Types;
 
 namespace Neo.CLI
 {
@@ -12,9 +13,9 @@ namespace Neo.CLI
         /// Process "register candidate" command
         /// </summary>
         /// <param name="senderAccount">Sender account</param>
-        /// <param name="publicKey">Register publicKey</param>
+        /// <param name="senderPublicKey">Register publicKey</param>
         [ConsoleCommand("register candidate", Category = "Vote Commands")]
-        private void OnRegisterCandidateCommand(UInt160 senderAccount, ECPoint publicKey)
+        private void OnRegisterCandidateCommand(UInt160 senderAccount, ECPoint senderPublicKey)
         {
             if (NoWallet())
             {
@@ -25,27 +26,11 @@ namespace Neo.CLI
             byte[] script;
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
             {
-                scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "registerCandidate", publicKey);
+                scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "registerCandidate", senderPublicKey);
                 script = scriptBuilder.ToArray();
             }
 
             SendTransaction(script, senderAccount);
-        }
-
-        /// <summary>
-        /// Process "get candidates"
-        /// </summary>
-        [ConsoleCommand("get candidates", Category = "Vote Commands")]
-        private void OnGetCandidatesCommand()
-        {
-            byte[] script;
-            using (ScriptBuilder scriptBuilder = new ScriptBuilder())
-            {
-                scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "getCandidates");
-                script = scriptBuilder.ToArray();
-            }
-
-            SendTransaction(script);
         }
 
         /// <summary>
@@ -97,19 +82,52 @@ namespace Neo.CLI
         }
 
         /// <summary>
+        /// Process "get candidates"
+        /// </summary>
+        [ConsoleCommand("get candidates", Category = "Vote Commands")]
+        private void OnGetCandidatesCommand()
+        {
+            var result = OnInvokeWithResult(NativeContract.NEO.Hash, "getCandidates", null, null, false);
+
+            var resJArray = (VM.Types.Array)result;
+
+            if (resJArray.Count > 0)
+            {
+                Console.WriteLine();
+                Console.WriteLine("Candidates:");
+
+                foreach (var item in resJArray)
+                {
+                    var value = (VM.Types.Array)item;
+
+                    Console.Write(((ByteString)value?[0])?.GetSpan().ToHexString());
+                    Console.Write("    ");
+                    Console.WriteLine(((Integer)value?[1]).ToBigInteger());
+                }
+            }
+
+        }
+
+        /// <summary>
         /// Process "get validators"
         /// </summary>
         [ConsoleCommand("get validators", Category = "Vote Commands")]
         private void OnGetValidatorsCommand()
         {
-            byte[] script;
-            using (ScriptBuilder scriptBuilder = new ScriptBuilder())
-            {
-                scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "getValidators");
-                script = scriptBuilder.ToArray();
-            }
+            var result = OnInvokeWithResult(NativeContract.NEO.Hash, "getValidators", null, null, false);
 
-            SendTransaction(script);
+            var resJArray = (VM.Types.Array)result;
+
+            if (resJArray.Count > 0)
+            {
+                Console.WriteLine();
+                Console.WriteLine("Validators:");
+
+                foreach (var item in resJArray)
+                {
+                    Console.WriteLine(((ByteString)item)?.GetSpan().ToHexString());
+                }
+            }
         }
 
         /// <summary>
@@ -118,14 +136,20 @@ namespace Neo.CLI
         [ConsoleCommand("get committee", Category = "Vote Commands")]
         private void OnGetCommitteeCommand()
         {
-            byte[] script;
-            using (ScriptBuilder scriptBuilder = new ScriptBuilder())
-            {
-                scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "getCommittee");
-                script = scriptBuilder.ToArray();
-            }
+            var result = OnInvokeWithResult(NativeContract.NEO.Hash, "getCommittee", null, null, false);
 
-            SendTransaction(script);
+            var resJArray = (VM.Types.Array)result;
+
+            if (resJArray.Count > 0)
+            {
+                Console.WriteLine();
+                Console.WriteLine("Committee:");
+
+                foreach (var item in resJArray)
+                {
+                    Console.WriteLine(((ByteString)item)?.GetSpan().ToHexString());
+                }
+            }
         }
 
         /// <summary>
@@ -134,14 +158,20 @@ namespace Neo.CLI
         [ConsoleCommand("get next validators", Category = "Vote Commands")]
         private void OnGetNextBlockValidatorsCommand()
         {
-            byte[] script;
-            using (ScriptBuilder scriptBuilder = new ScriptBuilder())
-            {
-                scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "getNextBlockValidators");
-                script = scriptBuilder.ToArray();
-            }
+            var result = OnInvokeWithResult(NativeContract.NEO.Hash, "getNextBlockValidators", null, null, false);
 
-            SendTransaction(script);
+            var resJArray = (VM.Types.Array)result;
+
+            if (resJArray.Count > 0)
+            {
+                Console.WriteLine();
+                Console.WriteLine("Next validators:");
+
+                foreach (var item in resJArray)
+                {
+                    Console.WriteLine(((ByteString)item)?.GetSpan().ToHexString());
+                }
+            }
         }
     }
 }
