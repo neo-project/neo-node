@@ -46,55 +46,6 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="scriptHash">Script hash</param>
         /// <param name="operation">Operation</param>
-        /// <param name="verificable">Transaction</param>
-        /// <param name="contractParameters">Contract parameters</param>
-        private VM.Types.StackItem OnInvokeWithResult(UInt160 scriptHash, string operation, IVerifiable verificable = null, JArray contractParameters = null)
-        {
-            List<ContractParameter> parameters = new List<ContractParameter>();
-
-            if (contractParameters != null)
-            {
-                foreach (var contractParameter in contractParameters)
-                {
-                    parameters.Add(ContractParameter.FromJson(contractParameter));
-                }
-            }
-
-            byte[] script;
-
-            using (ScriptBuilder scriptBuilder = new ScriptBuilder())
-            {
-                scriptBuilder.EmitAppCall(scriptHash, operation, parameters.ToArray());
-                script = scriptBuilder.ToArray();
-                Console.WriteLine($"Invoking script with: '{script.ToHexString()}'");
-            }
-
-            if (verificable is Transaction tx)
-            {
-                tx.Script = script;
-            }
-
-            using (ApplicationEngine engine = ApplicationEngine.Run(script, verificable, testMode: true))
-            {
-                Console.WriteLine($"VM State: {engine.State}");
-                Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
-                Console.WriteLine($"Result Stack: {new JArray(engine.ResultStack.Select(p => p.ToJson()))}");
-
-                if (engine.State.HasFlag(VMState.FAULT) || !engine.ResultStack.TryPop(out VM.Types.StackItem ret))
-                {
-                    Console.WriteLine("Engine faulted.");
-                    return null;
-                }
-
-                return ret;
-            }
-        }
-
-        /// <summary>
-        /// Process "invoke" command
-        /// </summary>
-        /// <param name="scriptHash">Script hash</param>
-        /// <param name="operation">Operation</param>
         /// <param name="contractParameters">Contract parameters</param>
         /// <param name="witnessAddress">Witness address</param>
         [ConsoleCommand("invoke", Category = "Contract Commands")]
