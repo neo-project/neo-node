@@ -13,6 +13,7 @@ using Neo.SmartContract;
 using Neo.SmartContract.Manifest;
 using Neo.SmartContract.Native;
 using Neo.VM;
+using Neo.VM.Types;
 using Neo.Wallets;
 using Neo.Wallets.NEP6;
 using Neo.Wallets.SQLite;
@@ -550,7 +551,7 @@ namespace Neo.CLI
         /// <param name="operation">Operation</param>
         /// <param name="verificable">Transaction</param>
         /// <param name="contractParameters">Contract parameters</param>
-        private VM.Types.StackItem OnInvokeWithResult(UInt160 scriptHash, string operation, IVerifiable verificable = null, JArray contractParameters = null, bool showStack = true)
+        private StackItem OnInvokeWithResult(UInt160 scriptHash, string operation, IVerifiable verificable = null, JArray contractParameters = null, bool showStack = true)
         {
             List<ContractParameter> parameters = new List<ContractParameter>();
 
