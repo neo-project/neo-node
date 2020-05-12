@@ -67,7 +67,7 @@ namespace Neo
         public P2PSettings(IConfigurationSection section)
         {
             this.Port = ushort.Parse(section.GetValue("Port", "10333"));
-            this.WsPort = ushort.Parse(section.GetValue("WPort", "10334"));
+            this.WsPort = ushort.Parse(section.GetValue("WsPort", "10334"));
             this.MinDesiredConnections = section.GetValue("MinDesiredConnections", Peer.DefaultMinDesiredConnections);
             this.MaxConnections = section.GetValue("MaxConnections", Peer.DefaultMaxConnections);
             this.MaxConnectionsPerAddress = section.GetValue("MaxConnectionsPerAddress", 3);
