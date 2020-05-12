@@ -44,7 +44,7 @@ namespace Neo
             this.Storage = new StorageSettings(section.GetSection("Storage"));
             this.P2P = new P2PSettings(section.GetSection("P2P"));
             this.UnlockWallet = new UnlockWalletSettings(section.GetSection("UnlockWallet"));
-            this.PluginURL = section.GetSection("PluginURL").Value;
+            this.PluginURL = section.GetValue("PluginURL", "https://github.com/neo-project/neo-modules/releases/download/v{1}/{0}.zip");
         }
     }
 
@@ -68,7 +68,7 @@ namespace Neo
 
         public StorageSettings(IConfigurationSection section)
         {
-            this.Engine = section.GetSection("Engine").Value;
+            this.Engine = section.GetValue("Engine", "LevelDBStore");
         }
     }
 
@@ -82,8 +82,8 @@ namespace Neo
 
         public P2PSettings(IConfigurationSection section)
         {
-            this.Port = ushort.Parse(section.GetSection("Port").Value);
-            this.WsPort = ushort.Parse(section.GetSection("WsPort").Value);
+            this.Port = ushort.Parse(section.GetValue("Port", "10333"));
+            this.WsPort = ushort.Parse(section.GetValue("WsPort", "10334"));
             this.MinDesiredConnections = section.GetValue("MinDesiredConnections", Peer.DefaultMinDesiredConnections);
             this.MaxConnections = section.GetValue("MaxConnections", Peer.DefaultMaxConnections);
             this.MaxConnectionsPerAddress = section.GetValue("MaxConnectionsPerAddress", 3);
@@ -101,10 +101,10 @@ namespace Neo
         {
             if (section.Exists())
             {
-                this.Path = section.GetSection("Path").Value;
-                this.Password = section.GetSection("Password").Value;
-                this.StartConsensus = bool.Parse(section.GetSection("StartConsensus").Value);
-                this.IsActive = bool.Parse(section.GetSection("IsActive").Value);
+                this.Path = section.GetValue("Path", "");
+                this.Password = section.GetValue("Password", "");
+                this.StartConsensus = bool.Parse(section.GetValue("StartConsensus", "false"));
+                this.IsActive = bool.Parse(section.GetValue("IsActive", "false"));
             }
         }
     }
