@@ -85,7 +85,7 @@ namespace Neo
         {
             if (section.Exists())
             {
-                this.Path = section.GetValue("Path","");
+                this.Path = section.GetValue("Path", "");
                 this.Password = section.GetValue("Password", "");
                 this.StartConsensus = bool.Parse(section.GetValue("StartConsensus", "false"));
                 this.IsActive = bool.Parse(section.GetValue("IsActive", "false"));
