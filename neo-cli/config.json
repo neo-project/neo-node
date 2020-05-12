@@ -1,7 +1,11 @@
 {
   "ApplicationConfiguration": {
+    "Logger": {
+      "Path": "SystemLogs_{0}",
+      "ConsoleOutput": true
+    },
     "Storage": {
-      "Engine": "LevelDBStore"
+      "Engine": ""
     },
     "P2P": {
       "Port": 10333,

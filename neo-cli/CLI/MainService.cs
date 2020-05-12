@@ -12,6 +12,7 @@ using Neo.Plugins;
 using Neo.SmartContract;
 using Neo.SmartContract.Manifest;
 using Neo.SmartContract.Native;
+using Neo.SystemLog;
 using Neo.VM;
 using Neo.VM.Types;
 using Neo.Wallets;
@@ -64,6 +65,8 @@ namespace Neo.CLI
 
         protected override string Prompt => "neo";
         public override string ServiceName => "NEO-CLI";
+
+        private readonly Logger logger = new Logger();
 
         /// <summary>
         /// Constructor
