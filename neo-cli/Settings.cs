@@ -85,10 +85,10 @@ namespace Neo
         {
             if (section.Exists())
             {
-                this.Path = section.GetSection("Path").Value;
-                this.Password = section.GetSection("Password").Value;
-                this.StartConsensus = bool.Parse(section.GetSection("StartConsensus").Value);
-                this.IsActive = bool.Parse(section.GetSection("IsActive").Value);
+                this.Path = section.GetValue("Path","");
+                this.Password = section.GetValue("Password", "");
+                this.StartConsensus = bool.Parse(section.GetValue("StartConsensus", "false"));
+                this.IsActive = bool.Parse(section.GetValue("IsActive", "false"));
             }
         }
     }
