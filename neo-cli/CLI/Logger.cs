@@ -6,8 +6,9 @@ using System.IO;
 using static System.IO.Path;
 using Microsoft.Extensions.Configuration;
 using System.Reflection;
+using Neo.ConsoleService;
 
-namespace Neo.SystemLog
+namespace Neo.CLI
 {
     public class Logger : Plugin, ILogPlugin
     {
@@ -18,7 +19,7 @@ namespace Neo.SystemLog
 
         public Logger() : base()
         {
-            Started = true; // default is started to log
+            Started = Settings.Default.Logger.Started; // default is started to log
         }
 
         private static void GetErrorLogs(StringBuilder sb, Exception ex)

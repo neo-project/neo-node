@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Neo.SystemLog
+namespace Neo.ConsoleService
 {
-    internal class ConsoleColorSet
+    public class ConsoleColorSet
     {
         #region Constants
 

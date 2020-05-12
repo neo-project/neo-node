@@ -86,23 +86,5 @@ namespace Neo.CLI
             Console.WriteLine();
             Console.CursorVisible = true;
         }
-
-        /// <summary>
-        /// Start the default ILogPlugin
-        /// </summary>
-        [ConsoleCommand("log on", Category = "Node Commands")]
-        private void OnLogOnCommand()
-        {
-            this.logger.Started = true;
-        }
-
-        /// <summary>
-        /// Stop the default ILogPlugin
-        /// </summary>
-        [ConsoleCommand("log off", Category = "Node Commands")]
-        private void OnLogOffCommand()
-        {
-            this.logger.Started = false;
-        }
     }
 }

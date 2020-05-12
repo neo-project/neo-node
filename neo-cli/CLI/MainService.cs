@@ -12,7 +12,6 @@ using Neo.Plugins;
 using Neo.SmartContract;
 using Neo.SmartContract.Manifest;
 using Neo.SmartContract.Native;
-using Neo.SystemLog;
 using Neo.VM;
 using Neo.VM.Types;
 using Neo.Wallets;
