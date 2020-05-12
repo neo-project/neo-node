@@ -5,12 +5,14 @@ using System.Text;
 using System.IO;
 using static System.IO.Path;
 using Microsoft.Extensions.Configuration;
+using System.Reflection;
 
 namespace Neo.SystemLog
 {
     public class Logger : Plugin, ILogPlugin
     {
         public override string Name => "SystemLog";
+        public override string ConfigFile => Combine(GetDirectoryName(Assembly.GetEntryAssembly().Location), "config.json");
 
         public bool Started { get; set; }
 
