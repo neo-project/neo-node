@@ -17,7 +17,7 @@ namespace Neo.CLI
         {
             if (Blockchain.Singleton.Height < start)
             {
-                Console.WriteLine("error: invalid start height.");
+                Console.WriteLine("Error: invalid start height.");
                 return;
             }
 

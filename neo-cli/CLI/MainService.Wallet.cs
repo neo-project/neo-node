@@ -36,7 +36,7 @@ namespace Neo.CLI
             string password = ReadUserInput("password", true);
             if (password.Length == 0)
             {
-                Console.WriteLine("cancelled");
+                Console.WriteLine("Cancelled");
                 return;
             }
             try
@@ -45,7 +45,7 @@ namespace Neo.CLI
             }
             catch (System.Security.Cryptography.CryptographicException)
             {
-                Console.WriteLine($"failed to open file \"{path}\"");
+                Console.WriteLine($"Failed to open file \"{path}\"");
             }
         }
 
@@ -83,7 +83,7 @@ namespace Neo.CLI
             string password = ReadUserInput("password", true);
             if (password.Length == 0)
             {
-                Console.WriteLine("cancelled");
+                Console.WriteLine("Cancelled");
                 return;
             }
             string path_new = Path.ChangeExtension(path, ".json");
@@ -131,7 +131,7 @@ namespace Neo.CLI
             if (CurrentWallet is NEP6Wallet wallet)
                 wallet.Save();
 
-            Console.WriteLine($"export addresses to {path}");
+            Console.WriteLine($"Export addresses to {path}");
             File.WriteAllLines(path, addresses);
         }
 
@@ -152,7 +152,7 @@ namespace Neo.CLI
             string password = ReadUserInput("password", true);
             if (password.Length == 0)
             {
-                Console.WriteLine("cancelled");
+                Console.WriteLine("Cancelled");
                 return;
             }
             if (!CurrentWallet.VerifyPassword(password))
@@ -181,13 +181,13 @@ namespace Neo.CLI
             string password = ReadUserInput("password", true);
             if (password.Length == 0)
             {
-                Console.WriteLine("cancelled");
+                Console.WriteLine("Cancelled");
                 return;
             }
             string password2 = ReadUserInput("password", true);
             if (password != password2)
             {
-                Console.WriteLine("error");
+                Console.WriteLine("Error");
                 return;
             }
             if (!File.Exists(path))
@@ -277,8 +277,8 @@ namespace Neo.CLI
             {
                 WalletAccount account = CurrentWallet.CreateAccount(prikey);
                 Array.Clear(prikey, 0, prikey.Length);
-                Console.WriteLine($"address: {account.Address}");
-                Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+                Console.WriteLine($"Address: {account.Address}");
+                Console.WriteLine($" Pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
             }
             if (CurrentWallet is NEP6Wallet wallet)
                 wallet.Save();
@@ -347,7 +347,8 @@ namespace Neo.CLI
             if (NoWallet()) return;
             foreach (KeyPair key in CurrentWallet.GetAccounts().Where(p => p.HasKey).Select(p => p.GetKey()))
             {
-                Console.WriteLine(key.PublicKey);
+                Console.WriteLine($"  Address: {Contract.CreateSignatureContract(key.PublicKey).Address}");
+                Console.WriteLine($"PublicKey: {key.PublicKey}\n");
             }
         }
 
@@ -394,7 +395,7 @@ namespace Neo.CLI
             string password = ReadUserInput("password", true);
             if (password.Length == 0)
             {
-                Console.WriteLine("cancelled");
+                Console.WriteLine("Cancelled");
                 return;
             }
             if (!CurrentWallet.VerifyPassword(password))
@@ -454,7 +455,7 @@ namespace Neo.CLI
                 {
                     gas += NativeContract.NEO.UnclaimedGas(snapshot, account, snapshot.Height + 1);
                 }
-            Console.WriteLine($"unclaimed gas: {new BigDecimal(gas, NativeContract.GAS.Decimals)}");
+            Console.WriteLine($"Unclaimed gas: {new BigDecimal(gas, NativeContract.GAS.Decimals)}");
         }
 
         /// <summary>
@@ -467,7 +468,7 @@ namespace Neo.CLI
             string oldPassword = ReadUserInput("password", true);
             if (oldPassword.Length == 0)
             {
-                Console.WriteLine("cancelled");
+                Console.WriteLine("Cancelled");
                 return;
             }
             if (!CurrentWallet.VerifyPassword(oldPassword))

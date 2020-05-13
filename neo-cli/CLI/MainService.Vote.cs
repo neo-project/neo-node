@@ -100,8 +100,7 @@ namespace Neo.CLI
                 {
                     var value = (VM.Types.Array)item;
 
-                    Console.Write(((ByteString)value?[0])?.GetSpan().ToHexString());
-                    Console.Write("    ");
+                    Console.Write(((ByteString)value?[0])?.GetSpan().ToHexString() + "\t");
                     Console.WriteLine(((Integer)value?[1]).ToBigInteger());
                 }
             }
