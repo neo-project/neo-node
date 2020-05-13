@@ -371,9 +371,10 @@ namespace Neo.CLI
                         Settings.Initialize(new ConfigurationBuilder().AddJsonFile("config.mainnet.json").Build());
                         break;
                 }
-            NeoSystem = new NeoSystem(Settings.Default.Storage.Engine);
 
             logger = new Logger();
+
+            NeoSystem = new NeoSystem(Settings.Default.Storage.Engine);
 
             foreach (var plugin in Plugin.Plugins)
             {

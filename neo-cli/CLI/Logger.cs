@@ -1,10 +1,8 @@
 using Neo.Plugins;
 using System;
-using System.Collections.Generic;
 using System.Text;
 using System.IO;
 using static System.IO.Path;
-using Microsoft.Extensions.Configuration;
 using System.Reflection;
 using Neo.ConsoleService;
 
@@ -91,7 +89,6 @@ namespace Neo.CLI
                     catch (IOException)
                     {
                         Console.WriteLine("Error writing the log file: " + path);
-
                     }
                 }
             }
