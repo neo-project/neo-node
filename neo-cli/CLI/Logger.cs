@@ -84,7 +84,15 @@ namespace Neo.CLI
                     var path = Combine(Settings.Default.Logger.Path, sb.ToString());
                     Directory.CreateDirectory(path);
                     path = Combine(path, $"{now:yyyy-MM-dd}.log");
-                    File.AppendAllLines(path, new[] { $"[{level}]{log}" });
+                    try
+                    {
+                        File.AppendAllLines(path, new[] { $"[{level}]{log}" });
+                    }
+                    catch (IOException)
+                    {
+                        Console.WriteLine("Error writing the log file: " + path);
+
+                    }
                 }
             }
         }
