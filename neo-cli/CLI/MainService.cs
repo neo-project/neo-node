@@ -7,15 +7,19 @@ using Neo.IO.Json;
 using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
+using Neo.Persistence;
 using Neo.Plugins;
 using Neo.SmartContract;
 using Neo.SmartContract.Manifest;
+using Neo.SmartContract.Native;
 using Neo.VM;
+using Neo.VM.Types;
 using Neo.Wallets;
 using Neo.Wallets.NEP6;
 using Neo.Wallets.SQLite;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -112,8 +116,10 @@ namespace Neo.CLI
                 .ToArray();
             });
 
+            RegisterCommandHander<string, ECPoint>((str) => ECPoint.Parse(str.Trim(), ECCurve.Secp256r1));
             RegisterCommandHander<string[], ECPoint[]>((str) => str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray());
             RegisterCommandHander<string, JObject>((str) => JObject.Parse(str));
+            RegisterCommandHander<string, decimal>((str) => decimal.Parse(str, CultureInfo.InvariantCulture));
             RegisterCommandHander<JObject, JArray>((obj) => (JArray)obj);
 
             RegisterCommand(this);
@@ -140,8 +146,9 @@ namespace Neo.CLI
                     {
                         UserWallet wallet = UserWallet.Create(path, password);
                         WalletAccount account = wallet.CreateAccount();
-                        Console.WriteLine($"address: {account.Address}");
-                        Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+                        Console.WriteLine($"   Address: {account.Address}");
+                        Console.WriteLine($"    Pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+                        Console.WriteLine($"ScriptHash: {account.ScriptHash}");
                         CurrentWallet = wallet;
                     }
                     break;
@@ -151,8 +158,9 @@ namespace Neo.CLI
                         wallet.Unlock(password);
                         WalletAccount account = wallet.CreateAccount();
                         wallet.Save();
-                        Console.WriteLine($"address: {account.Address}");
-                        Console.WriteLine($" pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+                        Console.WriteLine($"   Address: {account.Address}");
+                        Console.WriteLine($"    Pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+                        Console.WriteLine($"ScriptHash: {account.ScriptHash}");
                         CurrentWallet = wallet;
                     }
                     break;
@@ -409,7 +417,7 @@ namespace Neo.CLI
                 }
                 catch (System.Security.Cryptography.CryptographicException)
                 {
-                    Console.WriteLine($"failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
+                    Console.WriteLine($"Failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
                 }
                 if (Settings.Default.UnlockWallet.StartConsensus && CurrentWallet != null)
                 {
@@ -475,6 +483,116 @@ namespace Neo.CLI
             var spacesToErase = maxWidth - message.Length;
             if (spacesToErase < 0) spacesToErase = 0;
             Console.WriteLine(new string(' ', spacesToErase));
+        }
+
+        /// <summary>
+        /// Make and send transaction with script, sender
+        /// </summary>
+        /// <param name="script">script</param>
+        /// <param name="account">sender</param>
+        private void SendTransaction(byte[] script, UInt160 account = null)
+        {
+            List<Cosigner> signCollection = new List<Cosigner>();
+
+            if (account != null)
+            {
+                using (SnapshotView snapshot = Blockchain.Singleton.GetSnapshot())
+                {
+                    UInt160[] accounts = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly).Select(p => p.ScriptHash).Where(p => NativeContract.GAS.BalanceOf(snapshot, p).Sign > 0).ToArray();
+                    foreach (var signAccount in accounts)
+                    {
+                        if (account.Equals(signAccount))
+                        {
+                            signCollection.Add(new Cosigner() { Account = signAccount });
+                            break;
+                        }
+                    }
+                }
+            }
+
+            try
+            {
+                Transaction tx = CurrentWallet.MakeTransaction(script, account, signCollection?.ToArray());
+                Console.WriteLine($"Invoking script with: '{tx.Script.ToHexString()}'");
+
+                using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, null, testMode: true))
+                {
+                    Console.WriteLine($"VM State: {engine.State}");
+                    Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
+                    Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
+                    Console.WriteLine();
+                    if (engine.State.HasFlag(VMState.FAULT))
+                    {
+                        Console.WriteLine("Engine faulted.");
+                        return;
+                    }
+                }
+
+                if (!ReadUserInput("relay tx(no|yes)").IsYes())
+                {
+                    return;
+                }
+
+                SignAndSendTx(tx);
+            }
+            catch (InvalidOperationException)
+            {
+                Console.WriteLine("Error: insufficient balance.");
+                return;
+            }
+
+            return;
+        }
+
+        /// <summary>
+        /// Process "invoke" command
+        /// </summary>
+        /// <param name="scriptHash">Script hash</param>
+        /// <param name="operation">Operation</param>
+        /// <param name="verificable">Transaction</param>
+        /// <param name="contractParameters">Contract parameters</param>
+        private StackItem OnInvokeWithResult(UInt160 scriptHash, string operation, IVerifiable verificable = null, JArray contractParameters = null, bool showStack = true)
+        {
+            List<ContractParameter> parameters = new List<ContractParameter>();
+
+            if (contractParameters != null)
+            {
+                foreach (var contractParameter in contractParameters)
+                {
+                    parameters.Add(ContractParameter.FromJson(contractParameter));
+                }
+            }
+
+            byte[] script;
+
+            using (ScriptBuilder scriptBuilder = new ScriptBuilder())
+            {
+                scriptBuilder.EmitAppCall(scriptHash, operation, parameters.ToArray());
+                script = scriptBuilder.ToArray();
+                Console.WriteLine($"Invoking script with: '{script.ToHexString()}'");
+            }
+
+            if (verificable is Transaction tx)
+            {
+                tx.Script = script;
+            }
+
+            using (ApplicationEngine engine = ApplicationEngine.Run(script, verificable, testMode: true))
+            {
+                Console.WriteLine($"VM State: {engine.State}");
+                Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
+
+                if (showStack)
+                    Console.WriteLine($"Result Stack: {new JArray(engine.ResultStack.Select(p => p.ToJson()))}");
+
+                if (engine.State.HasFlag(VMState.FAULT) || !engine.ResultStack.TryPop(out VM.Types.StackItem ret))
+                {
+                    Console.WriteLine("Engine faulted.");
+                    return null;
+                }
+
+                return ret;
+            }
         }
     }
 }

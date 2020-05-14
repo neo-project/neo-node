@@ -51,10 +51,9 @@ namespace Neo.CLI
         [ConsoleCommand("invoke", Category = "Contract Commands")]
         private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160[] witnessAddress = null)
         {
-            List<ContractParameter> parameters = new List<ContractParameter>();
             List<Cosigner> signCollection = new List<Cosigner>();
 
-            if (!NoWallet() && witnessAddress != null)
+            if (witnessAddress != null && !NoWallet())
             {
                 using (SnapshotView snapshot = Blockchain.Singleton.GetSnapshot())
                 {
@@ -77,53 +76,26 @@ namespace Neo.CLI
                 }
             }
 
-            if (contractParameters != null)
-            {
-                foreach (var contractParameter in contractParameters)
-                {
-                    parameters.Add(ContractParameter.FromJson(contractParameter));
-                }
-            }
-
             Transaction tx = new Transaction
             {
                 Sender = UInt160.Zero,
-                Attributes = Array.Empty<TransactionAttribute>(),
+                Attributes = signCollection.ToArray(),
                 Witnesses = Array.Empty<Witness>(),
-                Cosigners = signCollection.ToArray()
             };
 
-            using (ScriptBuilder scriptBuilder = new ScriptBuilder())
-            {
-                scriptBuilder.EmitAppCall(scriptHash, operation, parameters.ToArray());
-                tx.Script = scriptBuilder.ToArray();
-                Console.WriteLine($"Invoking script with: '{tx.Script.ToHexString()}'");
-            }
-
-            using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, testMode: true))
-            {
-                Console.WriteLine($"VM State: {engine.State}");
-                Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
-                Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToJson()))}");
-                Console.WriteLine();
-                if (engine.State.HasFlag(VMState.FAULT))
-                {
-                    Console.WriteLine("Engine faulted.");
-                    return;
-                }
-            }
+            _ = OnInvokeWithResult(scriptHash, operation, tx, contractParameters);
 
             if (NoWallet()) return;
             try
             {
-                tx = CurrentWallet.MakeTransaction(tx.Script, null, tx.Attributes, tx.Cosigners);
+                tx = CurrentWallet.MakeTransaction(tx.Script, null, tx.Attributes);
             }
             catch (InvalidOperationException)
             {
                 Console.WriteLine("Error: insufficient balance.");
                 return;
             }
-            if (!ReadUserInput("relay tx(no|yes)").IsYes())
+            if (!ReadUserInput("Relay tx(no|yes)").IsYes())
             {
                 return;
             }
