@@ -65,8 +65,6 @@ namespace Neo.CLI
         protected override string Prompt => "neo";
         public override string ServiceName => "NEO-CLI";
 
-        private Logger logger;
-
         /// <summary>
         /// Constructor
         /// </summary>
@@ -371,9 +369,6 @@ namespace Neo.CLI
                         Settings.Initialize(new ConfigurationBuilder().AddJsonFile("config.mainnet.json").Build());
                         break;
                 }
-
-            logger = new Logger();
-
             NeoSystem = new NeoSystem(Settings.Default.Storage.Engine);
 
             foreach (var plugin in Plugin.Plugins)

@@ -1,10 +1,5 @@
 {
   "ApplicationConfiguration": {
-    "Logger": {
-      "Path": "SystemLogs_{0}",
-      "ConsoleOutput": false,
-      "Started": false
-    },
     "Storage": {
       "Engine": "LevelDBStore"
     },
