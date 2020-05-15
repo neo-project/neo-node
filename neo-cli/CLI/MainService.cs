@@ -422,7 +422,7 @@ namespace Neo.CLI
                 }
                 catch (System.Security.Cryptography.CryptographicException)
                 {
-                    Console.WriteLine($"failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
+                    Console.WriteLine($"Failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
                 }
                 if (Settings.Default.UnlockWallet.StartConsensus && CurrentWallet != null)
                 {
