@@ -1,15 +1,21 @@
+using Neo.ConsoleService;
 using Neo.Plugins;
 using System;
-using System.Text;
 using System.IO;
-using static System.IO.Path;
 using System.Reflection;
-using Neo.ConsoleService;
+using System.Text;
+using static System.IO.Path;
 
 namespace Neo.CLI
 {
     public class Logger : Plugin, ILogPlugin
     {
+        private static readonly ConsoleColorSet DebugColor = new ConsoleColorSet(ConsoleColor.Cyan);
+        private static readonly ConsoleColorSet InfoColor = new ConsoleColorSet(ConsoleColor.White);
+        private static readonly ConsoleColorSet WarningColor = new ConsoleColorSet(ConsoleColor.Yellow);
+        private static readonly ConsoleColorSet ErrorColor = new ConsoleColorSet(ConsoleColor.Red);
+        private static readonly ConsoleColorSet FatalColor = new ConsoleColorSet(ConsoleColor.Red);
+
         public override string Name => "SystemLog";
         public override string ConfigFile => Combine(GetDirectoryName(Assembly.GetEntryAssembly().Location), "config.json");
 
@@ -63,11 +69,11 @@ namespace Neo.CLI
 
                     switch (level)
                     {
-                        case LogLevel.Debug: ConsoleColorSet.Debug.Apply(); break;
-                        case LogLevel.Error: ConsoleColorSet.Error.Apply(); break;
-                        case LogLevel.Fatal: ConsoleColorSet.Fatal.Apply(); break;
-                        case LogLevel.Info: ConsoleColorSet.Info.Apply(); break;
-                        case LogLevel.Warning: ConsoleColorSet.Warning.Apply(); break;
+                        case LogLevel.Debug: DebugColor.Apply(); break;
+                        case LogLevel.Error: ErrorColor.Apply(); break;
+                        case LogLevel.Fatal: FatalColor.Apply(); break;
+                        case LogLevel.Info: InfoColor.Apply(); break;
+                        case LogLevel.Warning: WarningColor.Apply(); break;
                     }
 
                     Console.WriteLine(log);

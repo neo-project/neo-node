@@ -4,16 +4,6 @@ namespace Neo.ConsoleService
 {
     public class ConsoleColorSet
     {
-        #region Constants
-
-        public static readonly ConsoleColorSet Debug = new ConsoleColorSet(ConsoleColor.Cyan);
-        public static readonly ConsoleColorSet Info = new ConsoleColorSet(ConsoleColor.White);
-        public static readonly ConsoleColorSet Warning = new ConsoleColorSet(ConsoleColor.Yellow);
-        public static readonly ConsoleColorSet Error = new ConsoleColorSet(ConsoleColor.Red);
-        public static readonly ConsoleColorSet Fatal = new ConsoleColorSet(ConsoleColor.Red);
-
-        #endregion
-
         public ConsoleColor Foreground;
         public ConsoleColor Background;
 
