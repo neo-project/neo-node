@@ -2,7 +2,6 @@ using Neo.ConsoleService;
 using Neo.Plugins;
 using System;
 using System.IO;
-using System.Reflection;
 using System.Text;
 using static System.IO.Path;
 
@@ -17,7 +16,7 @@ namespace Neo.CLI
         private static readonly ConsoleColorSet FatalColor = new ConsoleColorSet(ConsoleColor.Red);
 
         public override string Name => "SystemLog";
-        public override string ConfigFile => Combine(GetDirectoryName(Assembly.GetEntryAssembly().Location), "config.json");
+        public override string ConfigFile => Combine(GetDirectoryName(Path), "config.json");
         public override string Path => GetType().Assembly.Location;
 
         public bool Active { get; set; }
