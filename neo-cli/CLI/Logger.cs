@@ -18,13 +18,13 @@ namespace Neo.CLI
 
         public override string Name => "SystemLog";
         public override string ConfigFile => Combine(GetDirectoryName(Assembly.GetEntryAssembly().Location), "config.json");
-        public override string Path => Settings.Default.Logger.Path;
+        //public override string Path => Settings.Default.Logger.Path;
 
-        public bool Started { get; set; }
+        public bool Active { get; set; }
 
         public Logger() : base()
         {
-            Started = Settings.Default.Logger.Started;
+            Active = Settings.Default.Logger.Active;
         }
 
         private static void GetErrorLogs(StringBuilder sb, Exception ex)
@@ -49,7 +49,7 @@ namespace Neo.CLI
 
         void ILogPlugin.Log(string source, LogLevel level, object message)
         {
-            if (!Started)
+            if (!Active)
                 return;
 
             if (message is Exception ex)

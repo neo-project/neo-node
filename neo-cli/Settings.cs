@@ -52,13 +52,13 @@ namespace Neo
     {
         public string Path { get; }
         public bool ConsoleOutput { get; }
-        public bool Started { get; }
+        public bool Active { get; }
 
         public LoggerSettings(IConfigurationSection section)
         {
             this.Path = string.Format(section.GetSection("Path").Value, ProtocolSettings.Default.Magic.ToString("X8"));
             this.ConsoleOutput = section.GetSection("ConsoleOutput").Get<bool>();
-            this.Started = section.GetSection("Started").Get<bool>();
+            this.Active = section.GetSection("Active").Get<bool>();
         }
     }
 
