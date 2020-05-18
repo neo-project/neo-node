@@ -18,7 +18,7 @@ namespace Neo.CLI
 
         public override string Name => "SystemLog";
         public override string ConfigFile => Combine(GetDirectoryName(Assembly.GetEntryAssembly().Location), "config.json");
-        public override string Path => "";
+        public override string Path => Settings.Default.Logger.Path;
 
         public bool Started { get; set; }
 
