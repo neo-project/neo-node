@@ -18,12 +18,13 @@ namespace Neo.CLI
 
         public override string Name => "SystemLog";
         public override string ConfigFile => Combine(GetDirectoryName(Assembly.GetEntryAssembly().Location), "config.json");
+        public override string Path => "";
 
         public bool Started { get; set; }
 
         public Logger() : base()
         {
-            Started = Settings.Default.Logger.Started; // default is started to log
+            Started = Settings.Default.Logger.Started;
         }
 
         private static void GetErrorLogs(StringBuilder sb, Exception ex)
