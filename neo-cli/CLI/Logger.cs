@@ -7,7 +7,7 @@ using static System.IO.Path;
 
 namespace Neo.CLI
 {
-    public class Logger : Plugin, ILogPlugin
+    internal class Logger : Plugin, ILogPlugin
     {
         private static readonly ConsoleColorSet DebugColor = new ConsoleColorSet(ConsoleColor.Cyan);
         private static readonly ConsoleColorSet InfoColor = new ConsoleColorSet(ConsoleColor.White);
