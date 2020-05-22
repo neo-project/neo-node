@@ -1,5 +1,4 @@
 using Akka.Actor;
-using Microsoft.Extensions.Configuration;
 using Neo.ConsoleService;
 using Neo.Cryptography.ECC;
 using Neo.IO;
@@ -64,8 +63,6 @@ namespace Neo.CLI
 
         protected override string Prompt => "neo";
         public override string ServiceName => "NEO-CLI";
-
-        private Logger logger;
 
         /// <summary>
         /// Constructor
@@ -360,7 +357,7 @@ namespace Neo.CLI
                         break;
                 }
 
-            logger = new Logger();
+            _ = new Logger();
 
             NeoSystem = new NeoSystem(Settings.Default.Storage.Engine);
 
