@@ -19,13 +19,6 @@ namespace Neo.CLI
         public override string ConfigFile => Combine(GetDirectoryName(Path), "config.json");
         public override string Path => GetType().Assembly.Location;
 
-        public bool Active { get; set; }
-
-        public Logger() : base()
-        {
-            Active = Settings.Default.Logger.Active;
-        }
-
         private static void GetErrorLogs(StringBuilder sb, Exception ex)
         {
             sb.AppendLine(ex.GetType().ToString());
@@ -48,7 +41,7 @@ namespace Neo.CLI
 
         void ILogPlugin.Log(string source, LogLevel level, object message)
         {
-            if (!Active)
+            if (!Settings.Default.Logger.Active)
                 return;
 
             if (message is Exception ex)
