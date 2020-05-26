@@ -6,6 +6,7 @@ namespace Neo
 {
     public class Settings
     {
+        public LoggerSettings Logger { get; }
         public StorageSettings Storage { get; }
         public P2PSettings P2P { get; }
         public UnlockWalletSettings UnlockWallet { get; }
@@ -39,10 +40,25 @@ namespace Neo
 
         public Settings(IConfigurationSection section)
         {
+            this.Logger = new LoggerSettings(section.GetSection("Logger"));
             this.Storage = new StorageSettings(section.GetSection("Storage"));
             this.P2P = new P2PSettings(section.GetSection("P2P"));
             this.UnlockWallet = new UnlockWalletSettings(section.GetSection("UnlockWallet"));
             this.PluginURL = section.GetValue("PluginURL", "https://github.com/neo-project/neo-modules/releases/download/v{1}/{0}.zip");
+        }
+    }
+
+    public class LoggerSettings
+    {
+        public string Path { get; }
+        public bool ConsoleOutput { get; }
+        public bool Active { get; }
+
+        public LoggerSettings(IConfigurationSection section)
+        {
+            this.Path = string.Format(section.GetValue("Path", "Logs_{0}"), ProtocolSettings.Default.Magic.ToString("X8"));
+            this.ConsoleOutput = section.GetValue("ConsoleOutput", false);
+            this.Active = section.GetValue("Active", false);
         }
     }
 
