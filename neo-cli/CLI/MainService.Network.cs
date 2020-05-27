@@ -141,7 +141,7 @@ namespace Neo.CLI
                     return;
                 }
                 tx.Witnesses = context.GetWitnesses();
-                NeoSystem.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
+                NeoSystem.Blockchain.Tell(tx);
                 Console.WriteLine($"Data relay success, the hash is shown as follows:{Environment.NewLine}{tx.Hash}");
             }
             catch (Exception e)
