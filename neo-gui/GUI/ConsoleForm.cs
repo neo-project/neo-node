@@ -39,7 +39,7 @@ namespace Neo.GUI
             {
                 e.SuppressKeyPress = true;
                 string line = $"{textBox2.Text}{Environment.NewLine}";
-                textBox1.AppendText(line);
+                textBox1.AppendText(Program.Service.ReadingPassword ? "***" : line);
                 switch (textBox2.Text.ToLower())
                 {
                     case "clear":

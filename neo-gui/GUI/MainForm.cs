@@ -119,6 +119,12 @@ namespace Neo.GUI
 
         private void Service_WalletChanged(object sender, EventArgs e)
         {
+            if (InvokeRequired)
+            {
+                Invoke(new EventHandler(Service_WalletChanged), sender, e);
+                return;
+            }
+
             listView3.Items.Clear();
             修改密码CToolStripMenuItem.Enabled = Service.CurrentWallet is UserWallet;
             交易TToolStripMenuItem.Enabled = Service.CurrentWallet != null;
@@ -281,11 +287,16 @@ namespace Neo.GUI
         {
             using ChangePasswordDialog dialog = new ChangePasswordDialog();
             if (dialog.ShowDialog() != DialogResult.OK) return;
-            if (!(Service.CurrentWallet is UserWallet wallet)) return;
-            if (wallet.ChangePassword(dialog.OldPassword, dialog.NewPassword))
+            if (Service.CurrentWallet.ChangePassword(dialog.OldPassword, dialog.NewPassword))
+            {
+                if (Service.CurrentWallet is NEP6Wallet wallet)
+                    wallet.Save();
                 MessageBox.Show(Strings.ChangePasswordSuccessful);
+            }
             else
+            {
                 MessageBox.Show(Strings.PasswordIncorrect);
+            }
         }
 
         private void 退出XToolStripMenuItem_Click(object sender, EventArgs e)

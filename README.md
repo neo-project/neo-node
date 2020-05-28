@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://neo.org/">
+<a href="https://neo.org/">
       <img
       src="https://neo3.azureedge.net/images/logo%20files-dark.svg"
       width="250px" alt="neo-logo">
@@ -14,7 +14,7 @@
   <a href="https://docs.neo.org/docs/en-us/index.html"><strong>Documentation »</strong></a>
   <br>
   <br>
-  <a href="https://github.com/neo-project/neo">Neo<</a>
+  <a href="https://github.com/neo-project/neo">Neo</a>
   ·
   <a href="https://github.com/neo-project/neo-vm">Neo VM</a>
   ·
@@ -80,7 +80,6 @@
       width="28px">
   </a>
 </p>
-
 
 ## Table of Contents
 1. [Overview](#overview)
@@ -167,6 +166,7 @@ Neo-cli is a full node with wallet capabilities. It also supports RPC endpoints 
 
 #### Logging
 
+
 To enable logs in neo-cli, you need to add the ApplicationLogs plugin. Please check [here](https://github.com/neo-project/neo-plugins) for more information.
 
 
@@ -217,4 +217,3 @@ The best way to start contributing is by testing open PRs.
 
 #### License
 The NEO project is licensed under the [MIT license](LICENSE).
-

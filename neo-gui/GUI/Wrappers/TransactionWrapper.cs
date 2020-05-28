@@ -24,8 +24,6 @@ namespace Neo.GUI.Wrappers
         [Category("Basic")]
         public List<TransactionAttributeWrapper> Attributes { get; set; } = new List<TransactionAttributeWrapper>();
         [Category("Basic")]
-        public List<CosignerWrapper> Cosigners { get; set; } = new List<CosignerWrapper>();
-        [Category("Basic")]
         [Editor(typeof(ScriptEditor), typeof(UITypeEditor))]
         [TypeConverter(typeof(HexConverter))]
         public byte[] Script { get; set; }
@@ -43,7 +41,6 @@ namespace Neo.GUI.Wrappers
                 NetworkFee = NetworkFee,
                 ValidUntilBlock = ValidUntilBlock,
                 Attributes = Attributes.Select(p => p.Unwrap()).ToArray(),
-                Cosigners = Cosigners.Select(p => p.Unwrap()).ToArray(),
                 Script = Script,
                 Witnesses = Witnesses.Select(p => p.Unwrap()).ToArray()
             };
