@@ -73,7 +73,6 @@ namespace Neo.GUI
             {
                 Sender = UInt160.Zero,
                 Attributes = new TransactionAttribute[0],
-                Cosigners = new Cosigner[0],
                 Script = script,
                 Witnesses = new Witness[0]
             };

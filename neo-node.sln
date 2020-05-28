@@ -5,7 +5,15 @@ VisualStudioVersion = 16.0.29519.87
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "neo-cli", "neo-cli\neo-cli.csproj", "{900CA179-AEF0-43F3-9833-5DB060272D8E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "neo-gui", "neo-gui\neo-gui.csproj", "{1CF672B6-B5A1-47D2-8CE9-C54BC05FA6E7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "neo-gui", "neo-gui\neo-gui.csproj", "{1CF672B6-B5A1-47D2-8CE9-C54BC05FA6E7}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Neo.ConsoleService.Tests", "tests\Neo.ConsoleService.Tests\Neo.ConsoleService.Tests.csproj", "{CC845558-D7C2-412D-8014-15699DFBA530}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Neo.ConsoleService", "Neo.ConsoleService\Neo.ConsoleService.csproj", "{8D2BC669-11AC-42DB-BE75-FD53FA2475C6}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{62F4DC79-BE3D-4E60-B402-8D5F9C4BB2D9}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{705EBADA-05F7-45D1-9D63-D399E87525DB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,9 +29,23 @@ Global
 		{1CF672B6-B5A1-47D2-8CE9-C54BC05FA6E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1CF672B6-B5A1-47D2-8CE9-C54BC05FA6E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1CF672B6-B5A1-47D2-8CE9-C54BC05FA6E7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CC845558-D7C2-412D-8014-15699DFBA530}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC845558-D7C2-412D-8014-15699DFBA530}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC845558-D7C2-412D-8014-15699DFBA530}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC845558-D7C2-412D-8014-15699DFBA530}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D2BC669-11AC-42DB-BE75-FD53FA2475C6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D2BC669-11AC-42DB-BE75-FD53FA2475C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D2BC669-11AC-42DB-BE75-FD53FA2475C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D2BC669-11AC-42DB-BE75-FD53FA2475C6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{900CA179-AEF0-43F3-9833-5DB060272D8E} = {705EBADA-05F7-45D1-9D63-D399E87525DB}
+		{1CF672B6-B5A1-47D2-8CE9-C54BC05FA6E7} = {705EBADA-05F7-45D1-9D63-D399E87525DB}
+		{CC845558-D7C2-412D-8014-15699DFBA530} = {62F4DC79-BE3D-4E60-B402-8D5F9C4BB2D9}
+		{8D2BC669-11AC-42DB-BE75-FD53FA2475C6} = {705EBADA-05F7-45D1-9D63-D399E87525DB}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {6C1293A1-8EC4-44E8-9EE9-67892696FE26}

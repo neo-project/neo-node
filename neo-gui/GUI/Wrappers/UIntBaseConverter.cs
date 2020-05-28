@@ -31,9 +31,13 @@ namespace Neo.GUI.Wrappers
         {
             if (destinationType != typeof(string))
                 throw new NotSupportedException();
-            UIntBase i = value as UIntBase;
-            if (i == null) return null;
-            return i.ToString();
+
+            return value switch
+            {
+                UInt160 i => i.ToString(),
+                UInt256 i => i.ToString(),
+                _ => null,
+            };
         }
     }
 }
