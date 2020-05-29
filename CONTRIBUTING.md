@@ -35,25 +35,6 @@ Avoid implementing issues with the discussion tag.
 ### Issues for beginners
 If you are looking to start contributing to NEO, we suggest you start working on issues with ![](./.github/images/cosmetic.png) or ![](./.github/images/house-keeping.png) tags since they usually do not depend on extensive NEO platform knowledge. 
 
-### Tags for Issues States
-
-![Discussion](./.github/images/discussion.png) Whenever someone posts a new feature request, the tag discussion is added. This means that there is no consensus if the feature should be implemented or not. Avoid creating PR to solve issues in this state since it may be completely discarded.
-
-![Design](./.github/images/solution-design.png) When a feature request is accepted by the team, but there is no consensus about the implementation, the issue is tagged with design. We recommend the team to agree in the solution design before anyone attempts to implement it, using text or UML. It is not recommended, but developers can also present their solution using code.  
-Note that PRs for issues in this state may also be discarded if the team disagree with the proposed solution.
-
-![Ready-to-implement](./.github/images/ready-to-implement.png) Once the team has agreed on feature and the proposed solution, the issue is tagged with ready-to-implement. When implementing it, please follow the solution accepted by the team.
-
-### Tags for Issue Types
-
-![Cosmetic](./.github/images/cosmetic.png) Issues with the cosmetic tag are usually changes in code or documentation that improve user experience without affecting current functionality. These issues are recommended for beginners because they require little to no knowledge about Neo platform.
-
-![Enhancement](./.github/images/enhancement.png) Enhancements are platform changes that may affect performance, usability or add new features to existing modules. It is recommended that developers have previous knowledge in the platform to work in these improvements, specially in more complicated modules like the compiler, ledger and consensus.
-
-![Feature](./.github/images/new-feature.png) New features may include large changes in the code base. Some are complex, but some are not. So, a few issues with new-feature may be recommended for starters, specially those related to the rpc and the sdk module.
-
-![Migration](./.github/images/migration.png) Issues related to the migration from Neo 2 to Neo 3 are tagged with migration. These issues are usually the most complicated ones since they require a deep knowledge in both versions.
-
 ### Tags for Project Modules 
 These tags do not necessarily represent each module at code level. Modules consensus and compiler are not recommended for beginners.
 
