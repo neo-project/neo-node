@@ -432,7 +432,7 @@ namespace Neo.CLI
             if (context.Completed)
             {
                 tx.Witnesses = context.GetWitnesses();
-                NeoSystem.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
+                NeoSystem.Blockchain.Tell(tx);
                 Console.WriteLine($"TXID: {tx.Hash}");
             }
             else
@@ -534,7 +534,7 @@ namespace Neo.CLI
             {
                 tx.Witnesses = context.GetWitnesses();
 
-                NeoSystem.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
+                NeoSystem.Blockchain.Tell(tx);
 
                 msg = $"Signed and relayed transaction with hash={tx.Hash}";
                 Console.WriteLine(msg);
