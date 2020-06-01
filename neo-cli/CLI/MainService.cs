@@ -285,20 +285,6 @@ namespace Neo.CLI
                         throw new FormatException($"OpCode not found at {context.InstructionPointer}-{((byte)ci.OpCode).ToString("x2")}");
                     }
 
-                    switch (ci.OpCode)
-                    {
-                        case OpCode.SYSCALL:
-                            {
-                                // Check bad syscalls (NEO2)
-
-                                if (!InteropService.SupportedMethods().Any(u => u.Hash == ci.TokenU32))
-                                {
-                                    throw new FormatException($"Syscall not found {ci.TokenU32.ToString("x2")}. Are you using a NEO2 smartContract?");
-                                }
-                                break;
-                            }
-                    }
-
                     context.InstructionPointer += ci.Size;
                 }
             }
@@ -308,7 +294,7 @@ namespace Neo.CLI
             scriptHash = file.ScriptHash;
             using (ScriptBuilder sb = new ScriptBuilder())
             {
-                sb.EmitSysCall(InteropService.Contract.Create, file.Script, manifest.ToJson().ToString());
+                sb.EmitSysCall(ApplicationEngine.System_Contract_Create, file.Script, manifest.ToJson().ToString());
                 return sb.ToArray();
             }
         }

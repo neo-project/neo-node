@@ -18,7 +18,7 @@ namespace Neo.GUI
             byte[] script = textBox8.Text.HexToBytes();
             string manifest = "";
             using ScriptBuilder sb = new ScriptBuilder();
-            sb.EmitSysCall(InteropService.Contract.Create, script, manifest);
+            sb.EmitSysCall(ApplicationEngine.System_Contract_Create, script, manifest);
             return sb.ToArray();
         }
 
