@@ -105,24 +105,20 @@ namespace Neo.CLI
             dic.Add("RpcNep5Tracker", "Enquiries NEP-5 balance and transactions history of accounts through RPC");
             dic.Add("RpcServer", "Enables RPC for the node");
             dic.Add("StatesDumper", "Exports Neo-CLI status data");
-            dic.Add("SystemLog", "Prints the consensus log");
 
-            if (Plugin.Plugins.Count > 0)
-            {
-                Console.WriteLine("Installed plugins:");
-                Plugin.Plugins.ForEach(p =>
+            Console.WriteLine("Installed plugins:");
+            Plugin.Plugins.ForEach(p =>
+                {
+                    if (dic.TryGetValue(p.Name, out string description))
                     {
-                        var description = dic.GetValueOrDefault(p.Name, "Description");
                         Console.WriteLine("\t" + p.Name + "\t" + description);
                         dic.Remove(p.Name);
-                    });
-                Console.WriteLine("Uninstalled plugins:");
-                dic.ForEach(p => Console.WriteLine("\t" + p.Key + "\t" + p.Value));
-            }
-            else
-            {
-                Console.WriteLine("No installed plugins");
-            }
+                    }
+                });
+
+            Console.WriteLine();
+            Console.WriteLine("Uninstalled plugins:");
+            dic.ForEach(p => Console.WriteLine("\t" + p.Key + "\t" + p.Value));
         }
     }
 }
