@@ -52,7 +52,7 @@ namespace Neo.GUI
             if (context.Completed)
             {
                 tx.Witnesses = context.GetWitnesses();
-                Service.NeoSystem.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
+                Service.NeoSystem.Blockchain.Tell(tx);
                 InformationBox.Show(tx.Hash.ToString(), Strings.SendTxSucceedMessage, Strings.SendTxSucceedTitle);
             }
             else
