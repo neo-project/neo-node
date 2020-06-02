@@ -1,6 +1,8 @@
+using Akka.Util.Internal;
 using Neo.ConsoleService;
 using Neo.Plugins;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -96,14 +98,30 @@ namespace Neo.CLI
         [ConsoleCommand("plugins", Category = "Plugin Commands")]
         private void OnPluginsCommand()
         {
+            Dictionary<string, string> dic = new Dictionary<string, string>();
+            dic.Add("ApplicationLogs", "Synchronizes the smart contract log with the NativeContract log (Notify)");
+            dic.Add("LevelDBStore", "Uses LevelDB to store the blockchain data");
+            dic.Add("RocksDBStore", "Uses RocksDBStore to store the blockchain data");
+            dic.Add("RpcNep5Tracker", "Enquiries NEP-5 balance and transactions history of accounts through RPC");
+            dic.Add("RpcServer", "Enables RPC for the node");
+            dic.Add("StatesDumper", "Exports Neo-CLI status data");
+            dic.Add("SystemLog", "Prints the consensus log");
+
             if (Plugin.Plugins.Count > 0)
             {
-                Console.WriteLine("Loaded plugins:");
-                Plugin.Plugins.ForEach(p => Console.WriteLine("\t" + p.Name));
+                Console.WriteLine("Installed plugins:");
+                Plugin.Plugins.ForEach(p =>
+                    {
+                        var description = dic.GetValueOrDefault(p.Name, "Description");
+                        Console.WriteLine("\t" + p.Name + "\t" + description);
+                        dic.Remove(p.Name);
+                    });
+                Console.WriteLine("Uninstalled plugins:");
+                dic.ForEach(p => Console.WriteLine("\t" + p.Key + "\t" + p.Value));
             }
             else
             {
-                Console.WriteLine("No loaded plugins");
+                Console.WriteLine("No installed plugins");
             }
         }
     }
