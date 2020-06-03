@@ -48,7 +48,7 @@ namespace Neo.GUI
                 return;
             }
             tx.Witnesses = context.GetWitnesses();
-            Service.NeoSystem.LocalNode.Tell(new LocalNode.Relay { Inventory = tx });
+            Service.NeoSystem.Blockchain.Tell(tx);
             InformationBox.Show(tx.Hash.ToString(), Strings.RelaySuccessText, Strings.RelaySuccessTitle);
             button4.Visible = false;
         }

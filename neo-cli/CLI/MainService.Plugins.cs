@@ -98,27 +98,25 @@ namespace Neo.CLI
         [ConsoleCommand("plugins", Category = "Plugin Commands")]
         private void OnPluginsCommand()
         {
-            Dictionary<string, string> dic = new Dictionary<string, string>();
-            dic.Add("ApplicationLogs", "Synchronizes the smart contract log with the NativeContract log (Notify)");
-            dic.Add("LevelDBStore", "Uses LevelDB to store the blockchain data");
-            dic.Add("RocksDBStore", "Uses RocksDBStore to store the blockchain data");
-            dic.Add("RpcNep5Tracker", "Enquiries NEP-5 balance and transactions history of accounts through RPC");
-            dic.Add("RpcServer", "Enables RPC for the node");
-            dic.Add("StatesDumper", "Exports Neo-CLI status data");
+            Dictionary<string, string> officialPlugins = new Dictionary<string, string>();
+            officialPlugins.Add("ApplicationLogs", "Synchronizes the smart contract log with the NativeContract log (Notify)");
+            officialPlugins.Add("LevelDBStore", "Uses LevelDB to store the blockchain data");
+            officialPlugins.Add("RocksDBStore", "Uses RocksDBStore to store the blockchain data");
+            officialPlugins.Add("RpcNep5Tracker", "Enquiries NEP-5 balance and transactions history of accounts through RPC");
+            officialPlugins.Add("RpcServer", "Enables RPC for the node");
+            officialPlugins.Add("StatesDumper", "Exports Neo-CLI status data");
 
             Console.WriteLine("Installed plugins:");
             Plugin.Plugins.ForEach(p =>
                 {
-                    if (dic.TryGetValue(p.Name, out string description))
-                    {
-                        Console.WriteLine("\t" + p.Name + "\t" + description);
-                        dic.Remove(p.Name);
-                    }
+                    if (officialPlugins.TryGetValue(p.Name, out string description))
+                        officialPlugins.Remove(p.Name);
+                    Console.WriteLine("\t" + p.Name + "\t" + p.Description);
                 });
 
             Console.WriteLine();
             Console.WriteLine("Uninstalled plugins:");
-            dic.ForEach(p => Console.WriteLine("\t" + p.Key + "\t" + p.Value));
+            officialPlugins.ForEach(p => Console.WriteLine("\t" + p.Key + "\t" + p.Value));
         }
     }
 }
