@@ -1,8 +1,6 @@
-using Akka.Util.Internal;
 using Neo.ConsoleService;
 using Neo.Plugins;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -98,25 +96,11 @@ namespace Neo.CLI
         [ConsoleCommand("plugins", Category = "Plugin Commands")]
         private void OnPluginsCommand()
         {
-            Dictionary<string, string> officialPlugins = new Dictionary<string, string>();
-            officialPlugins.Add("ApplicationLogs", "Synchronizes the smart contract log with the NativeContract log (Notify)");
-            officialPlugins.Add("LevelDBStore", "Uses LevelDB to store the blockchain data");
-            officialPlugins.Add("RocksDBStore", "Uses RocksDBStore to store the blockchain data");
-            officialPlugins.Add("RpcNep5Tracker", "Enquiries NEP-5 balance and transactions history of accounts through RPC");
-            officialPlugins.Add("RpcServer", "Enables RPC for the node");
-            officialPlugins.Add("StatesDumper", "Exports Neo-CLI status data");
-
             Console.WriteLine("Installed plugins:");
             Plugin.Plugins.ForEach(p =>
                 {
-                    if (officialPlugins.TryGetValue(p.Name, out string description))
-                        officialPlugins.Remove(p.Name);
                     Console.WriteLine("\t" + p.Name + "\t" + p.Description);
                 });
-
-            Console.WriteLine();
-            Console.WriteLine("Uninstalled plugins:");
-            officialPlugins.ForEach(p => Console.WriteLine("\t" + p.Key + "\t" + p.Value));
         }
     }
 }
