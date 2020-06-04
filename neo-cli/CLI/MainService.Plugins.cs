@@ -96,11 +96,15 @@ namespace Neo.CLI
         [ConsoleCommand("plugins", Category = "Plugin Commands")]
         private void OnPluginsCommand()
         {
-            Console.WriteLine("Installed plugins:");
-            Plugin.Plugins.ForEach(p =>
-                {
-                    Console.WriteLine("\t" + p.Name + "\t" + p.Description);
-                });
+            if (Plugin.Plugins.Count > 0)
+            {
+                Console.WriteLine("Loaded plugins:");
+                Plugin.Plugins.ForEach(p => Console.WriteLine("\t" + p.Name + "\t" + p.Description));
+            }
+            else
+            {
+                Console.WriteLine("No loaded plugins");
+            }
         }
     }
 }
