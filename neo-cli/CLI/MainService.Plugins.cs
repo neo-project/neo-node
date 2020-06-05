@@ -99,7 +99,7 @@ namespace Neo.CLI
             if (Plugin.Plugins.Count > 0)
             {
                 Console.WriteLine("Loaded plugins:");
-                Plugin.Plugins.ForEach(p => Console.WriteLine("\t" + p.Name));
+                Plugin.Plugins.ForEach(p => Console.WriteLine("\t" + p.Name + "\t" + p.Description));
             }
             else
             {
