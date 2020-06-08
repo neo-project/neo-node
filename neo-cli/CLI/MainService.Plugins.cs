@@ -71,6 +71,11 @@ namespace Neo.CLI
         [ConsoleCommand("uninstall", Category = "Plugin Commands")]
         private void OnUnInstallCommand(string pluginName)
         {
+            if (pluginName == "SystemLog")
+            {
+                Console.WriteLine("You cannot uninstall a built-in plugin.");
+                return;
+            }
             var plugin = Plugin.Plugins.FirstOrDefault(p => p.Name == pluginName);
             if (plugin is null)
             {
