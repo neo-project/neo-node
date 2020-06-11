@@ -104,7 +104,11 @@ namespace Neo.CLI
             if (Plugin.Plugins.Count > 0)
             {
                 Console.WriteLine("Loaded plugins:");
-                Plugin.Plugins.ForEach(p => { if (p.Name != "SystemLog") Console.WriteLine("\t" + p.Name + "\t" + p.Description); });
+                foreach (Plugin plugin in Plugin.Plugins)
+                {
+                    if (plugin is Logger) continue;
+                    Console.WriteLine("\t" + plugin.Name + "\t" + plugin.Description);
+                }
             }
             else
             {
