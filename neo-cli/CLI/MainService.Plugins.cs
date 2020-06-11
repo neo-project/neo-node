@@ -77,6 +77,11 @@ namespace Neo.CLI
                 Console.WriteLine("Plugin not found");
                 return;
             }
+            if (plugin is Logger)
+            {
+                Console.WriteLine("You cannot uninstall a built-in plugin.");
+                return;
+            }
 
             File.Delete(plugin.Path);
             File.Delete(plugin.ConfigFile);
@@ -99,7 +104,11 @@ namespace Neo.CLI
             if (Plugin.Plugins.Count > 0)
             {
                 Console.WriteLine("Loaded plugins:");
-                Plugin.Plugins.ForEach(p => Console.WriteLine("\t" + p.Name + "\t" + p.Description));
+                foreach (Plugin plugin in Plugin.Plugins)
+                {
+                    if (plugin is Logger) continue;
+                    Console.WriteLine("\t" + plugin.Name + "\t" + plugin.Description);
+                }
             }
             else
             {

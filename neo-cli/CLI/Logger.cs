@@ -16,6 +16,7 @@ namespace Neo.CLI
         private static readonly ConsoleColorSet FatalColor = new ConsoleColorSet(ConsoleColor.Red);
 
         public override string Name => "SystemLog";
+        public override string Description => "Prints consensus log and is a built-in plugin which cannot be uninstalled";
         public override string ConfigFile => Combine(GetDirectoryName(Path), "config.json");
         public override string Path => GetType().Assembly.Location;
 
