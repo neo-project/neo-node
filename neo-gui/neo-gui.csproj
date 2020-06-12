@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+
+  <PropertyGroup>
+    <Copyright>2016-2019 The Neo Project</Copyright>
+    <AssemblyTitle>Neo.GUI</AssemblyTitle>
+    <Version>3.0.0-preview2</Version>
+    <Authors>The Neo Project</Authors>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <RootNamespace>Neo</RootNamespace>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Company>The Neo Project</Company>
+    <Product>Neo.GUI</Product>
+    <Description>Neo.GUI</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\neo-cli\neo-cli.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="GUI\DeveloperToolsForm.ContractParameters.cs">
+      <DependentUpon>DeveloperToolsForm.cs</DependentUpon>
+    </Compile>
+    <Compile Update="GUI\DeveloperToolsForm.TxBuilder.cs">
+      <DependentUpon>DeveloperToolsForm.cs</DependentUpon>
+    </Compile>
+    <Compile Update="Properties\Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Update="Properties\Strings.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Strings.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Properties\Strings.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Strings.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Properties\Strings.es-Es.resx">
+      <DependentUpon>Strings.resx</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Properties\Strings.zh-Hans.resx">
+      <DependentUpon>Strings.resx</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>

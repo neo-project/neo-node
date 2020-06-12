@@ -3,6 +3,59 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.10.1] - 2019-04-05
+### Added
+- New CLI commands: `close wallet`.
+- New RPC command: `listplugins`.
+- New plugin type: `IP2PPlugin`.
+- Allow setting `MaxConnectionsPerAddress` in `config.json`.
+- Allow setting `MaxGasInvoke` in `config.json`.
+- Automatically set transaction fee.
+
+### Changed
+- Improve performance of NeoVM.
+- Improve performance of `.db3` wallet.
+
+### Fixed
+- Fixed a bug in dBFT 2.0.
+- Fixed bugs in NeoVM.
+- Fixed bugs in RPC commands: `getblock` and `getblockhash`.
+
+## [2.10.0] - 2019-03-13
+### Added
+- dBFT 2.0
+- Add support for deploying and invoking contracts.
+- Allow setting `MinDesiredConnections` and `MaxConnections` in `config.json`.
+- Add new plugin type: `IMemoryPoolTxObserverPlugin`.
+- New smart contract API: `Neo.Iterator.Concat`.
+- New RPC command: `gettransactionheight`.
+
+### Changed
+- Improve performance of NeoVM.
+- Improve large memory pool performance.
+
+### Fixed
+- Fixed startup issue in non-windows platform.
+- Fixed console flicker with show state command.
+- Fixed a dead lock in `WalletIndexer`.
+- Fixed an error when exiting.
+
+### Removed
+- Refactor RpcServer and move wallet related commands to a plugin.
+
+## [2.9.4] - 2019-01-07
+### Added
+- Allow to start as a service in windows.
+- New CLI commands: `install <plugin>` and `uninstall <plugin>`.
+- Allow plugins to get contract execution results.
+- Allow plugins to delay starting the node.
+- Allow plugins to have third-party dependencies.
+
+### Fixed
+- Fixed a concurrency issue.
+- Fixed a block relaying issue.
+- Fixed an issue where sometimes transactions could not be removed from the memory pool.
+
 ## [2.9.3] - 2018-12-12
 ### Added
 - Hash interop names to save space in compiled byte code.(smart contract)
