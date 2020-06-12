@@ -15,6 +15,5 @@ namespace Neo.CLI
         {
             NativeContract.Contracts.ToList().ForEach(p => Console.WriteLine("\t" + p.Name + "\t" + p.Hash));
         }
-
     }
 }
