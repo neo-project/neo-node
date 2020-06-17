@@ -318,7 +318,7 @@ namespace Neo.CLI
                 throw new FileNotFoundException();
             }
 
-            switch (Path.GetExtension(path))
+            switch (Path.GetExtension(path).ToLowerInvariant())
             {
                 case ".db3":
                     {
