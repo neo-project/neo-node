@@ -573,8 +573,7 @@ namespace Neo.CLI
                     return null;
                 }
 
-                StackItem ret = engine.ResultStack.Pop();
-                return ret;
+                return engine.ResultStack.Pop();
             }
         }
     }
