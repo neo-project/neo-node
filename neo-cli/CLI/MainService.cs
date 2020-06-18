@@ -572,7 +572,7 @@ namespace Neo.CLI
                     Console.WriteLine("Engine faulted.");
                     return null;
                 }
-                
+
                 StackItem ret = engine.ResultStack.Pop();
                 return ret;
             }
