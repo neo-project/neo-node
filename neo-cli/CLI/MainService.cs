@@ -318,15 +318,21 @@ namespace Neo.CLI
                 throw new FileNotFoundException();
             }
 
-            if (Path.GetExtension(path) == ".db3")
+            switch (Path.GetExtension(path).ToLowerInvariant())
             {
-                CurrentWallet = UserWallet.Open(path, password);
-            }
-            else
-            {
-                NEP6Wallet nep6wallet = new NEP6Wallet(path);
-                nep6wallet.Unlock(password);
-                CurrentWallet = nep6wallet;
+                case ".db3":
+                    {
+                        CurrentWallet = UserWallet.Open(path, password);
+                        break;
+                    }
+                case ".json":
+                    {
+                        NEP6Wallet nep6wallet = new NEP6Wallet(path);
+                        nep6wallet.Unlock(password);
+                        CurrentWallet = nep6wallet;
+                        break;
+                    }
+                default: throw new NotSupportedException();
             }
         }
 
