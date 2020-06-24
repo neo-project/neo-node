@@ -567,13 +567,13 @@ namespace Neo.CLI
                 if (showStack)
                     Console.WriteLine($"Result Stack: {new JArray(engine.ResultStack.Select(p => p.ToJson()))}");
 
-                if (engine.State.HasFlag(VMState.FAULT) || !engine.ResultStack.TryPop(out VM.Types.StackItem ret))
+                if (engine.State.HasFlag(VMState.FAULT))
                 {
                     Console.WriteLine("Engine faulted.");
                     return null;
                 }
 
-                return ret;
+                return engine.ResultStack.Pop();
             }
         }
     }
