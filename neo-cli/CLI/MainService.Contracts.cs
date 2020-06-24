@@ -57,7 +57,7 @@ namespace Neo.CLI
             {
                 using (SnapshotView snapshot = Blockchain.Singleton.GetSnapshot())
                 {
-                    UInt160[] accounts = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly).Select(p => p.ScriptHash).Where(p => NativeContract.GAS.BalanceOf(snapshot, p).Sign > 0).ToArray();
+                    UInt160[] accounts = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly).Select(p => p.ScriptHash).ToArray();
                     foreach (var signAccount in accounts)
                     {
                         if (witnessAddress is null)
