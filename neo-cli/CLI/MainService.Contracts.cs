@@ -51,35 +51,14 @@ namespace Neo.CLI
         [ConsoleCommand("invoke", Category = "Contract Commands")]
         private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160[] witnessAddress = null)
         {
-            List<Cosigner> signCollection = new List<Cosigner>();
-
+            Cosigner[] cosigners = new Cosigner[0];
             if (witnessAddress != null && !NoWallet())
-            {
-                using (SnapshotView snapshot = Blockchain.Singleton.GetSnapshot())
-                {
-                    UInt160[] accounts = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly).Select(p => p.ScriptHash).ToArray();
-                    foreach (var signAccount in accounts)
-                    {
-                        if (witnessAddress is null)
-                        {
-                            break;
-                        }
-                        foreach (var witness in witnessAddress)
-                        {
-                            if (witness.Equals(signAccount))
-                            {
-                                signCollection.Add(new Cosigner() { Account = signAccount });
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
+                cosigners = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly && witnessAddress.Contains(p.ScriptHash)).Select(p => new Cosigner() { Account = p.ScriptHash }).ToArray();
 
             Transaction tx = new Transaction
             {
                 Sender = UInt160.Zero,
-                Attributes = signCollection.ToArray(),
+                Attributes = cosigners,
                 Witnesses = Array.Empty<Witness>(),
             };
 
