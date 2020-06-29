@@ -60,10 +60,6 @@ namespace Neo.CLI
                     UInt160[] accounts = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly).Select(p => p.ScriptHash).Where(p => NativeContract.GAS.BalanceOf(snapshot, p).Sign > 0).ToArray();
                     foreach (var signAccount in accounts)
                     {
-                        if (witnessAddress is null)
-                        {
-                            break;
-                        }
                         foreach (var witness in witnessAddress)
                         {
                             if (witness.Equals(signAccount))
