@@ -1,9 +1,9 @@
 using Neo.ConsoleService;
+using Neo.Cryptography.ECC;
 using Neo.SmartContract.Native;
 using Neo.VM;
-using System;
-using Neo.Cryptography.ECC;
 using Neo.VM.Types;
+using System;
 
 namespace Neo.CLI
 {
@@ -101,7 +101,7 @@ namespace Neo.CLI
                     var value = (VM.Types.Array)item;
 
                     Console.Write(((ByteString)value?[0])?.GetSpan().ToHexString() + "\t");
-                    Console.WriteLine(((Integer)value?[1]).ToBigInteger());
+                    Console.WriteLine(((Integer)value?[1]).GetInteger());
                 }
             }
         }
