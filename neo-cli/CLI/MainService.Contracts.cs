@@ -53,7 +53,7 @@ namespace Neo.CLI
         {
             Cosigner[] cosigners = new Cosigner[0];
             if (witnessAddress != null && !NoWallet())
-                cosigners = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly && witnessAddress.Contains(p.ScriptHash)).Select(p => new Cosigner() { Account = p.ScriptHash }).ToArray();
+                cosigners = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly && witnessAddress.Contains(p.ScriptHash)).Select(p => new Cosigner() { Account = p.ScriptHash, Scopes = WitnessScope.CalledByEntry }).ToArray();
 
             Transaction tx = new Transaction
             {
