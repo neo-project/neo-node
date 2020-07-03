@@ -51,7 +51,7 @@ namespace Neo.CLI
         [ConsoleCommand("invoke", Category = "Contract Commands")]
         private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160[] witnessAddress = null)
         {
-            Cosigner[] cosigners = new Cosigner[0];
+            Cosigner[] cosigners = Array.Empty<Cosigner>();
             if (witnessAddress != null && !NoWallet())
                 cosigners = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly && witnessAddress.Contains(p.ScriptHash)).Select(p => new Cosigner() { Account = p.ScriptHash, Scopes = WitnessScope.CalledByEntry }).ToArray();
 
