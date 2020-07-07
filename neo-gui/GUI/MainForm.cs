@@ -204,11 +204,11 @@ namespace Neo.GUI
                     sb.EmitAppCall(assetId, "name");
                     script = sb.ToArray();
                 }
-                using ApplicationEngine engine = ApplicationEngine.Run(script, snapshot, extraGAS: 0_20000000L * addresses.Length);
+                using ApplicationEngine engine = ApplicationEngine.Run(script, snapshot, gas: 0_20000000L * addresses.Length);
                 if (engine.State.HasFlag(VMState.FAULT)) continue;
                 string name = engine.ResultStack.Pop().GetString();
-                byte decimals = (byte)engine.ResultStack.Pop().GetBigInteger();
-                BigInteger[] balances = ((VMArray)engine.ResultStack.Pop()).Select(p => p.GetBigInteger()).ToArray();
+                byte decimals = (byte)engine.ResultStack.Pop().GetInteger();
+                BigInteger[] balances = ((VMArray)engine.ResultStack.Pop()).Select(p => p.GetInteger()).ToArray();
                 string symbol = null;
                 if (assetId.Equals(NativeContract.NEO.Hash))
                     symbol = NativeContract.NEO.Symbol;
