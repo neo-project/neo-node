@@ -49,16 +49,15 @@ namespace Neo.CLI
         /// <param name="contractParameters">Contract parameters</param>
         /// <param name="witnessAddress">Witness address</param>
         [ConsoleCommand("invoke", Category = "Contract Commands")]
-        private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160[] witnessAddress = null)
+        private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160[] signerAccounts = null)
         {
-            Cosigner[] cosigners = Array.Empty<Cosigner>();
-            if (witnessAddress != null && !NoWallet())
-                cosigners = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly && witnessAddress.Contains(p.ScriptHash)).Select(p => new Cosigner() { Account = p.ScriptHash, Scopes = WitnessScope.CalledByEntry }).ToArray();
+            Signer[] signers = Array.Empty<Signer>();
+            if (signerAccounts != null && !NoWallet())
+                signers = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly && signerAccounts.Contains(p.ScriptHash)).Select(p => new Signer() { Account = p.ScriptHash, Scopes = WitnessScope.CalledByEntry }).ToArray();
 
             Transaction tx = new Transaction
             {
-                Sender = UInt160.Zero,
-                Attributes = cosigners,
+                Signers = signers,
                 Witnesses = Array.Empty<Witness>(),
             };
 
@@ -67,7 +66,7 @@ namespace Neo.CLI
             if (NoWallet()) return;
             try
             {
-                tx = CurrentWallet.MakeTransaction(tx.Script, null, tx.Attributes);
+                tx = CurrentWallet.MakeTransaction(tx.Script, signers[0].Account, signers);
             }
             catch (InvalidOperationException)
             {
