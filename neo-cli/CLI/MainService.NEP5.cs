@@ -1,7 +1,6 @@
 using Neo.ConsoleService;
 using Neo.IO.Json;
 using Neo.Network.P2P.Payloads;
-using Neo.VM;
 using Neo.VM.Types;
 using Neo.Wallets;
 using System;
@@ -65,7 +64,7 @@ namespace Neo.CLI
             var asset = new AssetDescriptor(tokenHash);
 
             var balanceResult = OnInvokeWithResult(tokenHash, "balanceOf", null, new JArray(arg));
-            var balance = new BigDecimal(((PrimitiveType)balanceResult).GetBigInteger(), asset.Decimals);
+            var balance = new BigDecimal(((PrimitiveType)balanceResult).GetInteger(), asset.Decimals);
 
             Console.WriteLine();
             Console.WriteLine($"{asset.AssetName} balance: {balance}");
@@ -92,7 +91,7 @@ namespace Neo.CLI
         {
             var result = OnInvokeWithResult(tokenHash, "decimals", null);
 
-            Console.WriteLine($"Result : {((PrimitiveType)result).GetBigInteger()}");
+            Console.WriteLine($"Result : {((PrimitiveType)result).GetInteger()}");
         }
     }
 }

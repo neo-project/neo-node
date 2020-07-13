@@ -73,8 +73,8 @@ namespace Neo.CLI
             {
                 switch (str.ToLowerInvariant())
                 {
-                    case "neo": return SmartContract.Native.NativeContract.NEO.Hash;
-                    case "gas": return SmartContract.Native.NativeContract.GAS.Hash;
+                    case "neo": return NativeContract.NEO.Hash;
+                    case "gas": return NativeContract.GAS.Hash;
                 }
 
                 // Try to parse as UInt160
@@ -97,8 +97,8 @@ namespace Neo.CLI
                 {
                     switch (str.ToLowerInvariant())
                     {
-                        case "neo": return SmartContract.Native.NativeContract.NEO.Hash;
-                        case "gas": return SmartContract.Native.NativeContract.GAS.Hash;
+                        case "neo": return NativeContract.NEO.Hash;
+                        case "gas": return NativeContract.GAS.Hash;
                     }
 
                     // Try to parse as UInt160
@@ -285,20 +285,6 @@ namespace Neo.CLI
                         throw new FormatException($"OpCode not found at {context.InstructionPointer}-{((byte)ci.OpCode).ToString("x2")}");
                     }
 
-                    switch (ci.OpCode)
-                    {
-                        case OpCode.SYSCALL:
-                            {
-                                // Check bad syscalls (NEO2)
-
-                                if (!InteropService.SupportedMethods().Any(u => u.Hash == ci.TokenU32))
-                                {
-                                    throw new FormatException($"Syscall not found {ci.TokenU32.ToString("x2")}. Are you using a NEO2 smartContract?");
-                                }
-                                break;
-                            }
-                    }
-
                     context.InstructionPointer += ci.Size;
                 }
             }
@@ -308,7 +294,7 @@ namespace Neo.CLI
             scriptHash = file.ScriptHash;
             using (ScriptBuilder sb = new ScriptBuilder())
             {
-                sb.EmitSysCall(InteropService.Contract.Create, file.Script, manifest.ToJson().ToString());
+                sb.EmitSysCall(ApplicationEngine.System_Contract_Create, file.Script, manifest.ToJson().ToString());
                 return sb.ToArray();
             }
         }
@@ -332,15 +318,21 @@ namespace Neo.CLI
                 throw new FileNotFoundException();
             }
 
-            if (Path.GetExtension(path) == ".db3")
+            switch (Path.GetExtension(path).ToLowerInvariant())
             {
-                CurrentWallet = UserWallet.Open(path, password);
-            }
-            else
-            {
-                NEP6Wallet nep6wallet = new NEP6Wallet(path);
-                nep6wallet.Unlock(password);
-                CurrentWallet = nep6wallet;
+                case ".db3":
+                    {
+                        CurrentWallet = UserWallet.Open(path, password);
+                        break;
+                    }
+                case ".json":
+                    {
+                        NEP6Wallet nep6wallet = new NEP6Wallet(path);
+                        nep6wallet.Unlock(password);
+                        CurrentWallet = nep6wallet;
+                        break;
+                    }
+                default: throw new NotSupportedException();
             }
         }
 
@@ -509,11 +501,11 @@ namespace Neo.CLI
                 {
                     Console.WriteLine($"VM State: {engine.State}");
                     Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
-                    Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
+                    Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToJson()))}");
                     Console.WriteLine();
                     if (engine.State.HasFlag(VMState.FAULT))
                     {
-                        Console.WriteLine("Engine faulted.");
+                        Console.WriteLine("Error: " + GetExceptionMessage(engine.FaultException));
                         return;
                     }
                 }
@@ -525,9 +517,9 @@ namespace Neo.CLI
 
                 SignAndSendTx(tx);
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException e)
             {
-                Console.WriteLine("Error: insufficient balance.");
+                Console.WriteLine("Error: " + GetExceptionMessage(e));
                 return;
             }
 
@@ -575,14 +567,26 @@ namespace Neo.CLI
                 if (showStack)
                     Console.WriteLine($"Result Stack: {new JArray(engine.ResultStack.Select(p => p.ToJson()))}");
 
-                if (engine.State.HasFlag(VMState.FAULT) || !engine.ResultStack.TryPop(out VM.Types.StackItem ret))
+                if (engine.State.HasFlag(VMState.FAULT))
                 {
-                    Console.WriteLine("Engine faulted.");
+                    Console.WriteLine("Error: " + GetExceptionMessage(engine.FaultException));
                     return null;
                 }
 
-                return ret;
+                return engine.ResultStack.Pop();
             }
+        }
+
+        static string GetExceptionMessage(Exception exception)
+        {
+            if (exception == null) return "Engine faulted.";
+
+            if (exception.InnerException != null)
+            {
+                return exception.InnerException.Message;
+            }
+
+            return exception.Message;
         }
     }
 }
