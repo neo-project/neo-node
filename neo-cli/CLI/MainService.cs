@@ -73,8 +73,8 @@ namespace Neo.CLI
             {
                 switch (str.ToLowerInvariant())
                 {
-                    case "neo": return SmartContract.Native.NativeContract.NEO.Hash;
-                    case "gas": return SmartContract.Native.NativeContract.GAS.Hash;
+                    case "neo": return NativeContract.NEO.Hash;
+                    case "gas": return NativeContract.GAS.Hash;
                 }
 
                 // Try to parse as UInt160
@@ -97,8 +97,8 @@ namespace Neo.CLI
                 {
                     switch (str.ToLowerInvariant())
                     {
-                        case "neo": return SmartContract.Native.NativeContract.NEO.Hash;
-                        case "gas": return SmartContract.Native.NativeContract.GAS.Hash;
+                        case "neo": return NativeContract.NEO.Hash;
+                        case "gas": return NativeContract.GAS.Hash;
                     }
 
                     // Try to parse as UInt160
@@ -497,7 +497,7 @@ namespace Neo.CLI
                     Console.WriteLine();
                     if (engine.State.HasFlag(VMState.FAULT))
                     {
-                        Console.WriteLine("Engine faulted.");
+                        Console.WriteLine("Error: " + GetExceptionMessage(engine.FaultException));
                         return;
                     }
                 }
@@ -509,9 +509,9 @@ namespace Neo.CLI
 
                 SignAndSendTx(tx);
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException e)
             {
-                Console.WriteLine("Error: insufficient balance.");
+                Console.WriteLine("Error: " + GetExceptionMessage(e));
                 return;
             }
 
@@ -561,12 +561,24 @@ namespace Neo.CLI
 
                 if (engine.State.HasFlag(VMState.FAULT))
                 {
-                    Console.WriteLine("Engine faulted.");
+                    Console.WriteLine("Error: " + GetExceptionMessage(engine.FaultException));
                     return null;
                 }
 
                 return engine.ResultStack.Pop();
             }
+        }
+
+        static string GetExceptionMessage(Exception exception)
+        {
+            if (exception == null) return "Engine faulted.";
+
+            if (exception.InnerException != null)
+            {
+                return exception.InnerException.Message;
+            }
+
+            return exception.Message;
         }
     }
 }
