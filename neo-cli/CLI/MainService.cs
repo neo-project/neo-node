@@ -481,10 +481,8 @@ namespace Neo.CLI
                 using (SnapshotView snapshot = Blockchain.Singleton.GetSnapshot())
                 {
                     signers = CurrentWallet.GetAccounts()
-                    .Where(p => !p.Lock && !p.WatchOnly)
-                    .Select(p => p.ScriptHash)
-                    .Where(p => p == account && NativeContract.GAS.BalanceOf(snapshot, p).Sign > 0)
-                    .Select(p => new Signer() { Account = p, Scopes = WitnessScope.CalledByEntry })
+                    .Where(p => !p.Lock && !p.WatchOnly && p.ScriptHash == account && NativeContract.GAS.BalanceOf(snapshot, p.ScriptHash).Sign > 0)
+                    .Select(p => new Signer() { Account = p.ScriptHash, Scopes = WitnessScope.CalledByEntry })
                     .ToArray();
                 }
             }
