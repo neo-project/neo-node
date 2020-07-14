@@ -22,7 +22,7 @@ namespace Neo.CLI
                 return;
             }
 
-            ECPoint publicKey = CurrentWallet.GetAccount(account).GetKey().PublicKey;
+            ECPoint publicKey = CurrentWallet.GetAccount(account)?.GetKey()?.PublicKey;
             byte[] script;
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
             {
@@ -46,7 +46,7 @@ namespace Neo.CLI
                 return;
             }
 
-            ECPoint publicKey = CurrentWallet.GetAccount(account).GetKey().PublicKey;
+            ECPoint publicKey = CurrentWallet.GetAccount(account)?.GetKey()?.PublicKey;
             byte[] script;
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
             {
