@@ -12,10 +12,9 @@ namespace Neo.CLI
         /// <summary>
         /// Process "register candidate" command
         /// </summary>
-        /// <param name="senderAccount">Sender account</param>
-        /// <param name="senderPublicKey">Register publicKey</param>
+        /// <param name="account">register account scriptHash</param>        
         [ConsoleCommand("register candidate", Category = "Vote Commands")]
-        private void OnRegisterCandidateCommand(UInt160 senderAccount, ECPoint senderPublicKey)
+        private void OnRegisterCandidateCommand(UInt160 account)
         {
             if (NoWallet())
             {
@@ -23,23 +22,23 @@ namespace Neo.CLI
                 return;
             }
 
+            ECPoint publicKey = CurrentWallet.GetAccount(account)?.GetKey()?.PublicKey;
             byte[] script;
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
             {
-                scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "registerCandidate", senderPublicKey);
+                scriptBuilder.EmitAppCall(NativeContract.NEO.Hash, "registerCandidate", publicKey);
                 script = scriptBuilder.ToArray();
             }
 
-            SendTransaction(script, senderAccount);
+            SendTransaction(script, account);
         }
 
         /// <summary>
         /// Process "unregister candidate" command
         /// </summary>
-        /// <param name="senderAccount">Sender account</param>
-        /// <param name="publicKey">Unregister publicKey</param>
+        /// <param name="account">unregister account scriptHash</param>        
         [ConsoleCommand("unregister candidate", Category = "Vote Commands")]
-        private void OnUnregisterCandidateCommand(UInt160 senderAccount, ECPoint publicKey)
+        private void OnUnregisterCandidateCommand(UInt160 account)
         {
             if (NoWallet())
             {
@@ -47,6 +46,7 @@ namespace Neo.CLI
                 return;
             }
 
+            ECPoint publicKey = CurrentWallet.GetAccount(account)?.GetKey()?.PublicKey;
             byte[] script;
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
             {
@@ -54,7 +54,7 @@ namespace Neo.CLI
                 script = scriptBuilder.ToArray();
             }
 
-            SendTransaction(script, senderAccount);
+            SendTransaction(script, account);
         }
 
         /// <summary>
