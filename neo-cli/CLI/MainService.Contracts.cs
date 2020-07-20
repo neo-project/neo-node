@@ -30,9 +30,9 @@ namespace Neo.CLI
             {
                 tx = CurrentWallet.MakeTransaction(script);
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException e)
             {
-                Console.WriteLine("Engine faulted.");
+                Console.WriteLine("Error: " + GetExceptionMessage(e));
                 return;
             }
             Console.WriteLine($"Script hash: {scriptHash.ToString()}");
