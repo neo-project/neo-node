@@ -204,11 +204,11 @@ namespace Neo.GUI
                     sb.EmitAppCall(assetId, "name");
                     script = sb.ToArray();
                 }
-                using ApplicationEngine engine = ApplicationEngine.Run(script, snapshot, extraGAS: 0_20000000L * addresses.Length);
+                using ApplicationEngine engine = ApplicationEngine.Run(script, snapshot, gas: 0_20000000L * addresses.Length);
                 if (engine.State.HasFlag(VMState.FAULT)) continue;
                 string name = engine.ResultStack.Pop().GetString();
-                byte decimals = (byte)engine.ResultStack.Pop().GetBigInteger();
-                BigInteger[] balances = ((VMArray)engine.ResultStack.Pop()).Select(p => p.GetBigInteger()).ToArray();
+                byte decimals = (byte)engine.ResultStack.Pop().GetInteger();
+                BigInteger[] balances = ((VMArray)engine.ResultStack.Pop()).Select(p => p.GetInteger()).ToArray();
                 string symbol = null;
                 if (assetId.Equals(NativeContract.NEO.Hash))
                     symbol = NativeContract.NEO.Symbol;
@@ -287,11 +287,16 @@ namespace Neo.GUI
         {
             using ChangePasswordDialog dialog = new ChangePasswordDialog();
             if (dialog.ShowDialog() != DialogResult.OK) return;
-            if (!(Service.CurrentWallet is UserWallet wallet)) return;
-            if (wallet.ChangePassword(dialog.OldPassword, dialog.NewPassword))
+            if (Service.CurrentWallet.ChangePassword(dialog.OldPassword, dialog.NewPassword))
+            {
+                if (Service.CurrentWallet is NEP6Wallet wallet)
+                    wallet.Save();
                 MessageBox.Show(Strings.ChangePasswordSuccessful);
+            }
             else
+            {
                 MessageBox.Show(Strings.PasswordIncorrect);
+            }
         }
 
         private void 退出XToolStripMenuItem_Click(object sender, EventArgs e)

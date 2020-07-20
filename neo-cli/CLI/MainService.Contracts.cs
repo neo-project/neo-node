@@ -49,81 +49,31 @@ namespace Neo.CLI
         /// <param name="contractParameters">Contract parameters</param>
         /// <param name="witnessAddress">Witness address</param>
         [ConsoleCommand("invoke", Category = "Contract Commands")]
-        private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160[] witnessAddress = null)
+        private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160[] signerAccounts = null)
         {
-            List<ContractParameter> parameters = new List<ContractParameter>();
-            List<Cosigner> signCollection = new List<Cosigner>();
-
-            if (!NoWallet() && witnessAddress != null)
-            {
-                using (SnapshotView snapshot = Blockchain.Singleton.GetSnapshot())
-                {
-                    UInt160[] accounts = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly).Select(p => p.ScriptHash).Where(p => NativeContract.GAS.BalanceOf(snapshot, p).Sign > 0).ToArray();
-                    foreach (var signAccount in accounts)
-                    {
-                        if (witnessAddress is null)
-                        {
-                            break;
-                        }
-                        foreach (var witness in witnessAddress)
-                        {
-                            if (witness.Equals(signAccount))
-                            {
-                                signCollection.Add(new Cosigner() { Account = signAccount });
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (contractParameters != null)
-            {
-                foreach (var contractParameter in contractParameters)
-                {
-                    parameters.Add(ContractParameter.FromJson(contractParameter));
-                }
-            }
+            Signer[] signers = Array.Empty<Signer>();
+            if (signerAccounts != null && !NoWallet())
+                signers = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly && signerAccounts.Contains(p.ScriptHash)).Select(p => new Signer() { Account = p.ScriptHash, Scopes = WitnessScope.CalledByEntry }).ToArray();
 
             Transaction tx = new Transaction
             {
-                Sender = UInt160.Zero,
-                Attributes = Array.Empty<TransactionAttribute>(),
+                Signers = signers,
                 Witnesses = Array.Empty<Witness>(),
-                Cosigners = signCollection.ToArray()
             };
 
-            using (ScriptBuilder scriptBuilder = new ScriptBuilder())
-            {
-                scriptBuilder.EmitAppCall(scriptHash, operation, parameters.ToArray());
-                tx.Script = scriptBuilder.ToArray();
-                Console.WriteLine($"Invoking script with: '{tx.Script.ToHexString()}'");
-            }
-
-            using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, testMode: true))
-            {
-                Console.WriteLine($"VM State: {engine.State}");
-                Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
-                Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToParameter().ToJson()))}");
-                Console.WriteLine();
-                if (engine.State.HasFlag(VMState.FAULT))
-                {
-                    Console.WriteLine("Engine faulted.");
-                    return;
-                }
-            }
+            _ = OnInvokeWithResult(scriptHash, operation, tx, contractParameters);
 
             if (NoWallet()) return;
             try
             {
-                tx = CurrentWallet.MakeTransaction(tx.Script, null, tx.Attributes, tx.Cosigners);
+                tx = CurrentWallet.MakeTransaction(tx.Script, signers.Length > 0 ? signers[0].Account : null, signers);
             }
             catch (InvalidOperationException)
             {
                 Console.WriteLine("Error: insufficient balance.");
                 return;
             }
-            if (!ReadUserInput("relay tx(no|yes)").IsYes())
+            if (!ReadUserInput("Relay tx(no|yes)").IsYes())
             {
                 return;
             }
