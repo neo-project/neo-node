@@ -53,7 +53,7 @@ namespace Neo.CLI
         {
             Signer[] signers = Array.Empty<Signer>();
             if (signerAccounts != null && !NoWallet())
-                signers = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly && signerAccounts.Contains(p.ScriptHash)).Select(p => new Signer() { Account = p.ScriptHash, Scopes = WitnessScope.CalledByEntry }).ToArray();
+                signers = CurrentWallet.GetAccounts().Where(p => !p.Lock && signerAccounts.Contains(p.ScriptHash)).Select(p => new Signer() { Account = p.ScriptHash, Scopes = WitnessScope.CalledByEntry }).ToArray();
 
             Transaction tx = new Transaction
             {

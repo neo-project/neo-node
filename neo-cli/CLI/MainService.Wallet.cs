@@ -294,8 +294,15 @@ namespace Neo.CLI
 
             using (var snapshot = Blockchain.Singleton.GetSnapshot())
             {
-                foreach (Contract contract in CurrentWallet.GetAccounts().Where(p => !p.WatchOnly).Select(p => p.Contract))
+                foreach (var account in CurrentWallet.GetAccounts())
                 {
+                    if (account.WatchOnly)
+                    {
+                        Console.WriteLine($"{"   Address: "}{account.Address}\tWatchOnly");
+                        continue;
+                    }
+
+                    var contract = account.Contract;
                     var type = "Nonstandard";
 
                     if (contract.Script.IsMultiSigContract())
