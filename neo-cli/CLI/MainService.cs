@@ -91,30 +91,7 @@ namespace Neo.CLI
 
             RegisterCommandHander<string, UInt256>(false, (str) => UInt256.Parse(str));
             RegisterCommandHander<string[], UInt256[]>((str) => str.Select(u => UInt256.Parse(u.Trim())).ToArray());
-            RegisterCommandHander<string[], UInt160[]>((arr) =>
-            {
-                return arr.Select(str =>
-                {
-                    switch (str.ToLowerInvariant())
-                    {
-                        case "neo": return NativeContract.NEO.Hash;
-                        case "gas": return NativeContract.GAS.Hash;
-                    }
-
-                    // Try to parse as UInt160
-
-                    if (UInt160.TryParse(str, out var addr))
-                    {
-                        return addr;
-                    }
-
-                    // Accept wallet format
-
-                    return str.ToScriptHash();
-                })
-                .ToArray();
-            });
-
+            RegisterCommandHander<string[], UInt160[]>((arr) => arr.Select(str => StringToAddress(str)).ToArray());
             RegisterCommandHander<string, ECPoint>((str) => ECPoint.Parse(str.Trim(), ECCurve.Secp256r1));
             RegisterCommandHander<string[], ECPoint[]>((str) => str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray());
             RegisterCommandHander<string, JObject>((str) => JObject.Parse(str));
@@ -122,6 +99,26 @@ namespace Neo.CLI
             RegisterCommandHander<JObject, JArray>((obj) => (JArray)obj);
 
             RegisterCommand(this);
+        }
+
+        internal static UInt160 StringToAddress(string input)
+        {
+            switch (input.ToLowerInvariant())
+            {
+                case "neo": return NativeContract.NEO.Hash;
+                case "gas": return NativeContract.GAS.Hash;
+            }
+
+            // Try to parse as UInt160
+
+            if (UInt160.TryParse(input, out var addr))
+            {
+                return addr;
+            }
+
+            // Accept wallet format
+
+            return input.ToScriptHash();
         }
 
         public override void RunConsole()

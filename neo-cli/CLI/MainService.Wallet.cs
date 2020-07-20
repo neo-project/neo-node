@@ -285,6 +285,57 @@ namespace Neo.CLI
         }
 
         /// <summary>
+        /// Process "import watchonly" command
+        /// </summary>
+        [ConsoleCommand("import watchonly", Category = "Wallet Commands")]
+        private void OnImportWatchOnlyCommand(string addressOrFile)
+        {
+            UInt160 address = null;
+            try
+            {
+                address = StringToAddress(addressOrFile);
+            }
+            catch (FormatException) { }
+            if (address == null)
+            {
+                var fileInfo = new FileInfo(addressOrFile);
+
+                if (!fileInfo.Exists)
+                {
+                    Console.WriteLine($"Error: File '{fileInfo.FullName}' doesn't exists");
+                    return;
+                }
+
+                if (fileInfo.Length > 1024 * 1024)
+                {
+                    if (!ReadUserInput($"The file '{fileInfo.FullName}' is too big, do you want to continue? (yes|no)", false).IsYes())
+                    {
+                        return;
+                    }
+                }
+
+                string[] lines = File.ReadAllLines(fileInfo.FullName).Where(u => !string.IsNullOrEmpty(u)).ToArray();
+                using (var percent = new ConsolePercent(0, lines.Length))
+                {
+                    for (int i = 0; i < lines.Length; i++)
+                    {
+                        address = StringToAddress(lines[i]);
+                        CurrentWallet.CreateAccount(address);
+                        percent.Value++;
+                    }
+                }
+            }
+            else
+            {
+                WalletAccount account = CurrentWallet.CreateAccount(address);
+                Console.WriteLine($"Address: {account.Address}");
+                Console.WriteLine($" Pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+            }
+            if (CurrentWallet is NEP6Wallet wallet)
+                wallet.Save();
+        }
+
+        /// <summary>
         /// Process "list address" command
         /// </summary>
         [ConsoleCommand("list address", Category = "Wallet Commands")]
