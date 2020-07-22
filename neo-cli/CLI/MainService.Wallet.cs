@@ -529,20 +529,14 @@ namespace Neo.CLI
                 throw;
             }
             CurrentWallet.Sign(context);
-            string msg;
             if (context.Completed)
             {
                 tx.Witnesses = context.GetWitnesses();
-
                 NeoSystem.Blockchain.Tell(tx);
-
-                msg = $"Signed and relayed transaction with hash={tx.Hash}";
-                Console.WriteLine(msg);
+                Console.WriteLine($"Signed and relayed transaction with hash={tx.Hash}");
                 return;
             }
-
-            msg = $"Failed sending transaction with hash={tx.Hash}";
-            Console.WriteLine(msg);
+            Console.WriteLine($"Failed sending transaction with hash={tx.Hash}");
         }
     }
 }
