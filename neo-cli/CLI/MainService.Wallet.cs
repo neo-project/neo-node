@@ -378,7 +378,7 @@ namespace Neo.CLI
             }
             catch (Exception e)
             {
-                Console.WriteLine($"One or more errors occurred:{Environment.NewLine}{e.Message}");
+                Console.WriteLine("Error: " + GetExceptionMessage(e));
             }
         }
 
@@ -525,7 +525,7 @@ namespace Neo.CLI
             }
             catch (InvalidOperationException ex)
             {
-                Console.WriteLine($"Error creating contract params: {ex}");
+                Console.WriteLine($"Error creating contract params: " + GetExceptionMessage(e));
                 throw;
             }
             CurrentWallet.Sign(context);
