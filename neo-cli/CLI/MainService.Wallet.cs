@@ -523,7 +523,7 @@ namespace Neo.CLI
             {
                 context = new ContractParametersContext(tx);
             }
-            catch (InvalidOperationException ex)
+            catch (InvalidOperationException e)
             {
                 Console.WriteLine($"Error creating contract params: " + GetExceptionMessage(e));
                 throw;
