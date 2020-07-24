@@ -296,7 +296,7 @@ namespace Neo.CLI
                 address = StringToAddress(addressOrFile);
             }
             catch (FormatException) { }
-            if (address == null)
+            if (address is null)
             {
                 var fileInfo = new FileInfo(addressOrFile);
 
