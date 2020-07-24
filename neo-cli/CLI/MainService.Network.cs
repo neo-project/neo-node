@@ -146,7 +146,7 @@ namespace Neo.CLI
             }
             catch (Exception e)
             {
-                Console.WriteLine($"One or more errors occurred:{Environment.NewLine}{e.Message}");
+                Console.WriteLine("Error: " + GetExceptionMessage(e));
             }
         }
     }

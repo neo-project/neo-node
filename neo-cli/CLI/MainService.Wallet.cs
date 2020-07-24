@@ -378,7 +378,7 @@ namespace Neo.CLI
             }
             catch (Exception e)
             {
-                Console.WriteLine($"One or more errors occurred:{Environment.NewLine}{e.Message}");
+                Console.WriteLine("Error: " + GetExceptionMessage(e));
             }
         }
 
@@ -523,26 +523,20 @@ namespace Neo.CLI
             {
                 context = new ContractParametersContext(tx);
             }
-            catch (InvalidOperationException ex)
+            catch (InvalidOperationException e)
             {
-                Console.WriteLine($"Error creating contract params: {ex}");
+                Console.WriteLine($"Error creating contract params: " + GetExceptionMessage(e));
                 throw;
             }
             CurrentWallet.Sign(context);
-            string msg;
             if (context.Completed)
             {
                 tx.Witnesses = context.GetWitnesses();
-
                 NeoSystem.Blockchain.Tell(tx);
-
-                msg = $"Signed and relayed transaction with hash={tx.Hash}";
-                Console.WriteLine(msg);
+                Console.WriteLine($"Signed and relayed transaction with hash={tx.Hash}");
                 return;
             }
-
-            msg = $"Failed sending transaction with hash={tx.Hash}";
-            Console.WriteLine(msg);
+            Console.WriteLine($"Failed sending transaction with hash={tx.Hash}");
         }
     }
 }
