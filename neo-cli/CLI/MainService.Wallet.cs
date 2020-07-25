@@ -424,16 +424,9 @@ namespace Neo.CLI
                     }
                 }, from: from);
             }
-            catch (InvalidOperationException e)
+            catch (Exception e)
             {
-                if (e.InnerException == null)
-                {
-                    Console.WriteLine("Error: insufficient balance.");
-                }
-                else
-                {
-                    Console.WriteLine($"Error: {e.Message}");
-                }
+                Console.WriteLine("Error: " + GetExceptionMessage(e));
                 return;
             }
 
