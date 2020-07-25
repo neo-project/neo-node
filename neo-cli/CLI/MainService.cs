@@ -578,7 +578,7 @@ namespace Neo.CLI
 
             if (exception.InnerException != null)
             {
-                return exception.InnerException.Message;
+                return GetExceptionMessage(exception.InnerException);
             }
 
             return exception.Message;

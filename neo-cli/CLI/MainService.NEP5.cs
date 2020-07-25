@@ -38,9 +38,9 @@ namespace Neo.CLI
                     }
                 }, from: from);
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException e)
             {
-                Console.WriteLine("Error: insufficient balance.");
+                Console.WriteLine("Error: " + GetExceptionMessage(e));
                 return;
             }
             if (!ReadUserInput("Relay tx(no|yes)").IsYes())
