@@ -25,9 +25,9 @@ namespace Neo.CLI
             {
                 tx = CurrentWallet.MakeTransaction(script);
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException e)
             {
-                Console.WriteLine("Engine faulted.");
+                Console.WriteLine("Error: " + GetExceptionMessage(e));
                 return;
             }
             Console.WriteLine($"Script hash: {scriptHash.ToString()}");
@@ -63,9 +63,9 @@ namespace Neo.CLI
             {
                 tx = CurrentWallet.MakeTransaction(tx.Script, signers.Length > 0 ? signers[0].Account : null, signers);
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException e)
             {
-                Console.WriteLine("Error: insufficient balance.");
+                Console.WriteLine("Error: " + GetExceptionMessage(e));
                 return;
             }
             if (!ReadUserInput("Relay tx(no|yes)").IsYes())
