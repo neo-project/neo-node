@@ -329,7 +329,6 @@ namespace Neo.CLI
             {
                 WalletAccount account = CurrentWallet.CreateAccount(address);
                 Console.WriteLine($"Address: {account.Address}");
-                Console.WriteLine($" Pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
             }
             if (CurrentWallet is NEP6Wallet wallet)
                 wallet.Save();
