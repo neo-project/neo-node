@@ -164,7 +164,10 @@ namespace Neo.CLI
             if (scriptHash == null)
                 keys = CurrentWallet.GetAccounts().Where(p => p.HasKey).Select(p => p.GetKey());
             else
-                keys = new[] { CurrentWallet.GetAccount(scriptHash).GetKey() };
+            {
+                var account = CurrentWallet.GetAccount(scriptHash);
+                keys = account?.HasKey != true ? Array.Empty<KeyPair>() : new[] { account.GetKey() };
+            }
             if (path == null)
                 foreach (KeyPair key in keys)
                     Console.WriteLine(key.Export());
