@@ -388,8 +388,9 @@ namespace Neo.CLI
         /// <param name="asset">Asset id</param>
         /// <param name="to">To</param>
         /// <param name="amount">Amount</param>
+        /// <param name="from">From</param>
         [ConsoleCommand("send", Category = "Wallet Commands")]
-        private void OnSendCommand(UInt160 asset, UInt160 to, string amount)
+        private void OnSendCommand(UInt160 asset, UInt160 to, string amount, UInt160 from = null)
         {
             if (NoWallet()) return;
             string password = ReadUserInput("password", true);
@@ -411,15 +412,23 @@ namespace Neo.CLI
                 Console.WriteLine("Incorrect Amount Format");
                 return;
             }
-            tx = CurrentWallet.MakeTransaction(new[]
+            try
             {
-                new TransferOutput
+                tx = CurrentWallet.MakeTransaction(new[]
                 {
-                    AssetId = asset,
-                    Value = decimalAmount,
-                    ScriptHash = to
-                }
-            });
+                    new TransferOutput
+                    {
+                        AssetId = asset,
+                        Value = decimalAmount,
+                        ScriptHash = to
+                    }
+                }, from: from);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Error: " + GetExceptionMessage(e));
+                return;
+            }
 
             if (tx == null)
             {
