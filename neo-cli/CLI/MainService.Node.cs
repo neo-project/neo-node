@@ -19,6 +19,7 @@ namespace Neo.CLI
         [ConsoleCommand("show pool", Category = "Node Commands", Description = "Show the current state of the mempool")]
         private void OnShowPoolCommand(bool verbose = false)
         {
+            int verifiedCount, unverifiedCount;
             if (verbose)
             {
                 Blockchain.Singleton.MemPool.GetVerifiedAndUnverifiedTransactions(
@@ -30,8 +31,16 @@ namespace Neo.CLI
                 Console.WriteLine("Unverified Transactions:");
                 foreach (Transaction tx in unverifiedTransactions)
                     Console.WriteLine($" {tx.Hash} {tx.GetType().Name} {tx.NetworkFee} GAS_NetFee");
+
+                verifiedCount = verifiedTransactions.Count();
+                unverifiedCount = unverifiedTransactions.Count();
             }
-            Console.WriteLine($"total: {Blockchain.Singleton.MemPool.Count}, verified: {Blockchain.Singleton.MemPool.VerifiedCount}, unverified: {Blockchain.Singleton.MemPool.UnVerifiedCount}");
+            else
+            {
+                verifiedCount = Blockchain.Singleton.MemPool.VerifiedCount;
+                unverifiedCount = Blockchain.Singleton.MemPool.UnVerifiedCount;
+            }
+            Console.WriteLine($"total: {Blockchain.Singleton.MemPool.Count}, verified: {verifiedCount}, unverified: {unverifiedCount}");
         }
 
         /// <summary>
