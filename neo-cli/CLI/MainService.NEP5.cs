@@ -5,6 +5,7 @@ using Neo.VM.Types;
 using Neo.Wallets;
 using System;
 using System.Globalization;
+using System.Linq;
 
 namespace Neo.CLI
 {
@@ -37,7 +38,13 @@ namespace Neo.CLI
                         Value = value,
                         ScriptHash = to
                     }
-                }, from: from, cosigners: cosigners);
+                }, from: from, cosigners: cosigners?.Select(p => new Signer
+                {
+                    // default access for transfers should be valid only for first invocation
+                    Scopes = WitnessScope.CalledByEntry,
+                    Account = p
+                })
+                .ToArray() ?? new Signer[0]);
             }
             catch (InvalidOperationException e)
             {
