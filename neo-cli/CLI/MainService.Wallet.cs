@@ -349,16 +349,14 @@ namespace Neo.CLI
             {
                 foreach (var account in CurrentWallet.GetAccounts())
                 {
-                    if (account.WatchOnly)
-                    {
-                        Console.WriteLine($"{"   Address: "}{account.Address}\tWatchOnly");
-                        continue;
-                    }
-
                     var contract = account.Contract;
                     var type = "Nonstandard";
 
-                    if (contract.Script.IsMultiSigContract())
+                    if (account.WatchOnly)
+                    {
+                        type = "WatchOnly";
+                    }
+                    else if (contract.Script.IsMultiSigContract())
                     {
                         type = "MultiSignature";
                     }
@@ -366,13 +364,13 @@ namespace Neo.CLI
                     {
                         type = "Standard";
                     }
-                    else if (snapshot.Contracts.TryGet(contract.ScriptHash) != null)
+                    else if (snapshot.Contracts.TryGet(account.ScriptHash) != null)
                     {
                         type = "Deployed-Nonstandard";
                     }
 
-                    Console.WriteLine($"{"   Address: "}{contract.Address}\t{type}");
-                    Console.WriteLine($"{"ScriptHash: "}{contract.ScriptHash}\n");
+                    Console.WriteLine($"{"   Address: "}{account.Address}\t{type}");
+                    Console.WriteLine($"{"ScriptHash: "}{account.ScriptHash}\n");
                 }
             }
         }
@@ -405,10 +403,11 @@ namespace Neo.CLI
         private void OnListKeyCommand()
         {
             if (NoWallet()) return;
-            foreach (KeyPair key in CurrentWallet.GetAccounts().Where(p => p.HasKey).Select(p => p.GetKey()))
+            foreach (WalletAccount account in CurrentWallet.GetAccounts().Where(p => p.HasKey))
             {
-                Console.WriteLine($"  Address: {Contract.CreateSignatureContract(key.PublicKey).Address}");
-                Console.WriteLine($"PublicKey: {key.PublicKey}\n");
+                Console.WriteLine($"   Address: {account.Address}");
+                Console.WriteLine($"ScriptHash: {account.ScriptHash}");
+                Console.WriteLine($" PublicKey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}\n");
             }
         }
 
