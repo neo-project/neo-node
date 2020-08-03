@@ -19,7 +19,7 @@ All notable changes to this project will be documented in this file.
 - ([#581](https://github.com/neo-project/neo-node/pull/581)) Parse vote commands' result
 - ([#579](https://github.com/neo-project/neo-node/pull/579)) Update cosigner
 - ([#578](https://github.com/neo-project/neo-node/pull/578)) Backup Wallet on change password
-- ([#566](https://github.com/neo-project/neo-node/pull/566)) Show ScriptHash in `list address
+- ([#566](https://github.com/neo-project/neo-node/pull/566)) Show ScriptHash in `list address`
 - ([#577](https://github.com/neo-project/neo-node/pull/577)) Remove log logic
 - ([#604](https://github.com/neo-project/neo-node/pull/604)) Add description and uninstall restriction for “SystemLog”
 - ([#602](https://github.com/neo-project/neo-node/pull/602)) Remove StackItem.ToParameter()
