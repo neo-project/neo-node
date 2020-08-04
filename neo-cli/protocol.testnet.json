@@ -1,6 +1,6 @@
 {
   "ProtocolConfiguration": {
-    "Magic": 1951352142,
+    "Magic": 1955645156,
     "MillisecondsPerBlock": 15000,
     "ValidatorsCount": 7,
     "StandbyCommittee": [
