@@ -263,7 +263,7 @@ namespace Neo.CLI
             }
 
             NefFile file;
-            using (var stream = new BinaryReader(File.OpenRead(nefFilePath), Encoding.UTF8, false))
+            using (var stream = new BinaryReader(File.OpenRead(nefFilePath), Utility.StrictUTF8, false))
             {
                 file = stream.ReadSerializable<NefFile>();
             }

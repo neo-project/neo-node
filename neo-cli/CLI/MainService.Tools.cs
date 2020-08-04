@@ -70,7 +70,7 @@ namespace Neo.CLI
             {
                 var clearHexString = ClearHexString(hexString);
                 var bytes = clearHexString.HexToBytes();
-                var utf8String = Encoding.UTF8.GetString(bytes);
+                var utf8String = Utility.StrictUTF8.GetString(bytes);
 
                 if (!IsPrintable(utf8String))
                 {
@@ -170,7 +170,7 @@ namespace Neo.CLI
         {
             try
             {
-                var bytesParam = Encoding.UTF8.GetBytes(strParam);
+                var bytesParam = Utility.StrictUTF8.GetBytes(strParam);
                 return bytesParam.ToHexString();
             }
             catch
@@ -196,7 +196,7 @@ namespace Neo.CLI
         {
             try
             {
-                byte[] bytearray = Encoding.UTF8.GetBytes(strParam);
+                byte[] bytearray = Utility.StrictUTF8.GetBytes(strParam);
                 string base64 = Convert.ToBase64String(bytearray.AsSpan());
                 return base64;
             }
@@ -407,7 +407,7 @@ namespace Neo.CLI
             try
             {
                 byte[] result = Convert.FromBase64String(bytearray);
-                string utf8string = Encoding.UTF8.GetString(result);
+                string utf8string = Utility.StrictUTF8.GetString(result);
 
                 if (!IsPrintable(utf8string))
                 {
