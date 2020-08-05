@@ -49,9 +49,22 @@ namespace Neo.CLI
         {
             Signer[] signers = Array.Empty<Signer>();
             if (signerAccounts != null && !NoWallet())
+            {
+                if (sender != null)
+                {
+                    if (signerAccounts.Contains(sender) && signerAccounts[0] != sender)
+                    {
+                        var signersList = signerAccounts.ToList();
+                        signersList.Remove(sender);
+                        signerAccounts = signersList.Prepend(sender).ToArray();
+                    }
+                    else if (!signerAccounts.Contains(sender))
+                    {
+                        signerAccounts = signerAccounts.Prepend(sender).ToArray();
+                    }
+                }
                 signers = signerAccounts.Select(p => new Signer() { Account = p, Scopes = WitnessScope.CalledByEntry }).ToArray();
-            if (sender != null && !signerAccounts.Contains(sender))
-                signers = signers.Prepend(new Signer() { Account = sender, Scopes = WitnessScope.CalledByEntry }).ToArray();
+            }
 
             Transaction tx = new Transaction
             {
