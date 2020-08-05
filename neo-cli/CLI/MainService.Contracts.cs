@@ -42,7 +42,8 @@ namespace Neo.CLI
         /// <param name="scriptHash">Script hash</param>
         /// <param name="operation">Operation</param>
         /// <param name="contractParameters">Contract parameters</param>
-        /// <param name="witnessAddress">Witness address</param>
+        /// <param name="sender">Transaction's sender</param>
+        /// <param name="signerAccounts">Signer's accounts</param>
         [ConsoleCommand("invoke", Category = "Contract Commands")]
         private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160 sender = null, UInt160[] signerAccounts = null)
         {

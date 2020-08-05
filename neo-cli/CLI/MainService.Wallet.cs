@@ -448,8 +448,9 @@ namespace Neo.CLI
         /// <param name="to">To</param>
         /// <param name="amount">Amount</param>
         /// <param name="from">From</param>
+        /// <param name="signerAccounts">Signer's accounts</param>
         [ConsoleCommand("send", Category = "Wallet Commands")]
-        private void OnSendCommand(UInt160 asset, UInt160 to, string amount, UInt160 from = null, UInt160[] signers = null)
+        private void OnSendCommand(UInt160 asset, UInt160 to, string amount, UInt160 from = null, UInt160[] signerAccounts = null)
         {
             if (NoWallet()) return;
             string password = ReadUserInput("password", true);
@@ -481,7 +482,7 @@ namespace Neo.CLI
                         Value = decimalAmount,
                         ScriptHash = to
                     }
-                }, from: from, cosigners: signers?.Select(p => new Signer
+                }, from: from, cosigners: signerAccounts?.Select(p => new Signer
                 {
                     // default access for transfers should be valid only for first invocation
                     Scopes = WitnessScope.CalledByEntry,
