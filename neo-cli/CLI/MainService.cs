@@ -493,13 +493,8 @@ namespace Neo.CLI
 
                 using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, null, testMode: true))
                 {
-                    Console.WriteLine($"VM State: {engine.State}");
-                    Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
-                    Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToJson()))}");
-                    Console.WriteLine();
-                    if (engine.State.HasFlag(VMState.FAULT))
+                    if (!PrintOutputExecution(engine, true))
                     {
-                        Console.WriteLine("Error: " + GetExceptionMessage(engine.FaultException));
                         return;
                     }
                 }
@@ -553,22 +548,31 @@ namespace Neo.CLI
                 tx.Script = script;
             }
 
-            using (ApplicationEngine engine = ApplicationEngine.Run(script, verificable, testMode: true))
+            using ApplicationEngine engine = ApplicationEngine.Run(script, verificable, testMode: true);
+
+            if (!PrintOutputExecution(engine, showStack))
             {
-                Console.WriteLine($"VM State: {engine.State}");
-                Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
-
-                if (showStack)
-                    Console.WriteLine($"Result Stack: {new JArray(engine.ResultStack.Select(p => p.ToJson()))}");
-
-                if (engine.State.HasFlag(VMState.FAULT))
-                {
-                    Console.WriteLine("Error: " + GetExceptionMessage(engine.FaultException));
-                    return null;
-                }
-
-                return engine.ResultStack.Pop();
+                return null;
             }
+
+            return engine.ResultStack.Pop();
+        }
+
+        bool PrintOutputExecution(ApplicationEngine engine, bool showStack = true)
+        {
+            Console.WriteLine($"VM State: {engine.State}");
+            Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
+
+            if (showStack)
+                Console.WriteLine($"Result Stack: {new JArray(engine.ResultStack.Select(p => p.ToJson()))}");
+
+            if (engine.State.HasFlag(VMState.FAULT))
+            {
+                Console.WriteLine("Error: " + GetExceptionMessage(engine.FaultException));
+                return false;
+            }
+
+            return true;
         }
 
         static string GetExceptionMessage(Exception exception)
