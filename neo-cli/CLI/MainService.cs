@@ -499,7 +499,7 @@ namespace Neo.CLI
                     }
                 }
 
-                if (!ReadUserInput("relay tx(no|yes)").IsYes())
+                if (!ReadUserInput("Relay tx(no|yes)").IsYes())
                 {
                     return;
                 }
