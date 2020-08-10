@@ -24,7 +24,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Reflection;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 
@@ -260,7 +259,7 @@ namespace Neo.CLI
             }
 
             NefFile file;
-            using (var stream = new BinaryReader(File.OpenRead(nefFilePath), Encoding.UTF8, false))
+            using (var stream = new BinaryReader(File.OpenRead(nefFilePath), Utility.StrictUTF8, false))
             {
                 file = stream.ReadSerializable<NefFile>();
             }
