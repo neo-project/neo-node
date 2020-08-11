@@ -71,7 +71,7 @@ namespace Neo.GUI
             }
             Transaction tx_test = tx ?? new Transaction
             {
-                Sender = UInt160.Zero,
+                Signers = new Signer[0],
                 Attributes = new TransactionAttribute[0],
                 Script = script,
                 Witnesses = new Witness[0]

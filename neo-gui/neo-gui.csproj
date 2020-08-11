@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
 
   <PropertyGroup>
-    <Copyright>2016-2019 The Neo Project</Copyright>
+    <Copyright>2016-2020 The Neo Project</Copyright>
     <AssemblyTitle>Neo.GUI</AssemblyTitle>
-    <Version>3.0.0-preview2</Version>
+    <Version>3.0.0-preview3</Version>
     <Authors>The Neo Project</Authors>
     <OutputType>WinExe</OutputType>
     <TargetFramework>netcoreapp3.0</TargetFramework>
