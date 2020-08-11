@@ -493,10 +493,8 @@ namespace Neo.CLI
 
                 using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, null, testMode: true))
                 {
-                    if (!PrintOutputExecution(engine, true))
-                    {
-                        return;
-                    }
+                    PrintExecutionOutput(engine, true);
+                    if (engine.State == VMState.FAULT) return;
                 }
 
                 if (!ReadUserInput("Relay tx(no|yes)").IsYes())
@@ -549,16 +547,11 @@ namespace Neo.CLI
             }
 
             using ApplicationEngine engine = ApplicationEngine.Run(script, verificable, testMode: true);
-
-            if (!PrintOutputExecution(engine, showStack))
-            {
-                return null;
-            }
-
-            return engine.ResultStack.Pop();
+            PrintExecutionOutput(engine, showStack);
+            return engine.State == VMState.FAULT ? null : engine.ResultStack.Peek();
         }
 
-        bool PrintOutputExecution(ApplicationEngine engine, bool showStack = true)
+        private void PrintExecutionOutput(ApplicationEngine engine, bool showStack = true)
         {
             Console.WriteLine($"VM State: {engine.State}");
             Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
@@ -566,13 +559,8 @@ namespace Neo.CLI
             if (showStack)
                 Console.WriteLine($"Result Stack: {new JArray(engine.ResultStack.Select(p => p.ToJson()))}");
 
-            if (engine.State.HasFlag(VMState.FAULT))
-            {
+            if (engine.State == VMState.FAULT)
                 Console.WriteLine("Error: " + GetExceptionMessage(engine.FaultException));
-                return false;
-            }
-
-            return true;
         }
 
         static string GetExceptionMessage(Exception exception)
