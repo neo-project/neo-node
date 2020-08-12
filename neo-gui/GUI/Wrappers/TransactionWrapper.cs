@@ -13,8 +13,7 @@ namespace Neo.GUI.Wrappers
         [Category("Basic")]
         public uint Nonce { get; set; }
         [Category("Basic")]
-        [TypeConverter(typeof(UIntBaseConverter))]
-        public UInt160 Sender { get; set; }
+        public List<SignerWrapper> Signers { get; set; }
         [Category("Basic")]
         public long SystemFee { get; set; }
         [Category("Basic")]
@@ -36,7 +35,7 @@ namespace Neo.GUI.Wrappers
             {
                 Version = Version,
                 Nonce = Nonce,
-                Sender = Sender,
+                Signers = Signers.Select(p => p.Unwrap()).ToArray(),
                 SystemFee = SystemFee,
                 NetworkFee = NetworkFee,
                 ValidUntilBlock = ValidUntilBlock,
