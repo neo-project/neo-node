@@ -269,23 +269,17 @@ namespace Neo.CLI
 
             // Basic script checks
 
-            using (var engine = ApplicationEngine.Create(TriggerType.Application, null, null, 0, true))
+            Script script = new Script(file.Script);
+            for (var i = 0; i < script.Length;)
             {
-                var context = engine.LoadScript(file.Script);
+                // Check bad opcodes
 
-                while (context.InstructionPointer <= context.Script.Length)
+                Instruction inst = script.GetInstruction(i);
+                if (inst is null || !Enum.IsDefined(typeof(OpCode), inst.OpCode))
                 {
-                    // Check bad opcodes
-
-                    var ci = context.CurrentInstruction;
-
-                    if (ci == null || !Enum.IsDefined(typeof(OpCode), ci.OpCode))
-                    {
-                        throw new FormatException($"OpCode not found at {context.InstructionPointer}-{((byte)ci.OpCode).ToString("x2")}");
-                    }
-
-                    context.InstructionPointer += ci.Size;
+                    throw new FormatException($"OpCode not found at {i}-{((byte)inst.OpCode).ToString("x2")}");
                 }
+                i += inst.Size;
             }
 
             // Build script
