@@ -24,7 +24,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Reflection;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 
@@ -263,30 +262,24 @@ namespace Neo.CLI
             }
 
             NefFile file;
-            using (var stream = new BinaryReader(File.OpenRead(nefFilePath), Encoding.UTF8, false))
+            using (var stream = new BinaryReader(File.OpenRead(nefFilePath), Utility.StrictUTF8, false))
             {
                 file = stream.ReadSerializable<NefFile>();
             }
 
             // Basic script checks
 
-            using (var engine = ApplicationEngine.Create(TriggerType.Application, null, null, 0, true))
+            Script script = new Script(file.Script);
+            for (var i = 0; i < script.Length;)
             {
-                var context = engine.LoadScript(file.Script);
+                // Check bad opcodes
 
-                while (context.InstructionPointer <= context.Script.Length)
+                Instruction inst = script.GetInstruction(i);
+                if (inst is null || !Enum.IsDefined(typeof(OpCode), inst.OpCode))
                 {
-                    // Check bad opcodes
-
-                    var ci = context.CurrentInstruction;
-
-                    if (ci == null || !Enum.IsDefined(typeof(OpCode), ci.OpCode))
-                    {
-                        throw new FormatException($"OpCode not found at {context.InstructionPointer}-{((byte)ci.OpCode).ToString("x2")}");
-                    }
-
-                    context.InstructionPointer += ci.Size;
+                    throw new FormatException($"OpCode not found at {i}-{((byte)inst.OpCode).ToString("x2")}");
                 }
+                i += inst.Size;
             }
 
             // Build script
@@ -494,18 +487,11 @@ namespace Neo.CLI
 
                 using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, null, testMode: true))
                 {
-                    Console.WriteLine($"VM State: {engine.State}");
-                    Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
-                    Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToJson()))}");
-                    Console.WriteLine();
-                    if (engine.State.HasFlag(VMState.FAULT))
-                    {
-                        Console.WriteLine("Error: " + GetExceptionMessage(engine.FaultException));
-                        return;
-                    }
+                    PrintExecutionOutput(engine, true);
+                    if (engine.State == VMState.FAULT) return;
                 }
 
-                if (!ReadUserInput("relay tx(no|yes)").IsYes())
+                if (!ReadUserInput("Relay tx(no|yes)").IsYes())
                 {
                     return;
                 }
@@ -554,22 +540,21 @@ namespace Neo.CLI
                 tx.Script = script;
             }
 
-            using (ApplicationEngine engine = ApplicationEngine.Run(script, verificable, testMode: true))
-            {
-                Console.WriteLine($"VM State: {engine.State}");
-                Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
+            using ApplicationEngine engine = ApplicationEngine.Run(script, verificable, testMode: true);
+            PrintExecutionOutput(engine, showStack);
+            return engine.State == VMState.FAULT ? null : engine.ResultStack.Peek();
+        }
 
-                if (showStack)
-                    Console.WriteLine($"Result Stack: {new JArray(engine.ResultStack.Select(p => p.ToJson()))}");
+        private void PrintExecutionOutput(ApplicationEngine engine, bool showStack = true)
+        {
+            Console.WriteLine($"VM State: {engine.State}");
+            Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
 
-                if (engine.State.HasFlag(VMState.FAULT))
-                {
-                    Console.WriteLine("Error: " + GetExceptionMessage(engine.FaultException));
-                    return null;
-                }
+            if (showStack)
+                Console.WriteLine($"Result Stack: {new JArray(engine.ResultStack.Select(p => p.ToJson()))}");
 
-                return engine.ResultStack.Pop();
-            }
+            if (engine.State == VMState.FAULT)
+                Console.WriteLine("Error: " + GetExceptionMessage(engine.FaultException));
         }
 
         static string GetExceptionMessage(Exception exception)
@@ -578,7 +563,7 @@ namespace Neo.CLI
 
             if (exception.InnerException != null)
             {
-                return exception.InnerException.Message;
+                return GetExceptionMessage(exception.InnerException);
             }
 
             return exception.Message;

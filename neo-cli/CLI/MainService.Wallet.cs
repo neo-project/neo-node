@@ -378,7 +378,7 @@ namespace Neo.CLI
             }
             catch (Exception e)
             {
-                Console.WriteLine($"One or more errors occurred:{Environment.NewLine}{e.Message}");
+                Console.WriteLine("Error: " + GetExceptionMessage(e));
             }
         }
 
@@ -388,8 +388,9 @@ namespace Neo.CLI
         /// <param name="asset">Asset id</param>
         /// <param name="to">To</param>
         /// <param name="amount">Amount</param>
+        /// <param name="from">From</param>
         [ConsoleCommand("send", Category = "Wallet Commands")]
-        private void OnSendCommand(UInt160 asset, UInt160 to, string amount)
+        private void OnSendCommand(UInt160 asset, UInt160 to, string amount, UInt160 from = null)
         {
             if (NoWallet()) return;
             string password = ReadUserInput("password", true);
@@ -411,15 +412,23 @@ namespace Neo.CLI
                 Console.WriteLine("Incorrect Amount Format");
                 return;
             }
-            tx = CurrentWallet.MakeTransaction(new[]
+            try
             {
-                new TransferOutput
+                tx = CurrentWallet.MakeTransaction(new[]
                 {
-                    AssetId = asset,
-                    Value = decimalAmount,
-                    ScriptHash = to
-                }
-            });
+                    new TransferOutput
+                    {
+                        AssetId = asset,
+                        Value = decimalAmount,
+                        ScriptHash = to
+                    }
+                }, from: from);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Error: " + GetExceptionMessage(e));
+                return;
+            }
 
             if (tx == null)
             {
@@ -523,26 +532,20 @@ namespace Neo.CLI
             {
                 context = new ContractParametersContext(tx);
             }
-            catch (InvalidOperationException ex)
+            catch (InvalidOperationException e)
             {
-                Console.WriteLine($"Error creating contract params: {ex}");
+                Console.WriteLine($"Error creating contract params: " + GetExceptionMessage(e));
                 throw;
             }
             CurrentWallet.Sign(context);
-            string msg;
             if (context.Completed)
             {
                 tx.Witnesses = context.GetWitnesses();
-
                 NeoSystem.Blockchain.Tell(tx);
-
-                msg = $"Signed and relayed transaction with hash={tx.Hash}";
-                Console.WriteLine(msg);
+                Console.WriteLine($"Signed and relayed transaction with hash={tx.Hash}");
                 return;
             }
-
-            msg = $"Failed sending transaction with hash={tx.Hash}";
-            Console.WriteLine(msg);
+            Console.WriteLine($"Failed sending transaction with hash={tx.Hash}");
         }
     }
 }
