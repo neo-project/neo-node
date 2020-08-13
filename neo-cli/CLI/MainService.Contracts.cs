@@ -1,13 +1,8 @@
 using Neo.ConsoleService;
 using Neo.IO.Json;
-using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
-using Neo.Persistence;
-using Neo.SmartContract;
 using Neo.SmartContract.Native;
-using Neo.VM;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace Neo.CLI
@@ -47,13 +42,29 @@ namespace Neo.CLI
         /// <param name="scriptHash">Script hash</param>
         /// <param name="operation">Operation</param>
         /// <param name="contractParameters">Contract parameters</param>
-        /// <param name="witnessAddress">Witness address</param>
+        /// <param name="sender">Transaction's sender</param>
+        /// <param name="signerAccounts">Signer's accounts</param>
         [ConsoleCommand("invoke", Category = "Contract Commands")]
-        private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160[] signerAccounts = null)
+        private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160 sender = null, UInt160[] signerAccounts = null)
         {
             Signer[] signers = Array.Empty<Signer>();
             if (signerAccounts != null && !NoWallet())
-                signers = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly && signerAccounts.Contains(p.ScriptHash)).Select(p => new Signer() { Account = p.ScriptHash, Scopes = WitnessScope.CalledByEntry }).ToArray();
+            {
+                if (sender != null)
+                {
+                    if (signerAccounts.Contains(sender) && signerAccounts[0] != sender)
+                    {
+                        var signersList = signerAccounts.ToList();
+                        signersList.Remove(sender);
+                        signerAccounts = signersList.Prepend(sender).ToArray();
+                    }
+                    else if (!signerAccounts.Contains(sender))
+                    {
+                        signerAccounts = signerAccounts.Prepend(sender).ToArray();
+                    }
+                }
+                signers = signerAccounts.Select(p => new Signer() { Account = p, Scopes = WitnessScope.CalledByEntry }).ToArray();
+            }
 
             Transaction tx = new Transaction
             {
@@ -66,7 +77,7 @@ namespace Neo.CLI
             if (NoWallet()) return;
             try
             {
-                tx = CurrentWallet.MakeTransaction(tx.Script, signers.Length > 0 ? signers[0].Account : null, signers);
+                tx = CurrentWallet.MakeTransaction(tx.Script, sender, signers);
             }
             catch (InvalidOperationException e)
             {
