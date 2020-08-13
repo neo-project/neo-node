@@ -485,7 +485,7 @@ namespace Neo.CLI
                 Transaction tx = CurrentWallet.MakeTransaction(script, account, signers);
                 Console.WriteLine($"Invoking script with: '{tx.Script.ToHexString()}'");
 
-                using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, null, testMode: true))
+                using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, container: tx))
                 {
                     PrintExecutionOutput(engine, true);
                     if (engine.State == VMState.FAULT) return;
@@ -540,7 +540,7 @@ namespace Neo.CLI
                 tx.Script = script;
             }
 
-            using ApplicationEngine engine = ApplicationEngine.Run(script, verificable, testMode: true);
+            using ApplicationEngine engine = ApplicationEngine.Run(script,container: verificable);
             PrintExecutionOutput(engine, showStack);
             return engine.State == VMState.FAULT ? null : engine.ResultStack.Peek();
         }
