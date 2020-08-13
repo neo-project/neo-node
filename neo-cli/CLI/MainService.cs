@@ -540,7 +540,7 @@ namespace Neo.CLI
                 tx.Script = script;
             }
 
-            using ApplicationEngine engine = ApplicationEngine.Run(script,container: verificable);
+            using ApplicationEngine engine = ApplicationEngine.Run(script, container: verificable);
             PrintExecutionOutput(engine, showStack);
             return engine.State == VMState.FAULT ? null : engine.ResultStack.Peek();
         }
