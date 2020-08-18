@@ -1305,7 +1305,8 @@ namespace Neo.Shell
 #endif
                 }
             }
-            Console.ResetColor();          
+            Console.ResetColor();
+            useNonInteractive = false;
         }
 
         private bool OnStartCommand(string[] args)
