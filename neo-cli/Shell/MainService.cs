@@ -33,6 +33,7 @@ namespace Neo.Shell
         private LevelDBStore store;
         private NeoSystem system;
         private WalletIndexer indexer;
+        private static bool useNonInteractive = false;
 
         protected override string Prompt => "neo";
         public override string ServiceName => "NEO-CLI";
@@ -250,7 +251,7 @@ namespace Neo.Shell
                 Console.WriteLine("Error: insufficient balance.");
                 return true;
             }
-            if (ReadUserInput("relay tx(no|yes)") != "yes")
+            if (ReadUserInput("relay tx(no|yes)", false, args, 3) != "yes")
             {
                 return true;
             }
@@ -492,13 +493,13 @@ namespace Neo.Shell
                 return true;
             }
             string path = args[2];
-            string password = ReadUserInput("password", true);
+            string password = ReadUserInput("password", true, args, 3);
             if (password.Length == 0)
             {
                 Console.WriteLine("cancelled");
                 return true;
             }
-            string password2 = ReadUserInput("password", true);
+            string password2 = ReadUserInput("password", true, args, 4);
             if (password != password2)
             {
                 Console.WriteLine("error");
@@ -578,7 +579,7 @@ namespace Neo.Shell
                 Console.WriteLine($"Error: File '{path}' already exists");
                 return true;
             }
-            string password = ReadUserInput("password", true);
+            string password = ReadUserInput("password", true, args, 4);
             if (password.Length == 0)
             {
                 Console.WriteLine("cancelled");
@@ -730,7 +731,7 @@ namespace Neo.Shell
 
                 if (file.Length > 1024 * 1024)
                 {
-                    if (ReadUserInput($"The file '{file.FullName}' is too big, do you want to continue? (yes|no)", false)?.ToLowerInvariant() != "yes") return true;
+                    if (ReadUserInput($"The file '{file.FullName}' is too big, do you want to continue? (yes|no)", false, args, 3)?.ToLowerInvariant() != "yes") return true;
                 }
 
                 string[] lines = File.ReadAllLines(args[2]);
@@ -787,7 +788,7 @@ namespace Neo.Shell
 
             if (useChangeAddress)
             {
-                string password = ReadUserInput("password", true);
+                string password = ReadUserInput("password", true, args, args.Length - 1);
                 if (password.Length == 0)
                 {
                     Console.WriteLine("cancelled");
@@ -887,7 +888,7 @@ namespace Neo.Shell
                 Console.WriteLine($"File does not exist");
                 return true;
             }
-            string password = ReadUserInput("password", true);
+            string password = ReadUserInput("password", true, args, 3);
             if (password.Length == 0)
             {
                 Console.WriteLine("cancelled");
@@ -970,7 +971,7 @@ namespace Neo.Shell
                 return true;
             }
             if (NoWallet()) return true;
-            string password = ReadUserInput("password", true);
+            string password = ReadUserInput("password", true, args, args.Length - 1);
             if (password.Length == 0)
             {
                 Console.WriteLine("cancelled");
@@ -1226,6 +1227,11 @@ namespace Neo.Shell
                     case "-r":
                         useRPC = true;
                         break;
+                    case "/noninteractive":
+                    case "--noninteractive":
+                    case "-noninteractive":
+                        useNonInteractive = true;
+                        break;
                 }
             store = new LevelDBStore(Path.GetFullPath(Settings.Default.Paths.Chain));
             system = new NeoSystem(store);
@@ -1259,6 +1265,47 @@ namespace Neo.Shell
                     password: Settings.Default.RPC.SslCertPassword,
                     maxGasInvoke: Settings.Default.RPC.MaxGasInvoke);
             }
+            if (useNonInteractive&&Settings.Default.NonInteractive.IsNonInteractive)
+            {
+                PreRun(Settings.Default.NonInteractive.CommandPath);
+            }
+        }
+
+        private void PreRun(string filePath)
+        {
+            string[] commands = File.ReadAllLines(filePath);
+            if (commands.Length == 0) return;
+            bool running = true;
+            string[] emptyarg = new string[] { "" };
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+                Console.Title = ServiceName;
+            Console.OutputEncoding = Encoding.Unicode;
+            Console.ForegroundColor = ConsoleColor.DarkGreen;
+            Console.WriteLine();
+            foreach (var command in commands) 
+            {
+                if (ShowPrompt)
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.Write($"{Prompt}> " + "\n");
+                }
+                string[] args = ParseCommandLine(command);
+                if (args.Length == 0)
+                    args = emptyarg;
+                try
+                {
+                    running = OnCommand(args);
+                }
+                catch (Exception ex)
+                {
+#if DEBUG
+                    Console.WriteLine($"error: {ex.Message}");
+#else
+                    Console.WriteLine("error");
+#endif
+                }
+            }
+            Console.ResetColor();          
         }
 
         private bool OnStartCommand(string[] args)
@@ -1398,7 +1445,7 @@ namespace Neo.Shell
                 Console.WriteLine("File does not exist.");
                 return true;
             }
-            string password = ReadUserInput("password", true);
+            string password = ReadUserInput("password", true, args, 3);
             if (password.Length == 0)
             {
                 Console.WriteLine("cancelled");
@@ -1435,6 +1482,51 @@ namespace Neo.Shell
             var spacesToErase = maxWidth - message.Length;
             if (spacesToErase < 0) spacesToErase = 0;
             Console.WriteLine(new string(' ', spacesToErase));
+        }
+
+        public static string ReadUserInput(string prompt, bool password = false, string[] args = null, int index = 0)
+        {
+            if (useNonInteractive)
+            {
+                return args[index];
+            }
+            else 
+            {
+                const string t = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+                StringBuilder sb = new StringBuilder();
+                ConsoleKeyInfo key;
+                Console.Write(prompt);
+                Console.Write(": ");
+
+                Console.ForegroundColor = ConsoleColor.Yellow;
+
+                do
+                {
+                    key = Console.ReadKey(true);
+                    if (t.IndexOf(key.KeyChar) != -1)
+                    {
+                        sb.Append(key.KeyChar);
+                        if (password)
+                        {
+                            Console.Write('*');
+                        }
+                        else
+                        {
+                            Console.Write(key.KeyChar);
+                        }
+                    }
+                    else if (key.Key == ConsoleKey.Backspace && sb.Length > 0)
+                    {
+                        sb.Length--;
+                        Console.Write(key.KeyChar);
+                        Console.Write(' ');
+                        Console.Write(key.KeyChar);
+                    }
+                } while (key.Key != ConsoleKey.Enter);
+                Console.ForegroundColor = ConsoleColor.White;
+                Console.WriteLine();
+                return sb.ToString();
+            }            
         }
     }
 }

@@ -43,7 +43,7 @@ namespace Neo.Services
 
         protected internal abstract void OnStop();
 
-        private static string[] ParseCommandLine(string line)
+        protected static string[] ParseCommandLine(string line)
         {
             List<string> outputArgs = new List<string>();
             using (StringReader reader = new StringReader(line))
@@ -146,9 +146,7 @@ namespace Neo.Services
             ConsoleKeyInfo key;
             Console.Write(prompt);
             Console.Write(": ");
-
             Console.ForegroundColor = ConsoleColor.Yellow;
-
             do
             {
                 key = Console.ReadKey(true);
@@ -172,7 +170,6 @@ namespace Neo.Services
                     Console.Write(key.KeyChar);
                 }
             } while (key.Key != ConsoleKey.Enter);
-
             Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine();
             return sb.ToString();
@@ -309,7 +306,6 @@ namespace Neo.Services
 #endif
                 }
             }
-
             Console.ResetColor();
         }
     }

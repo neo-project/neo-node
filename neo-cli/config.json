@@ -20,6 +20,10 @@
       "StartConsensus": false,
       "IsActive": false
     },
+    "NonInteractive": {
+      "IsNonInteractive": false,
+      "CommandPath" : ""
+    },
     "PluginURL": "https://github.com/neo-project/neo-plugins/releases/download/v{1}/{0}.zip"
   }
 }
