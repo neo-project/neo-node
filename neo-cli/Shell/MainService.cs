@@ -1265,7 +1265,7 @@ namespace Neo.Shell
                     password: Settings.Default.RPC.SslCertPassword,
                     maxGasInvoke: Settings.Default.RPC.MaxGasInvoke);
             }
-            if (useNonInteractive&&Settings.Default.NonInteractive.IsNonInteractive)
+            if (useNonInteractive && Settings.Default.NonInteractive.IsNonInteractive)
             {
                 PreRun(Settings.Default.NonInteractive.CommandPath);
             }
@@ -1282,7 +1282,7 @@ namespace Neo.Shell
             Console.OutputEncoding = Encoding.Unicode;
             Console.ForegroundColor = ConsoleColor.DarkGreen;
             Console.WriteLine();
-            foreach (var command in commands) 
+            foreach (var command in commands)
             {
                 if (ShowPrompt)
                 {
@@ -1491,7 +1491,7 @@ namespace Neo.Shell
             {
                 return args[index];
             }
-            else 
+            else
             {
                 const string t = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
                 StringBuilder sb = new StringBuilder();
@@ -1527,7 +1527,7 @@ namespace Neo.Shell
                 Console.ForegroundColor = ConsoleColor.White;
                 Console.WriteLine();
                 return sb.ToString();
-            }            
+            }
         }
     }
 }
