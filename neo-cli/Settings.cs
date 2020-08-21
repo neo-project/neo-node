@@ -10,7 +10,6 @@ namespace Neo
         public P2PSettings P2P { get; }
         public RPCSettings RPC { get; }
         public UnlockWalletSettings UnlockWallet { get; }
-        public NonInteractiveSettings NonInteractive { get; }
         public string PluginURL { get; }
 
         public static Settings Default { get; }
@@ -27,7 +26,6 @@ namespace Neo
             this.P2P = new P2PSettings(section.GetSection("P2P"));
             this.RPC = new RPCSettings(section.GetSection("RPC"));
             this.UnlockWallet = new UnlockWalletSettings(section.GetSection("UnlockWallet"));
-            this.NonInteractive = new NonInteractiveSettings(section.GetSection("NonInteractive"));
             this.PluginURL = section.GetSection("PluginURL").Value;
         }
     }
@@ -77,18 +75,6 @@ namespace Neo
             this.SslCert = section.GetSection("SslCert").Value;
             this.SslCertPassword = section.GetSection("SslCertPassword").Value;
             this.MaxGasInvoke = Fixed8.Parse(section.GetValue("MaxGasInvoke", "0"));
-        }
-    }
-
-    internal class NonInteractiveSettings
-    {
-        public bool IsNonInteractive { get; }
-        public NonInteractiveSettings(IConfigurationSection section)
-        {
-            if (section.Exists())
-            {
-                this.IsNonInteractive = bool.Parse(section.GetSection("IsNonInteractive").Value);
-            }
         }
     }
 

@@ -33,6 +33,7 @@ namespace Neo.Shell
         private LevelDBStore store;
         private NeoSystem system;
         private WalletIndexer indexer;
+        private bool useNonInteractive;
 
         protected override string Prompt => "neo";
         public override string ServiceName => "NEO-CLI";
@@ -1226,6 +1227,11 @@ namespace Neo.Shell
                     case "-r":
                         useRPC = true;
                         break;
+                    case "/noninteractive":
+                    case "--noninteractive":
+                    case "-noninteractive":
+                        useNonInteractive = true;
+                        break;
                 }
             store = new LevelDBStore(Path.GetFullPath(Settings.Default.Paths.Chain));
             system = new NeoSystem(store);
@@ -1259,7 +1265,7 @@ namespace Neo.Shell
                     password: Settings.Default.RPC.SslCertPassword,
                     maxGasInvoke: Settings.Default.RPC.MaxGasInvoke);
             }
-            if (Settings.Default.NonInteractive.IsNonInteractive)
+            if (useNonInteractive)
             {
                 PreRun();
             }
