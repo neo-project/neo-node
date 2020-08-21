@@ -89,7 +89,6 @@ namespace Neo
             if (section.Exists())
             {
                 this.IsNonInteractive = bool.Parse(section.GetSection("IsNonInteractive").Value);
-                this.CommandPath = section.GetSection("CommandPath").Value;
             }
         }
     }
