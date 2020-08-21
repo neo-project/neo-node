@@ -250,7 +250,7 @@ namespace Neo.Shell
                 Console.WriteLine("Error: insufficient balance.");
                 return true;
             }
-            if (ReadUserInput("relay tx(no|yes)", false) != "yes")
+            if (ReadUserInput("relay tx(no|yes)") != "yes")
             {
                 return true;
             }

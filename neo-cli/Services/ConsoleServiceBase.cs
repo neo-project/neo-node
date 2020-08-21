@@ -43,7 +43,7 @@ namespace Neo.Services
 
         protected internal abstract void OnStop();
 
-        protected static string[] ParseCommandLine(string line)
+        private static string[] ParseCommandLine(string line)
         {
             List<string> outputArgs = new List<string>();
             using (StringReader reader = new StringReader(line))

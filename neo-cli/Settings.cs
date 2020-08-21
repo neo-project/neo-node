@@ -83,7 +83,6 @@ namespace Neo
     internal class NonInteractiveSettings
     {
         public bool IsNonInteractive { get; }
-        public string CommandPath { get; }
         public NonInteractiveSettings(IConfigurationSection section)
         {
             if (section.Exists())
