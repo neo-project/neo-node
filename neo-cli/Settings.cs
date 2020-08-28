@@ -55,7 +55,7 @@ namespace Neo
             this.Port = ushort.Parse(section.GetSection("Port").Value);
             this.WsPort = ushort.Parse(section.GetSection("WsPort").Value);
             this.MinDesiredConnections = section.GetValue("MinDesiredConnections", Peer.DefaultMinDesiredConnections);
-            this.MaxConnections = section.GetValue("MaxConnections", Peer.DefaultMaxConnections);
+            this.MaxConnections = section.GetValue("MaxConnections", 40);
             this.MaxConnectionsPerAddress = section.GetValue("MaxConnectionsPerAddress", 3);
         }
     }
