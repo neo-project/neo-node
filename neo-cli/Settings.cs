@@ -55,7 +55,7 @@ namespace Neo
             this.Port = ushort.Parse(section.GetSection("Port").Value);
             this.WsPort = ushort.Parse(section.GetSection("WsPort").Value);
             this.MinDesiredConnections = section.GetValue("MinDesiredConnections", Peer.DefaultMinDesiredConnections);
-            this.MaxConnections = section.GetValue("MaxConnections", 40);
+            this.MaxConnections = section.GetValue("MaxConnections", Peer.DefaultMaxConnections);
             this.MaxConnectionsPerAddress = section.GetValue("MaxConnectionsPerAddress", 3);
         }
     }
@@ -76,7 +76,7 @@ namespace Neo
             this.SslCert = section.GetSection("SslCert").Value;
             this.SslCertPassword = section.GetSection("SslCertPassword").Value;
             this.ExtraGasInvoke = Fixed8.Parse(section.GetValue("ExtraGasInvoke", "0"));
-            this.MaxConcurrentConnections = int.Parse(section.GetValue("MaxConcurrentConnections", Peer.DefaultMaxConnections.ToString()));
+            this.MaxConcurrentConnections = int.Parse(section.GetValue("MaxConcurrentConnections", "40"));
         }
     }
 
