@@ -1270,7 +1270,7 @@ namespace Neo.Shell
         {
             while (!(system.LocalNode.IsNobody()))
             {
-                System.Threading.Thread.Sleep(1000);
+                System.Threading.Thread.Sleep(500);
             }
         }
 
