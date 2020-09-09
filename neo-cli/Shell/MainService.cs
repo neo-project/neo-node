@@ -1217,16 +1217,6 @@ namespace Neo.Shell
 
         protected internal override void OnStart(string[] args)
         {
-            bool useRPC = false;
-            for (int i = 0; i < args.Length; i++)
-                switch (args[i])
-                {
-                    case "/rpc":
-                    case "--rpc":
-                    case "-r":
-                        useRPC = true;
-                        break;
-                }
             store = new LevelDBStore(Path.GetFullPath(Settings.Default.Paths.Chain));
             system = new NeoSystem(store);
             system.StartNode(
@@ -1250,6 +1240,21 @@ namespace Neo.Shell
                     OnStartConsensusCommand(null);
                 }
             }
+            bool useRPC = false;
+            for (int i = 0; i < args.Length; i++)
+                switch (args[i])
+                {
+                    case "/rpc":
+                    case "--rpc":
+                    case "-r":
+                        useRPC = true;
+                        break;
+                    case "/noninteractive":
+                    case "--noninteractive":
+                    case "-noninteractive":
+                        PreRun();
+                        break;
+                }
             if (useRPC)
             {
                 system.StartRpc(Settings.Default.RPC.BindAddress,
@@ -1259,6 +1264,14 @@ namespace Neo.Shell
                     password: Settings.Default.RPC.SslCertPassword,
                     extraGasInvoke: Settings.Default.RPC.ExtraGasInvoke,
                     maxConcurrentConnections: Settings.Default.RPC.MaxConcurrentConnections);
+            }
+        }
+
+        private void PreRun()
+        {
+            while (!(system.LocalNode.IsNobody()))
+            {
+                System.Threading.Thread.Sleep(500);
             }
         }
 
