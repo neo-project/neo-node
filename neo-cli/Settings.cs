@@ -76,7 +76,7 @@ namespace Neo
             this.SslCert = section.GetSection("SslCert").Value;
             this.SslCertPassword = section.GetSection("SslCertPassword").Value;
             this.ExtraGasInvoke = Fixed8.Parse(section.GetValue("ExtraGasInvoke", "0"));
-            this.MaxConcurrentConnections = int.Parse(section.GetValue("MaxConcurrentConnections", "120"));
+            this.MaxConcurrentConnections = int.Parse(section.GetValue("MaxConcurrentConnections", "10"));
         }
     }
 
