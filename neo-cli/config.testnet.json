@@ -12,7 +12,9 @@
       "BindAddress": "127.0.0.1",
       "Port": 20332,
       "SslCert": "",
-      "SslCertPassword": ""
+      "SslCertPassword": "",
+      "ExtraGasInvoke": "0",
+      "MaxConcurrentConnections": "10"
     },
     "UnlockWallet": {
       "Path": "",
