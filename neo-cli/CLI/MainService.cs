@@ -24,7 +24,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Reflection;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 
@@ -73,8 +72,8 @@ namespace Neo.CLI
             {
                 switch (str.ToLowerInvariant())
                 {
-                    case "neo": return SmartContract.Native.NativeContract.NEO.Hash;
-                    case "gas": return SmartContract.Native.NativeContract.GAS.Hash;
+                    case "neo": return NativeContract.NEO.Hash;
+                    case "gas": return NativeContract.GAS.Hash;
                 }
 
                 // Try to parse as UInt160
@@ -91,30 +90,7 @@ namespace Neo.CLI
 
             RegisterCommandHander<string, UInt256>(false, (str) => UInt256.Parse(str));
             RegisterCommandHander<string[], UInt256[]>((str) => str.Select(u => UInt256.Parse(u.Trim())).ToArray());
-            RegisterCommandHander<string[], UInt160[]>((arr) =>
-            {
-                return arr.Select(str =>
-                {
-                    switch (str.ToLowerInvariant())
-                    {
-                        case "neo": return SmartContract.Native.NativeContract.NEO.Hash;
-                        case "gas": return SmartContract.Native.NativeContract.GAS.Hash;
-                    }
-
-                    // Try to parse as UInt160
-
-                    if (UInt160.TryParse(str, out var addr))
-                    {
-                        return addr;
-                    }
-
-                    // Accept wallet format
-
-                    return str.ToScriptHash();
-                })
-                .ToArray();
-            });
-
+            RegisterCommandHander<string[], UInt160[]>((arr) => arr.Select(str => StringToAddress(str)).ToArray());
             RegisterCommandHander<string, ECPoint>((str) => ECPoint.Parse(str.Trim(), ECCurve.Secp256r1));
             RegisterCommandHander<string[], ECPoint[]>((str) => str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray());
             RegisterCommandHander<string, JObject>((str) => JObject.Parse(str));
@@ -122,6 +98,26 @@ namespace Neo.CLI
             RegisterCommandHander<JObject, JArray>((obj) => (JArray)obj);
 
             RegisterCommand(this);
+        }
+
+        internal static UInt160 StringToAddress(string input)
+        {
+            switch (input.ToLowerInvariant())
+            {
+                case "neo": return NativeContract.NEO.Hash;
+                case "gas": return NativeContract.GAS.Hash;
+            }
+
+            // Try to parse as UInt160
+
+            if (UInt160.TryParse(input, out var addr))
+            {
+                return addr;
+            }
+
+            // Accept wallet format
+
+            return input.ToScriptHash();
         }
 
         public override void RunConsole()
@@ -263,30 +259,24 @@ namespace Neo.CLI
             }
 
             NefFile file;
-            using (var stream = new BinaryReader(File.OpenRead(nefFilePath), Encoding.UTF8, false))
+            using (var stream = new BinaryReader(File.OpenRead(nefFilePath), Utility.StrictUTF8, false))
             {
                 file = stream.ReadSerializable<NefFile>();
             }
 
             // Basic script checks
 
-            using (var engine = new ApplicationEngine(TriggerType.Application, null, null, 0, true))
+            Script script = new Script(file.Script);
+            for (var i = 0; i < script.Length;)
             {
-                var context = engine.LoadScript(file.Script);
+                // Check bad opcodes
 
-                while (context.InstructionPointer <= context.Script.Length)
+                Instruction inst = script.GetInstruction(i);
+                if (inst is null || !Enum.IsDefined(typeof(OpCode), inst.OpCode))
                 {
-                    // Check bad opcodes
-
-                    var ci = context.CurrentInstruction;
-
-                    if (ci == null || !Enum.IsDefined(typeof(OpCode), ci.OpCode))
-                    {
-                        throw new FormatException($"OpCode not found at {context.InstructionPointer}-{((byte)ci.OpCode).ToString("x2")}");
-                    }
-
-                    context.InstructionPointer += ci.Size;
+                    throw new FormatException($"OpCode not found at {i}-{((byte)inst.OpCode).ToString("x2")}");
                 }
+                i += inst.Size;
             }
 
             // Build script
@@ -318,15 +308,21 @@ namespace Neo.CLI
                 throw new FileNotFoundException();
             }
 
-            if (Path.GetExtension(path) == ".db3")
+            switch (Path.GetExtension(path).ToLowerInvariant())
             {
-                CurrentWallet = UserWallet.Open(path, password);
-            }
-            else
-            {
-                NEP6Wallet nep6wallet = new NEP6Wallet(path);
-                nep6wallet.Unlock(password);
-                CurrentWallet = nep6wallet;
+                case ".db3":
+                    {
+                        CurrentWallet = UserWallet.Open(path, password);
+                        break;
+                    }
+                case ".json":
+                    {
+                        NEP6Wallet nep6wallet = new NEP6Wallet(path);
+                        nep6wallet.Unlock(password);
+                        CurrentWallet = nep6wallet;
+                        break;
+                    }
+                default: throw new NotSupportedException();
             }
         }
 
@@ -468,52 +464,40 @@ namespace Neo.CLI
         /// <param name="account">sender</param>
         private void SendTransaction(byte[] script, UInt160 account = null)
         {
-            List<Cosigner> signCollection = new List<Cosigner>();
+            Signer[] signers = System.Array.Empty<Signer>();
 
             if (account != null)
             {
                 using (SnapshotView snapshot = Blockchain.Singleton.GetSnapshot())
                 {
-                    UInt160[] accounts = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly).Select(p => p.ScriptHash).Where(p => NativeContract.GAS.BalanceOf(snapshot, p).Sign > 0).ToArray();
-                    foreach (var signAccount in accounts)
-                    {
-                        if (account.Equals(signAccount))
-                        {
-                            signCollection.Add(new Cosigner() { Account = signAccount });
-                            break;
-                        }
-                    }
+                    signers = CurrentWallet.GetAccounts()
+                    .Where(p => !p.Lock && !p.WatchOnly && p.ScriptHash == account && NativeContract.GAS.BalanceOf(snapshot, p.ScriptHash).Sign > 0)
+                    .Select(p => new Signer() { Account = p.ScriptHash, Scopes = WitnessScope.CalledByEntry })
+                    .ToArray();
                 }
             }
 
             try
             {
-                Transaction tx = CurrentWallet.MakeTransaction(script, account, signCollection?.ToArray());
+                Transaction tx = CurrentWallet.MakeTransaction(script, account, signers);
                 Console.WriteLine($"Invoking script with: '{tx.Script.ToHexString()}'");
 
-                using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, tx, null, testMode: true))
+                using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, container: tx))
                 {
-                    Console.WriteLine($"VM State: {engine.State}");
-                    Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
-                    Console.WriteLine($"Evaluation Stack: {new JArray(engine.ResultStack.Select(p => p.ToJson()))}");
-                    Console.WriteLine();
-                    if (engine.State.HasFlag(VMState.FAULT))
-                    {
-                        Console.WriteLine("Engine faulted.");
-                        return;
-                    }
+                    PrintExecutionOutput(engine, true);
+                    if (engine.State == VMState.FAULT) return;
                 }
 
-                if (!ReadUserInput("relay tx(no|yes)").IsYes())
+                if (!ReadUserInput("Relay tx(no|yes)").IsYes())
                 {
                     return;
                 }
 
                 SignAndSendTx(tx);
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException e)
             {
-                Console.WriteLine("Error: insufficient balance.");
+                Console.WriteLine("Error: " + GetExceptionMessage(e));
                 return;
             }
 
@@ -553,22 +537,33 @@ namespace Neo.CLI
                 tx.Script = script;
             }
 
-            using (ApplicationEngine engine = ApplicationEngine.Run(script, verificable, testMode: true))
+            using ApplicationEngine engine = ApplicationEngine.Run(script, container: verificable);
+            PrintExecutionOutput(engine, showStack);
+            return engine.State == VMState.FAULT ? null : engine.ResultStack.Peek();
+        }
+
+        private void PrintExecutionOutput(ApplicationEngine engine, bool showStack = true)
+        {
+            Console.WriteLine($"VM State: {engine.State}");
+            Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
+
+            if (showStack)
+                Console.WriteLine($"Result Stack: {new JArray(engine.ResultStack.Select(p => p.ToJson()))}");
+
+            if (engine.State == VMState.FAULT)
+                Console.WriteLine("Error: " + GetExceptionMessage(engine.FaultException));
+        }
+
+        static string GetExceptionMessage(Exception exception)
+        {
+            if (exception == null) return "Engine faulted.";
+
+            if (exception.InnerException != null)
             {
-                Console.WriteLine($"VM State: {engine.State}");
-                Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
-
-                if (showStack)
-                    Console.WriteLine($"Result Stack: {new JArray(engine.ResultStack.Select(p => p.ToJson()))}");
-
-                if (engine.State.HasFlag(VMState.FAULT) || !engine.ResultStack.TryPop(out VM.Types.StackItem ret))
-                {
-                    Console.WriteLine("Engine faulted.");
-                    return null;
-                }
-
-                return ret;
+                return GetExceptionMessage(exception.InnerException);
             }
+
+            return exception.Message;
         }
     }
 }

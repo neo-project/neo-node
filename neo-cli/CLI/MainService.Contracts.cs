@@ -1,13 +1,8 @@
 using Neo.ConsoleService;
 using Neo.IO.Json;
-using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
-using Neo.Persistence;
-using Neo.SmartContract;
 using Neo.SmartContract.Native;
-using Neo.VM;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace Neo.CLI
@@ -30,9 +25,9 @@ namespace Neo.CLI
             {
                 tx = CurrentWallet.MakeTransaction(script);
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException e)
             {
-                Console.WriteLine("Engine faulted.");
+                Console.WriteLine("Error: " + GetExceptionMessage(e));
                 return;
             }
             Console.WriteLine($"Script hash: {scriptHash.ToString()}");
@@ -47,39 +42,33 @@ namespace Neo.CLI
         /// <param name="scriptHash">Script hash</param>
         /// <param name="operation">Operation</param>
         /// <param name="contractParameters">Contract parameters</param>
-        /// <param name="witnessAddress">Witness address</param>
+        /// <param name="sender">Transaction's sender</param>
+        /// <param name="signerAccounts">Signer's accounts</param>
         [ConsoleCommand("invoke", Category = "Contract Commands")]
-        private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160[] witnessAddress = null)
+        private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160 sender = null, UInt160[] signerAccounts = null)
         {
-            List<Cosigner> signCollection = new List<Cosigner>();
-
-            if (witnessAddress != null && !NoWallet())
+            Signer[] signers = Array.Empty<Signer>();
+            if (signerAccounts != null && !NoWallet())
             {
-                using (SnapshotView snapshot = Blockchain.Singleton.GetSnapshot())
+                if (sender != null)
                 {
-                    UInt160[] accounts = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly).Select(p => p.ScriptHash).Where(p => NativeContract.GAS.BalanceOf(snapshot, p).Sign > 0).ToArray();
-                    foreach (var signAccount in accounts)
+                    if (signerAccounts.Contains(sender) && signerAccounts[0] != sender)
                     {
-                        if (witnessAddress is null)
-                        {
-                            break;
-                        }
-                        foreach (var witness in witnessAddress)
-                        {
-                            if (witness.Equals(signAccount))
-                            {
-                                signCollection.Add(new Cosigner() { Account = signAccount });
-                                break;
-                            }
-                        }
+                        var signersList = signerAccounts.ToList();
+                        signersList.Remove(sender);
+                        signerAccounts = signersList.Prepend(sender).ToArray();
+                    }
+                    else if (!signerAccounts.Contains(sender))
+                    {
+                        signerAccounts = signerAccounts.Prepend(sender).ToArray();
                     }
                 }
+                signers = signerAccounts.Select(p => new Signer() { Account = p, Scopes = WitnessScope.CalledByEntry }).ToArray();
             }
 
             Transaction tx = new Transaction
             {
-                Sender = UInt160.Zero,
-                Attributes = signCollection.ToArray(),
+                Signers = signers,
                 Witnesses = Array.Empty<Witness>(),
             };
 
@@ -88,11 +77,11 @@ namespace Neo.CLI
             if (NoWallet()) return;
             try
             {
-                tx = CurrentWallet.MakeTransaction(tx.Script, null, tx.Attributes);
+                tx = CurrentWallet.MakeTransaction(tx.Script, sender, signers);
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException e)
             {
-                Console.WriteLine("Error: insufficient balance.");
+                Console.WriteLine("Error: " + GetExceptionMessage(e));
                 return;
             }
             if (!ReadUserInput("Relay tx(no|yes)").IsYes())

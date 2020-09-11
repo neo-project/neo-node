@@ -164,7 +164,10 @@ namespace Neo.CLI
             if (scriptHash == null)
                 keys = CurrentWallet.GetAccounts().Where(p => p.HasKey).Select(p => p.GetKey());
             else
-                keys = new[] { CurrentWallet.GetAccount(scriptHash).GetKey() };
+            {
+                var account = CurrentWallet.GetAccount(scriptHash);
+                keys = account?.HasKey != true ? Array.Empty<KeyPair>() : new[] { account.GetKey() };
+            }
             if (path == null)
                 foreach (KeyPair key in keys)
                     Console.WriteLine(key.Export());
@@ -285,6 +288,56 @@ namespace Neo.CLI
         }
 
         /// <summary>
+        /// Process "import watchonly" command
+        /// </summary>
+        [ConsoleCommand("import watchonly", Category = "Wallet Commands")]
+        private void OnImportWatchOnlyCommand(string addressOrFile)
+        {
+            UInt160 address = null;
+            try
+            {
+                address = StringToAddress(addressOrFile);
+            }
+            catch (FormatException) { }
+            if (address is null)
+            {
+                var fileInfo = new FileInfo(addressOrFile);
+
+                if (!fileInfo.Exists)
+                {
+                    Console.WriteLine($"Error: File '{fileInfo.FullName}' doesn't exists");
+                    return;
+                }
+
+                if (fileInfo.Length > 1024 * 1024)
+                {
+                    if (!ReadUserInput($"The file '{fileInfo.FullName}' is too big, do you want to continue? (yes|no)", false).IsYes())
+                    {
+                        return;
+                    }
+                }
+
+                string[] lines = File.ReadAllLines(fileInfo.FullName).Where(u => !string.IsNullOrEmpty(u)).ToArray();
+                using (var percent = new ConsolePercent(0, lines.Length))
+                {
+                    for (int i = 0; i < lines.Length; i++)
+                    {
+                        address = StringToAddress(lines[i]);
+                        CurrentWallet.CreateAccount(address);
+                        percent.Value++;
+                    }
+                }
+            }
+            else
+            {
+                WalletAccount account = CurrentWallet.CreateAccount(address);
+                Console.WriteLine($"Address: {account.Address}");
+            }
+            if (CurrentWallet is NEP6Wallet wallet)
+                wallet.Save();
+        }
+
+        /// <summary>
         /// Process "list address" command
         /// </summary>
         [ConsoleCommand("list address", Category = "Wallet Commands")]
@@ -294,11 +347,16 @@ namespace Neo.CLI
 
             using (var snapshot = Blockchain.Singleton.GetSnapshot())
             {
-                foreach (Contract contract in CurrentWallet.GetAccounts().Where(p => !p.WatchOnly).Select(p => p.Contract))
+                foreach (var account in CurrentWallet.GetAccounts())
                 {
+                    var contract = account.Contract;
                     var type = "Nonstandard";
 
-                    if (contract.Script.IsMultiSigContract())
+                    if (account.WatchOnly)
+                    {
+                        type = "WatchOnly";
+                    }
+                    else if (contract.Script.IsMultiSigContract())
                     {
                         type = "MultiSignature";
                     }
@@ -306,13 +364,13 @@ namespace Neo.CLI
                     {
                         type = "Standard";
                     }
-                    else if (snapshot.Contracts.TryGet(contract.ScriptHash) != null)
+                    else if (snapshot.Contracts.TryGet(account.ScriptHash) != null)
                     {
                         type = "Deployed-Nonstandard";
                     }
 
-                    Console.WriteLine($"{"   Address: "}{contract.Address}\t{type}");
-                    Console.WriteLine($"{"ScriptHash: "}{contract.ScriptHash}\n");
+                    Console.WriteLine($"{"   Address: "}{account.Address}\t{type}");
+                    Console.WriteLine($"{"ScriptHash: "}{account.ScriptHash}\n");
                 }
             }
         }
@@ -345,10 +403,11 @@ namespace Neo.CLI
         private void OnListKeyCommand()
         {
             if (NoWallet()) return;
-            foreach (KeyPair key in CurrentWallet.GetAccounts().Where(p => p.HasKey).Select(p => p.GetKey()))
+            foreach (WalletAccount account in CurrentWallet.GetAccounts().Where(p => p.HasKey))
             {
-                Console.WriteLine($"  Address: {Contract.CreateSignatureContract(key.PublicKey).Address}");
-                Console.WriteLine($"PublicKey: {key.PublicKey}\n");
+                Console.WriteLine($"   Address: {account.Address}");
+                Console.WriteLine($"ScriptHash: {account.ScriptHash}");
+                Console.WriteLine($" PublicKey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}\n");
             }
         }
 
@@ -378,7 +437,7 @@ namespace Neo.CLI
             }
             catch (Exception e)
             {
-                Console.WriteLine($"One or more errors occurred:{Environment.NewLine}{e.Message}");
+                Console.WriteLine("Error: " + GetExceptionMessage(e));
             }
         }
 
@@ -388,8 +447,10 @@ namespace Neo.CLI
         /// <param name="asset">Asset id</param>
         /// <param name="to">To</param>
         /// <param name="amount">Amount</param>
+        /// <param name="from">From</param>
+        /// <param name="signerAccounts">Signer's accounts</param>
         [ConsoleCommand("send", Category = "Wallet Commands")]
-        private void OnSendCommand(UInt160 asset, UInt160 to, string amount)
+        private void OnSendCommand(UInt160 asset, UInt160 to, string amount, UInt160 from = null, UInt160[] signerAccounts = null)
         {
             if (NoWallet()) return;
             string password = ReadUserInput("password", true);
@@ -411,15 +472,29 @@ namespace Neo.CLI
                 Console.WriteLine("Incorrect Amount Format");
                 return;
             }
-            tx = CurrentWallet.MakeTransaction(new[]
+            try
             {
-                new TransferOutput
+                tx = CurrentWallet.MakeTransaction(new[]
                 {
-                    AssetId = asset,
-                    Value = decimalAmount,
-                    ScriptHash = to
-                }
-            });
+                    new TransferOutput
+                    {
+                        AssetId = asset,
+                        Value = decimalAmount,
+                        ScriptHash = to
+                    }
+                }, from: from, cosigners: signerAccounts?.Select(p => new Signer
+                {
+                    // default access for transfers should be valid only for first invocation
+                    Scopes = WitnessScope.CalledByEntry,
+                    Account = p
+                })
+                .ToArray() ?? new Signer[0]);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Error: " + GetExceptionMessage(e));
+                return;
+            }
 
             if (tx == null)
             {
@@ -523,26 +598,20 @@ namespace Neo.CLI
             {
                 context = new ContractParametersContext(tx);
             }
-            catch (InvalidOperationException ex)
+            catch (InvalidOperationException e)
             {
-                Console.WriteLine($"Error creating contract params: {ex}");
+                Console.WriteLine($"Error creating contract params: " + GetExceptionMessage(e));
                 throw;
             }
             CurrentWallet.Sign(context);
-            string msg;
             if (context.Completed)
             {
                 tx.Witnesses = context.GetWitnesses();
-
                 NeoSystem.Blockchain.Tell(tx);
-
-                msg = $"Signed and relayed transaction with hash={tx.Hash}";
-                Console.WriteLine(msg);
+                Console.WriteLine($"Signed and relayed transaction with hash={tx.Hash}");
                 return;
             }
-
-            msg = $"Failed sending transaction with hash={tx.Hash}";
-            Console.WriteLine(msg);
+            Console.WriteLine($"Failed sending transaction with hash={tx.Hash}");
         }
     }
 }
