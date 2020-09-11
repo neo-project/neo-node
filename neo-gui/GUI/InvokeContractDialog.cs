@@ -76,7 +76,7 @@ namespace Neo.GUI
                 Script = script,
                 Witnesses = new Witness[0]
             };
-            using ApplicationEngine engine = ApplicationEngine.Run(tx_test.Script, tx_test, testMode: true);
+            using ApplicationEngine engine = ApplicationEngine.Run(tx_test.Script, container: tx_test);
             StringBuilder sb = new StringBuilder();
             sb.AppendLine($"VM State: {engine.State}");
             sb.AppendLine($"Gas Consumed: {engine.GasConsumed}");
