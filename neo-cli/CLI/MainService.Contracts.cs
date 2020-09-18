@@ -69,6 +69,7 @@ namespace Neo.CLI
             Transaction tx = new Transaction
             {
                 Signers = signers,
+                Attributes = Array.Empty<TransactionAttribute>(),
                 Witnesses = Array.Empty<Witness>(),
             };
 
