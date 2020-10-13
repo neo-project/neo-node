@@ -107,28 +107,6 @@ namespace Neo.CLI
         }
 
         /// <summary>
-        /// Process "get validators"
-        /// </summary>
-        [ConsoleCommand("get validators", Category = "Vote Commands")]
-        private void OnGetValidatorsCommand()
-        {
-            var result = OnInvokeWithResult(NativeContract.NEO.Hash, "getValidators", null, null, false);
-
-            var resJArray = (VM.Types.Array)result;
-
-            if (resJArray.Count > 0)
-            {
-                Console.WriteLine();
-                Console.WriteLine("Validators:");
-
-                foreach (var item in resJArray)
-                {
-                    Console.WriteLine(((ByteString)item)?.GetSpan().ToHexString());
-                }
-            }
-        }
-
-        /// <summary>
         /// Process "get committee"
         /// </summary>
         [ConsoleCommand("get committee", Category = "Vote Commands")]
