@@ -10,5 +10,7 @@ namespace Neo.CLI
 
             return input == "yes" || input == "y";
         }
+
+        public static string ToBase64String(this byte[] input) => System.Convert.ToBase64String(input);
     }
 }
