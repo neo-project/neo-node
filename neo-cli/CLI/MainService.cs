@@ -511,7 +511,7 @@ namespace Neo.CLI
         /// <param name="operation">Operation</param>
         /// <param name="verificable">Transaction</param>
         /// <param name="contractParameters">Contract parameters</param>
-        private StackItem OnInvokeWithResult(UInt160 scriptHash, string operation, IVerifiable verificable = null, JArray contractParameters = null, bool showStack = true)
+        private bool OnInvokeWithResult(UInt160 scriptHash, string operation,out StackItem result, IVerifiable verificable = null, JArray contractParameters = null, bool showStack = true)
         {
             List<ContractParameter> parameters = new List<ContractParameter>();
 
@@ -539,7 +539,8 @@ namespace Neo.CLI
 
             using ApplicationEngine engine = ApplicationEngine.Run(script, container: verificable);
             PrintExecutionOutput(engine, showStack);
-            return engine.State == VMState.FAULT ? null : engine.ResultStack.Peek();
+            result = engine.State == VMState.FAULT ? null : engine.ResultStack.Peek();
+            return engine.State != VMState.FAULT;
         }
 
         private void PrintExecutionOutput(ApplicationEngine engine, bool showStack = true)
