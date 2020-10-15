@@ -511,7 +511,7 @@ namespace Neo.CLI
         /// <param name="operation">Operation</param>
         /// <param name="verificable">Transaction</param>
         /// <param name="contractParameters">Contract parameters</param>
-        private bool OnInvokeWithResult(UInt160 scriptHash, string operation,out StackItem result, IVerifiable verificable = null, JArray contractParameters = null, bool showStack = true)
+        private bool OnInvokeWithResult(UInt160 scriptHash, string operation, out StackItem result, IVerifiable verificable = null, JArray contractParameters = null, bool showStack = true)
         {
             List<ContractParameter> parameters = new List<ContractParameter>();
 
