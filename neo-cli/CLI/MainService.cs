@@ -509,8 +509,10 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="scriptHash">Script hash</param>
         /// <param name="operation">Operation</param>
+        /// <param name="result">Result</param>
         /// <param name="verificable">Transaction</param>
         /// <param name="contractParameters">Contract parameters</param>
+        /// <returns>Return true if it was successful</returns>
         private bool OnInvokeWithResult(UInt160 scriptHash, string operation, out StackItem result, IVerifiable verificable = null, JArray contractParameters = null, bool showStack = true)
         {
             List<ContractParameter> parameters = new List<ContractParameter>();
