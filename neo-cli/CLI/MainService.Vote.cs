@@ -87,22 +87,21 @@ namespace Neo.CLI
         [ConsoleCommand("get candidates", Category = "Vote Commands")]
         private void OnGetCandidatesCommand()
         {
-            if (OnInvokeWithResult(NativeContract.NEO.Hash, "getCandidates", out StackItem result, null, null, false))
+            if (!OnInvokeWithResult(NativeContract.NEO.Hash, "getCandidates", out StackItem result, null, null, false)) return;
+
+            var resJArray = (VM.Types.Array)result;
+
+            if (resJArray.Count > 0)
             {
-                var resJArray = (VM.Types.Array)result;
+                Console.WriteLine();
+                Console.WriteLine("Candidates:");
 
-                if (resJArray.Count > 0)
+                foreach (var item in resJArray)
                 {
-                    Console.WriteLine();
-                    Console.WriteLine("Candidates:");
+                    var value = (VM.Types.Array)item;
 
-                    foreach (var item in resJArray)
-                    {
-                        var value = (VM.Types.Array)item;
-
-                        Console.Write(((ByteString)value?[0])?.GetSpan().ToHexString() + "\t");
-                        Console.WriteLine(((Integer)value?[1]).GetInteger());
-                    }
+                    Console.Write(((ByteString)value?[0])?.GetSpan().ToHexString() + "\t");
+                    Console.WriteLine(((Integer)value?[1]).GetInteger());
                 }
             }
         }
@@ -113,19 +112,18 @@ namespace Neo.CLI
         [ConsoleCommand("get committee", Category = "Vote Commands")]
         private void OnGetCommitteeCommand()
         {
-            if (OnInvokeWithResult(NativeContract.NEO.Hash, "getCommittee", out StackItem result, null, null, false))
+            if (!OnInvokeWithResult(NativeContract.NEO.Hash, "getCommittee", out StackItem result, null, null, false)) return;
+
+            var resJArray = (VM.Types.Array)result;
+
+            if (resJArray.Count > 0)
             {
-                var resJArray = (VM.Types.Array)result;
+                Console.WriteLine();
+                Console.WriteLine("Committee:");
 
-                if (resJArray.Count > 0)
+                foreach (var item in resJArray)
                 {
-                    Console.WriteLine();
-                    Console.WriteLine("Committee:");
-
-                    foreach (var item in resJArray)
-                    {
-                        Console.WriteLine(((ByteString)item)?.GetSpan().ToHexString());
-                    }
+                    Console.WriteLine(((ByteString)item)?.GetSpan().ToHexString());
                 }
             }
         }
@@ -136,19 +134,18 @@ namespace Neo.CLI
         [ConsoleCommand("get next validators", Category = "Vote Commands")]
         private void OnGetNextBlockValidatorsCommand()
         {
-            if (OnInvokeWithResult(NativeContract.NEO.Hash, "getNextBlockValidators", out StackItem result, null, null, false))
+            if (!OnInvokeWithResult(NativeContract.NEO.Hash, "getNextBlockValidators", out StackItem result, null, null, false)) return;
+
+            var resJArray = (VM.Types.Array)result;
+
+            if (resJArray.Count > 0)
             {
-                var resJArray = (VM.Types.Array)result;
+                Console.WriteLine();
+                Console.WriteLine("Next validators:");
 
-                if (resJArray.Count > 0)
+                foreach (var item in resJArray)
                 {
-                    Console.WriteLine();
-                    Console.WriteLine("Next validators:");
-
-                    foreach (var item in resJArray)
-                    {
-                        Console.WriteLine(((ByteString)item)?.GetSpan().ToHexString());
-                    }
+                    Console.WriteLine(((ByteString)item)?.GetSpan().ToHexString());
                 }
             }
         }
