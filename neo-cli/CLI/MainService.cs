@@ -480,7 +480,7 @@ namespace Neo.CLI
             try
             {
                 Transaction tx = CurrentWallet.MakeTransaction(script, account, signers);
-                Console.WriteLine($"Invoking script with: '{tx.Script.ToHexString()}'");
+                Console.WriteLine($"Invoking script with: '{tx.Script.ToBase64String()}'");
 
                 using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, container: tx))
                 {
@@ -529,7 +529,7 @@ namespace Neo.CLI
             {
                 scriptBuilder.EmitAppCall(scriptHash, operation, parameters.ToArray());
                 script = scriptBuilder.ToArray();
-                Console.WriteLine($"Invoking script with: '{script.ToHexString()}'");
+                Console.WriteLine($"Invoking script with: '{script.ToBase64String()}'");
             }
 
             if (verificable is Transaction tx)
