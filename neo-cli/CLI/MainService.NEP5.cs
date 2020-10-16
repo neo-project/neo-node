@@ -72,7 +72,8 @@ namespace Neo.CLI
 
             var asset = new AssetDescriptor(tokenHash);
 
-            var balanceResult = OnInvokeWithResult(tokenHash, "balanceOf", null, new JArray(arg));
+            if (!OnInvokeWithResult(tokenHash, "balanceOf", out StackItem balanceResult, null, new JArray(arg))) return;
+
             var balance = new BigDecimal(((PrimitiveType)balanceResult).GetInteger(), asset.Decimals);
 
             Console.WriteLine();
@@ -86,7 +87,7 @@ namespace Neo.CLI
         [ConsoleCommand("name", Category = "NEP5 Commands")]
         private void OnNameCommand(UInt160 tokenHash)
         {
-            var result = OnInvokeWithResult(tokenHash, "name", null);
+            if (!OnInvokeWithResult(tokenHash, "name", out StackItem result, null)) return;
 
             Console.WriteLine($"Result : {((PrimitiveType)result).GetString()}");
         }
@@ -98,7 +99,7 @@ namespace Neo.CLI
         [ConsoleCommand("decimals", Category = "NEP5 Commands")]
         private void OnDecimalsCommand(UInt160 tokenHash)
         {
-            var result = OnInvokeWithResult(tokenHash, "decimals", null);
+            if (!OnInvokeWithResult(tokenHash, "decimals", out StackItem result, null)) return;
 
             Console.WriteLine($"Result : {((PrimitiveType)result).GetInteger()}");
         }
