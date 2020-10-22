@@ -281,7 +281,7 @@ namespace Neo.CLI
 
             // Build script
 
-            scriptHash = file.ToArray().ToHexString().HexToBytes().ToScriptHash();
+            scriptHash = file.ToArray().ToScriptHash();
             using (ScriptBuilder sb = new ScriptBuilder())
             {
                 sb.EmitSysCall(ApplicationEngine.System_Contract_Create, file.Script, manifest.ToJson().ToString());
