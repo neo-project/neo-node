@@ -87,7 +87,7 @@ namespace Neo.CLI
         [ConsoleCommand("get candidates", Category = "Vote Commands")]
         private void OnGetCandidatesCommand()
         {
-            var result = OnInvokeWithResult(NativeContract.NEO.Hash, "getCandidates", null, null, false);
+            if (!OnInvokeWithResult(NativeContract.NEO.Hash, "getCandidates", out StackItem result, null, null, false)) return;
 
             var resJArray = (VM.Types.Array)result;
 
@@ -107,34 +107,12 @@ namespace Neo.CLI
         }
 
         /// <summary>
-        /// Process "get validators"
-        /// </summary>
-        [ConsoleCommand("get validators", Category = "Vote Commands")]
-        private void OnGetValidatorsCommand()
-        {
-            var result = OnInvokeWithResult(NativeContract.NEO.Hash, "getValidators", null, null, false);
-
-            var resJArray = (VM.Types.Array)result;
-
-            if (resJArray.Count > 0)
-            {
-                Console.WriteLine();
-                Console.WriteLine("Validators:");
-
-                foreach (var item in resJArray)
-                {
-                    Console.WriteLine(((ByteString)item)?.GetSpan().ToHexString());
-                }
-            }
-        }
-
-        /// <summary>
         /// Process "get committee"
         /// </summary>
         [ConsoleCommand("get committee", Category = "Vote Commands")]
         private void OnGetCommitteeCommand()
         {
-            var result = OnInvokeWithResult(NativeContract.NEO.Hash, "getCommittee", null, null, false);
+            if (!OnInvokeWithResult(NativeContract.NEO.Hash, "getCommittee", out StackItem result, null, null, false)) return;
 
             var resJArray = (VM.Types.Array)result;
 
@@ -156,7 +134,7 @@ namespace Neo.CLI
         [ConsoleCommand("get next validators", Category = "Vote Commands")]
         private void OnGetNextBlockValidatorsCommand()
         {
-            var result = OnInvokeWithResult(NativeContract.NEO.Hash, "getNextBlockValidators", null, null, false);
+            if (!OnInvokeWithResult(NativeContract.NEO.Hash, "getNextBlockValidators", out StackItem result, null, null, false)) return;
 
             var resJArray = (VM.Types.Array)result;
 
