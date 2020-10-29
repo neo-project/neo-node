@@ -281,10 +281,11 @@ namespace Neo.CLI
 
             // Build script
 
-            scriptHash = file.ToArray().ToScriptHash();
+            var fileData = file.ToArray();
+            scriptHash = fileData.ToScriptHash();
             using (ScriptBuilder sb = new ScriptBuilder())
             {
-                sb.EmitSysCall(ApplicationEngine.System_Contract_Create, file.Script, manifest.ToJson().ToString());
+                sb.EmitSysCall(ApplicationEngine.System_Contract_Create, fileData, manifest.ToJson().ToString());
                 return sb.ToArray();
             }
         }
