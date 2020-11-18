@@ -73,7 +73,7 @@ namespace Neo.CLI
                 Witnesses = Array.Empty<Witness>(),
             };
 
-            _ = OnInvokeWithResult(scriptHash, operation, tx, contractParameters);
+            if (!OnInvokeWithResult(scriptHash, operation, out _, tx, contractParameters)) return;
 
             if (NoWallet()) return;
             try
