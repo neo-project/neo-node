@@ -1,7 +1,9 @@
 using Neo.ConsoleService;
 using Neo.IO.Json;
 using Neo.Network.P2P.Payloads;
+using Neo.SmartContract;
 using Neo.SmartContract.Native;
+using Neo.VM;
 using System;
 using System.Linq;
 
@@ -18,7 +20,7 @@ namespace Neo.CLI
         private void OnDeployCommand(string filePath, string manifestPath = null)
         {
             if (NoWallet()) return;
-            byte[] script = LoadDeploymentScript(filePath, manifestPath, out var scriptHash);
+            byte[] script = LoadDeploymentScript(filePath, manifestPath, out var nef);
 
             Transaction tx;
             try
@@ -30,7 +32,16 @@ namespace Neo.CLI
                 Console.WriteLine("Error: " + GetExceptionMessage(e));
                 return;
             }
-            Console.WriteLine($"Script hash: {scriptHash.ToString()}");
+
+            // TODO need to replace by ContractHash method
+
+            using var sb = new ScriptBuilder();
+            sb.Emit(OpCode.ABORT);
+            sb.EmitPush(tx.Sender);
+            sb.EmitPush(nef.Script);
+            UInt160 hash = sb.ToArray().ToScriptHash();
+
+            Console.WriteLine($"Contract hash: {hash}");
             Console.WriteLine($"Gas: {new BigDecimal(tx.SystemFee, NativeContract.GAS.Decimals)}");
             Console.WriteLine();
             SignAndSendTx(tx);
