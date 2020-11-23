@@ -6,7 +6,7 @@
     <Version>3.0.0-preview3</Version>
     <Authors>The Neo Project</Authors>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <TargetFramework>net5.0</TargetFramework>
     <RootNamespace>Neo</RootNamespace>
     <UseWindowsForms>true</UseWindowsForms>
     <Company>The Neo Project</Company>

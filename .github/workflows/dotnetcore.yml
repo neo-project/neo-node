@@ -3,7 +3,7 @@ name: .NET Core Test
 on: pull_request
 
 env:
-  DOTNET_VERSION: 3.0.100
+  DOTNET_VERSION: 5.0.100
 
 jobs:
 
