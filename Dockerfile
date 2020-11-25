@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/runtime:5.0.0 AS Build
+FROM mcr.microsoft.com/dotnet/sdk:5.0.0 AS Build
 
 COPY neo-cli /neo-cli
 COPY Neo.ConsoleService /Neo.ConsoleService
