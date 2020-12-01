@@ -233,7 +233,7 @@ namespace Neo.CLI
             return true;
         }
 
-        private byte[] LoadDeploymentScript(string nefFilePath, string manifestFilePath, out UInt160 scriptHash)
+        private byte[] LoadDeploymentScript(string nefFilePath, string manifestFilePath, out NefFile nef)
         {
             if (string.IsNullOrEmpty(manifestFilePath))
             {
@@ -258,15 +258,14 @@ namespace Neo.CLI
                 throw new ArgumentException(nameof(nefFilePath));
             }
 
-            NefFile file;
             using (var stream = new BinaryReader(File.OpenRead(nefFilePath), Utility.StrictUTF8, false))
             {
-                file = stream.ReadSerializable<NefFile>();
+                nef = stream.ReadSerializable<NefFile>();
             }
 
             // Basic script checks
 
-            Script script = new Script(file.Script);
+            Script script = new Script(nef.Script);
             for (var i = 0; i < script.Length;)
             {
                 // Check bad opcodes
@@ -281,10 +280,9 @@ namespace Neo.CLI
 
             // Build script
 
-            scriptHash = file.ScriptHash;
             using (ScriptBuilder sb = new ScriptBuilder())
             {
-                sb.EmitSysCall(ApplicationEngine.System_Contract_Create, file.Script, manifest.ToJson().ToString());
+                sb.EmitSysCall(ApplicationEngine.System_Contract_Create, nef.ToArray(), manifest.ToJson().ToString());
                 return sb.ToArray();
             }
         }

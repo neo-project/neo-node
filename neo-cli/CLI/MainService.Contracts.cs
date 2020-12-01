@@ -18,7 +18,7 @@ namespace Neo.CLI
         private void OnDeployCommand(string filePath, string manifestPath = null)
         {
             if (NoWallet()) return;
-            byte[] script = LoadDeploymentScript(filePath, manifestPath, out var scriptHash);
+            byte[] script = LoadDeploymentScript(filePath, manifestPath, out var nef);
 
             Transaction tx;
             try
@@ -30,7 +30,10 @@ namespace Neo.CLI
                 Console.WriteLine("Error: " + GetExceptionMessage(e));
                 return;
             }
-            Console.WriteLine($"Script hash: {scriptHash.ToString()}");
+
+            UInt160 hash = SmartContract.Helper.GetContractHash(tx.Sender, nef.Script);
+
+            Console.WriteLine($"Contract hash: {hash}");
             Console.WriteLine($"Gas: {new BigDecimal(tx.SystemFee, NativeContract.GAS.Decimals)}");
             Console.WriteLine();
             SignAndSendTx(tx);
