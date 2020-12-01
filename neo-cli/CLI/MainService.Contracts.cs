@@ -33,13 +33,7 @@ namespace Neo.CLI
                 return;
             }
 
-            // TODO need to replace by ContractHash method
-
-            using var sb = new ScriptBuilder();
-            sb.Emit(OpCode.ABORT);
-            sb.EmitPush(tx.Sender);
-            sb.EmitPush(nef.Script);
-            UInt160 hash = sb.ToArray().ToScriptHash();
+            UInt160 hash = SmartContract.Helper.GetContractHash(tx.Sender, nef.Script);
 
             Console.WriteLine($"Contract hash: {hash}");
             Console.WriteLine($"Gas: {new BigDecimal(tx.SystemFee, NativeContract.GAS.Decimals)}");
