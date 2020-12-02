@@ -1,13 +1,8 @@
 using Neo.ConsoleService;
 using Neo.IO.Json;
-using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
-using Neo.Persistence;
-using Neo.SmartContract;
 using Neo.SmartContract.Native;
-using Neo.VM;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace Neo.CLI
@@ -23,7 +18,7 @@ namespace Neo.CLI
         private void OnDeployCommand(string filePath, string manifestPath = null)
         {
             if (NoWallet()) return;
-            byte[] script = LoadDeploymentScript(filePath, manifestPath, out var scriptHash);
+            byte[] script = LoadDeploymentScript(filePath, manifestPath, out var nef);
 
             Transaction tx;
             try
@@ -35,7 +30,10 @@ namespace Neo.CLI
                 Console.WriteLine("Error: " + GetExceptionMessage(e));
                 return;
             }
-            Console.WriteLine($"Script hash: {scriptHash.ToString()}");
+
+            UInt160 hash = SmartContract.Helper.GetContractHash(tx.Sender, nef.Script);
+
+            Console.WriteLine($"Contract hash: {hash}");
             Console.WriteLine($"Gas: {new BigDecimal(tx.SystemFee, NativeContract.GAS.Decimals)}");
             Console.WriteLine();
             SignAndSendTx(tx);
@@ -47,26 +45,43 @@ namespace Neo.CLI
         /// <param name="scriptHash">Script hash</param>
         /// <param name="operation">Operation</param>
         /// <param name="contractParameters">Contract parameters</param>
-        /// <param name="witnessAddress">Witness address</param>
+        /// <param name="sender">Transaction's sender</param>
+        /// <param name="signerAccounts">Signer's accounts</param>
         [ConsoleCommand("invoke", Category = "Contract Commands")]
-        private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160[] signerAccounts = null)
+        private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160 sender = null, UInt160[] signerAccounts = null)
         {
             Signer[] signers = Array.Empty<Signer>();
             if (signerAccounts != null && !NoWallet())
-                signers = CurrentWallet.GetAccounts().Where(p => !p.Lock && !p.WatchOnly && signerAccounts.Contains(p.ScriptHash)).Select(p => new Signer() { Account = p.ScriptHash, Scopes = WitnessScope.CalledByEntry }).ToArray();
+            {
+                if (sender != null)
+                {
+                    if (signerAccounts.Contains(sender) && signerAccounts[0] != sender)
+                    {
+                        var signersList = signerAccounts.ToList();
+                        signersList.Remove(sender);
+                        signerAccounts = signersList.Prepend(sender).ToArray();
+                    }
+                    else if (!signerAccounts.Contains(sender))
+                    {
+                        signerAccounts = signerAccounts.Prepend(sender).ToArray();
+                    }
+                }
+                signers = signerAccounts.Select(p => new Signer() { Account = p, Scopes = WitnessScope.CalledByEntry }).ToArray();
+            }
 
             Transaction tx = new Transaction
             {
                 Signers = signers,
+                Attributes = Array.Empty<TransactionAttribute>(),
                 Witnesses = Array.Empty<Witness>(),
             };
 
-            _ = OnInvokeWithResult(scriptHash, operation, tx, contractParameters);
+            if (!OnInvokeWithResult(scriptHash, operation, out _, tx, contractParameters)) return;
 
             if (NoWallet()) return;
             try
             {
-                tx = CurrentWallet.MakeTransaction(tx.Script, signers.Length > 0 ? signers[0].Account : null, signers);
+                tx = CurrentWallet.MakeTransaction(tx.Script, sender, signers);
             }
             catch (InvalidOperationException e)
             {
