@@ -450,7 +450,7 @@ namespace Neo.CLI
         /// <param name="from">From</param>
         /// <param name="signerAccounts">Signer's accounts</param>
         [ConsoleCommand("send", Category = "Wallet Commands")]
-        private void OnSendCommand(UInt160 asset, UInt160 to, string amount, UInt160 from = null, UInt160[] signerAccounts = null)
+        private void OnSendCommand(UInt160 asset, UInt160 to, string amount, string data = null, UInt160 from = null, UInt160[] signerAccounts = null)
         {
             if (NoWallet()) return;
             string password = ReadUserInput("password", true);
@@ -480,7 +480,8 @@ namespace Neo.CLI
                     {
                         AssetId = asset,
                         Value = decimalAmount,
-                        ScriptHash = to
+                        ScriptHash = to,
+                        Data = data
                     }
                 }, from: from, cosigners: signerAccounts?.Select(p => new Signer
                 {
