@@ -20,7 +20,7 @@ namespace Neo.CLI
         /// <param name="from">From</param>
         /// <param name="signersAccounts">Signer's accounts</param>
         [ConsoleCommand("transfer", Category = "NEP5 Commands")]
-        private void OnTransferCommand(UInt160 tokenHash, UInt160 to, decimal amount, UInt160 from = null, UInt160[] signersAccounts = null)
+        private void OnTransferCommand(UInt160 tokenHash, UInt160 to, decimal amount, string data = null, UInt160 from = null, UInt160[] signersAccounts = null)
         {
             var asset = new AssetDescriptor(tokenHash);
             var value = BigDecimal.Parse(amount.ToString(CultureInfo.InvariantCulture), asset.Decimals);
@@ -36,7 +36,8 @@ namespace Neo.CLI
                     {
                         AssetId = tokenHash,
                         Value = value,
-                        ScriptHash = to
+                        ScriptHash = to,
+                        Data = data
                     }
                 }, from: from, cosigners: signersAccounts?.Select(p => new Signer
                 {
