@@ -19,8 +19,8 @@ namespace Neo.CLI
         /// <param name="amount">Ammount</param>
         /// <param name="from">From</param>
         /// <param name="signersAccounts">Signer's accounts</param>
-        [ConsoleCommand("transfer", Category = "NEP5 Commands")]
-        private void OnTransferCommand(UInt160 tokenHash, UInt160 to, decimal amount, UInt160 from = null, UInt160[] signersAccounts = null)
+        [ConsoleCommand("transfer", Category = "NEP17 Commands")]
+        private void OnTransferCommand(UInt160 tokenHash, UInt160 to, decimal amount, string data = null, UInt160 from = null, UInt160[] signersAccounts = null)
         {
             var asset = new AssetDescriptor(tokenHash);
             var value = BigDecimal.Parse(amount.ToString(CultureInfo.InvariantCulture), asset.Decimals);
@@ -36,7 +36,8 @@ namespace Neo.CLI
                     {
                         AssetId = tokenHash,
                         Value = value,
-                        ScriptHash = to
+                        ScriptHash = to,
+                        Data = data
                     }
                 }, from: from, cosigners: signersAccounts?.Select(p => new Signer
                 {
@@ -63,7 +64,7 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="tokenHash">Script hash</param>
         /// <param name="address">Address</param>
-        [ConsoleCommand("balanceOf", Category = "NEP5 Commands")]
+        [ConsoleCommand("balanceOf", Category = "NEP17 Commands")]
         private void OnBalanceOfCommand(UInt160 tokenHash, UInt160 address)
         {
             var arg = new JObject();
@@ -84,7 +85,7 @@ namespace Neo.CLI
         /// Process "name" command
         /// </summary>
         /// <param name="tokenHash">Script hash</param>
-        [ConsoleCommand("name", Category = "NEP5 Commands")]
+        [ConsoleCommand("name", Category = "NEP17 Commands")]
         private void OnNameCommand(UInt160 tokenHash)
         {
             if (!OnInvokeWithResult(tokenHash, "name", out StackItem result, null)) return;
@@ -96,7 +97,7 @@ namespace Neo.CLI
         /// Process "decimals" command
         /// </summary>
         /// <param name="tokenHash">Script hash</param>
-        [ConsoleCommand("decimals", Category = "NEP5 Commands")]
+        [ConsoleCommand("decimals", Category = "NEP17 Commands")]
         private void OnDecimalsCommand(UInt160 tokenHash)
         {
             if (!OnInvokeWithResult(tokenHash, "decimals", out StackItem result, null)) return;
