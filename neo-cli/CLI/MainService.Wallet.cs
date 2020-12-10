@@ -3,7 +3,6 @@ using Neo.ConsoleService;
 using Neo.Cryptography.ECC;
 using Neo.IO.Json;
 using Neo.Ledger;
-using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.SmartContract;
@@ -364,7 +363,7 @@ namespace Neo.CLI
                     {
                         type = "Standard";
                     }
-                    else if (snapshot.Contracts.TryGet(account.ScriptHash) != null)
+                    else if (NativeContract.Management.GetContract(snapshot, account.ScriptHash) != null)
                     {
                         type = "Deployed-Nonstandard";
                     }
