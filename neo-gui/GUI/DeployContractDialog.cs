@@ -1,4 +1,5 @@
 using Neo.SmartContract;
+using Neo.SmartContract.Native;
 using Neo.VM;
 using System;
 using System.IO;
@@ -18,7 +19,7 @@ namespace Neo.GUI
             byte[] script = textBox8.Text.HexToBytes();
             string manifest = "";
             using ScriptBuilder sb = new ScriptBuilder();
-            sb.EmitSysCall(ApplicationEngine.System_Contract_Create, script, manifest);
+            sb.EmitAppCall(NativeContract.Management.Hash, "deploy", script, manifest);
             return sb.ToArray();
         }
 
