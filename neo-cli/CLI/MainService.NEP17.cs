@@ -6,6 +6,9 @@ using Neo.Wallets;
 using System;
 using System.Globalization;
 using System.Linq;
+using Neo.SmartContract;
+using Neo.SmartContract.Native;
+using Neo.Ledger;
 
 namespace Neo.CLI
 {
@@ -88,9 +91,10 @@ namespace Neo.CLI
         [ConsoleCommand("name", Category = "NEP17 Commands")]
         private void OnNameCommand(UInt160 tokenHash)
         {
-            if (!OnInvokeWithResult(tokenHash, "name", out StackItem result, null)) return;
-
-            Console.WriteLine($"Result : {((PrimitiveType)result).GetString()}");
+            var snapshot = Blockchain.Singleton.GetSnapshot();
+            ContractState contract = NativeContract.Management.GetContract(snapshot, tokenHash);
+            if (contract == null) Console.WriteLine($"Contract hash not exist: {tokenHash}");
+            else Console.WriteLine($"Result : {contract.Manifest.Name.ToString()}");
         }
 
         /// <summary>
