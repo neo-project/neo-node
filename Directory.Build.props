@@ -3,7 +3,7 @@
   
   <PropertyGroup>
     <VersionPrefix>3.0.0</VersionPrefix>
-    <VersionSuffix>preview3</VersionSuffix>
+    <VersionSuffix>preview4</VersionSuffix>
     <TargetFramework>net5.0</TargetFramework>
     <Authors>The Neo Project</Authors>
     <PackageTags>Neo;Blockchain;Neo-CLI;Neo-Node</PackageTags>
