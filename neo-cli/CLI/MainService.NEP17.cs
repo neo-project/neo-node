@@ -92,7 +92,7 @@ namespace Neo.CLI
         private void OnNameCommand(UInt160 tokenHash)
         {
             var snapshot = Blockchain.Singleton.GetSnapshot();
-            ContractState contract = NativeContract.Management.GetContract(snapshot, tokenHash);
+            ContractState contract = NativeContract.ContractManagement.GetContract(snapshot, tokenHash);
             if (contract == null) Console.WriteLine($"Contract hash not exist: {tokenHash}");
             else Console.WriteLine($"Result : {contract.Manifest.Name.ToString()}");
         }
