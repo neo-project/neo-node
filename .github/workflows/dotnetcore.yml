@@ -3,7 +3,7 @@ name: .NET Core Test
 on: pull_request
 
 env:
-  DOTNET_VERSION: 3.0.100
+  DOTNET_VERSION: 5.0.100
 
 jobs:
 
@@ -22,8 +22,8 @@ jobs:
     - name: Check format
       if: runner.os == 'Linux'
       run: |
-        dotnet tool install --version 3.2.111002 --tool-path ./ dotnet-format --add-source https://dotnet.myget.org/F/format/api/v3/index.json
-        ./dotnet-format --check --dry-run -v diagnostic
+        dotnet tool install --version 5.0.142902 --tool-path ./ dotnet-format --add-source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-tools/nuget/v3/index.json
+        ./dotnet-format --check -v diagnostic
     - name: Build CLI
       if: runner.os == 'Linux'
       run: |

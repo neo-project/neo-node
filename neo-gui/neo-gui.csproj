@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <Copyright>2016-2020 The Neo Project</Copyright>
@@ -6,7 +6,7 @@
     <Version>3.0.0-preview4</Version>
     <Authors>The Neo Project</Authors>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <TargetFramework>net5.0-windows</TargetFramework>
     <RootNamespace>Neo</RootNamespace>
     <UseWindowsForms>true</UseWindowsForms>
     <Company>The Neo Project</Company>
