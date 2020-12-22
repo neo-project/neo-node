@@ -1,11 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
   
   <PropertyGroup>
+    <Copyright>2016-2020 The Neo Project</Copyright>
     <AssemblyTitle>Neo.CLI</AssemblyTitle>
+    <Version>3.0.0-preview4</Version>
+    <Authors>The Neo Project</Authors>
+    <TargetFramework>net5.0</TargetFramework>
     <AssemblyName>neo-cli</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>Neo.CLI</PackageId>
     <RootNamespace>Neo</RootNamespace>
+    <Company>The Neo Project</Company>
     <Product>Neo.CLI</Product>
     <Description>Neo.CLI</Description>
   </PropertyGroup>
