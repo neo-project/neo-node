@@ -558,6 +558,7 @@ namespace Neo.ConsoleService
             }
             else
             {
+                Debug.Assert(OperatingSystem.IsWindows());
                 ServiceBase.Run(new ServiceProxy(this));
             }
         }
