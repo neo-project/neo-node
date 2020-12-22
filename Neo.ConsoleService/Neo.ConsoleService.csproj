@@ -10,7 +10,7 @@
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/neo-project/neo-node.git</RepositoryUrl>
   </PropertyGroup>
-  
+
   <ItemGroup>
     <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="4.7.0" />
