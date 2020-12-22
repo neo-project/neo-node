@@ -19,7 +19,7 @@ namespace Neo.GUI
             byte[] script = textBox8.Text.HexToBytes();
             string manifest = "";
             using ScriptBuilder sb = new ScriptBuilder();
-            sb.EmitAppCall(NativeContract.Management.Hash, "deploy", script, manifest);
+            sb.EmitAppCall(NativeContract.ContractManagement.Hash, "deploy", script, manifest);
             return sb.ToArray();
         }
 

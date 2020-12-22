@@ -65,10 +65,12 @@ namespace Neo
     public class StorageSettings
     {
         public string Engine { get; }
+        public string Path { get; }
 
         public StorageSettings(IConfigurationSection section)
         {
             this.Engine = section.GetValue("Engine", "LevelDBStore");
+            this.Path = section.GetValue("Path", "Data_LevelDB_{0}");
         }
     }
 
