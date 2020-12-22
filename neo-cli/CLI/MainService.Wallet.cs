@@ -363,7 +363,7 @@ namespace Neo.CLI
                     {
                         type = "Standard";
                     }
-                    else if (NativeContract.Management.GetContract(snapshot, account.ScriptHash) != null)
+                    else if (NativeContract.ContractManagement.GetContract(snapshot, account.ScriptHash) != null)
                     {
                         type = "Deployed-Nonstandard";
                     }

@@ -1,14 +1,14 @@
 using Neo.ConsoleService;
 using Neo.IO.Json;
+using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
+using Neo.SmartContract;
+using Neo.SmartContract.Native;
 using Neo.VM.Types;
 using Neo.Wallets;
 using System;
 using System.Globalization;
 using System.Linq;
-using Neo.SmartContract;
-using Neo.SmartContract.Native;
-using Neo.Ledger;
 
 namespace Neo.CLI
 {
@@ -92,7 +92,7 @@ namespace Neo.CLI
         private void OnNameCommand(UInt160 tokenHash)
         {
             var snapshot = Blockchain.Singleton.GetSnapshot();
-            ContractState contract = NativeContract.Management.GetContract(snapshot, tokenHash);
+            ContractState contract = NativeContract.ContractManagement.GetContract(snapshot, tokenHash);
             if (contract == null) Console.WriteLine($"Contract hash not exist: {tokenHash}");
             else Console.WriteLine($"Result : {contract.Manifest.Name.ToString()}");
         }

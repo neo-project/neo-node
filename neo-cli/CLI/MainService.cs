@@ -282,7 +282,7 @@ namespace Neo.CLI
 
             using (ScriptBuilder sb = new ScriptBuilder())
             {
-                sb.EmitAppCall(NativeContract.Management.Hash, "deploy", nef.ToArray(), manifest.ToJson().ToString());
+                sb.EmitAppCall(NativeContract.ContractManagement.Hash, "deploy", nef.ToArray(), manifest.ToJson().ToString());
                 return sb.ToArray();
             }
         }
@@ -341,7 +341,7 @@ namespace Neo.CLI
 
             _ = new Logger();
 
-            NeoSystem = new NeoSystem(Settings.Default.Storage.Engine);
+            NeoSystem = new NeoSystem(Settings.Default.Storage.Engine, Settings.Default.Storage.Path);
 
             foreach (var plugin in Plugin.Plugins)
             {

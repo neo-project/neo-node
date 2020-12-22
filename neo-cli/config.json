@@ -6,7 +6,8 @@
       "Active": false
     },
     "Storage": {
-      "Engine": "LevelDBStore"
+      "Engine": "LevelDBStore",
+      "Path": "Data_LevelDB_{0}"
     },
     "P2P": {
       "Port": 10333,
