@@ -22,6 +22,20 @@ namespace Neo.CLI
                 return;
             }
 
+            if (CurrentWallet.GetAccount(account) == null)
+            {
+                Console.WriteLine("This address isn't in your wallet!");
+                return;
+            }
+            else
+            {
+                if (CurrentWallet.GetAccount(account).Lock || CurrentWallet.GetAccount(account).WatchOnly)
+                {
+                    Console.WriteLine("Locked or WatchOnly address.");
+                    return;
+                }
+            }
+
             ECPoint publicKey = CurrentWallet.GetAccount(account)?.GetKey()?.PublicKey;
             byte[] script;
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
@@ -44,6 +58,20 @@ namespace Neo.CLI
             {
                 Console.WriteLine("Need open wallet!");
                 return;
+            }
+
+            if (CurrentWallet.GetAccount(account) == null)
+            {
+                Console.WriteLine("This address isn't in your wallet!");
+                return;
+            }
+            else
+            {
+                if (CurrentWallet.GetAccount(account).Lock || CurrentWallet.GetAccount(account).WatchOnly)
+                {
+                    Console.WriteLine("Locked or WatchOnly address.");
+                    return;
+                }
             }
 
             ECPoint publicKey = CurrentWallet.GetAccount(account)?.GetKey()?.PublicKey;
