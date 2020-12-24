@@ -3,6 +3,7 @@ using Neo.Cryptography.ECC;
 using Neo.SmartContract.Native;
 using Neo.VM;
 using Neo.VM.Types;
+using Neo.Wallets;
 using System;
 
 namespace Neo.CLI
@@ -22,21 +23,23 @@ namespace Neo.CLI
                 return;
             }
 
-            if (CurrentWallet.GetAccount(account) == null)
+            WalletAccount currentAccount = CurrentWallet.GetAccount(account);
+
+            if (currentAccount == null)
             {
                 Console.WriteLine("This address isn't in your wallet!");
                 return;
             }
             else
             {
-                if (CurrentWallet.GetAccount(account).Lock || CurrentWallet.GetAccount(account).WatchOnly)
+                if (currentAccount.Lock || currentAccount.WatchOnly)
                 {
                     Console.WriteLine("Locked or WatchOnly address.");
                     return;
                 }
             }
 
-            ECPoint publicKey = CurrentWallet.GetAccount(account)?.GetKey()?.PublicKey;
+            ECPoint publicKey = currentAccount?.GetKey()?.PublicKey;
             byte[] script;
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
             {
@@ -60,21 +63,23 @@ namespace Neo.CLI
                 return;
             }
 
-            if (CurrentWallet.GetAccount(account) == null)
+            WalletAccount currentAccount = CurrentWallet.GetAccount(account);
+
+            if (currentAccount == null)
             {
                 Console.WriteLine("This address isn't in your wallet!");
                 return;
             }
             else
             {
-                if (CurrentWallet.GetAccount(account).Lock || CurrentWallet.GetAccount(account).WatchOnly)
+                if (currentAccount.Lock || currentAccount.WatchOnly)
                 {
                     Console.WriteLine("Locked or WatchOnly address.");
                     return;
                 }
             }
 
-            ECPoint publicKey = CurrentWallet.GetAccount(account)?.GetKey()?.PublicKey;
+            ECPoint publicKey = currentAccount?.GetKey()?.PublicKey;
             byte[] script;
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
             {
