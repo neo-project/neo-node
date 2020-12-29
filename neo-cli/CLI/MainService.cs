@@ -282,7 +282,7 @@ namespace Neo.CLI
 
             using (ScriptBuilder sb = new ScriptBuilder())
             {
-                sb.EmitAppCall(NativeContract.ContractManagement.Hash, "deploy", nef.ToArray(), manifest.ToJson().ToString());
+                sb.EmitDynamicCall(NativeContract.ContractManagement.Hash, "deploy", true, nef.ToArray(), manifest.ToJson().ToString());
                 return sb.ToArray();
             }
         }
@@ -513,7 +513,7 @@ namespace Neo.CLI
         /// <param name="verificable">Transaction</param>
         /// <param name="contractParameters">Contract parameters</param>
         /// <returns>Return true if it was successful</returns>
-        private bool OnInvokeWithResult(UInt160 scriptHash, string operation, out StackItem result, IVerifiable verificable = null, JArray contractParameters = null, bool showStack = true)
+        private bool OnInvokeWithResult(UInt160 scriptHash, string operation, out StackItem result, IVerifiable verificable = null, JArray contractParameters = null, bool hasReturnValue = false, bool showStack = true)
         {
             List<ContractParameter> parameters = new List<ContractParameter>();
 
@@ -529,7 +529,7 @@ namespace Neo.CLI
 
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
             {
-                scriptBuilder.EmitAppCall(scriptHash, operation, parameters.ToArray());
+                scriptBuilder.EmitDynamicCall(scriptHash, operation, hasReturnValue, parameters.ToArray());
                 script = scriptBuilder.ToArray();
                 Console.WriteLine($"Invoking script with: '{script.ToBase64String()}'");
             }
