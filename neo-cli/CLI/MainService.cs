@@ -533,7 +533,8 @@ namespace Neo.CLI
                 Console.WriteLine("Contract does not exist.");
                 result = StackItem.Null;
                 return false;
-            } else
+            }
+            else
             {
                 if (contract.Manifest.Abi.GetMethod(operation) == null)
                 {
