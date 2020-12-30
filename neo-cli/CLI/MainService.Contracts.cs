@@ -74,7 +74,7 @@ namespace Neo.CLI
                 Signers = signers,
                 Attributes = Array.Empty<TransactionAttribute>(),
                 Witnesses = Array.Empty<Witness>(),
-            }; 
+            };
 
             if (!OnInvokeWithResult(scriptHash, operation, out _, tx, contractParameters)) return;
 
