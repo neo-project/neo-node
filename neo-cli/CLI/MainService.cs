@@ -513,7 +513,7 @@ namespace Neo.CLI
         /// <param name="verificable">Transaction</param>
         /// <param name="contractParameters">Contract parameters</param>
         /// <returns>Return true if it was successful</returns>
-        private bool OnInvokeWithResult(UInt160 scriptHash, string operation, out StackItem result, IVerifiable verificable = null, JArray contractParameters = null, bool hasReturnValue = true, bool showStack = true)
+        private bool OnInvokeWithResult(UInt160 scriptHash, string operation, out StackItem result, IVerifiable verificable = null, JArray contractParameters = null, bool showStack = true)
         {
             List<ContractParameter> parameters = new List<ContractParameter>();
 
@@ -524,6 +524,17 @@ namespace Neo.CLI
                     parameters.Add(ContractParameter.FromJson(contractParameter));
                 }
             }
+
+            var snapshot = Blockchain.Singleton.GetSnapshot();
+            ContractState contract = NativeContract.ContractManagement.GetContract(snapshot, scriptHash);
+            if (contract == null)
+            {
+                Console.WriteLine("Contract is not exit");
+                result = StackItem.Null;
+                return false;
+            }
+
+            bool hasReturnValue = !contract.Manifest.Abi.GetMethod(operation).ReturnType.ToString().Equals("Void");
 
             byte[] script;
 

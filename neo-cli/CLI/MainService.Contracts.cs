@@ -48,7 +48,7 @@ namespace Neo.CLI
         /// <param name="sender">Transaction's sender</param>
         /// <param name="signerAccounts">Signer's accounts</param>
         [ConsoleCommand("invoke", Category = "Contract Commands")]
-        private void OnInvokeCommand(UInt160 scriptHash, string operation, bool hasReturnValue = true, JArray contractParameters = null, UInt160 sender = null, UInt160[] signerAccounts = null)
+        private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160 sender = null, UInt160[] signerAccounts = null)
         {
             Signer[] signers = Array.Empty<Signer>();
             if (signerAccounts != null && !NoWallet())
@@ -74,9 +74,9 @@ namespace Neo.CLI
                 Signers = signers,
                 Attributes = Array.Empty<TransactionAttribute>(),
                 Witnesses = Array.Empty<Witness>(),
-            };
+            }; 
 
-            if (!OnInvokeWithResult(scriptHash, operation, out _, tx, contractParameters, hasReturnValue)) return;
+            if (!OnInvokeWithResult(scriptHash, operation, out _, tx, contractParameters)) return;
 
             if (NoWallet()) return;
             try
