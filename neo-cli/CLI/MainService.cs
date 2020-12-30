@@ -525,16 +525,26 @@ namespace Neo.CLI
                 }
             }
 
+            bool hasReturnValue;
             var snapshot = Blockchain.Singleton.GetSnapshot();
             ContractState contract = NativeContract.ContractManagement.GetContract(snapshot, scriptHash);
             if (contract == null)
             {
-                Console.WriteLine("Contract is not exit");
+                Console.WriteLine("Contract does not exist.");
                 result = StackItem.Null;
                 return false;
+            } else
+            {
+                if (contract.Manifest.Abi.GetMethod(operation) == null)
+                {
+                    Console.WriteLine("This method does not not exist in this contract.");
+                    result = StackItem.Null;
+                    return false;
+                } else
+                {
+                    hasReturnValue = !contract.Manifest.Abi.GetMethod(operation).ReturnType.ToString().Equals("Void");
+                }
             }
-
-            bool hasReturnValue = !contract.Manifest.Abi.GetMethod(operation).ReturnType.ToString().Equals("Void");
 
             byte[] script;
 

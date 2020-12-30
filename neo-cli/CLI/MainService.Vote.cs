@@ -120,7 +120,7 @@ namespace Neo.CLI
         [ConsoleCommand("get candidates", Category = "Vote Commands")]
         private void OnGetCandidatesCommand()
         {
-            if (!OnInvokeWithResult(NativeContract.NEO.Hash, "getCandidates", out StackItem result, null, null, true, false)) return;
+            if (!OnInvokeWithResult(NativeContract.NEO.Hash, "getCandidates", out StackItem result, null, null, false)) return;
 
             var resJArray = (VM.Types.Array)result;
 
@@ -145,7 +145,7 @@ namespace Neo.CLI
         [ConsoleCommand("get committee", Category = "Vote Commands")]
         private void OnGetCommitteeCommand()
         {
-            if (!OnInvokeWithResult(NativeContract.NEO.Hash, "getCommittee", out StackItem result, null, null, true, false)) return;
+            if (!OnInvokeWithResult(NativeContract.NEO.Hash, "getCommittee", out StackItem result, null, null, false)) return;
 
             var resJArray = (VM.Types.Array)result;
 
@@ -167,7 +167,7 @@ namespace Neo.CLI
         [ConsoleCommand("get next validators", Category = "Vote Commands")]
         private void OnGetNextBlockValidatorsCommand()
         {
-            if (!OnInvokeWithResult(NativeContract.NEO.Hash, "getNextBlockValidators", out StackItem result, null, null, true, false)) return;
+            if (!OnInvokeWithResult(NativeContract.NEO.Hash, "getNextBlockValidators", out StackItem result, null, null, false)) return;
 
             var resJArray = (VM.Types.Array)result;
 
