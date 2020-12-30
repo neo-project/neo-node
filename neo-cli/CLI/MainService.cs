@@ -541,7 +541,8 @@ namespace Neo.CLI
                     Console.WriteLine("This method does not not exist in this contract.");
                     result = StackItem.Null;
                     return false;
-                } else
+                }
+                else
                 {
                     hasReturnValue = !contract.Manifest.Abi.GetMethod(operation).ReturnType.ToString().Equals("Void");
                 }
