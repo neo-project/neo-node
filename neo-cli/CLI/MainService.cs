@@ -282,7 +282,7 @@ namespace Neo.CLI
 
             using (ScriptBuilder sb = new ScriptBuilder())
             {
-                sb.EmitAppCall(NativeContract.ContractManagement.Hash, "deploy", nef.ToArray(), manifest.ToJson().ToString());
+                sb.EmitDynamicCall(NativeContract.ContractManagement.Hash, "deploy", true, nef.ToArray(), manifest.ToJson().ToString());
                 return sb.ToArray();
             }
         }
@@ -525,11 +525,34 @@ namespace Neo.CLI
                 }
             }
 
+            bool hasReturnValue;
+            var snapshot = Blockchain.Singleton.GetSnapshot();
+            ContractState contract = NativeContract.ContractManagement.GetContract(snapshot, scriptHash);
+            if (contract == null)
+            {
+                Console.WriteLine("Contract does not exist.");
+                result = StackItem.Null;
+                return false;
+            }
+            else
+            {
+                if (contract.Manifest.Abi.GetMethod(operation) == null)
+                {
+                    Console.WriteLine("This method does not not exist in this contract.");
+                    result = StackItem.Null;
+                    return false;
+                }
+                else
+                {
+                    hasReturnValue = contract.Manifest.Abi.GetMethod(operation).ReturnType != ContractParameterType.Void;
+                }
+            }
+
             byte[] script;
 
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
             {
-                scriptBuilder.EmitAppCall(scriptHash, operation, parameters.ToArray());
+                scriptBuilder.EmitDynamicCall(scriptHash, operation, hasReturnValue, parameters.ToArray());
                 script = scriptBuilder.ToArray();
                 Console.WriteLine($"Invoking script with: '{script.ToBase64String()}'");
             }
