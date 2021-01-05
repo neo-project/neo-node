@@ -544,7 +544,7 @@ namespace Neo.CLI
                 }
                 else
                 {
-                    hasReturnValue = !contract.Manifest.Abi.GetMethod(operation).ReturnType.ToString().Equals("Void");
+                    hasReturnValue = contract.Manifest.Abi.GetMethod(operation).ReturnType != ContractParameterType.Void;
                 }
             }
 
