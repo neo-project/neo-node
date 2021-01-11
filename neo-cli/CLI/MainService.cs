@@ -391,10 +391,6 @@ namespace Neo.CLI
                 {
                     Console.WriteLine($"Failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
                 }
-                if (Settings.Default.UnlockWallet.StartConsensus && CurrentWallet != null)
-                {
-                    OnStartConsensusCommand();
-                }
             }
         }
 
