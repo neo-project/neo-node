@@ -43,7 +43,7 @@ namespace Neo.CLI
             byte[] script;
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
             {
-                scriptBuilder.EmitDynamicCall(NativeContract.NEO.Hash, "registerCandidate", true, publicKey);
+                scriptBuilder.EmitDynamicCall(NativeContract.NEO.Hash, "registerCandidate", publicKey);
                 script = scriptBuilder.ToArray();
             }
 
@@ -83,7 +83,7 @@ namespace Neo.CLI
             byte[] script;
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
             {
-                scriptBuilder.EmitDynamicCall(NativeContract.NEO.Hash, "unregisterCandidate", true, publicKey);
+                scriptBuilder.EmitDynamicCall(NativeContract.NEO.Hash, "unregisterCandidate", publicKey);
                 script = scriptBuilder.ToArray();
             }
 
@@ -107,7 +107,7 @@ namespace Neo.CLI
             byte[] script;
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
             {
-                scriptBuilder.EmitDynamicCall(NativeContract.NEO.Hash, "vote", true, senderAccount, publicKey);
+                scriptBuilder.EmitDynamicCall(NativeContract.NEO.Hash, "vote", senderAccount, publicKey);
                 script = scriptBuilder.ToArray();
             }
 

@@ -282,7 +282,7 @@ namespace Neo.CLI
 
             using (ScriptBuilder sb = new ScriptBuilder())
             {
-                sb.EmitDynamicCall(NativeContract.ContractManagement.Hash, "deploy", true, nef.ToArray(), manifest.ToJson().ToString());
+                sb.EmitDynamicCall(NativeContract.ContractManagement.Hash, "deploy", nef.ToArray(), manifest.ToJson().ToString());
                 return sb.ToArray();
             }
         }
@@ -390,10 +390,6 @@ namespace Neo.CLI
                 catch (System.Security.Cryptography.CryptographicException)
                 {
                     Console.WriteLine($"Failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
-                }
-                if (Settings.Default.UnlockWallet.StartConsensus && CurrentWallet != null)
-                {
-                    OnStartConsensusCommand();
                 }
             }
         }
@@ -525,7 +521,6 @@ namespace Neo.CLI
                 }
             }
 
-            bool hasReturnValue;
             var snapshot = Blockchain.Singleton.GetSnapshot();
             ContractState contract = NativeContract.ContractManagement.GetContract(snapshot, scriptHash);
             if (contract == null)
@@ -542,17 +537,13 @@ namespace Neo.CLI
                     result = StackItem.Null;
                     return false;
                 }
-                else
-                {
-                    hasReturnValue = contract.Manifest.Abi.GetMethod(operation).ReturnType != ContractParameterType.Void;
-                }
             }
 
             byte[] script;
 
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
             {
-                scriptBuilder.EmitDynamicCall(scriptHash, operation, hasReturnValue, parameters.ToArray());
+                scriptBuilder.EmitDynamicCall(scriptHash, operation, parameters.ToArray());
                 script = scriptBuilder.ToArray();
                 Console.WriteLine($"Invoking script with: '{script.ToBase64String()}'");
             }
