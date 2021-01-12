@@ -96,7 +96,6 @@ namespace Neo
     {
         public string Path { get; }
         public string Password { get; }
-        public bool StartConsensus { get; }
         public bool IsActive { get; }
 
         public UnlockWalletSettings(IConfigurationSection section)
@@ -105,7 +104,6 @@ namespace Neo
             {
                 this.Path = section.GetValue("Path", "");
                 this.Password = section.GetValue("Password", "");
-                this.StartConsensus = bool.Parse(section.GetValue("StartConsensus", "false"));
                 this.IsActive = bool.Parse(section.GetValue("IsActive", "false"));
             }
         }
