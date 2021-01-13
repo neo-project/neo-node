@@ -17,7 +17,7 @@ namespace Neo.GUI
         {
             ECPoint[] pubkeys = textBox1.Lines.Select(p => ECPoint.Parse(p, ECCurve.Secp256r1)).ToArray();
             using ScriptBuilder sb = new ScriptBuilder();
-            sb.EmitAppCall(NativeContract.NEO.Hash, "vote", new ContractParameter
+            sb.EmitDynamicCall(NativeContract.NEO.Hash, "vote", new ContractParameter
             {
                 Type = ContractParameterType.Hash160,
                 Value = script_hash

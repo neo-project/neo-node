@@ -21,7 +21,7 @@ namespace Neo.GUI
         {
             ECPoint pubkey = (ECPoint)comboBox1.SelectedItem;
             using ScriptBuilder sb = new ScriptBuilder();
-            sb.EmitAppCall(NativeContract.NEO.Hash, "registerValidator", pubkey);
+            sb.EmitDynamicCall(NativeContract.NEO.Hash, "registerValidator", pubkey);
             return sb.ToArray();
         }
 
