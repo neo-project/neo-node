@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:5.0.0 AS Build
+FROM mcr.microsoft.com/dotnet/sdk:5.0 AS Build
 
 COPY neo-cli /neo-cli
 COPY Neo.ConsoleService /Neo.ConsoleService
@@ -7,7 +7,7 @@ COPY NuGet.Config /neo-cli
 WORKDIR /neo-cli
 RUN dotnet restore && dotnet publish -c Release -o /app
 
-FROM mcr.microsoft.com/dotnet/runtime:5.0.0 AS Final
+FROM mcr.microsoft.com/dotnet/aspnet:5.0 AS Final
 RUN apt-get update && apt-get install -y \
   screen \
   libleveldb-dev \
