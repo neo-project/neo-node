@@ -47,7 +47,7 @@ namespace Neo.GUI
         private void UpdateScript()
         {
             using ScriptBuilder sb = new ScriptBuilder();
-            sb.EmitAppCall(script_hash, (string)comboBox1.SelectedItem, parameters);
+            sb.EmitDynamicCall(script_hash, (string)comboBox1.SelectedItem, parameters);
             textBox6.Text = sb.ToArray().ToHexString();
         }
 

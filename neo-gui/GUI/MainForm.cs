@@ -117,28 +117,28 @@ namespace Neo.GUI
             }
         }
 
-        private void Service_WalletChanged(object sender, EventArgs e)
+        private void Service_WalletChanged(object sender, Wallet wallet)
         {
             if (InvokeRequired)
             {
-                Invoke(new EventHandler(Service_WalletChanged), sender, e);
+                Invoke(new EventHandler<Wallet>(Service_WalletChanged), sender, wallet);
                 return;
             }
 
             listView3.Items.Clear();
-            修改密码CToolStripMenuItem.Enabled = Service.CurrentWallet is UserWallet;
-            交易TToolStripMenuItem.Enabled = Service.CurrentWallet != null;
-            signDataToolStripMenuItem.Enabled = Service.CurrentWallet != null;
-            deployContractToolStripMenuItem.Enabled = Service.CurrentWallet != null;
-            invokeContractToolStripMenuItem.Enabled = Service.CurrentWallet != null;
-            选举EToolStripMenuItem.Enabled = Service.CurrentWallet != null;
-            创建新地址NToolStripMenuItem.Enabled = Service.CurrentWallet != null;
-            导入私钥IToolStripMenuItem.Enabled = Service.CurrentWallet != null;
-            创建智能合约SToolStripMenuItem.Enabled = Service.CurrentWallet != null;
+            修改密码CToolStripMenuItem.Enabled = wallet is UserWallet;
+            交易TToolStripMenuItem.Enabled = wallet != null;
+            signDataToolStripMenuItem.Enabled = wallet != null;
+            deployContractToolStripMenuItem.Enabled = wallet != null;
+            invokeContractToolStripMenuItem.Enabled = wallet != null;
+            选举EToolStripMenuItem.Enabled = wallet != null;
+            创建新地址NToolStripMenuItem.Enabled = wallet != null;
+            导入私钥IToolStripMenuItem.Enabled = wallet != null;
+            创建智能合约SToolStripMenuItem.Enabled = wallet != null;
             listView1.Items.Clear();
-            if (Service.CurrentWallet != null)
+            if (wallet != null)
             {
-                foreach (WalletAccount account in Service.CurrentWallet.GetAccounts().ToArray())
+                foreach (WalletAccount account in wallet.GetAccounts().ToArray())
                 {
                     AddAccount(account);
                 }
@@ -160,14 +160,14 @@ namespace Neo.GUI
         private void MainForm_Load(object sender, EventArgs e)
         {
             actor = Service.NeoSystem.ActorSystem.ActorOf(EventWrapper<Blockchain.PersistCompleted>.Props(Blockchain_PersistCompleted));
-            Service.WalletChanged += Service_WalletChanged;
+            Service.WalletOpened += Service_WalletChanged;
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             if (actor != null)
                 Service.NeoSystem.ActorSystem.Stop(actor);
-            Service.WalletChanged -= Service_WalletChanged;
+            Service.WalletOpened -= Service_WalletChanged;
         }
 
         private void timer1_Tick(object sender, EventArgs e)
@@ -198,10 +198,10 @@ namespace Neo.GUI
                 using (ScriptBuilder sb = new ScriptBuilder())
                 {
                     for (int i = addresses.Length - 1; i >= 0; i--)
-                        sb.EmitAppCall(assetId, "balanceOf", addresses[i]);
+                        sb.EmitDynamicCall(assetId, "balanceOf", addresses[i]);
                     sb.Emit(OpCode.DEPTH, OpCode.PACK);
-                    sb.EmitAppCall(assetId, "decimals");
-                    sb.EmitAppCall(assetId, "name");
+                    sb.EmitDynamicCall(assetId, "decimals");
+                    sb.EmitDynamicCall(assetId, "name");
                     script = sb.ToArray();
                 }
                 using ApplicationEngine engine = ApplicationEngine.Run(script, snapshot, gas: 0_20000000L * addresses.Length);

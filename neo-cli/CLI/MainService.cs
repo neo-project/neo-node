@@ -29,9 +29,9 @@ using System.Threading;
 
 namespace Neo.CLI
 {
-    public partial class MainService : ConsoleServiceBase
+    public partial class MainService : ConsoleServiceBase, IWalletProvider
     {
-        public event EventHandler WalletChanged;
+        public event EventHandler<Wallet> WalletOpened;
 
         private Wallet currentWallet;
         public Wallet CurrentWallet
@@ -43,7 +43,7 @@ namespace Neo.CLI
             private set
             {
                 currentWallet = value;
-                WalletChanged?.Invoke(this, EventArgs.Empty);
+                WalletOpened?.Invoke(this, value);
             }
         }
 
@@ -118,6 +118,11 @@ namespace Neo.CLI
             // Accept wallet format
 
             return input.ToScriptHash();
+        }
+
+        Wallet IWalletProvider.GetWallet()
+        {
+            return CurrentWallet;
         }
 
         public override void RunConsole()
