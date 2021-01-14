@@ -108,5 +108,21 @@ namespace Neo.CLI
 
             Console.WriteLine($"Result : {((PrimitiveType)result).GetInteger()}");
         }
+
+        /// <summary>
+        /// Process "totalSupply" command
+        /// </summary>
+        /// <param name="tokenHash">Script hash</param>
+        [ConsoleCommand("totalSupply", Category = "NEP17 Commands")]
+        private void OnTotalSupplyCommand(UInt160 tokenHash)
+        {
+            var asset = new AssetDescriptor(tokenHash);
+
+            if (!OnInvokeWithResult(tokenHash, "totalSupply", out StackItem result, null)) return;
+
+            var totalSupply = new BigDecimal(((PrimitiveType)result).GetInteger(), asset.Decimals);
+
+            Console.WriteLine($"Result : {totalSupply}");
+        }
     }
 }
