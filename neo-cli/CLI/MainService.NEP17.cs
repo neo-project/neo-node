@@ -116,10 +116,9 @@ namespace Neo.CLI
         [ConsoleCommand("totalSupply", Category = "NEP17 Commands")]
         private void OnTotalSupplyCommand(UInt160 tokenHash)
         {
-            var asset = new AssetDescriptor(tokenHash);
-
             if (!OnInvokeWithResult(tokenHash, "totalSupply", out StackItem result, null)) return;
 
+            var asset = new AssetDescriptor(tokenHash);
             var totalSupply = new BigDecimal(((PrimitiveType)result).GetInteger(), asset.Decimals);
 
             Console.WriteLine($"Result : {totalSupply}");
