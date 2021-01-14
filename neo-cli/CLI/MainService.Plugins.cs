@@ -107,7 +107,7 @@ namespace Neo.CLI
                 foreach (Plugin plugin in Plugin.Plugins)
                 {
                     if (plugin is Logger) continue;
-                    Console.WriteLine($"\t{plugin.Name, -20}{plugin.Description}");
+                    Console.WriteLine(string.Format("\t{0,-20}{1}", plugin.Name, plugin.Description));
                 }
             }
             else
