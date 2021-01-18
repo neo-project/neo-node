@@ -389,7 +389,7 @@ namespace Neo.CLI
                 Console.WriteLine();
             }
             Console.WriteLine("----------------------------------------------------");
-            Console.WriteLine("Total:   " + "NEO: " + CurrentWallet.GetAvailable(NativeContract.NEO.Hash) + "    GAS: " + CurrentWallet.GetAvailable(NativeContract.GAS.Hash));
+            Console.WriteLine($"Total:   NEO: {CurrentWallet.GetAvailable(NativeContract.NEO.Hash),10}     GAS: {CurrentWallet.GetAvailable(NativeContract.GAS.Hash),18}");
             Console.WriteLine();
             Console.WriteLine("NEO hash: " + NativeContract.NEO.Hash);
             Console.WriteLine("GAS hash: " + NativeContract.GAS.Hash);
