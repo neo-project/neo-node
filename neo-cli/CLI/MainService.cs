@@ -536,7 +536,7 @@ namespace Neo.CLI
             }
             else
             {
-                if (contract.Manifest.Abi.GetMethod(operation) == null)
+                if (contract.Manifest.Abi.GetMethod(operation, parameters.Count) == null)
                 {
                     Console.WriteLine("This method does not not exist in this contract.");
                     result = StackItem.Null;
