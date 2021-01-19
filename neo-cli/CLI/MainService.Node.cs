@@ -3,6 +3,7 @@ using Neo.ConsoleService;
 using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
+using Neo.SmartContract.Native;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -64,11 +65,11 @@ namespace Neo.CLI
             Task task = Task.Run(async () =>
             {
                 int maxLines = 0;
-
+                using var snapshot = Blockchain.Singleton.GetSnapshot();
                 while (!cancel.Token.IsCancellationRequested)
                 {
                     Console.SetCursorPosition(0, 0);
-                    WriteLineWithoutFlicker($"block: {Blockchain.Singleton.Height}/{Blockchain.Singleton.HeaderHeight}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}", Console.WindowWidth - 1);
+                    WriteLineWithoutFlicker($"block: {Blockchain.Singleton.Height}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}", Console.WindowWidth - 1);
 
                     int linesWritten = 1;
                     foreach (RemoteNode node in LocalNode.Singleton.GetRemoteNodes().OrderByDescending(u => u.LastBlockIndex).Take(Console.WindowHeight - 2).ToArray())

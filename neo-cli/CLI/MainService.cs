@@ -436,17 +436,15 @@ namespace Neo.CLI
                 fs.Write(BitConverter.GetBytes(count), 0, sizeof(uint));
             fs.Seek(0, SeekOrigin.End);
             Console.WriteLine("Export block from " + start + " to " + end);
-
-            using (var percent = new ConsolePercent(start, end))
+            using var snapshot = Blockchain.Singleton.GetSnapshot();
+            using var percent = new ConsolePercent(start, end);
+            for (uint i = start; i <= end; i++)
             {
-                for (uint i = start; i <= end; i++)
-                {
-                    Block block = Blockchain.Singleton.GetBlock(i);
-                    byte[] array = block.ToArray();
-                    fs.Write(BitConverter.GetBytes(array.Length), 0, sizeof(int));
-                    fs.Write(array, 0, array.Length);
-                    percent.Value = i;
-                }
+                Block block = NativeContract.Ledger.GetBlock(snapshot, i);
+                byte[] array = block.ToArray();
+                fs.Write(BitConverter.GetBytes(array.Length), 0, sizeof(int));
+                fs.Write(array, 0, array.Length);
+                percent.Value = i;
             }
         }
 
@@ -469,13 +467,11 @@ namespace Neo.CLI
 
             if (account != null)
             {
-                using (SnapshotView snapshot = Blockchain.Singleton.GetSnapshot())
-                {
-                    signers = CurrentWallet.GetAccounts()
-                    .Where(p => !p.Lock && !p.WatchOnly && p.ScriptHash == account && NativeContract.GAS.BalanceOf(snapshot, p.ScriptHash).Sign > 0)
-                    .Select(p => new Signer() { Account = p.ScriptHash, Scopes = WitnessScope.CalledByEntry })
-                    .ToArray();
-                }
+                using var snapshot = Blockchain.Singleton.GetSnapshot();
+                signers = CurrentWallet.GetAccounts()
+                .Where(p => !p.Lock && !p.WatchOnly && p.ScriptHash == account && NativeContract.GAS.BalanceOf(snapshot, p.ScriptHash).Sign > 0)
+                .Select(p => new Signer() { Account = p.ScriptHash, Scopes = WitnessScope.CalledByEntry })
+                .ToArray();
             }
 
             try
