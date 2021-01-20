@@ -346,7 +346,6 @@ namespace Neo.CLI
 
             _ = new Logger();
 
-
             NeoSystem = new NeoSystem(Settings.Default.Storage.Engine, Settings.Default.Storage.Path);
 
             foreach (var plugin in Plugin.Plugins)
