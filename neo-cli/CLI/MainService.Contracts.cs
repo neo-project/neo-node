@@ -31,7 +31,7 @@ namespace Neo.CLI
                 return;
             }
 
-            UInt160 hash = SmartContract.Helper.GetContractHash(tx.Sender, nef.Script);
+            UInt160 hash = SmartContract.Helper.GetContractHash(tx.Sender, nef.CheckSum, string.Empty);
 
             Console.WriteLine($"Contract hash: {hash}");
             Console.WriteLine($"Gas: {new BigDecimal(tx.SystemFee, NativeContract.GAS.Decimals)}");
