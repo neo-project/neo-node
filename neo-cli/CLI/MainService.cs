@@ -238,7 +238,7 @@ namespace Neo.CLI
             return true;
         }
 
-        private byte[] LoadDeploymentScript(string nefFilePath, string manifestFilePath, out NefFile nef)
+        private byte[] LoadDeploymentScript(string nefFilePath, string manifestFilePath, out NefFile nef, out ContractManifest manifest)
         {
             if (string.IsNullOrEmpty(manifestFilePath))
             {
@@ -253,7 +253,7 @@ namespace Neo.CLI
                 throw new ArgumentException(nameof(manifestFilePath));
             }
 
-            var manifest = ContractManifest.Parse(File.ReadAllBytes(manifestFilePath));
+            manifest = ContractManifest.Parse(File.ReadAllBytes(manifestFilePath));
 
             // Read nef
 
