@@ -7,6 +7,7 @@ using Neo.Network.P2P;
 using Neo.Network.P2P.Capabilities;
 using Neo.Network.P2P.Payloads;
 using Neo.SmartContract;
+using Neo.SmartContract.Native;
 using System;
 using System.Net;
 
@@ -44,7 +45,7 @@ namespace Neo.CLI
         [ConsoleCommand("broadcast block", Category = "Network Commands")]
         private void OnBroadcastGetBlocksByHashCommand(UInt256 hash)
         {
-            OnBroadcastCommand(MessageCommand.Block, Blockchain.Singleton.GetBlock(hash));
+            OnBroadcastCommand(MessageCommand.Block, NativeContract.Ledger.GetBlock(Blockchain.Singleton.View, hash));
         }
 
         /// <summary>
@@ -54,7 +55,7 @@ namespace Neo.CLI
         [ConsoleCommand("broadcast block", Category = "Network Commands")]
         private void OnBroadcastGetBlocksByHeightCommand(uint height)
         {
-            OnBroadcastCommand(MessageCommand.Block, Blockchain.Singleton.GetBlock(height));
+            OnBroadcastCommand(MessageCommand.Block, NativeContract.Ledger.GetBlock(Blockchain.Singleton.View, height));
         }
 
         /// <summary>
@@ -106,7 +107,8 @@ namespace Neo.CLI
         [ConsoleCommand("broadcast transaction", Category = "Network Commands")]
         private void OnBroadcastTransactionCommand(UInt256 hash)
         {
-            OnBroadcastCommand(MessageCommand.Transaction, Blockchain.Singleton.GetTransaction(hash));
+            if (Blockchain.Singleton.MemPool.TryGetValue(hash, out Transaction tx))
+                OnBroadcastCommand(MessageCommand.Transaction, tx);
         }
 
         private void OnBroadcastCommand(MessageCommand command, ISerializable ret)
