@@ -6,7 +6,6 @@ using Neo.IO.Json;
 using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
-using Neo.Persistence;
 using Neo.Plugins;
 using Neo.SmartContract;
 using Neo.SmartContract.Manifest;
@@ -441,7 +440,7 @@ namespace Neo.CLI
             {
                 for (uint i = start; i <= end; i++)
                 {
-                    Block block = Blockchain.Singleton.GetBlock(i);
+                    Block block = NativeContract.Ledger.GetBlock(Blockchain.Singleton.View, i);
                     byte[] array = block.ToArray();
                     fs.Write(BitConverter.GetBytes(array.Length), 0, sizeof(int));
                     fs.Write(array, 0, array.Length);
@@ -469,7 +468,7 @@ namespace Neo.CLI
 
             if (account != null)
             {
-                using (SnapshotView snapshot = Blockchain.Singleton.GetSnapshot())
+                using (var snapshot = Blockchain.Singleton.GetSnapshot())
                 {
                     signers = CurrentWallet.GetAccounts()
                     .Where(p => !p.Lock && !p.WatchOnly && p.ScriptHash == account && NativeContract.GAS.BalanceOf(snapshot, p.ScriptHash).Sign > 0)
