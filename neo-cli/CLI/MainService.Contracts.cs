@@ -4,6 +4,7 @@ using Neo.Network.P2P.Payloads;
 using Neo.SmartContract.Native;
 using System;
 using System.Linq;
+using System.Numerics;
 
 namespace Neo.CLI
 {
@@ -34,7 +35,7 @@ namespace Neo.CLI
             UInt160 hash = SmartContract.Helper.GetContractHash(tx.Sender, nef.CheckSum, manifest.Name);
 
             Console.WriteLine($"Contract hash: {hash}");
-            Console.WriteLine($"Gas: {new BigDecimal(tx.SystemFee, NativeContract.GAS.Decimals)}");
+            Console.WriteLine($"Gas: {new BigDecimal((BigInteger)tx.SystemFee, NativeContract.GAS.Decimals)}");
             Console.WriteLine();
             SignAndSendTx(tx);
         }

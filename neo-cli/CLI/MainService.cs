@@ -6,7 +6,6 @@ using Neo.IO.Json;
 using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
-using Neo.Persistence;
 using Neo.Plugins;
 using Neo.SmartContract;
 using Neo.SmartContract.Manifest;
@@ -23,6 +22,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Numerics;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -443,7 +443,7 @@ namespace Neo.CLI
             {
                 for (uint i = start; i <= end; i++)
                 {
-                    Block block = Blockchain.Singleton.GetBlock(i);
+                    Block block = NativeContract.Ledger.GetBlock(Blockchain.Singleton.View, i);
                     byte[] array = block.ToArray();
                     fs.Write(BitConverter.GetBytes(array.Length), 0, sizeof(int));
                     fs.Write(array, 0, array.Length);
@@ -471,7 +471,7 @@ namespace Neo.CLI
 
             if (account != null)
             {
-                using (SnapshotView snapshot = Blockchain.Singleton.GetSnapshot())
+                using (var snapshot = Blockchain.Singleton.GetSnapshot())
                 {
                     signers = CurrentWallet.GetAccounts()
                     .Where(p => !p.Lock && !p.WatchOnly && p.ScriptHash == account && NativeContract.GAS.BalanceOf(snapshot, p.ScriptHash).Sign > 0)
@@ -569,7 +569,7 @@ namespace Neo.CLI
         private void PrintExecutionOutput(ApplicationEngine engine, bool showStack = true)
         {
             Console.WriteLine($"VM State: {engine.State}");
-            Console.WriteLine($"Gas Consumed: {new BigDecimal(engine.GasConsumed, NativeContract.GAS.Decimals)}");
+            Console.WriteLine($"Gas Consumed: {new BigDecimal((BigInteger)engine.GasConsumed, NativeContract.GAS.Decimals)}");
 
             if (showStack)
                 Console.WriteLine($"Result Stack: {new JArray(engine.ResultStack.Select(p => p.ToJson()))}");

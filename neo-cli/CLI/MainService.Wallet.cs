@@ -4,7 +4,6 @@ using Neo.Cryptography.ECC;
 using Neo.IO.Json;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
-using Neo.Persistence;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.Wallets;
@@ -525,11 +524,12 @@ namespace Neo.CLI
         {
             if (NoWallet()) return;
             BigInteger gas = BigInteger.Zero;
-            using (SnapshotView snapshot = Blockchain.Singleton.GetSnapshot())
+            using (var snapshot = Blockchain.Singleton.GetSnapshot())
+            {
+                uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
                 foreach (UInt160 account in CurrentWallet.GetAccounts().Select(p => p.ScriptHash))
-                {
-                    gas += NativeContract.NEO.UnclaimedGas(snapshot, account, snapshot.Height + 1);
-                }
+                    gas += NativeContract.NEO.UnclaimedGas(snapshot, account, height);
+            }
             Console.WriteLine($"Unclaimed gas: {new BigDecimal(gas, NativeContract.GAS.Decimals)}");
         }
 
