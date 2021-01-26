@@ -423,7 +423,6 @@ namespace Neo.ConsoleService
             RegisterCommandHander<string, bool>(false, (str) => str == "1" || str == "yes" || str == "y" || bool.Parse(str));
             RegisterCommandHander<string, ushort>(false, (str) => ushort.Parse(str));
             RegisterCommandHander<string, uint>(false, (str) => uint.Parse(str));
-            RegisterCommandHander<string, long>(false, (str) => long.Parse(str));
             RegisterCommandHander<string, IPAddress>(false, (str) => IPAddress.Parse(str));
         }
 

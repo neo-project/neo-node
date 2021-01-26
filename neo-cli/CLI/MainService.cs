@@ -465,8 +465,10 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="script">script</param>
         /// <param name="account">sender</param>
-        private void SendTransaction(byte[] script, UInt160 account = null)
+        /// <param name="gas">Max fee for running the script</param>
+        private void SendTransaction(byte[] script, UInt160 account = null, long gas = TestModeGas)
         {
+
             Signer[] signers = System.Array.Empty<Signer>();
 
             if (account != null)
@@ -482,11 +484,11 @@ namespace Neo.CLI
 
             try
             {
-                Transaction tx = CurrentWallet.MakeTransaction(script, account, signers);
+                Transaction tx = CurrentWallet.MakeTransaction(script, account, signers, gas: gas);
                 Console.WriteLine($"Invoking script with: '{tx.Script.ToBase64String()}'");
 
-                using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, container: tx))
-                {
+                using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, container: tx, gas: gas))
+                { 
                     PrintExecutionOutput(engine, true);
                     if (engine.State == VMState.FAULT) return;
                 }

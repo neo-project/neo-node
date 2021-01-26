@@ -10,13 +10,27 @@ namespace Neo.CLI
 {
     partial class MainService
     {
+        public const long RegisterGas = 1010_00000000;
         /// <summary>
         /// Process "register candidate" command
         /// </summary>
-        /// <param name="account">register account scriptHash</param>        
+        /// <param name="account">register account scriptHash</param>
+        /// <param name="gas">Max fee for running the script</param>
         [ConsoleCommand("register candidate", Category = "Vote Commands")]
-        private void OnRegisterCandidateCommand(UInt160 account)
+        private void OnRegisterCandidateCommand(UInt160 account, string gas = null)
         {
+            long gasAmount = RegisterGas;
+            if (!string.IsNullOrEmpty(gas))
+            {
+                AssetDescriptor descriptor = new AssetDescriptor(NativeContract.GAS.Hash);
+                if (!BigDecimal.TryParse(gas, descriptor.Decimals, out BigDecimal decimalAmount) || decimalAmount.Sign <= 0)
+                {
+                    Console.WriteLine("Incorrect Amount Format");
+                    return;
+                }
+                gasAmount = (long)decimalAmount.Value;
+            }
+
             if (NoWallet())
             {
                 Console.WriteLine("Need open wallet!");
@@ -47,7 +61,7 @@ namespace Neo.CLI
                 script = scriptBuilder.ToArray();
             }
 
-            SendTransaction(script, account);
+            SendTransaction(script, account, gasAmount);
         }
 
         /// <summary>
