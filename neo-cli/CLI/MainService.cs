@@ -488,7 +488,7 @@ namespace Neo.CLI
                 Console.WriteLine($"Invoking script with: '{tx.Script.ToBase64String()}'");
 
                 using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, container: tx, gas: gas))
-                { 
+                {
                     PrintExecutionOutput(engine, true);
                     if (engine.State == VMState.FAULT) return;
                 }
