@@ -515,6 +515,7 @@ namespace Neo.CLI
         /// <param name="result">Result</param>
         /// <param name="verificable">Transaction</param>
         /// <param name="contractParameters">Contract parameters</param>
+        /// <param name="showStack">Show result stack if it is true</param>
         /// <param name="gas">Max fee for running the script</param>
         /// <returns>Return true if it was successful</returns>
         private bool OnInvokeWithResult(UInt160 scriptHash, string operation, out StackItem result, IVerifiable verificable = null, JArray contractParameters = null, bool showStack = true, long gas = TestModeGas)
