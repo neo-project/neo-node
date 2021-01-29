@@ -71,11 +71,11 @@ namespace Neo.CLI
         /// <summary>
         /// Process "broadcast getheaders" command
         /// </summary>
-        /// <param name="hash">Hash</param>
+        /// <param name="index">Index</param>
         [ConsoleCommand("broadcast getheaders", Category = "Network Commands")]
-        private void OnBroadcastGetHeadersCommand(UInt256 hash)
+        private void OnBroadcastGetHeadersCommand(uint index)
         {
-            OnBroadcastCommand(MessageCommand.GetHeaders, GetBlocksPayload.Create(hash));
+            OnBroadcastCommand(MessageCommand.GetHeaders, GetBlockByIndexPayload.Create(index));
         }
 
         /// <summary>
