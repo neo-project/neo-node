@@ -484,7 +484,7 @@ namespace Neo.CLI
 
             try
             {
-                Transaction tx = CurrentWallet.MakeTransaction(script, account, signers, gas: gas);
+                Transaction tx = CurrentWallet.MakeTransaction(script, account, signers, maxGas: gas);
                 Console.WriteLine($"Invoking script with: '{tx.Script.ToBase64String()}'");
 
                 using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, container: tx, gas: gas))

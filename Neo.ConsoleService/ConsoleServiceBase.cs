@@ -60,7 +60,7 @@ namespace Neo.ConsoleService
                             foreach (var arg in parameters)
                             {
                                 // Parse argument
-                                if ( args.Count > 0 && "null".Equals(args.ElementAt(0).Value))
+                                if (args.Count > 0 && "null".Equals(args.ElementAt(0).Value))
                                 {
                                     arguments.Add(null);
                                     args.RemoveAt(0);

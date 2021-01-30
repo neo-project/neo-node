@@ -86,7 +86,7 @@ namespace Neo.CLI
             if (NoWallet()) return;
             try
             {
-                tx = CurrentWallet.MakeTransaction(tx.Script, sender, signers, gas: (long)value.Value);
+                tx = CurrentWallet.MakeTransaction(tx.Script, sender, signers, maxGas: (long)value.Value);
             }
             catch (InvalidOperationException e)
             {
