@@ -176,7 +176,9 @@ namespace Neo.CLI
             uint start = read_start ? r.ReadUInt32() : 0;
             uint count = r.ReadUInt32();
             uint end = start + count - 1;
-            if (end <= Blockchain.Singleton.Height) yield break;
+            using var snapshot = Blockchain.Singleton.GetSnapshot();
+            uint blockHeight = NativeContract.Ledger.CurrentIndex(snapshot);
+            if (end <= blockHeight) yield break;
             for (uint height = start; height <= end; height++)
             {
                 var size = r.ReadInt32();
@@ -184,7 +186,7 @@ namespace Neo.CLI
                     throw new ArgumentException($"Block {height} exceeds the maximum allowed size");
 
                 byte[] array = r.ReadBytes(size);
-                if (height > Blockchain.Singleton.Height)
+                if (height > blockHeight)
                 {
                     Block block = array.AsSerializable<Block>();
                     yield return block;
@@ -215,9 +217,11 @@ namespace Neo.CLI
                 IsCompressed = p.EndsWith(".zip")
             }).OrderBy(p => p.Start);
 
+            using var snapshot = Blockchain.Singleton.GetSnapshot();
+            uint height = NativeContract.Ledger.CurrentIndex(snapshot);
             foreach (var path in paths)
             {
-                if (path.Start > Blockchain.Singleton.Height + 1) break;
+                if (path.Start > height + 1) break;
                 if (path.IsCompressed)
                     using (FileStream fs = new FileStream(path.FileName, FileMode.Open, FileAccess.Read, FileShare.Read))
                     using (ZipArchive zip = new ZipArchive(fs, ZipArchiveMode.Read))
