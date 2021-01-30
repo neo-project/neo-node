@@ -176,7 +176,8 @@ namespace Neo.CLI
             uint start = read_start ? r.ReadUInt32() : 0;
             uint count = r.ReadUInt32();
             uint end = start + count - 1;
-            if (end <= Blockchain.Singleton.Height) yield break;
+            uint currentHeight = NativeContract.Ledger.CurrentIndex(Blockchain.Singleton.View);
+            if (end <= currentHeight) yield break;
             for (uint height = start; height <= end; height++)
             {
                 var size = r.ReadInt32();
@@ -184,7 +185,7 @@ namespace Neo.CLI
                     throw new ArgumentException($"Block {height} exceeds the maximum allowed size");
 
                 byte[] array = r.ReadBytes(size);
-                if (height > Blockchain.Singleton.Height)
+                if (height > currentHeight)
                 {
                     Block block = array.AsSerializable<Block>();
                     yield return block;
@@ -215,9 +216,10 @@ namespace Neo.CLI
                 IsCompressed = p.EndsWith(".zip")
             }).OrderBy(p => p.Start);
 
+            uint height = NativeContract.Ledger.CurrentIndex(Blockchain.Singleton.View);
             foreach (var path in paths)
             {
-                if (path.Start > Blockchain.Singleton.Height + 1) break;
+                if (path.Start > height + 1) break;
                 if (path.IsCompressed)
                     using (FileStream fs = new FileStream(path.FileName, FileMode.Open, FileAccess.Read, FileShare.Read))
                     using (ZipArchive zip = new ZipArchive(fs, ZipArchiveMode.Read))
@@ -526,8 +528,7 @@ namespace Neo.CLI
                 }
             }
 
-            var snapshot = Blockchain.Singleton.GetSnapshot();
-            ContractState contract = NativeContract.ContractManagement.GetContract(snapshot, scriptHash);
+            ContractState contract = NativeContract.ContractManagement.GetContract(Blockchain.Singleton.View, scriptHash);
             if (contract == null)
             {
                 Console.WriteLine("Contract does not exist.");
