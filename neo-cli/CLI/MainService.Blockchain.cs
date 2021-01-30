@@ -16,8 +16,7 @@ namespace Neo.CLI
         [ConsoleCommand("export blocks", Category = "Blockchain Commands")]
         private void OnExportBlocksStartCountCommand(uint start, uint count = uint.MaxValue, string path = null)
         {
-            using var snapshot = Blockchain.Singleton.GetSnapshot();
-            uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+            uint height = NativeContract.Ledger.CurrentIndex(Blockchain.Singleton.View);
             if (height < start)
             {
                 Console.WriteLine("Error: invalid start height.");

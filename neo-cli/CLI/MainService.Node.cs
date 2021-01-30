@@ -55,8 +55,7 @@ namespace Neo.CLI
             Console.CursorVisible = false;
             Console.Clear();
 
-            using var snapshot = Blockchain.Singleton.GetSnapshot();
-            uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+            uint height = NativeContract.Ledger.CurrentIndex(Blockchain.Singleton.View);
             Task broadcast = Task.Run(async () =>
             {
                 while (!cancel.Token.IsCancellationRequested)

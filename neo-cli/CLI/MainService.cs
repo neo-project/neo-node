@@ -176,9 +176,8 @@ namespace Neo.CLI
             uint start = read_start ? r.ReadUInt32() : 0;
             uint count = r.ReadUInt32();
             uint end = start + count - 1;
-            using var snapshot = Blockchain.Singleton.GetSnapshot();
-            uint blockHeight = NativeContract.Ledger.CurrentIndex(snapshot);
-            if (end <= blockHeight) yield break;
+            uint currentHeight = NativeContract.Ledger.CurrentIndex(Blockchain.Singleton.View);
+            if (end <= currentHeight) yield break;
             for (uint height = start; height <= end; height++)
             {
                 var size = r.ReadInt32();
@@ -186,7 +185,7 @@ namespace Neo.CLI
                     throw new ArgumentException($"Block {height} exceeds the maximum allowed size");
 
                 byte[] array = r.ReadBytes(size);
-                if (height > blockHeight)
+                if (height > currentHeight)
                 {
                     Block block = array.AsSerializable<Block>();
                     yield return block;
@@ -217,8 +216,7 @@ namespace Neo.CLI
                 IsCompressed = p.EndsWith(".zip")
             }).OrderBy(p => p.Start);
 
-            using var snapshot = Blockchain.Singleton.GetSnapshot();
-            uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+            uint height = NativeContract.Ledger.CurrentIndex(Blockchain.Singleton.View);
             foreach (var path in paths)
             {
                 if (path.Start > height + 1) break;
@@ -530,8 +528,7 @@ namespace Neo.CLI
                 }
             }
 
-            var snapshot = Blockchain.Singleton.GetSnapshot();
-            ContractState contract = NativeContract.ContractManagement.GetContract(snapshot, scriptHash);
+            ContractState contract = NativeContract.ContractManagement.GetContract(Blockchain.Singleton.View, scriptHash);
             if (contract == null)
             {
                 Console.WriteLine("Contract does not exist.");
