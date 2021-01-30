@@ -6,6 +6,7 @@ using System;
 using System.Linq;
 using System.Numerics;
 using Neo.Wallets;
+using System.Globalization;
 
 namespace Neo.CLI
 {
@@ -51,19 +52,9 @@ namespace Neo.CLI
         /// <param name="signerAccounts">Signer's accounts</param>
         /// <param name="gas">Max fee for running the script</param>
         [ConsoleCommand("invoke", Category = "Contract Commands")]
-        private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160 sender = null, UInt160[] signerAccounts = null, string gas = null)
+        private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160 sender = null, UInt160[] signerAccounts = null, decimal maxGas = 20)
         {
-            long gasAmount = TestModeGas;
-            if (!string.IsNullOrEmpty(gas))
-            {
-                AssetDescriptor descriptor = new AssetDescriptor(NativeContract.GAS.Hash);
-                if (!BigDecimal.TryParse(gas, descriptor.Decimals, out BigDecimal decimalAmount) || decimalAmount.Sign <= 0)
-                {
-                    Console.WriteLine("Incorrect Amount Format");
-                    return;
-                }
-                gasAmount = (long)decimalAmount.Value;
-            }
+            var value = BigDecimal.Parse(maxGas.ToString(CultureInfo.InvariantCulture), NativeContract.GAS.Decimals);
             Signer[] signers = Array.Empty<Signer>();
             if (signerAccounts != null && !NoWallet())
             {
@@ -90,12 +81,12 @@ namespace Neo.CLI
                 Witnesses = Array.Empty<Witness>(),
             };
 
-            if (!OnInvokeWithResult(scriptHash, operation, out _, tx, contractParameters, gas: gasAmount)) return;
+            if (!OnInvokeWithResult(scriptHash, operation, out _, tx, contractParameters, gas: (long)value.Value)) return;
 
             if (NoWallet()) return;
             try
             {
-                tx = CurrentWallet.MakeTransaction(tx.Script, sender, signers, gas: gasAmount);
+                tx = CurrentWallet.MakeTransaction(tx.Script, sender, signers, gas: (long)value.Value);
             }
             catch (InvalidOperationException e)
             {

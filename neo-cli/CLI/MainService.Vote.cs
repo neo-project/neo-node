@@ -5,31 +5,22 @@ using Neo.VM;
 using Neo.VM.Types;
 using Neo.Wallets;
 using System;
+using System.Globalization;
 
 namespace Neo.CLI
 {
     partial class MainService
     {
-        public const long RegisterGas = 1010_00000000;
+        public const uint RegisterGas = 1010;
         /// <summary>
         /// Process "register candidate" command
         /// </summary>
         /// <param name="account">register account scriptHash</param>
-        /// <param name="gas">Max fee for running the script</param>
+        /// <param name="maxGas">Max fee for running the script</param>
         [ConsoleCommand("register candidate", Category = "Vote Commands")]
-        private void OnRegisterCandidateCommand(UInt160 account, string gas = null)
+        private void OnRegisterCandidateCommand(UInt160 account, decimal maxGas = RegisterGas)
         {
-            long gasAmount = RegisterGas;
-            if (!string.IsNullOrEmpty(gas))
-            {
-                AssetDescriptor descriptor = new AssetDescriptor(NativeContract.GAS.Hash);
-                if (!BigDecimal.TryParse(gas, descriptor.Decimals, out BigDecimal decimalAmount) || decimalAmount.Sign <= 0)
-                {
-                    Console.WriteLine("Incorrect Amount Format");
-                    return;
-                }
-                gasAmount = (long)decimalAmount.Value;
-            }
+            var gas = BigDecimal.Parse(maxGas.ToString(CultureInfo.InvariantCulture), NativeContract.GAS.Decimals);
 
             if (NoWallet())
             {
@@ -61,7 +52,7 @@ namespace Neo.CLI
                 script = scriptBuilder.ToArray();
             }
 
-            SendTransaction(script, account, gasAmount);
+            SendTransaction(script, account, (long)gas.Value);
         }
 
         /// <summary>
