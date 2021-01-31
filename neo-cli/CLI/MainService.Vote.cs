@@ -12,6 +12,7 @@ namespace Neo.CLI
     partial class MainService
     {
         public const uint RegisterGas = 1010;
+
         /// <summary>
         /// Process "register candidate" command
         /// </summary>
