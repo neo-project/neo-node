@@ -470,7 +470,6 @@ namespace Neo.CLI
         /// <param name="gas">Max fee for running the script</param>
         private void SendTransaction(byte[] script, UInt160 account = null, long gas = TestModeGas)
         {
-
             Signer[] signers = System.Array.Empty<Signer>();
 
             if (account != null)

@@ -54,7 +54,7 @@ namespace Neo.CLI
         [ConsoleCommand("invoke", Category = "Contract Commands")]
         private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160 sender = null, UInt160[] signerAccounts = null, decimal maxGas = 20)
         {
-            var value = BigDecimal.Parse(maxGas.ToString(CultureInfo.InvariantCulture), NativeContract.GAS.Decimals);
+            var gas = BigDecimal.Parse(maxGas.ToString(CultureInfo.InvariantCulture), NativeContract.GAS.Decimals);
             Signer[] signers = Array.Empty<Signer>();
             if (signerAccounts != null && !NoWallet())
             {
@@ -81,12 +81,12 @@ namespace Neo.CLI
                 Witnesses = Array.Empty<Witness>(),
             };
 
-            if (!OnInvokeWithResult(scriptHash, operation, out _, tx, contractParameters, gas: (long)value.Value)) return;
+            if (!OnInvokeWithResult(scriptHash, operation, out _, tx, contractParameters, gas: (long)gas.Value)) return;
 
             if (NoWallet()) return;
             try
             {
-                tx = CurrentWallet.MakeTransaction(tx.Script, sender, signers, maxGas: (long)value.Value);
+                tx = CurrentWallet.MakeTransaction(tx.Script, sender, signers, maxGas: (long)gas.Value);
             }
             catch (InvalidOperationException e)
             {
