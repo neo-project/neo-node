@@ -3,6 +3,7 @@ using Neo.ConsoleService;
 using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
+using Neo.SmartContract.Native;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -53,11 +54,13 @@ namespace Neo.CLI
 
             Console.CursorVisible = false;
             Console.Clear();
+
+            uint height = NativeContract.Ledger.CurrentIndex(Blockchain.Singleton.View);
             Task broadcast = Task.Run(async () =>
             {
                 while (!cancel.Token.IsCancellationRequested)
                 {
-                    NeoSystem.LocalNode.Tell(Message.Create(MessageCommand.Ping, PingPayload.Create(Blockchain.Singleton.Height)));
+                    NeoSystem.LocalNode.Tell(Message.Create(MessageCommand.Ping, PingPayload.Create(height)));
                     await Task.Delay(Blockchain.TimePerBlock, cancel.Token);
                 }
             });
@@ -68,7 +71,7 @@ namespace Neo.CLI
                 while (!cancel.Token.IsCancellationRequested)
                 {
                     Console.SetCursorPosition(0, 0);
-                    WriteLineWithoutFlicker($"block: {Blockchain.Singleton.Height}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}", Console.WindowWidth - 1);
+                    WriteLineWithoutFlicker($"block: {height}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}", Console.WindowWidth - 1);
 
                     int linesWritten = 1;
                     foreach (RemoteNode node in LocalNode.Singleton.GetRemoteNodes().OrderByDescending(u => u.LastBlockIndex).Take(Console.WindowHeight - 2).ToArray())
