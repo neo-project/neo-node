@@ -133,12 +133,18 @@ namespace Neo.ConsoleService
         /// <param name="args">Args</param>
         public static void Trim(List<CommandToken> args)
         {
-            for (int i = args.Count - 1; i >= 0; i--)
+            // Trim start
+
+            while (args.Count > 0 && args[0].Type == CommandTokenType.Space)
             {
-                if (args[i].Type == CommandTokenType.Space)
-                {
-                    args.RemoveAt(i);
-                }
+                args.RemoveAt(0);
+            }
+
+            // Trim end
+
+            while (args.Count > 0 && args[args.Count - 1].Type == CommandTokenType.Space)
+            {
+                args.RemoveAt(args.Count - 1);
             }
         }
 
