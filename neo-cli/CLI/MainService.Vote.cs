@@ -5,7 +5,6 @@ using Neo.VM;
 using Neo.VM.Types;
 using Neo.Wallets;
 using System;
-using System.Globalization;
 
 namespace Neo.CLI
 {

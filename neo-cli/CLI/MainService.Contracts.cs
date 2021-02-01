@@ -5,8 +5,6 @@ using Neo.SmartContract.Native;
 using System;
 using System.Linq;
 using System.Numerics;
-using Neo.Wallets;
-using System.Globalization;
 
 namespace Neo.CLI
 {
