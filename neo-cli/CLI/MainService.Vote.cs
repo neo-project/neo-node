@@ -5,7 +5,6 @@ using Neo.VM;
 using Neo.VM.Types;
 using Neo.Wallets;
 using System;
-using System.Globalization;
 
 namespace Neo.CLI
 {
@@ -19,9 +18,9 @@ namespace Neo.CLI
         /// <param name="account">register account scriptHash</param>
         /// <param name="maxGas">Max fee for running the script</param>
         [ConsoleCommand("register candidate", Category = "Vote Commands")]
-        private void OnRegisterCandidateCommand(UInt160 account, decimal maxGas = RegisterGas)
+        private void OnRegisterCandidateCommand(UInt160 account, long maxGas = RegisterGas)
         {
-            var gas = new BigDecimal(maxGas, NativeContract.GAS.Decimals);
+            var gas = new BigDecimal((decimal)maxGas, NativeContract.GAS.Decimals);
 
             if (NoWallet())
             {

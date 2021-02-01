@@ -7,7 +7,6 @@ using Neo.SmartContract.Native;
 using Neo.VM.Types;
 using Neo.Wallets;
 using System;
-using System.Globalization;
 using System.Linq;
 
 namespace Neo.CLI
@@ -23,10 +22,10 @@ namespace Neo.CLI
         /// <param name="from">From</param>
         /// <param name="signersAccounts">Signer's accounts</param>
         [ConsoleCommand("transfer", Category = "NEP17 Commands")]
-        private void OnTransferCommand(UInt160 tokenHash, UInt160 to, decimal amount, string data = null, UInt160 from = null, UInt160[] signersAccounts = null)
+        private void OnTransferCommand(UInt160 tokenHash, UInt160 to, long amount, string data = null, UInt160 from = null, UInt160[] signersAccounts = null)
         {
             var asset = new AssetDescriptor(tokenHash);
-            var value = BigDecimal.Parse(amount.ToString(CultureInfo.InvariantCulture), asset.Decimals);
+            var value = new BigDecimal((decimal)amount, asset.Decimals);
 
             if (NoWallet()) return;
 
