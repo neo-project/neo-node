@@ -50,9 +50,9 @@ namespace Neo.CLI
         /// <param name="signerAccounts">Signer's accounts</param>
         /// <param name="gas">Max fee for running the script</param>
         [ConsoleCommand("invoke", Category = "Contract Commands")]
-        private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160 sender = null, UInt160[] signerAccounts = null, long maxGas = 20)
+        private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160 sender = null, UInt160[] signerAccounts = null, decimal maxGas = 20)
         {
-            var gas = new BigDecimal((decimal)maxGas, NativeContract.GAS.Decimals);
+            var gas = new BigDecimal(maxGas, NativeContract.GAS.Decimals);
             Signer[] signers = Array.Empty<Signer>();
             if (signerAccounts != null && !NoWallet())
             {
