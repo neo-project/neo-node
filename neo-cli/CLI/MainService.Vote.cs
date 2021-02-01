@@ -21,7 +21,7 @@ namespace Neo.CLI
         [ConsoleCommand("register candidate", Category = "Vote Commands")]
         private void OnRegisterCandidateCommand(UInt160 account, decimal maxGas = RegisterGas)
         {
-            var gas = BigDecimal.Parse(maxGas.ToString(CultureInfo.InvariantCulture), NativeContract.GAS.Decimals);
+            var gas = new BigDecimal(maxGas, NativeContract.GAS.Decimals);
 
             if (NoWallet())
             {

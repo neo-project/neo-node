@@ -54,7 +54,7 @@ namespace Neo.CLI
         [ConsoleCommand("invoke", Category = "Contract Commands")]
         private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160 sender = null, UInt160[] signerAccounts = null, decimal maxGas = 20)
         {
-            var gas = BigDecimal.Parse(maxGas.ToString(CultureInfo.InvariantCulture), NativeContract.GAS.Decimals);
+            var gas = new BigDecimal(maxGas, NativeContract.GAS.Decimals);
             Signer[] signers = Array.Empty<Signer>();
             if (signerAccounts != null && !NoWallet())
             {
