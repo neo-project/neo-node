@@ -33,6 +33,8 @@ namespace Neo.CLI
     {
         public event EventHandler<Wallet> WalletOpened;
 
+        public const long TestModeGas = 20_00000000;
+
         private Wallet currentWallet;
         public Wallet CurrentWallet
         {
@@ -465,7 +467,8 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="script">script</param>
         /// <param name="account">sender</param>
-        private void SendTransaction(byte[] script, UInt160 account = null)
+        /// <param name="gas">Max fee for running the script</param>
+        private void SendTransaction(byte[] script, UInt160 account = null, long gas = TestModeGas)
         {
             Signer[] signers = System.Array.Empty<Signer>();
 
@@ -482,10 +485,10 @@ namespace Neo.CLI
 
             try
             {
-                Transaction tx = CurrentWallet.MakeTransaction(script, account, signers);
+                Transaction tx = CurrentWallet.MakeTransaction(script, account, signers, maxGas: gas);
                 Console.WriteLine($"Invoking script with: '{tx.Script.ToBase64String()}'");
 
-                using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, container: tx))
+                using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, container: tx, gas: gas))
                 {
                     PrintExecutionOutput(engine, true);
                     if (engine.State == VMState.FAULT) return;
@@ -515,8 +518,10 @@ namespace Neo.CLI
         /// <param name="result">Result</param>
         /// <param name="verificable">Transaction</param>
         /// <param name="contractParameters">Contract parameters</param>
+        /// <param name="showStack">Show result stack if it is true</param>
+        /// <param name="gas">Max fee for running the script</param>
         /// <returns>Return true if it was successful</returns>
-        private bool OnInvokeWithResult(UInt160 scriptHash, string operation, out StackItem result, IVerifiable verificable = null, JArray contractParameters = null, bool showStack = true)
+        private bool OnInvokeWithResult(UInt160 scriptHash, string operation, out StackItem result, IVerifiable verificable = null, JArray contractParameters = null, bool showStack = true, long gas = TestModeGas)
         {
             List<ContractParameter> parameters = new List<ContractParameter>();
 
@@ -559,7 +564,7 @@ namespace Neo.CLI
                 tx.Script = script;
             }
 
-            using ApplicationEngine engine = ApplicationEngine.Run(script, container: verificable);
+            using ApplicationEngine engine = ApplicationEngine.Run(script, container: verificable, gas: gas);
             PrintExecutionOutput(engine, showStack);
             result = engine.State == VMState.FAULT ? null : engine.ResultStack.Peek();
             return engine.State != VMState.FAULT;
