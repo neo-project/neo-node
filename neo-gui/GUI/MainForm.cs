@@ -150,7 +150,7 @@ namespace Neo.GUI
             foreach (ListViewItem item in listView3.Items)
             {
                 uint? height = item.Tag as uint?;
-                int? confirmations = (int)Blockchain.Singleton.Height - (int?)height + 1;
+                int? confirmations = (int)NativeContract.Ledger.CurrentIndex(Blockchain.Singleton.View) - (int?)height + 1;
                 if (confirmations <= 0) confirmations = null;
                 item.SubItems["confirmations"].Text = confirmations?.ToString() ?? Strings.Unconfirmed;
             }
@@ -171,8 +171,10 @@ namespace Neo.GUI
 
         private void timer1_Tick(object sender, EventArgs e)
         {
-            lbl_height.Text = Blockchain.Singleton.Height.ToString();
+            uint height = NativeContract.Ledger.CurrentIndex(Blockchain.Singleton.View);
+            uint headerHeight = Blockchain.Singleton.HeaderCache.Last?.Index ?? height;
 
+            lbl_height.Text = $"{height}/{headerHeight}";
             lbl_count_node.Text = LocalNode.Singleton.ConnectedCount.ToString();
             TimeSpan persistence_span = DateTime.UtcNow - persistence_time;
             if (persistence_span < TimeSpan.Zero) persistence_span = TimeSpan.Zero;
