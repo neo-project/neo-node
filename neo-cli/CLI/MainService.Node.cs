@@ -70,7 +70,7 @@ namespace Neo.CLI
                 while (!cancel.Token.IsCancellationRequested)
                 {
                     Console.SetCursorPosition(0, 0);
-                    WriteLineWithoutFlicker($"block: {NativeContract.Ledger.CurrentIndex(Blockchain.Singleton.View)}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}", Console.WindowWidth - 1);
+                    WriteLineWithoutFlicker($"header: {Blockchain.Singleton.HeaderCache.Last?.Index ?? NativeContract.Ledger.CurrentIndex(Blockchain.Singleton.View)}  block: {NativeContract.Ledger.CurrentIndex(Blockchain.Singleton.View)}  connected: {LocalNode.Singleton.ConnectedCount}  unconnected: {LocalNode.Singleton.UnconnectedCount}", Console.WindowWidth - 1);
 
                     int linesWritten = 1;
                     foreach (RemoteNode node in LocalNode.Singleton.GetRemoteNodes().OrderByDescending(u => u.LastBlockIndex).Take(Console.WindowHeight - 2).ToArray())
