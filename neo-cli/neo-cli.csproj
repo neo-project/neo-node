@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Copyright>2016-2020 The Neo Project</Copyright>
+    <Copyright>2016-2021 The Neo Project</Copyright>
     <AssemblyTitle>Neo.CLI</AssemblyTitle>
-    <Version>3.0.0-preview4</Version>
+    <Version>3.0.0-preview5</Version>
     <Authors>The Neo Project</Authors>
     <TargetFramework>net5.0</TargetFramework>
     <AssemblyName>neo-cli</AssemblyName>
@@ -15,11 +15,6 @@
     <Description>Neo.CLI</Description>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)'=='Release'">
-    <DebugType>none</DebugType>
-    <DebugSymbols>False</DebugSymbols>
-  </PropertyGroup>
-
   <ItemGroup>
     <None Update="config.json;config.mainnet.json;config.testnet.json;protocol.json;protocol.mainnet.json;protocol.testnet.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -28,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Neo" Version="3.0.0-CI01184" />
+    <PackageReference Include="Neo" Version="3.0.0-preview5" />
   </ItemGroup>
 
   <ItemGroup>
