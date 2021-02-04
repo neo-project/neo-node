@@ -59,3 +59,30 @@ All notable changes to this project will be documented in this file.
 - ([#664](https://github.com/neo-project/neo-node/pull/664)) Fix invokecommand
 - ([#654](https://github.com/neo-project/neo-node/pull/654)) Fix applicationengine.run
 - ([#647](https://github.com/neo-project/neo-node/pull/647)) Fix script check
+
+## [3.0.0.preview4] - [3.0.0.preview5]
+### Added
+- ([#737](https://github.com/neo-project/neo-node/pull/737)) Show header height when show state
+- ([#714](https://github.com/neo-project/neo-node/pull/714)) add total supply
+
+### Changed
+- ([#733](https://github.com/neo-project/neo-node/pull/733)) sync block height
+- ([#726](https://github.com/neo-project/neo-node/pull/726)) Sync to CI01171
+- ([#724](https://github.com/neo-project/neo-node/pull/724)) Neo 3.0.0-CI01168
+- ([#722](https://github.com/neo-project/neo-node/pull/722)) sync ondeploycommand
+- ([#719](https://github.com/neo-project/neo-node/pull/719)) Sync neo 1161
+- ([#712](https://github.com/neo-project/neo-node/pull/712)) Neo 3.0.0-CI01152
+- ([#709](https://github.com/neo-project/neo-node/pull/709)) Sync to Neo 3.0.0-CI01148
+- ([#707](https://github.com/neo-project/neo-node/pull/707)) Sync to CI01133
+- ([#706](https://github.com/neo-project/neo-node/pull/706)) 3.0.0-CI01125
+- ([#702](https://github.com/neo-project/neo-node/pull/702)) CI01123
+- ([#681](https://github.com/neo-project/neo-node/pull/681)) dotnet 5.0
+
+### Fixed
+- ([#735](https://github.com/neo-project/neo-node/pull/735)) fix "show state" auto refresh
+- ([#730](https://github.com/neo-project/neo-node/pull/730)) fix broadcast getheaders
+- ([#727](https://github.com/neo-project/neo-node/pull/727)) Add test mode gas when invoking
+- ([#716](https://github.com/neo-project/neo-node/pull/716)) More alignment
+- ([#715](https://github.com/neo-project/neo-node/pull/715)) Fix Dockerfile
+- ([#713](https://github.com/neo-project/neo-node/pull/713)) Update MainService.Plugins.cs
+- ([#704](https://github.com/neo-project/neo-node/pull/704)) Avoid register candidate for others
