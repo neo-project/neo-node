@@ -523,7 +523,7 @@ namespace Neo.CLI
             BigInteger gas = BigInteger.Zero;
             uint height = NativeContract.Ledger.CurrentIndex(Snapshot) + 1;
             foreach (UInt160 account in CurrentWallet.GetAccounts().Select(p => p.ScriptHash))
-                    gas += NativeContract.NEO.UnclaimedGas(Snapshot, account, height);
+                gas += NativeContract.NEO.UnclaimedGas(Snapshot, account, height);
             Console.WriteLine($"Unclaimed gas: {new BigDecimal(gas, NativeContract.GAS.Decimals)}");
         }
 
