@@ -343,33 +343,30 @@ namespace Neo.CLI
         {
             if (NoWallet()) return;
 
-            using (var snapshot = Blockchain.Singleton.GetSnapshot())
+            foreach (var account in CurrentWallet.GetAccounts())
             {
-                foreach (var account in CurrentWallet.GetAccounts())
+                var contract = account.Contract;
+                var type = "Nonstandard";
+
+                if (account.WatchOnly)
                 {
-                    var contract = account.Contract;
-                    var type = "Nonstandard";
-
-                    if (account.WatchOnly)
-                    {
-                        type = "WatchOnly";
-                    }
-                    else if (contract.Script.IsMultiSigContract())
-                    {
-                        type = "MultiSignature";
-                    }
-                    else if (contract.Script.IsSignatureContract())
-                    {
-                        type = "Standard";
-                    }
-                    else if (NativeContract.ContractManagement.GetContract(snapshot, account.ScriptHash) != null)
-                    {
-                        type = "Deployed-Nonstandard";
-                    }
-
-                    Console.WriteLine($"{"   Address: "}{account.Address}\t{type}");
-                    Console.WriteLine($"{"ScriptHash: "}{account.ScriptHash}\n");
+                    type = "WatchOnly";
                 }
+                else if (contract.Script.IsMultiSigContract())
+                {
+                    type = "MultiSignature";
+                }
+                else if (contract.Script.IsSignatureContract())
+                {
+                    type = "Standard";
+                }
+                else if (NativeContract.ContractManagement.GetContract(Snapshot, account.ScriptHash) != null)
+                {
+                    type = "Deployed-Nonstandard";
+                }
+
+                Console.WriteLine($"{"   Address: "}{account.Address}\t{type}");
+                Console.WriteLine($"{"ScriptHash: "}{account.ScriptHash}\n");
             }
         }
 
@@ -383,12 +380,12 @@ namespace Neo.CLI
             foreach (UInt160 account in CurrentWallet.GetAccounts().Select(p => p.ScriptHash))
             {
                 Console.WriteLine(account.ToAddress());
-                Console.WriteLine($"NEO: {CurrentWallet.GetBalance(NativeContract.NEO.Hash, account)}");
-                Console.WriteLine($"GAS: {CurrentWallet.GetBalance(NativeContract.GAS.Hash, account)}");
+                Console.WriteLine($"NEO: {CurrentWallet.GetBalance(Snapshot, NativeContract.NEO.Hash, account)}");
+                Console.WriteLine($"GAS: {CurrentWallet.GetBalance(Snapshot, NativeContract.GAS.Hash, account)}");
                 Console.WriteLine();
             }
             Console.WriteLine("----------------------------------------------------");
-            Console.WriteLine($"Total:   NEO: {CurrentWallet.GetAvailable(NativeContract.NEO.Hash),10}     GAS: {CurrentWallet.GetAvailable(NativeContract.GAS.Hash),18}");
+            Console.WriteLine($"Total:   NEO: {CurrentWallet.GetAvailable(Snapshot, NativeContract.NEO.Hash),10}     GAS: {CurrentWallet.GetAvailable(Snapshot, NativeContract.GAS.Hash),18}");
             Console.WriteLine();
             Console.WriteLine("NEO hash: " + NativeContract.NEO.Hash);
             Console.WriteLine("GAS hash: " + NativeContract.GAS.Hash);
@@ -425,7 +422,7 @@ namespace Neo.CLI
             }
             try
             {
-                ContractParametersContext context = ContractParametersContext.Parse(jsonObjectToSign.ToString());
+                ContractParametersContext context = ContractParametersContext.Parse(jsonObjectToSign.ToString(), Snapshot);
                 if (!CurrentWallet.Sign(context))
                 {
                     Console.WriteLine("The private key that can sign the data is not found.");
@@ -464,7 +461,7 @@ namespace Neo.CLI
             }
 
             Transaction tx;
-            AssetDescriptor descriptor = new AssetDescriptor(asset);
+            AssetDescriptor descriptor = new AssetDescriptor(Snapshot, asset);
             if (!BigDecimal.TryParse(amount, descriptor.Decimals, out BigDecimal decimalAmount) || decimalAmount.Sign <= 0)
             {
                 Console.WriteLine("Incorrect Amount Format");
@@ -472,7 +469,7 @@ namespace Neo.CLI
             }
             try
             {
-                tx = CurrentWallet.MakeTransaction(new[]
+                tx = CurrentWallet.MakeTransaction(Snapshot, new[]
                 {
                     new TransferOutput
                     {
@@ -501,7 +498,7 @@ namespace Neo.CLI
                 return;
             }
 
-            ContractParametersContext context = new ContractParametersContext(tx);
+            ContractParametersContext context = new ContractParametersContext(Snapshot, tx);
             CurrentWallet.Sign(context);
             if (context.Completed)
             {
@@ -524,12 +521,9 @@ namespace Neo.CLI
         {
             if (NoWallet()) return;
             BigInteger gas = BigInteger.Zero;
-            using (var snapshot = Blockchain.Singleton.GetSnapshot())
-            {
-                uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
-                foreach (UInt160 account in CurrentWallet.GetAccounts().Select(p => p.ScriptHash))
-                    gas += NativeContract.NEO.UnclaimedGas(snapshot, account, height);
-            }
+            uint height = NativeContract.Ledger.CurrentIndex(Snapshot) + 1;
+            foreach (UInt160 account in CurrentWallet.GetAccounts().Select(p => p.ScriptHash))
+                    gas += NativeContract.NEO.UnclaimedGas(Snapshot, account, height);
             Console.WriteLine($"Unclaimed gas: {new BigDecimal(gas, NativeContract.GAS.Decimals)}");
         }
 
@@ -596,7 +590,7 @@ namespace Neo.CLI
             ContractParametersContext context;
             try
             {
-                context = new ContractParametersContext(tx);
+                context = new ContractParametersContext(Snapshot, tx);
             }
             catch (InvalidOperationException e)
             {

@@ -20,11 +20,10 @@ namespace Neo.CLI
         {
             if (NoWallet()) return;
             byte[] script = LoadDeploymentScript(filePath, manifestPath, out var nef, out var manifest);
-
             Transaction tx;
             try
             {
-                tx = CurrentWallet.MakeTransaction(script);
+                tx = CurrentWallet.MakeTransaction(Snapshot, script);
             }
             catch (InvalidOperationException e)
             {
@@ -84,7 +83,7 @@ namespace Neo.CLI
             if (NoWallet()) return;
             try
             {
-                tx = CurrentWallet.MakeTransaction(tx.Script, sender, signers, maxGas: (long)gas.Value);
+                tx = CurrentWallet.MakeTransaction(Snapshot, tx.Script, sender, signers, maxGas: (long)gas.Value);
             }
             catch (InvalidOperationException e)
             {

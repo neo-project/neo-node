@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Neo" Version="3.0.0-preview5" />
+    <PackageReference Include="Neo" Version="3.0.0-CI01195" />
   </ItemGroup>
 
   <ItemGroup>

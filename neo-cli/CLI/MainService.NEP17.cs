@@ -24,7 +24,7 @@ namespace Neo.CLI
         [ConsoleCommand("transfer", Category = "NEP17 Commands")]
         private void OnTransferCommand(UInt160 tokenHash, UInt160 to, decimal amount, string data = null, UInt160 from = null, UInt160[] signersAccounts = null)
         {
-            var asset = new AssetDescriptor(tokenHash);
+            var asset = new AssetDescriptor(Snapshot, tokenHash);
             var value = new BigDecimal(amount, asset.Decimals);
 
             if (NoWallet()) return;
@@ -32,7 +32,7 @@ namespace Neo.CLI
             Transaction tx;
             try
             {
-                tx = CurrentWallet.MakeTransaction(new[]
+                tx = CurrentWallet.MakeTransaction(Snapshot, new[]
                 {
                     new TransferOutput
                     {
@@ -73,7 +73,7 @@ namespace Neo.CLI
             arg["type"] = "Hash160";
             arg["value"] = address.ToString();
 
-            var asset = new AssetDescriptor(tokenHash);
+            var asset = new AssetDescriptor(Snapshot, tokenHash);
 
             if (!OnInvokeWithResult(tokenHash, "balanceOf", out StackItem balanceResult, null, new JArray(arg))) return;
 
@@ -90,10 +90,9 @@ namespace Neo.CLI
         [ConsoleCommand("name", Category = "NEP17 Commands")]
         private void OnNameCommand(UInt160 tokenHash)
         {
-            var snapshot = Blockchain.Singleton.GetSnapshot();
-            ContractState contract = NativeContract.ContractManagement.GetContract(snapshot, tokenHash);
+            ContractState contract = NativeContract.ContractManagement.GetContract(Snapshot, tokenHash);
             if (contract == null) Console.WriteLine($"Contract hash not exist: {tokenHash}");
-            else Console.WriteLine($"Result : {contract.Manifest.Name.ToString()}");
+            else Console.WriteLine($"Result : {contract.Manifest.Name}");
         }
 
         /// <summary>
@@ -117,7 +116,7 @@ namespace Neo.CLI
         {
             if (!OnInvokeWithResult(tokenHash, "totalSupply", out StackItem result, null)) return;
 
-            var asset = new AssetDescriptor(tokenHash);
+            var asset = new AssetDescriptor(Snapshot, tokenHash);
             var totalSupply = new BigDecimal(((PrimitiveType)result).GetInteger(), asset.Decimals);
 
             Console.WriteLine($"Result : {totalSupply}");

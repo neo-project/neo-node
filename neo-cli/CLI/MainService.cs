@@ -6,6 +6,7 @@ using Neo.IO.Json;
 using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
+using Neo.Persistence;
 using Neo.Plugins;
 using Neo.SmartContract;
 using Neo.SmartContract.Manifest;
@@ -36,6 +37,9 @@ namespace Neo.CLI
         public const long TestModeGas = 20_00000000;
 
         private Wallet currentWallet;
+
+        private static DataCache Snapshot;
+
         public Wallet CurrentWallet
         {
             get
@@ -178,7 +182,7 @@ namespace Neo.CLI
             uint start = read_start ? r.ReadUInt32() : 0;
             uint count = r.ReadUInt32();
             uint end = start + count - 1;
-            uint currentHeight = NativeContract.Ledger.CurrentIndex(Blockchain.Singleton.View);
+            uint currentHeight = NativeContract.Ledger.CurrentIndex(Snapshot);
             if (end <= currentHeight) yield break;
             for (uint height = start; height <= end; height++)
             {
@@ -218,7 +222,7 @@ namespace Neo.CLI
                 IsCompressed = p.EndsWith(".zip")
             }).OrderBy(p => p.Start);
 
-            uint height = NativeContract.Ledger.CurrentIndex(Blockchain.Singleton.View);
+            uint height = NativeContract.Ledger.CurrentIndex(Snapshot);
             foreach (var path in paths)
             {
                 if (path.Start > height + 1) break;
@@ -350,7 +354,8 @@ namespace Neo.CLI
 
             _ = new Logger();
 
-            NeoSystem = new NeoSystem(Settings.Default.Storage.Engine, Settings.Default.Storage.Path);
+            NeoSystem = new NeoSystem(ProtocolSettings.Default, null, null);
+            Snapshot = NeoSystem.GetSnapshot().CreateSnapshot();
 
             foreach (var plugin in Plugin.Plugins)
             {
@@ -445,7 +450,7 @@ namespace Neo.CLI
             {
                 for (uint i = start; i <= end; i++)
                 {
-                    Block block = NativeContract.Ledger.GetBlock(Blockchain.Singleton.View, i);
+                    Block block = NativeContract.Ledger.GetBlock(Snapshot, i);
                     byte[] array = block.ToArray();
                     fs.Write(BitConverter.GetBytes(array.Length), 0, sizeof(int));
                     fs.Write(array, 0, array.Length);
@@ -474,21 +479,18 @@ namespace Neo.CLI
 
             if (account != null)
             {
-                using (var snapshot = Blockchain.Singleton.GetSnapshot())
-                {
-                    signers = CurrentWallet.GetAccounts()
-                    .Where(p => !p.Lock && !p.WatchOnly && p.ScriptHash == account && NativeContract.GAS.BalanceOf(snapshot, p.ScriptHash).Sign > 0)
-                    .Select(p => new Signer() { Account = p.ScriptHash, Scopes = WitnessScope.CalledByEntry })
-                    .ToArray();
-                }
+                signers = CurrentWallet.GetAccounts()
+                .Where(p => !p.Lock && !p.WatchOnly && p.ScriptHash == account && NativeContract.GAS.BalanceOf(Snapshot, p.ScriptHash).Sign > 0)
+                .Select(p => new Signer() { Account = p.ScriptHash, Scopes = WitnessScope.CalledByEntry })
+                .ToArray();
             }
 
             try
             {
-                Transaction tx = CurrentWallet.MakeTransaction(script, account, signers, maxGas: gas);
+                Transaction tx = CurrentWallet.MakeTransaction(Snapshot, script, account, signers, maxGas: gas);
                 Console.WriteLine($"Invoking script with: '{tx.Script.ToBase64String()}'");
 
-                using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, container: tx, gas: gas))
+                using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, Snapshot, container: tx, gas: gas))
                 {
                     PrintExecutionOutput(engine, true);
                     if (engine.State == VMState.FAULT) return;
@@ -533,7 +535,7 @@ namespace Neo.CLI
                 }
             }
 
-            ContractState contract = NativeContract.ContractManagement.GetContract(Blockchain.Singleton.View, scriptHash);
+            ContractState contract = NativeContract.ContractManagement.GetContract(Snapshot, scriptHash);
             if (contract == null)
             {
                 Console.WriteLine("Contract does not exist.");
@@ -564,7 +566,7 @@ namespace Neo.CLI
                 tx.Script = script;
             }
 
-            using ApplicationEngine engine = ApplicationEngine.Run(script, container: verificable, gas: gas);
+            using ApplicationEngine engine = ApplicationEngine.Run(script, Snapshot, container: verificable, gas: gas);
             PrintExecutionOutput(engine, showStack);
             result = engine.State == VMState.FAULT ? null : engine.ResultStack.Peek();
             return engine.State != VMState.FAULT;
