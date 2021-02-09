@@ -483,7 +483,6 @@ namespace Neo.CLI
 
             try
             {
-                
                 Transaction tx = CurrentWallet.MakeTransaction(snapshot, script, account, signers, maxGas: gas);
                 Console.WriteLine($"Invoking script with: '{tx.Script.ToBase64String()}'");
 
