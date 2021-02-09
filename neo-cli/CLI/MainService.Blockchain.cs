@@ -1,5 +1,4 @@
 using Neo.ConsoleService;
-using Neo.Ledger;
 using Neo.SmartContract.Native;
 using System;
 
