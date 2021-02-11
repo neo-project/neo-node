@@ -2,7 +2,6 @@ using Akka.Actor;
 using Neo.ConsoleService;
 using Neo.IO;
 using Neo.IO.Json;
-using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Capabilities;
 using Neo.Network.P2P.Payloads;
@@ -45,7 +44,7 @@ namespace Neo.CLI
         [ConsoleCommand("broadcast block", Category = "Network Commands")]
         private void OnBroadcastGetBlocksByHashCommand(UInt256 hash)
         {
-            OnBroadcastCommand(MessageCommand.Block, NativeContract.Ledger.GetBlock(Blockchain.Singleton.View, hash));
+            OnBroadcastCommand(MessageCommand.Block, NativeContract.Ledger.GetBlock(NeoSystem.StoreView, hash));
         }
 
         /// <summary>
@@ -55,7 +54,7 @@ namespace Neo.CLI
         [ConsoleCommand("broadcast block", Category = "Network Commands")]
         private void OnBroadcastGetBlocksByHeightCommand(uint height)
         {
-            OnBroadcastCommand(MessageCommand.Block, NativeContract.Ledger.GetBlock(Blockchain.Singleton.View, height));
+            OnBroadcastCommand(MessageCommand.Block, NativeContract.Ledger.GetBlock(NeoSystem.StoreView, height));
         }
 
         /// <summary>
@@ -107,7 +106,7 @@ namespace Neo.CLI
         [ConsoleCommand("broadcast transaction", Category = "Network Commands")]
         private void OnBroadcastTransactionCommand(UInt256 hash)
         {
-            if (Blockchain.Singleton.MemPool.TryGetValue(hash, out Transaction tx))
+            if (NeoSystem.MemPool.TryGetValue(hash, out Transaction tx))
                 OnBroadcastCommand(MessageCommand.Transaction, tx);
         }
 
@@ -131,7 +130,7 @@ namespace Neo.CLI
 
             try
             {
-                ContractParametersContext context = ContractParametersContext.Parse(jsonObjectToRelay.ToString());
+                ContractParametersContext context = ContractParametersContext.Parse(jsonObjectToRelay.ToString(), NeoSystem.StoreView);
                 if (!context.Completed)
                 {
                     Console.WriteLine("The signature is incomplete.");

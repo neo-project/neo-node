@@ -24,7 +24,7 @@ namespace Neo.CLI
             Transaction tx;
             try
             {
-                tx = CurrentWallet.MakeTransaction(script);
+                tx = CurrentWallet.MakeTransaction(NeoSystem.StoreView, script);
             }
             catch (InvalidOperationException e)
             {
@@ -37,7 +37,7 @@ namespace Neo.CLI
             Console.WriteLine($"Contract hash: {hash}");
             Console.WriteLine($"Gas: {new BigDecimal((BigInteger)tx.SystemFee, NativeContract.GAS.Decimals)}");
             Console.WriteLine();
-            SignAndSendTx(tx);
+            SignAndSendTx(NeoSystem.StoreView, tx);
         }
 
         /// <summary>
@@ -84,7 +84,7 @@ namespace Neo.CLI
             if (NoWallet()) return;
             try
             {
-                tx = CurrentWallet.MakeTransaction(tx.Script, sender, signers, maxGas: (long)gas.Value);
+                tx = CurrentWallet.MakeTransaction(NeoSystem.StoreView, tx.Script, sender, signers, maxGas: (long)gas.Value);
             }
             catch (InvalidOperationException e)
             {
@@ -95,7 +95,7 @@ namespace Neo.CLI
             {
                 return;
             }
-            SignAndSendTx(tx);
+            SignAndSendTx(NeoSystem.StoreView, tx);
         }
     }
 }
