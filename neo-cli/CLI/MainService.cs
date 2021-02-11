@@ -31,7 +31,7 @@ namespace Neo.CLI
 {
     public partial class MainService : ConsoleServiceBase, IWalletProvider
     {
-        public event EventHandler<Wallet> WalletOpened;
+        public event EventHandler<Wallet> WalletChanged;
 
         public const long TestModeGas = 20_00000000;
 
@@ -45,7 +45,7 @@ namespace Neo.CLI
             private set
             {
                 currentWallet = value;
-                WalletOpened?.Invoke(this, value);
+                WalletChanged?.Invoke(this, value);
             }
         }
 
@@ -87,12 +87,12 @@ namespace Neo.CLI
 
                 // Accept wallet format
 
-                return str.ToScriptHash();
+                return str.ToScriptHash(NeoSystem.Settings.AddressVersion);
             });
 
             RegisterCommandHander<string, UInt256>(false, (str) => UInt256.Parse(str));
             RegisterCommandHander<string[], UInt256[]>((str) => str.Select(u => UInt256.Parse(u.Trim())).ToArray());
-            RegisterCommandHander<string[], UInt160[]>((arr) => arr.Select(str => StringToAddress(str)).ToArray());
+            RegisterCommandHander<string[], UInt160[]>((arr) => arr.Select(str => StringToAddress(str, NeoSystem.Settings.AddressVersion)).ToArray());
             RegisterCommandHander<string, ECPoint>((str) => ECPoint.Parse(str.Trim(), ECCurve.Secp256r1));
             RegisterCommandHander<string[], ECPoint[]>((str) => str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray());
             RegisterCommandHander<string, JObject>((str) => JObject.Parse(str));
@@ -102,7 +102,7 @@ namespace Neo.CLI
             RegisterCommand(this);
         }
 
-        internal static UInt160 StringToAddress(string input)
+        internal static UInt160 StringToAddress(string input, byte version)
         {
             switch (input.ToLowerInvariant())
             {
@@ -119,7 +119,7 @@ namespace Neo.CLI
 
             // Accept wallet format
 
-            return input.ToScriptHash();
+            return input.ToScriptHash(version);
         }
 
         Wallet IWalletProvider.GetWallet()
@@ -146,7 +146,7 @@ namespace Neo.CLI
             {
                 case ".db3":
                     {
-                        UserWallet wallet = UserWallet.Create(path, password);
+                        UserWallet wallet = UserWallet.Create(path, password, NeoSystem.Settings);
                         WalletAccount account = wallet.CreateAccount();
                         Console.WriteLine($"   Address: {account.Address}");
                         Console.WriteLine($"    Pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
@@ -156,7 +156,7 @@ namespace Neo.CLI
                     break;
                 case ".json":
                     {
-                        NEP6Wallet wallet = new NEP6Wallet(path);
+                        NEP6Wallet wallet = new NEP6Wallet(path, NeoSystem.Settings);
                         wallet.Unlock(password);
                         WalletAccount account = wallet.CreateAccount();
                         wallet.Save();
@@ -319,12 +319,12 @@ namespace Neo.CLI
             {
                 case ".db3":
                     {
-                        CurrentWallet = UserWallet.Open(path, password);
+                        CurrentWallet = UserWallet.Open(path, password, NeoSystem.Settings);
                         break;
                     }
                 case ".json":
                     {
-                        NEP6Wallet nep6wallet = new NEP6Wallet(path);
+                        NEP6Wallet nep6wallet = new NEP6Wallet(path, NeoSystem.Settings);
                         nep6wallet.Unlock(password);
                         CurrentWallet = nep6wallet;
                         break;
@@ -346,11 +346,11 @@ namespace Neo.CLI
                         break;
                 }
 
-            Plugin.AddService(this);
-
             _ = new Logger();
 
-            NeoSystem = new NeoSystem(ProtocolSettings.Default, Settings.Default.Storage.Engine, Settings.Default.Storage.Path);
+            NeoSystem = new NeoSystem(ProtocolSettings.Load("protocol.json"), Settings.Default.Storage.Engine, Settings.Default.Storage.Path);
+
+            NeoSystem.AddService(this);
 
             foreach (var plugin in Plugin.Plugins)
             {

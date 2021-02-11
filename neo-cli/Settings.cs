@@ -31,7 +31,9 @@ namespace Neo
             {
                 if (_default == null)
                 {
-                    UpdateDefault(Utility.LoadConfig("config"));
+                    IConfigurationRoot config = new ConfigurationBuilder().AddJsonFile("config.json").Build();
+                    IConfigurationSection section = config.GetSection("ApplicationConfiguration");
+                    _default = new Settings(section);
                 }
 
                 return _default;

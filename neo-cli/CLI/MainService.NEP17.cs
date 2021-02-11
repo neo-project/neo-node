@@ -24,7 +24,7 @@ namespace Neo.CLI
         private void OnTransferCommand(UInt160 tokenHash, UInt160 to, decimal amount, string data = null, UInt160 from = null, UInt160[] signersAccounts = null)
         {
             var snapshot = NeoSystem.StoreView;
-            var asset = new AssetDescriptor(snapshot, tokenHash);
+            var asset = new AssetDescriptor(snapshot, NeoSystem.Settings, tokenHash);
             var value = new BigDecimal(amount, asset.Decimals);
 
             if (NoWallet()) return;
@@ -73,7 +73,7 @@ namespace Neo.CLI
             arg["type"] = "Hash160";
             arg["value"] = address.ToString();
 
-            var asset = new AssetDescriptor(NeoSystem.StoreView, tokenHash);
+            var asset = new AssetDescriptor(NeoSystem.StoreView, NeoSystem.Settings, tokenHash);
 
             if (!OnInvokeWithResult(tokenHash, "balanceOf", out StackItem balanceResult, null, new JArray(arg))) return;
 
@@ -116,7 +116,7 @@ namespace Neo.CLI
         {
             if (!OnInvokeWithResult(tokenHash, "totalSupply", out StackItem result, null)) return;
 
-            var asset = new AssetDescriptor(NeoSystem.StoreView, tokenHash);
+            var asset = new AssetDescriptor(NeoSystem.StoreView, NeoSystem.Settings, tokenHash);
             var totalSupply = new BigDecimal(((PrimitiveType)result).GetInteger(), asset.Decimals);
 
             Console.WriteLine($"Result : {totalSupply}");

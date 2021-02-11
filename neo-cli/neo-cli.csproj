@@ -15,6 +15,8 @@
     <Description>Neo.CLI</Description>
   </PropertyGroup>
 
+
+
   <ItemGroup>
     <None Update="config.json;config.mainnet.json;config.testnet.json;protocol.json;protocol.mainnet.json;protocol.testnet.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -23,9 +25,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Neo" Version="3.0.0-CI01198" />
+    <PackageReference Include="Neo" Version="3.0.0-CI01207" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Neo.ConsoleService\Neo.ConsoleService.csproj" />
   </ItemGroup>
