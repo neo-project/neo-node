@@ -226,7 +226,7 @@ namespace Neo.CLI
             if (CurrentWallet is NEP6Wallet wallet)
                 wallet.Save();
 
-            Console.WriteLine("Multisig. Addr.: " + Contract.GetBFTAddress(publicKeys));
+            Console.WriteLine("Multisig. Addr.: " + multiSignContract.ScriptHash.ToAddress(NeoSystem.Settings.AddressVersion));
         }
 
         /// <summary>
