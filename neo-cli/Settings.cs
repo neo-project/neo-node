@@ -32,8 +32,7 @@ namespace Neo
                 if (_default == null)
                 {
                     IConfigurationRoot config = new ConfigurationBuilder().AddJsonFile("config.json").Build();
-                    IConfigurationSection section = config.GetSection("ApplicationConfiguration");
-                    _default = new Settings(section);
+                    Initialize(config);
                 }
 
                 return _default;
@@ -58,7 +57,7 @@ namespace Neo
 
         public LoggerSettings(IConfigurationSection section)
         {
-            this.Path = string.Format(section.GetValue("Path", "Logs_{0}"), ProtocolSettings.Default.Magic.ToString("X8"));
+            this.Path = string.Format(section.GetValue("Path", "Logs_{0}"), ProtocolSettings.Instance.Magic.ToString("X8"));
             this.ConsoleOutput = section.GetValue("ConsoleOutput", false);
             this.Active = section.GetValue("Active", false);
         }

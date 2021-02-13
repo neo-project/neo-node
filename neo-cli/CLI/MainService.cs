@@ -348,7 +348,7 @@ namespace Neo.CLI
 
             _ = new Logger();
 
-            NeoSystem = new NeoSystem(ProtocolSettings.Load("protocol.json"), Settings.Default.Storage.Engine, Settings.Default.Storage.Path);
+            NeoSystem = new NeoSystem(ProtocolSettings.Instance, Settings.Default.Storage.Engine, Settings.Default.Storage.Path);
 
             NeoSystem.AddService(this);
 
