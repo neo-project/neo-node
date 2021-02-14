@@ -58,7 +58,7 @@ namespace Neo
 
         public LoggerSettings(IConfigurationSection section)
         {
-            this.Path = string.Format(section.GetValue("Path", "Logs_{0}"), MainService.ProtocolSettings.Magic.ToString("X8"));
+            this.Path = section.GetValue("Path", "Logs_{0}");
             this.ConsoleOutput = section.GetValue("ConsoleOutput", false);
             this.Active = section.GetValue("Active", false);
         }

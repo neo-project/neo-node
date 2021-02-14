@@ -37,7 +37,6 @@ namespace Neo.CLI
 
         private Wallet currentWallet;
 
-        internal static ProtocolSettings ProtocolSettings;
         public Wallet CurrentWallet
         {
             get
@@ -348,10 +347,10 @@ namespace Neo.CLI
                         break;
                 }
 
-            _ = new Logger();
+            ProtocolSettings protocolSettings = ProtocolSettings.Load("protocol.json");
+            _ = new Logger(protocolSettings.Magic);
 
-            ProtocolSettings = ProtocolSettings.Load("protocol.json");
-            NeoSystem = new NeoSystem(ProtocolSettings, Settings.Default.Storage.Engine, Settings.Default.Storage.Path);
+            NeoSystem = new NeoSystem(protocolSettings, Settings.Default.Storage.Engine, Settings.Default.Storage.Path);
 
             NeoSystem.AddService(this);
 
