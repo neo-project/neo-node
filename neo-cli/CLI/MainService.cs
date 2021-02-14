@@ -36,6 +36,8 @@ namespace Neo.CLI
         public const long TestModeGas = 20_00000000;
 
         private Wallet currentWallet;
+
+        internal static ProtocolSettings ProtocolSettings;
         public Wallet CurrentWallet
         {
             get
@@ -348,7 +350,8 @@ namespace Neo.CLI
 
             _ = new Logger();
 
-            NeoSystem = new NeoSystem(ProtocolSettings.Instance, Settings.Default.Storage.Engine, Settings.Default.Storage.Path);
+            ProtocolSettings = ProtocolSettings.Load("protocol.json");
+            NeoSystem = new NeoSystem(ProtocolSettings, Settings.Default.Storage.Engine, Settings.Default.Storage.Path);
 
             NeoSystem.AddService(this);
 
