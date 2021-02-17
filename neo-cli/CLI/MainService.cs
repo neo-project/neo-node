@@ -36,6 +36,7 @@ namespace Neo.CLI
         public const long TestModeGas = 20_00000000;
 
         private Wallet currentWallet;
+        private LocalNode localNode;
 
         public Wallet CurrentWallet
         {
@@ -352,6 +353,8 @@ namespace Neo.CLI
             NeoSystem = new NeoSystem(ProtocolSettings.Load("protocol.json"), Settings.Default.Storage.Engine, Settings.Default.Storage.Path);
 
             NeoSystem.AddService(this);
+
+            localNode = await NeoSystem.LocalNode.Ask<LocalNode>(new LocalNode.GetInstance());
 
             foreach (var plugin in Plugin.Plugins)
             {

@@ -65,7 +65,6 @@ namespace Neo.CLI
             Task task = Task.Run(async () =>
             {
                 int maxLines = 0;
-                LocalNode localNode = await NeoSystem.LocalNode.Ask<LocalNode>(new LocalNode.GetInstance());
                 while (!cancel.Token.IsCancellationRequested)
                 {
                     uint height = NativeContract.Ledger.CurrentIndex(NeoSystem.StoreView);
