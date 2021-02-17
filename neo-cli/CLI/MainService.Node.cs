@@ -65,14 +65,12 @@ namespace Neo.CLI
             Task task = Task.Run(async () =>
             {
                 int maxLines = 0;
-
                 while (!cancel.Token.IsCancellationRequested)
                 {
                     uint height = NativeContract.Ledger.CurrentIndex(NeoSystem.StoreView);
                     uint headerHeight = NeoSystem.HeaderCache.Last?.Index ?? height;
 
                     Console.SetCursorPosition(0, 0);
-                    LocalNode localNode = await NeoSystem.LocalNode.Ask<LocalNode>(new LocalNode.GetInstance());
                     WriteLineWithoutFlicker($"block: {height}/{headerHeight}  connected: {localNode.ConnectedCount}  unconnected: {localNode.UnconnectedCount}", Console.WindowWidth - 1);
 
                     int linesWritten = 1;

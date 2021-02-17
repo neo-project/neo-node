@@ -90,7 +90,7 @@ namespace Neo.CLI
                 Console.WriteLine($"File '{path_new}' already exists");
                 return;
             }
-            NEP6Wallet.Migrate(path_new, path, password).Save();
+            NEP6Wallet.Migrate(path_new, path, password, NeoSystem.Settings).Save();
             Console.WriteLine($"Wallet file upgrade complete. New wallet file has been auto-saved at: {path_new}");
         }
 
@@ -226,7 +226,7 @@ namespace Neo.CLI
             if (CurrentWallet is NEP6Wallet wallet)
                 wallet.Save();
 
-            Console.WriteLine("Multisig. Addr.: " + multiSignContract.Address);
+            Console.WriteLine("Multisig. Addr.: " + multiSignContract.ScriptHash.ToAddress(NeoSystem.Settings.AddressVersion));
         }
 
         /// <summary>
@@ -294,7 +294,7 @@ namespace Neo.CLI
             UInt160 address = null;
             try
             {
-                address = StringToAddress(addressOrFile);
+                address = StringToAddress(addressOrFile, NeoSystem.Settings.AddressVersion);
             }
             catch (FormatException) { }
             if (address is null)
@@ -320,7 +320,7 @@ namespace Neo.CLI
                 {
                     for (int i = 0; i < lines.Length; i++)
                     {
-                        address = StringToAddress(lines[i]);
+                        address = StringToAddress(lines[i], NeoSystem.Settings.AddressVersion);
                         CurrentWallet.CreateAccount(address);
                         percent.Value++;
                     }
@@ -381,7 +381,7 @@ namespace Neo.CLI
             if (NoWallet()) return;
             foreach (UInt160 account in CurrentWallet.GetAccounts().Select(p => p.ScriptHash))
             {
-                Console.WriteLine(account.ToAddress());
+                Console.WriteLine(account.ToAddress(NeoSystem.Settings.AddressVersion));
                 Console.WriteLine($"NEO: {CurrentWallet.GetBalance(snapshot, NativeContract.NEO.Hash, account)}");
                 Console.WriteLine($"GAS: {CurrentWallet.GetBalance(snapshot, NativeContract.GAS.Hash, account)}");
                 Console.WriteLine();
@@ -464,7 +464,7 @@ namespace Neo.CLI
             }
             var snapshot = NeoSystem.StoreView;
             Transaction tx;
-            AssetDescriptor descriptor = new AssetDescriptor(snapshot, asset);
+            AssetDescriptor descriptor = new AssetDescriptor(snapshot, NeoSystem.Settings, asset);
             if (!BigDecimal.TryParse(amount, descriptor.Decimals, out BigDecimal decimalAmount) || decimalAmount.Sign <= 0)
             {
                 Console.WriteLine("Incorrect Amount Format");

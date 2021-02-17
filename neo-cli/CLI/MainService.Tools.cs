@@ -277,7 +277,7 @@ namespace Neo.CLI
         {
             try
             {
-                var bigEndScript = address.ToScriptHash();
+                var bigEndScript = address.ToScriptHash(NeoSystem.Settings.AddressVersion);
 
                 return bigEndScript.ToString();
             }
@@ -302,7 +302,7 @@ namespace Neo.CLI
         {
             try
             {
-                var script = address.ToScriptHash();
+                var script = address.ToScriptHash(NeoSystem.Settings.AddressVersion);
                 string base64 = Convert.ToBase64String(script.ToArray().AsSpan());
 
                 return base64;
@@ -348,7 +348,7 @@ namespace Neo.CLI
                     }
                 }
 
-                var hexScript = scriptHash.ToAddress();
+                var hexScript = scriptHash.ToAddress(NeoSystem.Settings.AddressVersion);
                 return hexScript;
             }
             catch
@@ -380,7 +380,7 @@ namespace Neo.CLI
                     return null;
                 }
 
-                string address = scripthash.ToAddress();
+                string address = scripthash.ToAddress(NeoSystem.Settings.AddressVersion);
                 return address;
             }
             catch

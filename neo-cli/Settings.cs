@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Configuration;
+using Neo.CLI;
 using Neo.Network.P2P;
 using System.Threading;
 
@@ -31,7 +32,8 @@ namespace Neo
             {
                 if (_default == null)
                 {
-                    UpdateDefault(Utility.LoadConfig("config"));
+                    IConfigurationRoot config = new ConfigurationBuilder().AddJsonFile("config.json", optional: true).Build();
+                    Initialize(config);
                 }
 
                 return _default;
@@ -56,7 +58,7 @@ namespace Neo
 
         public LoggerSettings(IConfigurationSection section)
         {
-            this.Path = string.Format(section.GetValue("Path", "Logs_{0}"), ProtocolSettings.Default.Magic.ToString("X8"));
+            this.Path = section.GetValue("Path", "Logs_{0}");
             this.ConsoleOutput = section.GetValue("ConsoleOutput", false);
             this.Active = section.GetValue("Active", false);
         }
