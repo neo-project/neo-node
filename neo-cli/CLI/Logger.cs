@@ -14,17 +14,11 @@ namespace Neo.CLI
         private static readonly ConsoleColorSet WarningColor = new ConsoleColorSet(ConsoleColor.Yellow);
         private static readonly ConsoleColorSet ErrorColor = new ConsoleColorSet(ConsoleColor.Red);
         private static readonly ConsoleColorSet FatalColor = new ConsoleColorSet(ConsoleColor.Red);
-        private readonly uint magic;
 
         public override string Name => "SystemLog";
         public override string Description => "Prints consensus log and is a built-in plugin which cannot be uninstalled";
         public override string ConfigFile => Combine(GetDirectoryName(Path), "config.json");
         public override string Path => GetType().Assembly.Location;
-
-        public Logger(uint magic) : base()
-        {
-            this.magic = magic;
-        }
 
         private static void GetErrorLogs(StringBuilder sb, Exception ex)
         {
@@ -82,20 +76,19 @@ namespace Neo.CLI
 
                 if (!string.IsNullOrEmpty(Settings.Default.Logger.Path))
                 {
-                    string path = string.Format(Settings.Default.Logger.Path, magic.ToString("X8"));
                     StringBuilder sb = new StringBuilder(source);
                     foreach (char c in GetInvalidFileNameChars())
                         sb.Replace(c, '-');
-                    var logPath = Combine(path, sb.ToString());
-                    Directory.CreateDirectory(logPath);
-                    logPath = Combine(logPath, $"{now:yyyy-MM-dd}.log");
+                    var path = Combine(Settings.Default.Logger.Path, sb.ToString());
+                    Directory.CreateDirectory(path);
+                    path = Combine(path, $"{now:yyyy-MM-dd}.log");
                     try
                     {
-                        File.AppendAllLines(logPath, new[] { $"[{level}]{log}" });
+                        File.AppendAllLines(path, new[] { $"[{level}]{log}" });
                     }
                     catch (IOException)
                     {
-                        Console.WriteLine("Error writing the log file: " + logPath);
+                        Console.WriteLine("Error writing the log file: " + path);
                     }
                 }
             }
