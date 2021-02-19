@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using static Neo.Program;
 
 namespace Neo.GUI
@@ -41,7 +42,7 @@ namespace Neo.GUI
         public Transaction GetTransaction()
         {
             byte[] script = textBox6.Text.Trim().HexToBytes();
-            return tx ?? Service.CurrentWallet.MakeTransaction(script);
+            return tx ?? Service.CurrentWallet.MakeTransaction(Service.NeoSystem.StoreView, script);
         }
 
         private void UpdateScript()
@@ -76,7 +77,7 @@ namespace Neo.GUI
                 Script = script,
                 Witnesses = new Witness[0]
             };
-            using ApplicationEngine engine = ApplicationEngine.Run(tx_test.Script, container: tx_test);
+            using ApplicationEngine engine = ApplicationEngine.Run(tx_test.Script, Service.NeoSystem.StoreView, container: tx_test);
             StringBuilder sb = new StringBuilder();
             sb.AppendLine($"VM State: {engine.State}");
             sb.AppendLine($"Gas Consumed: {engine.GasConsumed}");

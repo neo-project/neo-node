@@ -37,7 +37,7 @@ namespace Neo.GUI
         {
             InitializeComponent();
             this.script_hash = script_hash;
-            label1.Text = script_hash.ToAddress();
+            label1.Text = script_hash.ToAddress(Program.Service.NeoSystem.Settings.AddressVersion);
         }
     }
 }
