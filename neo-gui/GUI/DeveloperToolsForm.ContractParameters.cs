@@ -21,7 +21,7 @@ namespace Neo.GUI
             if (listBox1.SelectedIndex < 0) return;
             listBox2.Items.Clear();
             if (Service.CurrentWallet == null) return;
-            UInt160 hash = ((string)listBox1.SelectedItem).ToScriptHash(Program.Service.NeoSystem.Settings.AddressVersion);
+            UInt160 hash = ((string)listBox1.SelectedItem).ToScriptHash(Service.NeoSystem.Settings.AddressVersion);
             var parameters = context.GetParameters(hash);
             if (parameters == null)
             {

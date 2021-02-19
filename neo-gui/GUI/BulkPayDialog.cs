@@ -44,7 +44,7 @@ namespace Neo.GUI
                     AssetName = asset.AssetName,
                     AssetId = asset.AssetId,
                     Value = BigDecimal.Parse(line[1], asset.Decimals),
-                    ScriptHash = line[0].ToScriptHash(Program.Service.NeoSystem.Settings.AddressVersion)
+                    ScriptHash = line[0].ToScriptHash(Service.NeoSystem.Settings.AddressVersion)
                 };
             }).Where(p => p.Value.Value != 0).ToArray();
         }

@@ -32,7 +32,7 @@ namespace Neo.GUI
             }
             if (scriptHash != null)
             {
-                textBox1.Text = scriptHash.ToAddress(Program.Service.NeoSystem.Settings.AddressVersion);
+                textBox1.Text = scriptHash.ToAddress(Service.NeoSystem.Settings.AddressVersion);
                 textBox1.ReadOnly = true;
             }
         }

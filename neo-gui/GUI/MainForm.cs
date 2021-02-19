@@ -192,7 +192,7 @@ namespace Neo.GUI
             check_nep5_balance = false;
             UInt160[] addresses = Service.CurrentWallet.GetAccounts().Select(p => p.ScriptHash).ToArray();
             if (addresses.Length == 0) return;
-            using var snapshot = Program.Service.NeoSystem.GetSnapshot();
+            using var snapshot = Service.NeoSystem.GetSnapshot();
             foreach (UInt160 assetId in NEP5Watched)
             {
                 byte[] script;
@@ -217,7 +217,7 @@ namespace Neo.GUI
                     symbol = NativeContract.GAS.Symbol;
                 if (symbol != null)
                     for (int i = 0; i < addresses.Length; i++)
-                        listView1.Items[addresses[i].ToAddress(Program.Service.NeoSystem.Settings.AddressVersion)].SubItems[symbol].Text = new BigDecimal(balances[i], decimals).ToString();
+                        listView1.Items[addresses[i].ToAddress(Service.NeoSystem.Settings.AddressVersion)].SubItems[symbol].Text = new BigDecimal(balances[i], decimals).ToString();
                 BigInteger amount = balances.Sum();
                 if (amount == 0)
                 {
@@ -473,7 +473,7 @@ namespace Neo.GUI
                     UInt160 scriptHash;
                     try
                     {
-                        scriptHash = address.ToScriptHash(Program.Service.NeoSystem.Settings.AddressVersion);
+                        scriptHash = address.ToScriptHash(Service.NeoSystem.Settings.AddressVersion);
                     }
                     catch (FormatException)
                     {

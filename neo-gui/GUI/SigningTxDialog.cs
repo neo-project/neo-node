@@ -23,7 +23,7 @@ namespace Neo.GUI
                 MessageBox.Show(Strings.SigningFailedNoDataMessage);
                 return;
             }
-            ContractParametersContext context = ContractParametersContext.Parse(textBox1.Text,Service.NeoSystem.StoreView);
+            ContractParametersContext context = ContractParametersContext.Parse(textBox1.Text, Service.NeoSystem.StoreView);
             if (!Service.CurrentWallet.Sign(context))
             {
                 MessageBox.Show(Strings.SigningFailedKeyNotFoundMessage);
