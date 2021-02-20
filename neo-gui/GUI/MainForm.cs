@@ -175,7 +175,7 @@ namespace Neo.GUI
             uint headerHeight = Service.NeoSystem.HeaderCache.Last?.Index ?? height;
 
             lbl_height.Text = $"{height}/{headerHeight}";
-            lbl_count_node.Text = Service.localNode.ConnectedCount.ToString();
+            lbl_count_node.Text = Service.LocalNode.ConnectedCount.ToString();
             TimeSpan persistence_span = DateTime.UtcNow - persistence_time;
             if (persistence_span < TimeSpan.Zero) persistence_span = TimeSpan.Zero;
             if (persistence_span > Service.NeoSystem.Settings.TimePerBlock)
