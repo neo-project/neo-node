@@ -21,7 +21,7 @@ namespace Neo.GUI
             if (listBox1.SelectedIndex < 0) return;
             listBox2.Items.Clear();
             if (Service.CurrentWallet == null) return;
-            UInt160 hash = ((string)listBox1.SelectedItem).ToScriptHash();
+            UInt160 hash = ((string)listBox1.SelectedItem).ToScriptHash(Service.NeoSystem.Settings.AddressVersion);
             var parameters = context.GetParameters(hash);
             if (parameters == null)
             {
@@ -53,7 +53,7 @@ namespace Neo.GUI
             if (string.IsNullOrEmpty(input)) return;
             try
             {
-                context = ContractParametersContext.Parse(input);
+                context = ContractParametersContext.Parse(input, Service.NeoSystem.StoreView);
             }
             catch (FormatException ex)
             {
@@ -64,7 +64,7 @@ namespace Neo.GUI
             listBox2.Items.Clear();
             textBox1.Clear();
             textBox2.Clear();
-            listBox1.Items.AddRange(context.ScriptHashes.Select(p => p.ToAddress()).ToArray());
+            listBox1.Items.AddRange(context.ScriptHashes.Select(p => p.ToAddress(Service.NeoSystem.Settings.AddressVersion)).ToArray());
             button2.Enabled = true;
             button4.Visible = context.Completed;
         }

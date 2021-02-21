@@ -41,7 +41,7 @@ namespace Neo.GUI
             ContractParametersContext context;
             try
             {
-                context = new ContractParametersContext(tx);
+                context = new ContractParametersContext(Service.NeoSystem.StoreView, tx);
             }
             catch (InvalidOperationException)
             {
