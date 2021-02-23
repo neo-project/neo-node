@@ -38,7 +38,7 @@ namespace Neo.GUI
         {
             InitializeComponent();
 
-            toolStripProgressBar1.Maximum = (int)Blockchain.TimePerBlock.TotalSeconds;
+            toolStripProgressBar1.Maximum = (int)Service.NeoSystem.Settings.TimePerBlock.TotalSeconds;
 
             if (xdoc != null)
             {
@@ -150,7 +150,7 @@ namespace Neo.GUI
             foreach (ListViewItem item in listView3.Items)
             {
                 uint? height = item.Tag as uint?;
-                int? confirmations = (int)NativeContract.Ledger.CurrentIndex(Blockchain.Singleton.View) - (int?)height + 1;
+                int? confirmations = (int)NativeContract.Ledger.CurrentIndex(Service.NeoSystem.StoreView) - (int?)height + 1;
                 if (confirmations <= 0) confirmations = null;
                 item.SubItems["confirmations"].Text = confirmations?.ToString() ?? Strings.Unconfirmed;
             }
@@ -159,26 +159,26 @@ namespace Neo.GUI
         private void MainForm_Load(object sender, EventArgs e)
         {
             actor = Service.NeoSystem.ActorSystem.ActorOf(EventWrapper<Blockchain.PersistCompleted>.Props(Blockchain_PersistCompleted));
-            Service.WalletOpened += Service_WalletChanged;
+            Service.WalletChanged += Service_WalletChanged;
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             if (actor != null)
                 Service.NeoSystem.ActorSystem.Stop(actor);
-            Service.WalletOpened -= Service_WalletChanged;
+            Service.WalletChanged -= Service_WalletChanged;
         }
 
         private void timer1_Tick(object sender, EventArgs e)
         {
-            uint height = NativeContract.Ledger.CurrentIndex(Blockchain.Singleton.View);
-            uint headerHeight = Blockchain.Singleton.HeaderCache.Last?.Index ?? height;
+            uint height = NativeContract.Ledger.CurrentIndex(Service.NeoSystem.StoreView);
+            uint headerHeight = Service.NeoSystem.HeaderCache.Last?.Index ?? height;
 
             lbl_height.Text = $"{height}/{headerHeight}";
-            lbl_count_node.Text = LocalNode.Singleton.ConnectedCount.ToString();
+            lbl_count_node.Text = Service.LocalNode.ConnectedCount.ToString();
             TimeSpan persistence_span = DateTime.UtcNow - persistence_time;
             if (persistence_span < TimeSpan.Zero) persistence_span = TimeSpan.Zero;
-            if (persistence_span > Blockchain.TimePerBlock)
+            if (persistence_span > Service.NeoSystem.Settings.TimePerBlock)
             {
                 toolStripProgressBar1.Style = ProgressBarStyle.Marquee;
             }
@@ -192,7 +192,7 @@ namespace Neo.GUI
             check_nep5_balance = false;
             UInt160[] addresses = Service.CurrentWallet.GetAccounts().Select(p => p.ScriptHash).ToArray();
             if (addresses.Length == 0) return;
-            using var snapshot = Blockchain.Singleton.GetSnapshot();
+            using var snapshot = Service.NeoSystem.GetSnapshot();
             foreach (UInt160 assetId in NEP5Watched)
             {
                 byte[] script;
@@ -217,7 +217,7 @@ namespace Neo.GUI
                     symbol = NativeContract.GAS.Symbol;
                 if (symbol != null)
                     for (int i = 0; i < addresses.Length; i++)
-                        listView1.Items[addresses[i].ToAddress()].SubItems[symbol].Text = new BigDecimal(balances[i], decimals).ToString();
+                        listView1.Items[addresses[i].ToAddress(Service.NeoSystem.Settings.AddressVersion)].SubItems[symbol].Text = new BigDecimal(balances[i], decimals).ToString();
                 BigInteger amount = balances.Sum();
                 if (amount == 0)
                 {
@@ -473,7 +473,7 @@ namespace Neo.GUI
                     UInt160 scriptHash;
                     try
                     {
-                        scriptHash = address.ToScriptHash();
+                        scriptHash = address.ToScriptHash(Service.NeoSystem.Settings.AddressVersion);
                     }
                     catch (FormatException)
                     {

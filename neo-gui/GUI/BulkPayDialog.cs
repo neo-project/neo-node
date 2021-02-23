@@ -17,7 +17,7 @@ namespace Neo.GUI
                 {
                     try
                     {
-                        comboBox1.Items.Add(new AssetDescriptor(assetId));
+                        comboBox1.Items.Add(new AssetDescriptor(Service.NeoSystem.StoreView, Service.NeoSystem.Settings, assetId));
                     }
                     catch (ArgumentException)
                     {
@@ -44,7 +44,7 @@ namespace Neo.GUI
                     AssetName = asset.AssetName,
                     AssetId = asset.AssetId,
                     Value = BigDecimal.Parse(line[1], asset.Decimals),
-                    ScriptHash = line[0].ToScriptHash()
+                    ScriptHash = line[0].ToScriptHash(Service.NeoSystem.Settings.AddressVersion)
                 };
             }).Where(p => p.Value.Value != 0).ToArray();
         }
@@ -53,7 +53,7 @@ namespace Neo.GUI
         {
             if (comboBox1.SelectedItem is AssetDescriptor asset)
             {
-                textBox3.Text = Service.CurrentWallet.GetAvailable(asset.AssetId).ToString();
+                textBox3.Text = Service.CurrentWallet.GetAvailable(Service.NeoSystem.StoreView, asset.AssetId).ToString();
             }
             else
             {

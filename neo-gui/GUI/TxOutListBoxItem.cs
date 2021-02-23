@@ -8,7 +8,7 @@ namespace Neo.GUI
 
         public override string ToString()
         {
-            return $"{ScriptHash.ToAddress()}\t{Value}\t{AssetName}";
+            return $"{ScriptHash.ToAddress(Program.Service.NeoSystem.Settings.AddressVersion)}\t{Value}\t{AssetName}";
         }
     }
 }
