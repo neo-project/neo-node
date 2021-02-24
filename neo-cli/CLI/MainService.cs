@@ -404,6 +404,10 @@ namespace Neo.CLI
                 {
                     Console.WriteLine($"Failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
                 }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"error: {ex.GetBaseException().Message}");
+                }
             }
         }
 
