@@ -16,14 +16,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Update="config.json;config.mainnet.json;config.testnet.json;protocol.json;protocol.mainnet.json;protocol.testnet.json">
+    <None Update="config.json;config.mainnet.json;config.testnet.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </None>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Neo" Version="3.0.0-CI01229" />
+    <PackageReference Include="Neo" Version="3.0.0-CI01232" />
   </ItemGroup>
 
   <ItemGroup>
