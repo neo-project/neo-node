@@ -354,8 +354,6 @@ namespace Neo.CLI
 
             NeoSystem.AddService(this);
 
-            LocalNode = await NeoSystem.LocalNode.Ask<LocalNode>(new LocalNode.GetInstance());
-
             foreach (var plugin in Plugin.Plugins)
             {
                 // Register plugins commands
@@ -390,6 +388,9 @@ namespace Neo.CLI
                 MaxConnections = Settings.Default.P2P.MaxConnections,
                 MaxConnectionsPerAddress = Settings.Default.P2P.MaxConnectionsPerAddress
             });
+
+            LocalNode = await NeoSystem.LocalNode.Ask<LocalNode>(new LocalNode.GetInstance());
+
             if (Settings.Default.UnlockWallet.IsActive)
             {
                 try
