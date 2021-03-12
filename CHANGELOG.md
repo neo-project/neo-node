@@ -86,3 +86,16 @@ All notable changes to this project will be documented in this file.
 - ([#715](https://github.com/neo-project/neo-node/pull/715)) Fix Dockerfile
 - ([#713](https://github.com/neo-project/neo-node/pull/713)) Update MainService.Plugins.cs
 - ([#704](https://github.com/neo-project/neo-node/pull/704)) Avoid register candidate for others
+
+## [3.0.0.preview5] - [3.0.0.RC1]
+
+### Changed
+- ([#753](https://github.com/neo-project/neo-node/pull/753)) Combine config.json and protocol.json
+- ([#752](https://github.com/neo-project/neo-node/pull/752)) update neo to v3.0.0-CI01229
+- ([#748](https://github.com/neo-project/neo-node/pull/748)) sync neo changes
+- ([#743](https://github.com/neo-project/neo-node/pull/743)) sync neo
+- ([#740](https://github.com/neo-project/neo-node/pull/740)) remove singletons
+
+### Fixed
+- ([#750](https://github.com/neo-project/neo-node/pull/750)) Fix autostart
+- ([#749](https://github.com/neo-project/neo-node/pull/749)) fix log path
