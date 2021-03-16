@@ -71,7 +71,6 @@ namespace Neo.CLI
                     uint headerHeight = NeoSystem.HeaderCache.Last?.Index ?? height;
 
                     Console.SetCursorPosition(0, 0);
-                    LocalNode ??= await NeoSystem.LocalNode.Ask<LocalNode>(new LocalNode.GetInstance());
                     WriteLineWithoutFlicker($"block: {height}/{headerHeight}  connected: {LocalNode.ConnectedCount}  unconnected: {LocalNode.UnconnectedCount}", Console.WindowWidth - 1);
 
                     int linesWritten = 1;
