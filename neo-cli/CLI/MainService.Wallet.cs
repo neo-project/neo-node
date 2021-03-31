@@ -426,16 +426,14 @@ namespace Neo.CLI
             {
                 var snapshot = NeoSystem.StoreView;
                 ContractParametersContext context = ContractParametersContext.Parse(jsonObjectToSign.ToString(), snapshot);
-                if (!CurrentWallet.Sign(context))
+                if (context.Network != neoSystem.Settings.Network)
                 {
-                    if (context.Network != neoSystem.Settings.Network)
-                    {
-                        Console.WriteLine("Network mismatch");
-                    }
-                    else
-                    {
-                        Console.WriteLine("Non-existent private key in wallet.");
-                    }
+                    Console.WriteLine("Network mismatch");
+                    return;
+                }
+                else if (!CurrentWallet.Sign(context))
+                {
+                    Console.WriteLine("Non-existent private key in wallet.");
                     return;
                 }
                 Console.WriteLine($"Signed Output:{Environment.NewLine}{context}");
