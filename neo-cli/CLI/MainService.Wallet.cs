@@ -426,9 +426,14 @@ namespace Neo.CLI
             {
                 var snapshot = NeoSystem.StoreView;
                 ContractParametersContext context = ContractParametersContext.Parse(jsonObjectToSign.ToString(), snapshot);
-                if (!CurrentWallet.Sign(context))
+                if (context.Network != neoSystem.Settings.Network)
                 {
-                    Console.WriteLine("The private key that can sign the data is not found.");
+                    Console.WriteLine("Network mismatch.");
+                    return;
+                }
+                else if (!CurrentWallet.Sign(context))
+                {
+                    Console.WriteLine("Non-existent private key in wallet.");
                     return;
                 }
                 Console.WriteLine($"Signed Output:{Environment.NewLine}{context}");
@@ -501,7 +506,7 @@ namespace Neo.CLI
                 return;
             }
 
-            ContractParametersContext context = new ContractParametersContext(snapshot, tx);
+            ContractParametersContext context = new ContractParametersContext(snapshot, tx, neoSystem.Settings.Network);
             CurrentWallet.Sign(context);
             if (context.Completed)
             {
@@ -594,7 +599,7 @@ namespace Neo.CLI
             ContractParametersContext context;
             try
             {
-                context = new ContractParametersContext(snapshot, tx);
+                context = new ContractParametersContext(snapshot, tx, neoSystem.Settings.Network);
             }
             catch (InvalidOperationException e)
             {
