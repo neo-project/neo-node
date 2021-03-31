@@ -428,7 +428,7 @@ namespace Neo.CLI
                 ContractParametersContext context = ContractParametersContext.Parse(jsonObjectToSign.ToString(), snapshot);
                 if (context.Network != neoSystem.Settings.Network)
                 {
-                    Console.WriteLine("Network mismatch");
+                    Console.WriteLine("Network mismatch.");
                     return;
                 }
                 else if (!CurrentWallet.Sign(context))
