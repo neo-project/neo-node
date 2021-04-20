@@ -54,6 +54,11 @@ namespace Neo.CLI
         {
             var gas = new BigDecimal(maxGas, NativeContract.GAS.Decimals);
             Signer[] signers = Array.Empty<Signer>();
+            if (sender != null && signerAccounts == null)
+            {
+                signerAccounts = new UInt160[1]{ sender };
+            }
+
             if (signerAccounts != null && !NoWallet())
             {
                 if (sender != null)
