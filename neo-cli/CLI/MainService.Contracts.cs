@@ -99,7 +99,7 @@ namespace Neo.CLI
             }
             else
             {
-                Console.WriteLine($"Contract hash: {scriptHash}") ;
+                Console.WriteLine($"Contract hash: {scriptHash}");
                 Console.WriteLine($"Updated times: {contract.UpdateCounter}");
                 Console.WriteLine($"Gas consumed: {new BigDecimal((BigInteger)tx.SystemFee, NativeContract.GAS.Decimals)}");
                 Console.WriteLine($"NetFee: {new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)}");
@@ -109,7 +109,7 @@ namespace Neo.CLI
                     return;
                 }
                 SignAndSendTx(NeoSystem.StoreView, tx);
-            } 
+            }
         }
 
         /// <summary>
