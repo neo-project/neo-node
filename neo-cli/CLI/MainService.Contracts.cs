@@ -52,7 +52,7 @@ namespace Neo.CLI
         /// <param name="filePath">File path</param>
         /// <param name="manifestPath">Manifest path</param>
         [ConsoleCommand("update", Category = "Contract Commands")]
-        private void OnUpdateCommand(UInt160 scriptHash, string filePath, string manifestPath, UInt160 sender, UInt160[] signerAccounts)
+        private void OnUpdateCommand(UInt160 scriptHash, string filePath, string manifestPath, UInt160 sender, UInt160[] signerAccounts = null)
         {
             Signer[] signers = Array.Empty<Signer>();
 
