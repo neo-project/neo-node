@@ -73,18 +73,17 @@ namespace Neo.CLI
                 }
                 signers = signerAccounts.Select(p => new Signer() { Account = p, Scopes = WitnessScope.CalledByEntry }).ToArray();
             }
-            byte[] script = LoadUpdateScript(scriptHash, filePath, manifestPath, out var nef, out var manifest);
 
             Transaction tx = new Transaction
             {
                 Signers = signers,
                 Attributes = Array.Empty<TransactionAttribute>(),
-                Witnesses = Array.Empty<Witness>(),
-                Script = script
+                Witnesses = Array.Empty<Witness>()
             };
 
             try
             {
+                byte[] script = LoadUpdateScript(scriptHash, filePath, manifestPath, out var nef, out var manifest);
                 tx = CurrentWallet.MakeTransaction(NeoSystem.StoreView, script, sender, signers);
             }
             catch (InvalidOperationException e)
