@@ -73,7 +73,7 @@ namespace Neo.CLI
                 }
                 signers = signerAccounts.Select(p => new Signer() { Account = p, Scopes = WitnessScope.CalledByEntry }).ToArray();
             }
-            byte[] script = LoadUpdateScript(scriptHash, filePath, manifestPath,  out var nef, out var manifest);
+            byte[] script = LoadUpdateScript(scriptHash, filePath, manifestPath, out var nef, out var manifest);
 
             Transaction tx = new Transaction
             {
