@@ -52,7 +52,7 @@ namespace Neo.CLI
         /// <param name="filePath">File path</param>
         /// <param name="manifestPath">Manifest path</param>
         [ConsoleCommand("update", Category = "Contract Commands")]
-        private void OnUpdateCommand(UInt160 scriptHash, string filePath, string manifestPath = null, UInt160 sender = null, UInt160[] signerAccounts = null)
+        private void OnUpdateCommand(UInt160 scriptHash, string filePath, string manifestPath, UInt160 sender, UInt160[] signerAccounts)
         {
             Signer[] signers = Array.Empty<Signer>();
 
@@ -73,13 +73,14 @@ namespace Neo.CLI
                 }
                 signers = signerAccounts.Select(p => new Signer() { Account = p, Scopes = WitnessScope.CalledByEntry }).ToArray();
             }
-            byte[] script = LoadUpdateScript(scriptHash, filePath, manifestPath, out var nef, out var manifest);
+            byte[] script = LoadUpdateScript(scriptHash, filePath, manifestPath,  out var nef, out var manifest);
 
             Transaction tx = new Transaction
             {
                 Signers = signers,
                 Attributes = Array.Empty<TransactionAttribute>(),
                 Witnesses = Array.Empty<Witness>(),
+                Script = script
             };
 
             try
