@@ -72,26 +72,7 @@ namespace Neo.CLI
         /// </summary>
         public MainService() : base()
         {
-            RegisterCommandHander<string, UInt160>(false, (str) =>
-            {
-                switch (str.ToLowerInvariant())
-                {
-                    case "neo": return NativeContract.NEO.Hash;
-                    case "gas": return NativeContract.GAS.Hash;
-                }
-
-                // Try to parse as UInt160
-
-                if (UInt160.TryParse(str, out var addr))
-                {
-                    return addr;
-                }
-
-                // Accept wallet format
-
-                return str.ToScriptHash(NeoSystem.Settings.AddressVersion);
-            });
-
+            RegisterCommandHander<string, UInt160>(false, (str) => StringToAddress(str, NeoSystem.Settings.AddressVersion));
             RegisterCommandHander<string, UInt256>(false, (str) => UInt256.Parse(str));
             RegisterCommandHander<string[], UInt256[]>((str) => str.Select(u => UInt256.Parse(u.Trim())).ToArray());
             RegisterCommandHander<string[], UInt160[]>((arr) => arr.Select(str => StringToAddress(str, NeoSystem.Settings.AddressVersion)).ToArray());
