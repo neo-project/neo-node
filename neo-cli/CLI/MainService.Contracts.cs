@@ -1,6 +1,7 @@
 using Neo.ConsoleService;
 using Neo.IO.Json;
 using Neo.Network.P2P.Payloads;
+using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using System;
 using System.Linq;
@@ -35,9 +36,80 @@ namespace Neo.CLI
             UInt160 hash = SmartContract.Helper.GetContractHash(tx.Sender, nef.CheckSum, manifest.Name);
 
             Console.WriteLine($"Contract hash: {hash}");
-            Console.WriteLine($"Gas: {new BigDecimal((BigInteger)tx.SystemFee, NativeContract.GAS.Decimals)}");
-            Console.WriteLine();
+            Console.WriteLine($"Gas consumed: {new BigDecimal((BigInteger)tx.SystemFee, NativeContract.GAS.Decimals)}");
+            Console.WriteLine($"Network fee: {new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)}");
+            Console.WriteLine($"Total fee: {new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
+            if (!ReadUserInput("Relay tx? (no|yes)").IsYes()) // Add this in case just want to get hash but not relay
+            {
+                return;
+            }
             SignAndSendTx(NeoSystem.StoreView, tx);
+        }
+
+        /// <summary>
+        /// Process "update" command
+        /// </summary>
+        /// <param name="filePath">File path</param>
+        /// <param name="manifestPath">Manifest path</param>
+        [ConsoleCommand("update", Category = "Contract Commands")]
+        private void OnUpdateCommand(UInt160 scriptHash, string filePath, string manifestPath, UInt160 sender, UInt160[] signerAccounts = null)
+        {
+            Signer[] signers = Array.Empty<Signer>();
+
+            if (NoWallet()) return;
+            if (!NoWallet() && sender != null)
+            {
+                if (signerAccounts == null)
+                    signerAccounts = new UInt160[1] { sender };
+                else if (signerAccounts.Contains(sender) && signerAccounts[0] != sender)
+                {
+                    var signersList = signerAccounts.ToList();
+                    signersList.Remove(sender);
+                    signerAccounts = signersList.Prepend(sender).ToArray();
+                }
+                else if (!signerAccounts.Contains(sender))
+                {
+                    signerAccounts = signerAccounts.Prepend(sender).ToArray();
+                }
+                signers = signerAccounts.Select(p => new Signer() { Account = p, Scopes = WitnessScope.CalledByEntry }).ToArray();
+            }
+
+            Transaction tx = new Transaction
+            {
+                Signers = signers,
+                Attributes = Array.Empty<TransactionAttribute>(),
+                Witnesses = Array.Empty<Witness>()
+            };
+
+            try
+            {
+                byte[] script = LoadUpdateScript(scriptHash, filePath, manifestPath, out var nef, out var manifest);
+                tx = CurrentWallet.MakeTransaction(NeoSystem.StoreView, script, sender, signers);
+            }
+            catch (InvalidOperationException e)
+            {
+                Console.WriteLine("Error: " + GetExceptionMessage(e));
+                return;
+            }
+
+            ContractState contract = NativeContract.ContractManagement.GetContract(NeoSystem.StoreView, scriptHash);
+            if (contract == null)
+            {
+                Console.WriteLine($"Can't upgrade, contract hash not exist: {scriptHash}");
+            }
+            else
+            {
+                Console.WriteLine($"Contract hash: {scriptHash}");
+                Console.WriteLine($"Updated times: {contract.UpdateCounter}");
+                Console.WriteLine($"Gas consumed: {new BigDecimal((BigInteger)tx.SystemFee, NativeContract.GAS.Decimals)}");
+                Console.WriteLine($"Network fee: {new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)}");
+                Console.WriteLine($"Total fee: {new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
+                if (!ReadUserInput("Relay tx? (no|yes)").IsYes()) // Add this in case just want to get hash but not relay
+                {
+                    return;
+                }
+                SignAndSendTx(NeoSystem.StoreView, tx);
+            }
         }
 
         /// <summary>
@@ -90,7 +162,9 @@ namespace Neo.CLI
                 Console.WriteLine("Error: " + GetExceptionMessage(e));
                 return;
             }
-            if (!ReadUserInput("Relay tx(no|yes)").IsYes())
+            Console.WriteLine($"Network fee: {new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)}");
+            Console.WriteLine($"Total fee: {new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
+            if (!ReadUserInput("Relay tx? (no|yes)").IsYes())
             {
                 return;
             }

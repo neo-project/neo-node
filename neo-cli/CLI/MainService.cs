@@ -279,6 +279,60 @@ namespace Neo.CLI
             }
         }
 
+        private byte[] LoadUpdateScript(UInt160 scriptHash, string nefFilePath, string manifestFilePath, out NefFile nef, out ContractManifest manifest)
+        {
+            if (string.IsNullOrEmpty(manifestFilePath))
+            {
+                manifestFilePath = Path.ChangeExtension(nefFilePath, ".manifest.json");
+            }
+
+            // Read manifest
+
+            var info = new FileInfo(manifestFilePath);
+            if (!info.Exists || info.Length >= Transaction.MaxTransactionSize)
+            {
+                throw new ArgumentException(nameof(manifestFilePath));
+            }
+
+            manifest = ContractManifest.Parse(File.ReadAllBytes(manifestFilePath));
+
+            // Read nef
+
+            info = new FileInfo(nefFilePath);
+            if (!info.Exists || info.Length >= Transaction.MaxTransactionSize)
+            {
+                throw new ArgumentException(nameof(nefFilePath));
+            }
+
+            using (var stream = new BinaryReader(File.OpenRead(nefFilePath), Utility.StrictUTF8, false))
+            {
+                nef = stream.ReadSerializable<NefFile>();
+            }
+
+            // Basic script checks
+
+            Script script = new Script(nef.Script);
+            for (var i = 0; i < script.Length;)
+            {
+                // Check bad opcodes
+
+                Instruction inst = script.GetInstruction(i);
+                if (inst is null || !Enum.IsDefined(typeof(OpCode), inst.OpCode))
+                {
+                    throw new FormatException($"OpCode not found at {i}-{((byte)inst.OpCode).ToString("x2")}");
+                }
+                i += inst.Size;
+            }
+
+            // Build script
+
+            using (ScriptBuilder sb = new ScriptBuilder())
+            {
+                sb.EmitDynamicCall(scriptHash, "update", nef.ToArray(), manifest.ToJson().ToString());
+                return sb.ToArray();
+            }
+        }
+
         public override void OnStart(string[] args)
         {
             base.OnStart(args);
