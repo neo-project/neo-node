@@ -120,6 +120,29 @@ namespace Neo.CLI
         }
 
         /// <summary>
+        /// Process "unvote" command
+        /// </summary>  
+        /// <param name="senderAccount">Sender account</param>
+        [ConsoleCommand("unvote", Category = "Vote Commands")]
+        private void OnUnvoteCommand(UInt160 senderAccount)
+        {
+            if (NoWallet())
+            {
+                Console.WriteLine("Need open wallet!");
+                return;
+            }
+
+            byte[] script;
+            using (ScriptBuilder scriptBuilder = new ScriptBuilder())
+            {
+                scriptBuilder.EmitDynamicCall(NativeContract.NEO.Hash, "vote", senderAccount, null);
+                script = scriptBuilder.ToArray();
+            }
+
+            SendTransaction(script, senderAccount);
+        }
+
+        /// <summary>
         /// Process "get candidates"
         /// </summary>
         [ConsoleCommand("get candidates", Category = "Vote Commands")]
