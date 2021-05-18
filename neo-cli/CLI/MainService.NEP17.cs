@@ -19,9 +19,10 @@ namespace Neo.CLI
         /// <param name="to">To</param>
         /// <param name="amount">Ammount</param>
         /// <param name="from">From</param>
+        /// <param name="data">Data</param>
         /// <param name="signersAccounts">Signer's accounts</param>
         [ConsoleCommand("transfer", Category = "NEP17 Commands")]
-        private void OnTransferCommand(UInt160 tokenHash, UInt160 to, decimal amount, string data = null, UInt160 from = null, UInt160[] signersAccounts = null)
+        private void OnTransferCommand(UInt160 tokenHash, UInt160 to, decimal amount, UInt160 from = null, string data = null, UInt160[] signersAccounts = null)
         {
             var snapshot = NeoSystem.StoreView;
             var asset = new AssetDescriptor(snapshot, NeoSystem.Settings, tokenHash);
