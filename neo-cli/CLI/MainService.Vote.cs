@@ -229,11 +229,10 @@ namespace Neo.CLI
             if (resJArray.Count > 0)
             {
                 Console.WriteLine();
-                Console.WriteLine("Voted:");
                 var publickey = ECPoint.Parse(((ByteString)resJArray?[2])?.GetSpan().ToHexString(), ECCurve.Secp256r1);
-                Console.Write(Contract.CreateSignatureRedeemScript(publickey).ToScriptHash().ToAddress(NeoSystem.Settings.AddressVersion) + "\t");
-                Console.Write(new BigDecimal(((Integer)resJArray?[0]).GetInteger(), NativeContract.NEO.Decimals) + "\t\t");
-                Console.WriteLine("block: " + ((Integer)resJArray?[1]).GetInteger());
+                Console.WriteLine("Voted: " + Contract.CreateSignatureRedeemScript(publickey).ToScriptHash().ToAddress(NeoSystem.Settings.AddressVersion));
+                Console.WriteLine("Amount: " + new BigDecimal(((Integer)resJArray?[0]).GetInteger(), NativeContract.NEO.Decimals));
+                Console.WriteLine("Block: " + ((Integer)resJArray?[1]).GetInteger());
             }
         }
     }
