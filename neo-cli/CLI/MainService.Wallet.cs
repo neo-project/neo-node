@@ -451,9 +451,10 @@ namespace Neo.CLI
         /// <param name="to">To</param>
         /// <param name="amount">Amount</param>
         /// <param name="from">From</param>
+        /// <param name="data">Data</param>
         /// <param name="signerAccounts">Signer's accounts</param>
         [ConsoleCommand("send", Category = "Wallet Commands")]
-        private void OnSendCommand(UInt160 asset, UInt160 to, string amount, string data = null, UInt160 from = null, UInt160[] signerAccounts = null)
+        private void OnSendCommand(UInt160 asset, UInt160 to, string amount, UInt160 from = null, string data = null, UInt160[] signerAccounts = null)
         {
             if (NoWallet()) return;
             string password = ReadUserInput("password", true);
