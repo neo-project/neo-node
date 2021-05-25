@@ -214,7 +214,7 @@ namespace Neo.CLI
         }
 
         /// <summary>
-        /// Process "get next validators"
+        /// Process "get accountstate"
         /// </summary>
         [ConsoleCommand("get accountstate", Category = "Vote Commands")]
         private void OnGetAccountState(UInt160 address)
