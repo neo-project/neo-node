@@ -1,6 +1,8 @@
 using Neo.ConsoleService;
 using Neo.Cryptography.ECC;
+using Neo.IO.Json;
 using Neo.SmartContract.Native;
+using Neo.SmartContract;
 using Neo.VM;
 using Neo.VM.Types;
 using Neo.Wallets;
@@ -208,6 +210,29 @@ namespace Neo.CLI
                 {
                     Console.WriteLine(((ByteString)item)?.GetSpan().ToHexString());
                 }
+            }
+        }
+
+        /// <summary>
+        /// Process "get accountstate"
+        /// </summary>
+        [ConsoleCommand("get accountstate", Category = "Vote Commands")]
+        private void OnGetAccountState(UInt160 address)
+        {
+            var arg = new JObject();
+            arg["type"] = "Hash160";
+            arg["value"] = address.ToString();
+
+            if (!OnInvokeWithResult(NativeContract.NEO.Hash, "getAccountState", out StackItem result, null, new JArray(arg))) return;
+
+            var resJArray = (VM.Types.Array)result;
+            if (resJArray.Count > 0)
+            {
+                Console.WriteLine();
+                var publickey = ECPoint.Parse(((ByteString)resJArray?[2])?.GetSpan().ToHexString(), ECCurve.Secp256r1);
+                Console.WriteLine("Voted: " + Contract.CreateSignatureRedeemScript(publickey).ToScriptHash().ToAddress(NeoSystem.Settings.AddressVersion));
+                Console.WriteLine("Amount: " + new BigDecimal(((Integer)resJArray?[0]).GetInteger(), NativeContract.NEO.Decimals));
+                Console.WriteLine("Block: " + ((Integer)resJArray?[1]).GetInteger());
             }
         }
     }
