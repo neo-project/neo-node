@@ -615,7 +615,11 @@ namespace Neo.CLI
                 Console.WriteLine($"Signed and relayed transaction with hash={tx.Hash}");
                 return;
             }
-            Console.WriteLine($"Failed sending transaction with hash={tx.Hash}");
+            else
+            {
+                Console.WriteLine("Incomplete SignatureContext:");
+                Console.WriteLine(context.ToString());
+            }
         }
     }
 }
