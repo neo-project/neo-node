@@ -613,9 +613,12 @@ namespace Neo.CLI
                 tx.Witnesses = context.GetWitnesses();
                 NeoSystem.Blockchain.Tell(tx);
                 Console.WriteLine($"Signed and relayed transaction with hash={tx.Hash}");
-                return;
             }
-            Console.WriteLine($"Failed sending transaction with hash={tx.Hash}");
+            else
+            {
+                Console.WriteLine("Incomplete signature:");
+                Console.WriteLine(context.ToString());
+            }
         }
     }
 }
