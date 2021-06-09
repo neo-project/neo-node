@@ -613,11 +613,10 @@ namespace Neo.CLI
                 tx.Witnesses = context.GetWitnesses();
                 NeoSystem.Blockchain.Tell(tx);
                 Console.WriteLine($"Signed and relayed transaction with hash={tx.Hash}");
-                return;
             }
             else
             {
-                Console.WriteLine("Incomplete SignatureContext:");
+                Console.WriteLine("Incomplete signature:");
                 Console.WriteLine(context.ToString());
             }
         }
