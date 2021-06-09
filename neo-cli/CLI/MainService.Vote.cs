@@ -7,22 +7,21 @@ using Neo.VM;
 using Neo.VM.Types;
 using Neo.Wallets;
 using System;
+using System.Numerics;
 
 namespace Neo.CLI
 {
     partial class MainService
     {
-        public const uint RegisterGas = 1010;
-
         /// <summary>
         /// Process "register candidate" command
         /// </summary>
         /// <param name="account">register account scriptHash</param>
         /// <param name="maxGas">Max fee for running the script</param>
         [ConsoleCommand("register candidate", Category = "Vote Commands")]
-        private void OnRegisterCandidateCommand(UInt160 account, decimal maxGas = RegisterGas)
+        private void OnRegisterCandidateCommand(UInt160 account)
         {
-            var gas = new BigDecimal(maxGas, NativeContract.GAS.Decimals);
+            var gas = NativeContract.NEO.GetRegisterPrice(NeoSystem.StoreView) + (BigInteger)Math.Pow(10, NativeContract.GAS.Decimals) * 10;
 
             if (NoWallet())
             {
@@ -54,7 +53,7 @@ namespace Neo.CLI
                 script = scriptBuilder.ToArray();
             }
 
-            SendTransaction(script, account, (long)gas.Value);
+            SendTransaction(script, account, (long)gas);
         }
 
         /// <summary>
@@ -226,6 +225,15 @@ namespace Neo.CLI
             if (!OnInvokeWithResult(NativeContract.NEO.Hash, "getAccountState", out StackItem result, null, new JArray(arg))) return;
 
             var resJArray = (VM.Types.Array)result;
+            foreach (StackItem item in resJArray)
+            {
+                if (item.IsNull)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("Notice: No vote record!");
+                    return;
+                }
+            }
             if (resJArray.Count > 0)
             {
                 Console.WriteLine();
