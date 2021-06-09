@@ -617,7 +617,7 @@ namespace Neo.CLI
             }
             else
             {
-                Console.WriteLine("Incomplete SignatureContext:");
+                Console.WriteLine("Incomplete signature:");
                 Console.WriteLine(context.ToString());
             }
         }
