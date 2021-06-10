@@ -223,20 +223,23 @@ namespace Neo.CLI
             arg["value"] = address.ToString();
 
             if (!OnInvokeWithResult(NativeContract.NEO.Hash, "getAccountState", out StackItem result, null, new JArray(arg))) return;
-
-            var resJArray = (VM.Types.Array)result;
-            foreach (StackItem item in resJArray)
+            Console.WriteLine();
+            if (result.IsNull)
             {
-                if (item.IsNull)
+                Console.WriteLine("Notice: No vote record!");
+                return;
+            }
+            var resJArray = (VM.Types.Array)result;
+            foreach (StackItem value in resJArray)
+            {
+                if (value.IsNull)
                 {
-                    Console.WriteLine();
                     Console.WriteLine("Notice: No vote record!");
                     return;
                 }
             }
             if (resJArray.Count > 0)
             {
-                Console.WriteLine();
                 var publickey = ECPoint.Parse(((ByteString)resJArray?[2])?.GetSpan().ToHexString(), ECCurve.Secp256r1);
                 Console.WriteLine("Voted: " + Contract.CreateSignatureRedeemScript(publickey).ToScriptHash().ToAddress(NeoSystem.Settings.AddressVersion));
                 Console.WriteLine("Amount: " + new BigDecimal(((Integer)resJArray?[0]).GetInteger(), NativeContract.NEO.Decimals));
