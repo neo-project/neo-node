@@ -239,13 +239,10 @@ namespace Neo.CLI
                     return;
                 }
             }
-            if (resJArray.Count > 0)
-            {
-                var publickey = ECPoint.Parse(((ByteString)resJArray?[2])?.GetSpan().ToHexString(), ECCurve.Secp256r1);
-                Console.WriteLine("Voted: " + Contract.CreateSignatureRedeemScript(publickey).ToScriptHash().ToAddress(NeoSystem.Settings.AddressVersion));
-                Console.WriteLine("Amount: " + new BigDecimal(((Integer)resJArray?[0]).GetInteger(), NativeContract.NEO.Decimals));
-                Console.WriteLine("Block: " + ((Integer)resJArray?[1]).GetInteger());
-            }
+            var publickey = ECPoint.Parse(((ByteString)resJArray?[2])?.GetSpan().ToHexString(), ECCurve.Secp256r1);
+            Console.WriteLine("Voted: " + Contract.CreateSignatureRedeemScript(publickey).ToScriptHash().ToAddress(NeoSystem.Settings.AddressVersion));
+            Console.WriteLine("Amount: " + new BigDecimal(((Integer)resJArray?[0]).GetInteger(), NativeContract.NEO.Decimals));
+            Console.WriteLine("Block: " + ((Integer)resJArray?[1]).GetInteger());
         }
     }
 }
