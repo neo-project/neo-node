@@ -218,6 +218,7 @@ namespace Neo.CLI
         [ConsoleCommand("get accountstate", Category = "Vote Commands")]
         private void OnGetAccountState(UInt160 address)
         {
+            string notice = "Notice: No vote record!";
             var arg = new JObject();
             arg["type"] = "Hash160";
             arg["value"] = address.ToString();
@@ -226,7 +227,7 @@ namespace Neo.CLI
             Console.WriteLine();
             if (result.IsNull)
             {
-                Console.WriteLine("Notice: No vote record!");
+                Console.WriteLine(notice);
                 return;
             }
             var resJArray = (VM.Types.Array)result;
@@ -234,7 +235,7 @@ namespace Neo.CLI
             {
                 if (value.IsNull)
                 {
-                    Console.WriteLine("Notice: No vote record!");
+                    Console.WriteLine(notice);
                     return;
                 }
             }
