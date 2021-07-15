@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Configuration;
-using Neo.CLI;
 using Neo.Network.P2P;
 using System.Threading;
 
@@ -58,7 +57,7 @@ namespace Neo
 
         public LoggerSettings(IConfigurationSection section)
         {
-            this.Path = section.GetValue("Path", "Logs_{0}");
+            this.Path = section.GetValue("Path", "Logs");
             this.ConsoleOutput = section.GetValue("ConsoleOutput", false);
             this.Active = section.GetValue("Active", false);
         }

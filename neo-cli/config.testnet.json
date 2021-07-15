@@ -1,7 +1,7 @@
 {
   "ApplicationConfiguration": {
     "Logger": {
-      "Path": "Logs_{0}",
+      "Path": "Logs",
       "ConsoleOutput": false,
       "Active": false
     },
