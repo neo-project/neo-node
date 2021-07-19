@@ -22,8 +22,12 @@
   },
   "ProtocolConfiguration": {
     "Network": 877933390,
+    "AddressVersion": 53,
     "MillisecondsPerBlock": 15000,
+    "MaxTransactionsPerBlock": 512,
+    "MemoryPoolMaxTransactions": 50000,
     "MaxTraceableBlocks": 2102400,
+    "InitialGasDistribution": 5200000000000000,
     "ValidatorsCount": 7,
     "StandbyCommittee": [
       "023e9b32ea89b94d066e649b124fd50e396ee91369e8e2a6ae1b11c170d022256d",
