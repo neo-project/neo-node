@@ -22,6 +22,7 @@
   },
   "ProtocolConfiguration": {
     "Network": 877933390,
+    "AddressVersion": 53,
     "MillisecondsPerBlock": 15000,
     "MaxTransactionsPerBlock": 512,
     "MemoryPoolMaxTransactions": 50000,
