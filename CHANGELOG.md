@@ -99,3 +99,32 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - ([#750](https://github.com/neo-project/neo-node/pull/750)) Fix autostart
 - ([#749](https://github.com/neo-project/neo-node/pull/749)) fix log path
+
+## [3.0.0.RC1] - [3.0.0.RC2]
+
+### Added
+- ([#771](https://github.com/neo-project/neo-node/pull/771/)) Add update
+
+### Changed
+- ([#766](https://github.com/neo-project/neo-node/pull/766)) Add network to ContractParametersContext
+- ([#722](https://github.com/neo-project/neo-node/pull/772)) Optimize code
+
+### Fixed
+- ([#769](https://github.com/neo-project/neo-node/pull/769/)) Fix default signer in OnInvokeCommand
+
+## [3.0.0.RC2] - [3.0.0.RC3]
+
+### Added
+- ([#776](https://github.com/neo-project/neo-node/pull/776)) add unvote function
+- ([#781](https://github.com/neo-project/neo-node/pull/781)) add getAccountState
+
+### Changed
+- ([#779](https://github.com/neo-project/neo-node/pull/779)) Reorder transfer arguments
+- ([#780](https://github.com/neo-project/neo-node/pull/780)) reorder send args
+
+## [3.0.0.RC3] - [3.0.0.RC4]
+
+### Fixed
+- ([#787](https://github.com/neo-project/neo-node/pull/787/)) Fix incomplete signature make invoke failed
+- ([#788](https://github.com/neo-project/neo-node/pull/788/)) fix and improve
+- ([#796](https://github.com/neo-project/neo-node/pull/796/)) Fix logger path
