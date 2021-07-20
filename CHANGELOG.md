@@ -1,14 +1,14 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [3.0.0.RC4]
+## [3.0.0-rc4]
 
 ### Fixed
 - ([#787](https://github.com/neo-project/neo-node/pull/787/)) Fix incomplete signature make invoke failed
 - ([#788](https://github.com/neo-project/neo-node/pull/788/)) fix and improve
 - ([#796](https://github.com/neo-project/neo-node/pull/796/)) Fix logger path
 
-## [3.0.0.RC3]
+## [3.0.0-rc3]
 
 ### Added
 - ([#776](https://github.com/neo-project/neo-node/pull/776)) add unvote function
@@ -18,7 +18,7 @@ All notable changes to this project will be documented in this file.
 - ([#779](https://github.com/neo-project/neo-node/pull/779)) Reorder transfer arguments
 - ([#780](https://github.com/neo-project/neo-node/pull/780)) reorder send args
 
-## [3.0.0.RC2]
+## [3.0.0-rc2]
 
 ### Added
 - ([#771](https://github.com/neo-project/neo-node/pull/771/)) Add update
@@ -30,7 +30,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - ([#769](https://github.com/neo-project/neo-node/pull/769/)) Fix default signer in OnInvokeCommand
 
-## [3.0.0.RC1]
+## [3.0.0-rc1]
 
 ### Changed
 - ([#753](https://github.com/neo-project/neo-node/pull/753)) Combine config.json and protocol.json
@@ -43,7 +43,7 @@ All notable changes to this project will be documented in this file.
 - ([#750](https://github.com/neo-project/neo-node/pull/750)) Fix autostart
 - ([#749](https://github.com/neo-project/neo-node/pull/749)) fix log path
 
-## [3.0.0.preview5]
+## [3.0.0-preview5]
 ### Added
 - ([#737](https://github.com/neo-project/neo-node/pull/737)) Show header height when show state
 - ([#714](https://github.com/neo-project/neo-node/pull/714)) add total supply
@@ -70,7 +70,7 @@ All notable changes to this project will be documented in this file.
 - ([#713](https://github.com/neo-project/neo-node/pull/713)) Update MainService.Plugins.cs
 - ([#704](https://github.com/neo-project/neo-node/pull/704)) Avoid register candidate for others
 
-## [3.0.0.preview4]
+## [3.0.0-preview4]
 ### Added
 - ([#679](https://github.com/neo-project/neo-node/pull/679)) Add services to plugin system
 
@@ -93,7 +93,7 @@ All notable changes to this project will be documented in this file.
 - ([#654](https://github.com/neo-project/neo-node/pull/654)) Fix applicationengine.run
 - ([#647](https://github.com/neo-project/neo-node/pull/647)) Fix script check
 
-## [3.0.0.preview3]
+## [3.0.0-preview3]
 ### Added
 - ([#608](https://github.com/neo-project/neo-node/pull/608)) Ensure json extension in wallet
 - ([#607](https://github.com/neo-project/neo-node/pull/607)) Add 'nativecontract' command
