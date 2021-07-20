@@ -63,13 +63,13 @@ All notable changes to this project will be documented in this file.
 ## [3.0.0.preview4] - [3.0.0.preview5]
 ### Added
 - ([#737](https://github.com/neo-project/neo-node/pull/737)) Show header height when show state
-- ([#714](https://github.com/neo-project/neo-node/pull/714)) add total supply
+- ([#714](https://github.com/neo-project/neo-node/pull/714)) Add total supply
 
 ### Changed
-- ([#733](https://github.com/neo-project/neo-node/pull/733)) sync block height
+- ([#733](https://github.com/neo-project/neo-node/pull/733)) Sync block height
 - ([#726](https://github.com/neo-project/neo-node/pull/726)) Sync to CI01171
 - ([#724](https://github.com/neo-project/neo-node/pull/724)) Neo 3.0.0-CI01168
-- ([#722](https://github.com/neo-project/neo-node/pull/722)) sync ondeploycommand
+- ([#722](https://github.com/neo-project/neo-node/pull/722)) Sync ondeploycommand
 - ([#719](https://github.com/neo-project/neo-node/pull/719)) Sync neo 1161
 - ([#712](https://github.com/neo-project/neo-node/pull/712)) Neo 3.0.0-CI01152
 - ([#709](https://github.com/neo-project/neo-node/pull/709)) Sync to Neo 3.0.0-CI01148
@@ -79,8 +79,8 @@ All notable changes to this project will be documented in this file.
 - ([#681](https://github.com/neo-project/neo-node/pull/681)) dotnet 5.0
 
 ### Fixed
-- ([#735](https://github.com/neo-project/neo-node/pull/735)) fix "show state" auto refresh
-- ([#730](https://github.com/neo-project/neo-node/pull/730)) fix broadcast getheaders
+- ([#735](https://github.com/neo-project/neo-node/pull/735)) Fix "show state" auto refresh
+- ([#730](https://github.com/neo-project/neo-node/pull/730)) Fix broadcast getheaders
 - ([#727](https://github.com/neo-project/neo-node/pull/727)) Add test mode gas when invoking
 - ([#716](https://github.com/neo-project/neo-node/pull/716)) More alignment
 - ([#715](https://github.com/neo-project/neo-node/pull/715)) Fix Dockerfile
@@ -91,14 +91,14 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - ([#753](https://github.com/neo-project/neo-node/pull/753)) Combine config.json and protocol.json
-- ([#752](https://github.com/neo-project/neo-node/pull/752)) update neo to v3.0.0-CI01229
-- ([#748](https://github.com/neo-project/neo-node/pull/748)) sync neo changes
-- ([#743](https://github.com/neo-project/neo-node/pull/743)) sync neo
-- ([#740](https://github.com/neo-project/neo-node/pull/740)) remove singletons
+- ([#752](https://github.com/neo-project/neo-node/pull/752)) Update neo to v3.0.0-CI01229
+- ([#748](https://github.com/neo-project/neo-node/pull/748)) Sync neo changes
+- ([#743](https://github.com/neo-project/neo-node/pull/743)) Sync neo
+- ([#740](https://github.com/neo-project/neo-node/pull/740)) Remove singletons
 
 ### Fixed
 - ([#750](https://github.com/neo-project/neo-node/pull/750)) Fix autostart
-- ([#749](https://github.com/neo-project/neo-node/pull/749)) fix log path
+- ([#749](https://github.com/neo-project/neo-node/pull/749)) Fix log path
 
 ## [3.0.0.RC1] - [3.0.0.RC2]
 
@@ -115,16 +115,16 @@ All notable changes to this project will be documented in this file.
 ## [3.0.0.RC2] - [3.0.0.RC3]
 
 ### Added
-- ([#776](https://github.com/neo-project/neo-node/pull/776)) add unvote function
-- ([#781](https://github.com/neo-project/neo-node/pull/781)) add getAccountState
+- ([#776](https://github.com/neo-project/neo-node/pull/776)) Add unvote function
+- ([#781](https://github.com/neo-project/neo-node/pull/781)) Add getAccountState
 
 ### Changed
 - ([#779](https://github.com/neo-project/neo-node/pull/779)) Reorder transfer arguments
-- ([#780](https://github.com/neo-project/neo-node/pull/780)) reorder send args
+- ([#780](https://github.com/neo-project/neo-node/pull/780)) Reorder send args
 
 ## [3.0.0.RC3] - [3.0.0.RC4]
 
 ### Fixed
 - ([#787](https://github.com/neo-project/neo-node/pull/787/)) Fix incomplete signature make invoke failed
-- ([#788](https://github.com/neo-project/neo-node/pull/788/)) fix and improve
+- ([#788](https://github.com/neo-project/neo-node/pull/788/)) Fix and improve
 - ([#796](https://github.com/neo-project/neo-node/pull/796/)) Fix logger path
