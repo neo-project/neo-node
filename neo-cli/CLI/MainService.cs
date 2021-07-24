@@ -385,8 +385,9 @@ namespace Neo.CLI
 
             _ = new Logger();
 
-            NeoSystem = new NeoSystem(ProtocolSettings.Load("config.json"), Settings.Default.Storage.Engine, Settings.Default.Storage.Path);
+            ProtocolSettings protocol = ProtocolSettings.Load("config.json");
 
+            NeoSystem = new NeoSystem(protocol, Settings.Default.Storage.Engine, string.Format(Settings.Default.Storage.Path, protocol.Network.ToString("X8")));
             NeoSystem.AddService(this);
 
             LocalNode = NeoSystem.LocalNode.Ask<LocalNode>(new LocalNode.GetInstance()).Result;
