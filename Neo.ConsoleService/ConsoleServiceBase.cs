@@ -590,6 +590,7 @@ namespace Neo.ConsoleService
                 catch { }
 
             Console.ForegroundColor = ConsoleColor.DarkGreen;
+            Console.SetIn(new StreamReader(Console.OpenStandardInput(), Encoding.Default, false, 65536));
 
             while (_running)
             {
