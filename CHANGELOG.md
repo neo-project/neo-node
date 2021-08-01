@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [3.0.0]
+
+- None
+
 ## [3.0.0-rc4]
 
 ### Fixed
