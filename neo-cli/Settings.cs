@@ -10,7 +10,6 @@ namespace Neo
         public StorageSettings Storage { get; }
         public P2PSettings P2P { get; }
         public UnlockWalletSettings UnlockWallet { get; }
-        public string PluginURL { get; }
 
         static Settings _default;
 
@@ -45,7 +44,6 @@ namespace Neo
             this.Storage = new StorageSettings(section.GetSection("Storage"));
             this.P2P = new P2PSettings(section.GetSection("P2P"));
             this.UnlockWallet = new UnlockWalletSettings(section.GetSection("UnlockWallet"));
-            this.PluginURL = section.GetValue("PluginURL", "https://github.com/neo-project/neo-modules/releases/download/v{1}/{0}.zip");
         }
     }
 
