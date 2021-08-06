@@ -17,50 +17,7 @@ namespace Neo.CLI
         [ConsoleCommand("install", Category = "Plugin Commands")]
         private void OnInstallCommand(string pluginName)
         {
-            bool isTemp;
-            string fileName;
-
-            if (!File.Exists(pluginName))
-            {
-                if (string.IsNullOrEmpty(Settings.Default.PluginURL))
-                {
-                    Console.WriteLine("You must define `PluginURL` in your `config.json`");
-                    return;
-                }
-
-                var address = string.Format(Settings.Default.PluginURL, pluginName, typeof(Plugin).Assembly.GetVersion());
-                fileName = Path.Combine(Path.GetTempPath(), $"{pluginName}.zip");
-                isTemp = true;
-
-                Console.WriteLine($"Downloading from {address}");
-                using (WebClient wc = new WebClient())
-                {
-                    wc.DownloadFile(address, fileName);
-                }
-            }
-            else
-            {
-                fileName = pluginName;
-                isTemp = false;
-            }
-
-            try
-            {
-                ZipFile.ExtractToDirectory(fileName, ".");
-            }
-            catch (IOException)
-            {
-                Console.WriteLine($"Plugin already exist.");
-                return;
-            }
-            finally
-            {
-                if (isTemp)
-                {
-                    File.Delete(fileName);
-                }
-            }
-
+            CheckAndInstall(pluginName);
             Console.WriteLine($"Install successful, please restart neo-cli.");
         }
 
@@ -113,6 +70,72 @@ namespace Neo.CLI
             else
             {
                 Console.WriteLine("No loaded plugins");
+            }
+        }
+
+        private void CheckAndInstall(string pluginName)
+        {
+            if (pluginName == "ApplicationLogs" ||
+            pluginName == "RpcNep17Tracker" ||
+            pluginName == "StateService" ||
+            pluginName == "OracleService"
+            )
+            {
+                if (!File.Exists("RpcServer"))
+                {
+                    Console.WriteLine($"Installing plugin and dependencies.");
+                    InstallPlugin("RpcServer");
+                }
+
+                if (pluginName == "RpcServer") return;
+            }
+            InstallPlugin(pluginName);
+        }
+
+        private void InstallPlugin(string pluginName)
+        {
+            bool isTemp;
+            string fileName;
+
+            if (!File.Exists(pluginName))
+            {
+                if (string.IsNullOrEmpty(Settings.Default.PluginURL))
+                {
+                    Console.WriteLine("You must define `PluginURL` in your `config.json`");
+                    return;
+                }
+
+                var address = string.Format(Settings.Default.PluginURL, pluginName, typeof(Plugin).Assembly.GetVersion());
+                fileName = Path.Combine(Path.GetTempPath(), $"{pluginName}.zip");
+                isTemp = true;
+
+                Console.WriteLine($"Downloading from {address}");
+                using (WebClient wc = new WebClient())
+                {
+                    wc.DownloadFile(address, fileName);
+                }
+            }
+            else
+            {
+                fileName = pluginName;
+                isTemp = false;
+            }
+
+            try
+            {
+                ZipFile.ExtractToDirectory(fileName, ".");
+            }
+            catch (IOException)
+            {
+                Console.WriteLine($"Plugin already exist.");
+                return;
+            }
+            finally
+            {
+                if (isTemp)
+                {
+                    File.Delete(fileName);
+                }
             }
         }
     }
