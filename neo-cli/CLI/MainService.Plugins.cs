@@ -1,4 +1,5 @@
 using Neo.ConsoleService;
+using Neo.IO.Json;
 using Neo.Plugins;
 using System;
 using System.IO;
@@ -17,51 +18,49 @@ namespace Neo.CLI
         [ConsoleCommand("install", Category = "Plugin Commands")]
         private void OnInstallCommand(string pluginName)
         {
-            bool isTemp;
-            string fileName;
-
-            if (!File.Exists(pluginName))
-            {
-                if (string.IsNullOrEmpty(Settings.Default.PluginURL))
-                {
-                    Console.WriteLine("You must define `PluginURL` in your `config.json`");
-                    return;
-                }
-
-                var address = string.Format(Settings.Default.PluginURL, pluginName, typeof(Plugin).Assembly.GetVersion());
-                fileName = Path.Combine(Path.GetTempPath(), $"{pluginName}.zip");
-                isTemp = true;
-
-                Console.WriteLine($"Downloading from {address}");
-                using (WebClient wc = new WebClient())
-                {
-                    wc.DownloadFile(address, fileName);
-                }
-            }
-            else
-            {
-                fileName = pluginName;
-                isTemp = false;
-            }
-
+            HttpWebRequest request = WebRequest.CreateHttp($"https://github.com/neo-project/neo-modules/releases/download/v{typeof(Plugin).Assembly.GetVersion()}/{pluginName}.zip");
+            HttpWebResponse response;
             try
             {
-                ZipFile.ExtractToDirectory(fileName, ".");
+                response = (HttpWebResponse)request.GetResponse();
             }
-            catch (IOException)
+            catch (WebException ex) when (((HttpWebResponse)ex.Response).StatusCode == HttpStatusCode.NotFound)
             {
-                Console.WriteLine($"Plugin already exist.");
-                return;
+                Version version_core = typeof(Plugin).Assembly.GetName().Version;
+                request = WebRequest.CreateHttp($"https://api.github.com/repos/neo-project/neo-modules/releases");
+                request.UserAgent = $"{GetType().Assembly.GetName().Name}/{GetType().Assembly.GetVersion()}";
+                using HttpWebResponse response_api = (HttpWebResponse)request.GetResponse();
+                using Stream stream = response_api.GetResponseStream();
+                using StreamReader reader = new(stream);
+                JObject releases = JObject.Parse(reader.ReadToEnd());
+                JObject asset = releases.GetArray()
+                    .Where(p => !p["tag_name"].GetString().Contains('-'))
+                    .Select(p => new
+                    {
+                        Version = Version.Parse(p["tag_name"].GetString().TrimStart('v')),
+                        Assets = p["assets"].GetArray()
+                    })
+                    .OrderByDescending(p => p.Version)
+                    .First(p => p.Version <= version_core).Assets
+                    .FirstOrDefault(p => p["name"].GetString() == $"{pluginName}.zip");
+                if (asset is null) throw new Exception("Plugin doesn't exist.");
+                request = WebRequest.CreateHttp(asset["browser_download_url"].GetString());
+                response = (HttpWebResponse)request.GetResponse();
             }
-            finally
+            using (response)
             {
-                if (isTemp)
+                using Stream stream = response.GetResponseStream();
+                using ZipArchive zip = new(stream, ZipArchiveMode.Read);
+                try
                 {
-                    File.Delete(fileName);
+                    zip.ExtractToDirectory(".");
+                    Console.WriteLine($"Install successful, please restart neo-cli.");
+                }
+                catch (IOException)
+                {
+                    Console.WriteLine($"Plugin already exist.");
                 }
             }
-
-            Console.WriteLine($"Install successful, please restart neo-cli.");
         }
 
         /// <summary>
