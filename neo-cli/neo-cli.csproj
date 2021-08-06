@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Copyright>2016-2021 The Neo Project</Copyright>
     <AssemblyTitle>Neo.CLI</AssemblyTitle>
-    <Version>3.0.0</Version>
+    <Version>3.0.2</Version>
     <Authors>The Neo Project</Authors>
     <TargetFramework>net5.0</TargetFramework>
     <AssemblyName>neo-cli</AssemblyName>
@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Neo" Version="3.0.0" />
+    <PackageReference Include="Neo" Version="3.0.2" />
   </ItemGroup>
 
   <ItemGroup>
