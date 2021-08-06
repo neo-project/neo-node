@@ -121,6 +121,9 @@ namespace Neo.CLI
 
             try
             {
+                Console.WriteLine($"{pluginName}.zip");
+                Console.WriteLine("SHA256: "+ Helper.GetHashSha256(fileName));
+
                 ZipFile.ExtractToDirectory(fileName, ".");
             }
             catch (IOException)
