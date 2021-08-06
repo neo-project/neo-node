@@ -95,7 +95,7 @@ namespace Neo.CLI
             bool isTemp;
             string fileName;
 
-            if (!Directory.Exists("./Plugins/" + pluginName) || !File.Exists("Plugins/"+pluginName+".dll"))
+            if (!Directory.Exists("./Plugins/" + pluginName) || !File.Exists("Plugins/" + pluginName + ".dll"))
             {
                 if (string.IsNullOrEmpty(Settings.Default.PluginURL))
                 {
@@ -122,13 +122,14 @@ namespace Neo.CLI
             try
             {
                 Console.WriteLine($"{pluginName}.zip");
-                Console.WriteLine("SHA256: "+ Helper.GetHashSha256(fileName));
+                Console.WriteLine("SHA256: " + Helper.GetHashSha256(fileName));
 
                 ZipFile.ExtractToDirectory(fileName, ".");
             }
-            catch (IOException)
+            catch (Exception e)
             {
-                Console.WriteLine($"Plugin already exist.");
+                Console.WriteLine(e.ToString());
+                Console.WriteLine($"Plugin instalition failed, overwrite existing file");
                 return;
             }
             finally
