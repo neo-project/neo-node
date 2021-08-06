@@ -17,8 +17,7 @@
       "Path": "",
       "Password": "",
       "IsActive": false
-    },
-    "PluginURL": "https://github.com/neo-project/neo-modules/releases/download/v{1}/{0}.zip"
+    }
   },
   "ProtocolConfiguration": {
     "Network": 877933390,
