@@ -33,9 +33,7 @@ namespace Neo.CLI
                 using Stream stream = response_api.GetResponseStream();
                 using StreamReader reader = new(stream);
                 JObject releases = JObject.Parse(reader.ReadToEnd());
-                try
-                {
-                    JObject asset = releases.GetArray()
+                JObject asset = releases.GetArray()
                     .Where(p => !p["tag_name"].GetString().Contains('-'))
                     .Select(p => new
                     {
@@ -44,11 +42,10 @@ namespace Neo.CLI
                     })
                     .OrderByDescending(p => p.Version)
                     .First(p => p.Version <= version_core).Assets
-                    .First(p => p["name"].GetString() == $"{pluginName}.zip");
-                    request = WebRequest.CreateHttp(asset["browser_download_url"].GetString());
-                    response = (HttpWebResponse)request.GetResponse();
-                }
-                catch (Exception) { throw new Exception("Plugin doesn't exist."); }
+                    .FirstOrDefault(p => p["name"].GetString() == $"{pluginName}.zip");
+                if (asset is null) throw new Exception("Plugin doesn't exist.");
+                request = WebRequest.CreateHttp(asset["browser_download_url"].GetString());
+                response = (HttpWebResponse)request.GetResponse();
             }
             using (response)
             {
