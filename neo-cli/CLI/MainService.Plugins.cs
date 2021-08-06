@@ -48,7 +48,7 @@ namespace Neo.CLI
                     request = WebRequest.CreateHttp(asset["browser_download_url"].GetString());
                     response = (HttpWebResponse)request.GetResponse();
                 }
-                catch (Exception) { throw new Exception("Plugin is not existed."); }
+                catch (Exception) { throw new Exception("Plugin doesn't exist."); }
             }
             using (response)
             {
