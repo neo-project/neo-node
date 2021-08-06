@@ -86,8 +86,6 @@ namespace Neo.CLI
                     Console.WriteLine($"Installing plugin and dependencies.");
                     InstallPlugin("RpcServer");
                 }
-
-                if (pluginName == "RpcServer") return;
             }
             InstallPlugin(pluginName);
         }
