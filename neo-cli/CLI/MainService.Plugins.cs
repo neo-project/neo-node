@@ -81,7 +81,7 @@ namespace Neo.CLI
             pluginName == "OracleService"
             )
             {
-                if (!File.Exists("RpcServer"))
+                if (!Directory.Exists("./Plugins/RpcServer") || !File.Exists("./Plugins/RpcServer.dll"))
                 {
                     Console.WriteLine($"Installing plugin and dependencies.");
                     InstallPlugin("RpcServer");
@@ -95,7 +95,7 @@ namespace Neo.CLI
             bool isTemp;
             string fileName;
 
-            if (!File.Exists(pluginName))
+            if (!Directory.Exists("./Plugins/" + pluginName) || !File.Exists("Plugins/"+pluginName+".dll"))
             {
                 if (string.IsNullOrEmpty(Settings.Default.PluginURL))
                 {
