@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [3.0.2]
+
+### Changed
+- ([#805](https://github.com/neo-project/neo-node/pull/805/)) Improve plugins installation
+
 ## [3.0.0-rc4]
 
 ### Fixed
