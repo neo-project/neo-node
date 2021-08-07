@@ -6,6 +6,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Security.Cryptography;
 
 namespace Neo.CLI
 {
@@ -71,8 +72,28 @@ namespace Neo.CLI
             }
             using (response)
             {
+                const int IO_BUFFER_SIZE = 16 * 1024;
+
+                var totalRead = 0L;
+                byte[] buffer = new byte[IO_BUFFER_SIZE];
+                int read;
+
                 using Stream stream = response.GetResponseStream();
-                using ZipArchive zip = new(stream, ZipArchiveMode.Read);
+
+                using var output = new MemoryStream();
+                while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    output.Write(buffer, 0, read);
+                    totalRead += read;
+                    Console.Write($"\rDowloading {pluginName}.zip   {totalRead / 1024}KB/{response.ContentLength / 1024}KB  {(totalRead * 100) / response.ContentLength}%");
+                }
+                Console.WriteLine();
+                using (SHA256 sha256 = SHA256.Create())
+                {
+                    Console.WriteLine("SHA256: " + sha256.ComputeHash(output.ToArray()).ToHexString().ToString());
+                }
+
+                using ZipArchive zip = new(output, ZipArchiveMode.Read);
                 try
                 {
                     zip.ExtractToDirectory(".");
@@ -81,7 +102,8 @@ namespace Neo.CLI
                 catch (IOException)
                 {
                     Console.WriteLine($"Plugin already exist.");
-                }
+                };
+
             }
         }
         /// <summary>
