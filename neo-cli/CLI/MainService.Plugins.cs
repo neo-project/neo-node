@@ -33,13 +33,15 @@ namespace Neo.CLI
                 if (!Directory.Exists("./Plugins/RpcServer") || !File.Exists("./Plugins/RpcServer.dll"))
                 {
                     Console.WriteLine($"Installing plugin and dependencies.");
-                    InstallPlugin("RpcServer");
+
+                    InstallPlugin(DownloadPlugin("RpcServer"));
                 }
             }
-            InstallPlugin(pluginName);
+            InstallPlugin(DownloadPlugin(pluginName));
         }
 
-        private void InstallPlugin(string pluginName)
+
+        private MemoryStream DownloadPlugin(string pluginName)
         {
             HttpWebRequest request = WebRequest.CreateHttp($"https://github.com/neo-project/neo-modules/releases/download/v{typeof(Plugin).Assembly.GetVersion()}/{pluginName}.zip");
             HttpWebResponse response;
@@ -72,39 +74,44 @@ namespace Neo.CLI
             }
             using (response)
             {
-                const int IO_BUFFER_SIZE = 16 * 1024;
-
                 var totalRead = 0L;
-                byte[] buffer = new byte[IO_BUFFER_SIZE];
+                byte[] buffer = new byte[1024];
                 int read;
 
                 using Stream stream = response.GetResponseStream();
 
-                using var output = new MemoryStream();
+                var output = new MemoryStream();
                 while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
                 {
                     output.Write(buffer, 0, read);
                     totalRead += read;
-                    Console.Write($"\rDowloading {pluginName}.zip   {totalRead / 1024}KB/{response.ContentLength / 1024}KB  {(totalRead * 100) / response.ContentLength}%");
+                    Console.Write($"\rDowloading {pluginName}.zip {totalRead / 1024}KB/{response.ContentLength / 1024}KB {(totalRead * 100) / response.ContentLength}%");
                 }
                 Console.WriteLine();
-                using (SHA256 sha256 = SHA256.Create())
-                {
-                    Console.WriteLine("SHA256: " + sha256.ComputeHash(output.ToArray()).ToHexString().ToString());
-                }
 
-                using ZipArchive zip = new(output, ZipArchiveMode.Read);
-                try
-                {
-                    zip.ExtractToDirectory(".");
-                    Console.WriteLine($"Install successful, please restart neo-cli.");
-                }
-                catch (IOException)
-                {
-                    Console.WriteLine($"Plugin already exist.");
-                };
-
+                return output;
             }
+        }
+
+
+        private void InstallPlugin(MemoryStream stream)
+        {
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                Console.WriteLine("SHA256: " + sha256.ComputeHash(stream.ToArray()).ToHexString().ToString());
+            }
+
+            using ZipArchive zip = new(stream, ZipArchiveMode.Read);
+
+            try
+            {
+                zip.ExtractToDirectory(".");
+                Console.WriteLine($"Install successful, please restart neo-cli.");
+            }
+            catch (IOException)
+            {
+                Console.WriteLine($"Plugin already exist.");
+            };
         }
         /// <summary>
         /// Process "uninstall" command
