@@ -15,19 +15,5 @@ namespace Neo.CLI
         }
 
         public static string ToBase64String(this byte[] input) => System.Convert.ToBase64String(input);
-
-        // Compute the file's hash.
-        public static string GetHashSha256(string filename)
-        {
-            using (SHA256 Sha256 = SHA256.Create())
-            {
-                using (FileStream stream = File.OpenRead(filename))
-                {
-                    return Sha256.ComputeHash(stream).ToHexString().ToString();
-                }
-            }
-
-        }
-
     }
 }
