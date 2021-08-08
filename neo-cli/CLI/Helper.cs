@@ -1,6 +1,3 @@
-using System.IO;
-using System.Security.Cryptography;
-
 namespace Neo.CLI
 {
     internal static class Helper
