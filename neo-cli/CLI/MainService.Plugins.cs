@@ -24,10 +24,13 @@ namespace Neo.CLI
 
         private void CheckAndInstall(string pluginName)
         {
-            if (pluginName == "ApplicationLogs" ||
-            pluginName == "RpcNep17Tracker" ||
-            pluginName == "StateService" ||
-            pluginName == "OracleService"
+            var cmd = pluginName.Split('@');
+            //pluginName = cmd[0];
+
+            if (cmd[0] == "ApplicationLogs" ||
+            cmd[0] == "RpcNep17Tracker" ||
+            cmd[0] == "StateService" ||
+            cmd[0] == "OracleService"
             )
             {
                 if (!Directory.Exists("./Plugins/RpcServer") || !File.Exists("./Plugins/RpcServer.dll"))
@@ -36,10 +39,13 @@ namespace Neo.CLI
                     InstallPlugin("RpcServer");
                 }
             }
-            InstallPlugin(pluginName);
+            if (cmd.Length == 2)
+                InstallPlugin(cmd[0], cmd[1]);
+            else
+                InstallPlugin(cmd[0]);
         }
 
-        private void InstallPlugin(string pluginName)
+        private void InstallPlugin(string pluginName, string version=null)
         {
             HttpWebRequest request = WebRequest.CreateHttp($"https://github.com/neo-project/neo-modules/releases/download/v{typeof(Plugin).Assembly.GetVersion()}/{pluginName}.zip");
             HttpWebResponse response;
