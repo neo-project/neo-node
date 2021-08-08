@@ -111,6 +111,13 @@ namespace Neo.CLI
                 foreach (string plugin in plugins)
                 {
                     if (plugin.Length == 0) continue;
+
+                    if (Directory.Exists($"{Plugin.PluginsDirectory}/{pluginName}") &&
+                        File.Exists($"{Plugin.PluginsDirectory}/{pluginName}.dll"))
+                    {
+                        continue;
+                    }
+
                     InstallPlugin(DownloadPlugin(plugin), plugin);
                 }
             }
