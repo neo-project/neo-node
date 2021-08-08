@@ -19,28 +19,13 @@ namespace Neo.CLI
         [ConsoleCommand("install", Category = "Plugin Commands")]
         private void OnInstallCommand(string pluginName)
         {
-            CheckAndInstall(pluginName);
-        }
-
-        private void CheckAndInstall(string pluginName)
-        {
-            var cmd = pluginName.Split('@');
-            //pluginName = cmd[0];
-
-            if (cmd[0] == "ApplicationLogs" ||
-            cmd[0] == "RpcNep17Tracker" ||
-            cmd[0] == "StateService" ||
-            cmd[0] == "OracleService"
-            )
+            if (Directory.Exists($"{Plugin.PluginsDirectory}/{pluginName}") &&
+                File.Exists($"{Plugin.PluginsDirectory}/{pluginName}.dll"))
             {
-                if (!Directory.Exists("./Plugins/RpcServer") || !File.Exists("./Plugins/RpcServer.dll"))
-                {
-                    Console.WriteLine($"Installing plugin and dependencies.");
-
-                    InstallPlugin(DownloadPlugin("RpcServer"));
-                }
+                Console.WriteLine($"Plugin already exist.");
+                return;
             }
-            InstallPlugin(DownloadPlugin(pluginName));
+            InstallPlugin(DownloadPlugin(pluginName), pluginName);
         }
 
 
@@ -97,7 +82,7 @@ namespace Neo.CLI
         }
 
 
-        private void InstallPlugin(MemoryStream stream)
+        private void InstallPlugin(MemoryStream stream, string pluginName)
         {
             using (SHA256 sha256 = SHA256.Create())
             {
@@ -109,6 +94,7 @@ namespace Neo.CLI
             try
             {
                 zip.ExtractToDirectory(".");
+                InstallDependancy(pluginName);
                 Console.WriteLine($"Install successful, please restart neo-cli.");
             }
             catch (IOException)
@@ -116,6 +102,16 @@ namespace Neo.CLI
                 Console.WriteLine($"Plugin already exist.");
             };
         }
+
+        private void InstallDependancy(string pluginName)
+        {
+            string[] plugins = File.ReadAllLines($"{Plugin.PluginsDirectory}/{pluginName}/DEPENDENCY");
+            foreach (string plugin in plugins)
+            {
+                InstallPlugin(DownloadPlugin(plugin), plugin);
+            }
+        }
+
         /// <summary>
         /// Process "uninstall" command
         /// </summary>
@@ -159,7 +155,8 @@ namespace Neo.CLI
                 foreach (Plugin plugin in Plugin.Plugins)
                 {
                     if (plugin is Logger) continue;
-                    Console.WriteLine($"\t{plugin.Name,-20}{plugin.Description}");
+                    var name = $"{plugin.Name}@{plugin.Version}";
+                    Console.WriteLine($"\t{name,-25}{plugin.Description}");
                 }
             }
             else
