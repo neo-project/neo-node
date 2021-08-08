@@ -85,7 +85,7 @@ namespace Neo.CLI
                 {
                     output.Write(buffer, 0, read);
                     totalRead += read;
-                    Console.Write($"\rDowloading {pluginName}.zip {totalRead / 1024}KB/{response.ContentLength / 1024}KB {(totalRead * 100) / response.ContentLength}%");
+                    Console.Write($"\rDownloading {pluginName}.zip {totalRead / 1024}KB/{response.ContentLength / 1024}KB {(totalRead * 100) / response.ContentLength}%");
                 }
                 Console.WriteLine();
 
