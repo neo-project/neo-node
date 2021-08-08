@@ -94,7 +94,7 @@ namespace Neo.CLI
             try
             {
                 zip.ExtractToDirectory(".");
-                InstallDependancy(pluginName);
+                InstallDependency(pluginName);
                 Console.WriteLine($"Install successful, please restart neo-cli.");
             }
             catch (IOException)
@@ -103,7 +103,7 @@ namespace Neo.CLI
             };
         }
 
-        private void InstallDependancy(string pluginName)
+        private void InstallDependency(string pluginName)
         {
             try
             {
