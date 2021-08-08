@@ -105,10 +105,19 @@ namespace Neo.CLI
 
         private void InstallDependancy(string pluginName)
         {
-            string[] plugins = File.ReadAllLines($"{Plugin.PluginsDirectory}/{pluginName}/DEPENDENCY");
-            foreach (string plugin in plugins)
+            try
             {
-                InstallPlugin(DownloadPlugin(plugin), plugin);
+                string[] plugins = File.ReadAllLines($"{Plugin.PluginsDirectory}/{pluginName}/DEPENDENCY");
+                foreach (string plugin in plugins)
+                {
+                    if (plugin.Length == 0) continue;
+                    InstallPlugin(DownloadPlugin(plugin), plugin);
+                }
+            }
+            catch
+            {
+                // Fail to read DEPENDENCY means there is no dependency
+                return;
             }
         }
 
