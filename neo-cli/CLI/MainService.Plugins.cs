@@ -186,8 +186,10 @@ namespace Neo.CLI
                 return;
             }
 
-            File.Delete(plugin.Path);
-            File.Delete(plugin.ConfigFile);
+            DeleteFiles(plugin.Path,
+                plugin.ConfigFile,
+                $"{Plugin.PluginsDirectory}/{pluginName}/DEPENDENCY");
+
             try
             {
                 Directory.Delete(Path.GetDirectoryName(plugin.ConfigFile), false);
@@ -196,6 +198,15 @@ namespace Neo.CLI
             {
             }
             Console.WriteLine($"Uninstall successful, please restart neo-cli.");
+        }
+
+        private void DeleteFiles(params string[] list)
+        {
+            foreach (var file in list)
+            {
+                if (File.Exists(file))
+                    File.Delete(file);
+            }
         }
 
         /// <summary>
