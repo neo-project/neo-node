@@ -28,6 +28,23 @@ namespace Neo.CLI
         }
 
         /// <summary>
+        /// Force to install a pugin again. This will overwrite
+        /// existing plugin files, in case of any file missing or
+        /// damage to the old version.
+        /// </summary>
+        /// <param name="pluginName"></param>
+        [ConsoleCommand("reinstall", Category = "Plugin Commands")]
+        private void OnReinstallCommand(string pluginName)
+        {
+            if (PluginExists(pluginName))
+            {
+                Console.WriteLine($"Plugin already exist.");
+                return;
+            }
+            InstallPlugin(DownloadPlugin(pluginName), pluginName, true);
+        }
+
+        /// <summary>
         /// Download plugin from github release
         /// The function of download and install are devided
         /// for the consideration of `update` command hat
