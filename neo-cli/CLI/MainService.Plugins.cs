@@ -19,8 +19,7 @@ namespace Neo.CLI
         [ConsoleCommand("install", Category = "Plugin Commands")]
         private void OnInstallCommand(string pluginName)
         {
-            if (Directory.Exists($"{Plugin.PluginsDirectory}/{pluginName}") &&
-                File.Exists($"{Plugin.PluginsDirectory}/{pluginName}.dll"))
+            if (PluginExists(pluginName))
             {
                 Console.WriteLine($"Plugin already exist.");
                 return;
@@ -28,7 +27,14 @@ namespace Neo.CLI
             InstallPlugin(DownloadPlugin(pluginName), pluginName);
         }
 
-
+        /// <summary>
+        /// Download plugin from github release
+        /// The function of download and install are devided
+        /// for the consideration of `update` command hat
+        /// might be added in the future.
+        /// </summary>
+        /// <param name="pluginName">name of the plugin</param>
+        /// <returns></returns>
         private MemoryStream DownloadPlugin(string pluginName)
         {
             HttpWebRequest request = WebRequest.CreateHttp($"https://github.com/neo-project/neo-modules/releases/download/v{typeof(Plugin).Assembly.GetVersion()}/{pluginName}.zip");
@@ -81,8 +87,13 @@ namespace Neo.CLI
             }
         }
 
-
-        private void InstallPlugin(MemoryStream stream, string pluginName)
+        /// <summary>
+        /// Install plugin from stream
+        /// </summary>
+        /// <param name="stream">stream of the plugin</param>
+        /// <param name="pluginName">name of the plugin</param>
+        /// <param name="overWrite">Install by force for `update`</param>
+        private void InstallPlugin(MemoryStream stream, string pluginName, bool overWrite=false)
         {
             using (SHA256 sha256 = SHA256.Create())
             {
@@ -93,7 +104,7 @@ namespace Neo.CLI
 
             try
             {
-                zip.ExtractToDirectory(".");
+                zip.ExtractToDirectory(".", overWrite);
                 InstallDependency(pluginName);
                 Console.WriteLine($"Install successful, please restart neo-cli.");
             }
@@ -103,21 +114,24 @@ namespace Neo.CLI
             };
         }
 
+        /// <summary>
+        /// Install the dependency of the plugin
+        /// </summary>
+        /// <param name="pluginName">plugin name</param>
         private void InstallDependency(string pluginName)
         {
             try
             {
                 string[] plugins = File.ReadAllLines($"{Plugin.PluginsDirectory}/{pluginName}/DEPENDENCY");
+                if (plugins.Length > 0) Console.WriteLine("Installing dependencies.");
                 foreach (string plugin in plugins)
                 {
                     if (plugin.Length == 0) continue;
 
-                    if (Directory.Exists($"{Plugin.PluginsDirectory}/{pluginName}") &&
-                        File.Exists($"{Plugin.PluginsDirectory}/{pluginName}.dll"))
+                    if (PluginExists(plugin))
                     {
                         continue;
                     }
-
                     InstallPlugin(DownloadPlugin(plugin), plugin);
                 }
             }
@@ -126,6 +140,12 @@ namespace Neo.CLI
                 // Fail to read DEPENDENCY means there is no dependency
                 return;
             }
+        }
+
+        private bool PluginExists(string pluginName)
+        {
+            return Directory.Exists($"{Plugin.PluginsDirectory}/{pluginName}") &&
+                        File.Exists($"{Plugin.PluginsDirectory}/{pluginName}.dll");
         }
 
         /// <summary>
