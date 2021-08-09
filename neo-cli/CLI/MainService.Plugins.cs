@@ -140,7 +140,9 @@ namespace Neo.CLI
             try
             {
                 string[] plugins = File.ReadAllLines($"{Plugin.PluginsDirectory}/{pluginName}/DEPENDENCY");
-                if (plugins.Length > 0) Console.WriteLine("Installing dependencies.");
+                if (plugins.Length == 0) return;
+
+                Console.WriteLine("Installing dependencies.");
                 foreach (string plugin in plugins)
                 {
                     if (plugin.Length == 0) continue;
