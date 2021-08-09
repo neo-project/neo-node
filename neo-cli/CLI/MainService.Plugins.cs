@@ -110,7 +110,7 @@ namespace Neo.CLI
         /// <param name="stream">stream of the plugin</param>
         /// <param name="pluginName">name of the plugin</param>
         /// <param name="overWrite">Install by force for `update`</param>
-        private void InstallPlugin(MemoryStream stream, string pluginName, bool overWrite=false)
+        private void InstallPlugin(MemoryStream stream, string pluginName, bool overWrite = false)
         {
             using (SHA256 sha256 = SHA256.Create())
             {
