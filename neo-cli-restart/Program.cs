@@ -7,7 +7,7 @@ namespace neo_cli_restart
     {
         static void Main(string[] args)
         {
-            Thread.Sleep(2000);
+            // Thread.Sleep(500);
 
             var psi = new ProcessStartInfo(@"dotnet")
             {
