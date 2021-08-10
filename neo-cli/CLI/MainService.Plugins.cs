@@ -40,11 +40,6 @@ namespace Neo.CLI
         [ConsoleCommand("reinstall", Category = "Plugin Commands", Description ="Overwrite existing plugin by force.")]
         private void OnReinstallCommand(string pluginName)
         {
-            if (PluginExists(pluginName))
-            {
-                Console.WriteLine($"Plugin already exist.");
-                return;
-            }
             Stack<string> pluginToInstall = new();
             InstallPlugin(DownloadPlugin(pluginName), pluginName, pluginToInstall, true);
         }
