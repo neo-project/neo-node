@@ -37,7 +37,7 @@ namespace Neo.CLI
         /// damage to the old version.
         /// </summary>
         /// <param name="pluginName"></param>
-        [ConsoleCommand("reinstall", Category = "Plugin Commands")]
+        [ConsoleCommand("reinstall", Category = "Plugin Commands", Description ="Overwrite existing plugin by force.")]
         private void OnReinstallCommand(string pluginName)
         {
             if (PluginExists(pluginName))
@@ -52,7 +52,7 @@ namespace Neo.CLI
         /// <summary>
         /// Download plugin from github release
         /// The function of download and install are devided
-        /// for the consideration of `update` command hat
+        /// for the consideration of `update` command that
         /// might be added in the future.
         /// </summary>
         /// <param name="pluginName">name of the plugin</param>
@@ -151,6 +151,8 @@ namespace Neo.CLI
         /// Install the dependency of the plugin
         /// </summary>
         /// <param name="pluginName">plugin name</param>
+        /// <param name="pluginToInstall">installing plugin stack</param>
+        /// <param name="zip">archive of the plugin</param>
         private void InstallDependency(string pluginName, Stack<string> pluginToInstall, ZipArchive zip)
         {
             try
