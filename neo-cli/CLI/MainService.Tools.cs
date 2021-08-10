@@ -3,6 +3,7 @@ using Neo.IO;
 using Neo.Wallets;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 
@@ -50,6 +51,19 @@ namespace Neo.CLI
             {
                 Console.WriteLine($"Was not possible to convert: '{value}'");
             }
+        }
+
+        [ConsoleCommand("restart", Category = "Base Commands")]
+        private void OnRestartCommand()
+        {
+            var psi = new ProcessStartInfo(@"dotnet")
+            {
+                Arguments = @"neo-cli-restart.dll",
+                UseShellExecute = true,
+                CreateNoWindow = true
+            };
+            Process.Start(psi);
+            Process.GetCurrentProcess().Kill();
         }
 
         /// <summary>
@@ -294,7 +308,7 @@ namespace Neo.CLI
         /// String that represents the address to be converted
         /// </param>
         /// <returns>
-        /// Returns null when the string does not represent an address or when it is 
+        /// Returns null when the string does not represent an address or when it is
         /// not possible to parse the address to Base64 value; otherwise returns
         /// the string that represents the converted Base64 value.
         /// </returns>
