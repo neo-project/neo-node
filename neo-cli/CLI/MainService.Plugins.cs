@@ -121,8 +121,8 @@ namespace Neo.CLI
 
             try
             {
+                InstallDependency(pluginName, zip);
                 zip.ExtractToDirectory(".", overWrite);
-                InstallDependency(pluginName);
                 Console.WriteLine($"Install successful, please restart neo-cli.");
             }
             catch (IOException)
@@ -135,23 +135,26 @@ namespace Neo.CLI
         /// Install the dependency of the plugin
         /// </summary>
         /// <param name="pluginName">plugin name</param>
-        private void InstallDependency(string pluginName)
+        private void InstallDependency(string pluginName, ZipArchive zip)
         {
             try
             {
-                string[] plugins = File.ReadAllLines($"{Plugin.PluginsDirectory}/{pluginName}/DEPENDENCY");
-                if (plugins.Length == 0) return;
-
-                Console.WriteLine("Installing dependencies.");
-                foreach (string plugin in plugins)
+                ZipArchiveEntry entry = zip.GetEntry($"Plugins/{pluginName}/DEPENDENCY");
+                using (StreamReader reader = new StreamReader(entry.Open()))
                 {
-                    if (plugin.Length == 0) continue;
-
-                    if (PluginExists(plugin))
+                    Console.WriteLine("Installing dependencies.");
+                    while (!reader.EndOfStream)
                     {
-                        continue;
+                        var plugin = reader.ReadLine();
+                        if (plugin.Length == 0) continue;
+
+                        if (PluginExists(plugin))
+                        {
+                            Console.WriteLine("Dependency already installed.");
+                            continue;
+                        }
+                        InstallPlugin(DownloadPlugin(plugin), plugin);
                     }
-                    InstallPlugin(DownloadPlugin(plugin), plugin);
                 }
             }
             catch
@@ -163,8 +166,7 @@ namespace Neo.CLI
 
         private bool PluginExists(string pluginName)
         {
-            return Directory.Exists($"{Plugin.PluginsDirectory}/{pluginName}") &&
-                        File.Exists($"{Plugin.PluginsDirectory}/{pluginName}.dll");
+            return File.Exists($"{Plugin.PluginsDirectory}/{pluginName}.dll");
         }
 
         /// <summary>
