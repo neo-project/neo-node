@@ -1,21 +1,18 @@
 using System.Diagnostics;
 using System.Threading;
 
-namespace neo_cli_restart
+namespace neo_cli_launcher
 {
     class Program
     {
         static void Main(string[] args)
         {
-            // Thread.Sleep(500);
-
-            var psi = new ProcessStartInfo(@"dotnet")
+            Process.Start(new ProcessStartInfo(@"dotnet")
             {
                 Arguments = @"neo-cli.dll",
                 UseShellExecute = true,
                 CreateNoWindow = true
-            };
-            Process.Start(psi);
+            });
         }
     }
 }
