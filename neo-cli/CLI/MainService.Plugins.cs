@@ -138,6 +138,7 @@ namespace Neo.CLI
             }
             catch (IOException)
             {
+                pluginToInstall.Pop();
                 Console.WriteLine($"Plugin already exist.");
             };
         }
