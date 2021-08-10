@@ -15,7 +15,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{62F4DC79
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{705EBADA-05F7-45D1-9D63-D399E87525DB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "neo-cli-restart", "neo-cli-restart\neo-cli-restart.csproj", "{2F6CD679-3D40-4F7A-B4D4-12BFF7AFF9B8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "neo-cli-launcher", "neo-cli-launcher\neo-cli-launcher.csproj", "{2F6CD679-3D40-4F7A-B4D4-12BFF7AFF9B8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

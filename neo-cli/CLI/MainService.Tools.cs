@@ -58,7 +58,7 @@ namespace Neo.CLI
         {
             var psi = new ProcessStartInfo(@"dotnet")
             {
-                Arguments = @"neo-cli-restart.dll",
+                Arguments = @"neo-cli-launcher.dll",
                 UseShellExecute = true,
                 CreateNoWindow = true
             };
