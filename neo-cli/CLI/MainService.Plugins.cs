@@ -2,6 +2,7 @@ using Neo.ConsoleService;
 using Neo.IO.Json;
 using Neo.Plugins;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -24,7 +25,10 @@ namespace Neo.CLI
                 Console.WriteLine($"Plugin already exist.");
                 return;
             }
-            InstallPlugin(DownloadPlugin(pluginName), pluginName);
+            // To prevent circular dependency
+            // put plugin-to-install into stack
+            Stack<string> pluginToInstall = new();
+            InstallPlugin(DownloadPlugin(pluginName), pluginName, pluginToInstall);
         }
 
         /// <summary>
@@ -41,7 +45,8 @@ namespace Neo.CLI
                 Console.WriteLine($"Plugin already exist.");
                 return;
             }
-            InstallPlugin(DownloadPlugin(pluginName), pluginName, true);
+            Stack<string> pluginToInstall = new();
+            InstallPlugin(DownloadPlugin(pluginName), pluginName, pluginToInstall, true);
         }
 
         /// <summary>
@@ -109,21 +114,32 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="stream">stream of the plugin</param>
         /// <param name="pluginName">name of the plugin</param>
+        /// <param name="pluginToInstall">installing plugin stack</param>
         /// <param name="overWrite">Install by force for `update`</param>
-        private void InstallPlugin(MemoryStream stream, string pluginName, bool overWrite = false)
+        private void InstallPlugin(MemoryStream stream, string pluginName, Stack<string> pluginToInstall, bool overWrite = false)
         {
+            // If plugin already in the installing stack,
+            // It means there has circular dependency.
+            // Throw exception.
+            if (pluginToInstall.Contains(pluginName))
+            {
+                Console.WriteLine("Plugin has circular dependency");
+                throw new DuplicateWaitObjectException();
+            }
+            pluginToInstall.Push(pluginName);
+
             using (SHA256 sha256 = SHA256.Create())
             {
                 Console.WriteLine("SHA256: " + sha256.ComputeHash(stream.ToArray()).ToHexString().ToString());
             }
-
             using ZipArchive zip = new(stream, ZipArchiveMode.Read);
 
             try
             {
-                InstallDependency(pluginName, zip);
+                InstallDependency(pluginName, pluginToInstall, zip);
                 zip.ExtractToDirectory(".", overWrite);
                 Console.WriteLine($"Install successful, please restart neo-cli.");
+                pluginToInstall.Pop();
             }
             catch (IOException)
             {
@@ -135,7 +151,7 @@ namespace Neo.CLI
         /// Install the dependency of the plugin
         /// </summary>
         /// <param name="pluginName">plugin name</param>
-        private void InstallDependency(string pluginName, ZipArchive zip)
+        private void InstallDependency(string pluginName, Stack<string> pluginToInstall, ZipArchive zip)
         {
             try
             {
@@ -153,7 +169,7 @@ namespace Neo.CLI
                             Console.WriteLine("Dependency already installed.");
                             continue;
                         }
-                        InstallPlugin(DownloadPlugin(plugin), plugin);
+                        InstallPlugin(DownloadPlugin(plugin), plugin, pluginToInstall);
                     }
                 }
             }
