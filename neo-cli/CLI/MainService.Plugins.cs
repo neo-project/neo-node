@@ -32,7 +32,7 @@ namespace Neo.CLI
         }
 
         /// <summary>
-        /// Force to install a pugin again. This will overwrite
+        /// Force to install a plugin again. This will overwrite
         /// existing plugin files, in case of any file missing or
         /// damage to the old version.
         /// </summary>
