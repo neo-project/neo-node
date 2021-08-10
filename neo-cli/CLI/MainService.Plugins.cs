@@ -37,7 +37,7 @@ namespace Neo.CLI
         /// damage to the old version.
         /// </summary>
         /// <param name="pluginName"></param>
-        [ConsoleCommand("reinstall", Category = "Plugin Commands", Description ="Overwrite existing plugin by force.")]
+        [ConsoleCommand("reinstall", Category = "Plugin Commands", Description = "Overwrite existing plugin by force.")]
         private void OnReinstallCommand(string pluginName)
         {
             Stack<string> pluginToInstall = new();
