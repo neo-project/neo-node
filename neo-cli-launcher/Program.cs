@@ -7,11 +7,11 @@ namespace neo_cli_launcher
     {
         static void Main(string[] args)
         {
+            Thread.Sleep(2000);
             Process.Start(new ProcessStartInfo(@"dotnet")
             {
                 Arguments = @"neo-cli.dll",
-                UseShellExecute = true,
-                CreateNoWindow = true
+                UseShellExecute = false,
             });
         }
     }

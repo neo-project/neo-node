@@ -1,5 +1,6 @@
 using Neo.ConsoleService;
 using Neo.IO;
+using Neo.Plugins;
 using Neo.Wallets;
 using System;
 using System.Collections.Generic;
@@ -56,11 +57,12 @@ namespace Neo.CLI
         [ConsoleCommand("restart", Category = "Base Commands")]
         private void OnRestartCommand()
         {
+            foreach (var plugin in Plugin.Plugins) plugin.Dispose();
+
             var psi = new ProcessStartInfo(@"dotnet")
             {
                 Arguments = @"neo-cli-launcher.dll",
-                UseShellExecute = true,
-                CreateNoWindow = true
+                UseShellExecute = false,
             };
             Process.Start(psi);
             Process.GetCurrentProcess().Kill();
