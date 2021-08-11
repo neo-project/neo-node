@@ -54,6 +54,7 @@ namespace Neo.CLI
         /// <returns></returns>
         private MemoryStream DownloadPlugin(string pluginName)
         {
+
             HttpWebRequest request = WebRequest.CreateHttp($"https://github.com/neo-project/neo-modules/releases/download/v{typeof(Plugin).Assembly.GetVersion()}/{pluginName}.zip");
             HttpWebResponse response;
             try
@@ -83,25 +84,8 @@ namespace Neo.CLI
                 request = WebRequest.CreateHttp(asset["browser_download_url"].GetString());
                 response = (HttpWebResponse)request.GetResponse();
             }
-            using (response)
-            {
-                var totalRead = 0L;
-                byte[] buffer = new byte[1024];
-                int read;
 
-                using Stream stream = response.GetResponseStream();
-
-                var output = new MemoryStream();
-                while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
-                {
-                    output.Write(buffer, 0, read);
-                    totalRead += read;
-                    Console.Write($"\rDownloading {pluginName}.zip {totalRead / 1024}KB/{response.ContentLength / 1024}KB {(totalRead * 100) / response.ContentLength}%");
-                }
-                Console.WriteLine();
-
-                return output;
-            }
+            return Helper.DownloadFile(response, pluginName);
         }
 
         /// <summary>

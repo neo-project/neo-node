@@ -1,10 +1,15 @@
 using Neo.ConsoleService;
 using Neo.IO;
+using Neo.IO.Json;
 using Neo.Wallets;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Net;
 using System.Numerics;
+using System.Security.Cryptography;
 
 namespace Neo.CLI
 {
@@ -50,6 +55,68 @@ namespace Neo.CLI
             {
                 Console.WriteLine($"Was not possible to convert: '{value}'");
             }
+        }
+
+        [ConsoleCommand("update", Category = "Base Commands")]
+        private void OnUpdate(string version)
+        {
+            InstallPatch(DownloadPatch(version));
+        }
+
+
+        private MemoryStream DownloadPatch(string version)
+        {
+            HttpWebRequest request = WebRequest.CreateHttp($"https://github.com/neo-project/neo-node/releases/download/v{version}/neo-cli-patch.zip");
+            HttpWebResponse response;
+            try
+            {
+                response = (HttpWebResponse)request.GetResponse();
+            }
+            catch (WebException ex) when (((HttpWebResponse)ex.Response).StatusCode == HttpStatusCode.NotFound)
+            {
+                Version version_core = new Version(version);
+                request = WebRequest.CreateHttp($"https://api.github.com/repos/neo-project/neo-node/releases");
+                request.UserAgent = $"{GetType().Assembly.GetName().Name}/{GetType().Assembly.GetVersion()}";
+                using HttpWebResponse response_api = (HttpWebResponse)request.GetResponse();
+                using Stream stream = response_api.GetResponseStream();
+                using StreamReader reader = new(stream);
+                JObject releases = JObject.Parse(reader.ReadToEnd());
+                JObject asset = releases.GetArray()
+                    .Where(p => !p["tag_name"].GetString().Contains('-'))
+                    .Select(p => new
+                    {
+                        Version = Version.Parse(p["tag_name"].GetString().TrimStart('v')),
+                        Assets = p["assets"].GetArray()
+                    })
+                    .OrderByDescending(p => p.Version)
+                    .First(p => p.Version <= version_core).Assets
+                    .FirstOrDefault(p => p["name"].GetString() == $"neo-cli-patch.zip");
+                if (asset is null) throw new Exception("Patch doesn't exist.");
+                request = WebRequest.CreateHttp(asset["browser_download_url"].GetString());
+                response = (HttpWebResponse)request.GetResponse();
+            }
+
+            return Helper.DownloadFile(response, "neo-cli-patch.zip");
+        }
+
+        private void InstallPatch(MemoryStream stream)
+        {
+
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                Console.WriteLine("SHA256: " + sha256.ComputeHash(stream.ToArray()).ToHexString().ToString());
+            }
+            using ZipArchive zip = new(stream, ZipArchiveMode.Read);
+
+            try
+            {
+                zip.ExtractToDirectory(".", true);
+                Console.WriteLine($"Update successful, please restart neo-cli.");
+            }
+            catch (IOException)
+            {
+                Console.WriteLine($"Update failed.");
+            };
         }
 
         /// <summary>
