@@ -64,7 +64,7 @@ namespace Neo.CLI
 
                 var psi = new ProcessStartInfo(@"dotnet")
                 {
-                    Arguments = @"neo-cli-launcher.dll",
+                    Arguments = @"neo-cli.dll",
                     UseShellExecute = false,
                 };
                 Process.Start(psi);
