@@ -57,6 +57,8 @@ namespace Neo.CLI
         [ConsoleCommand("restart", Category = "Base Commands")]
         private void OnRestartCommand()
         {
+            // Due to a console read stream issue in .net core on linux platform
+            // currently we only support restart on windows.
             if (PlatformID.Win32S <= Environment.OSVersion.Platform &&
                 Environment.OSVersion.Platform <= PlatformID.WinCE)
             {
