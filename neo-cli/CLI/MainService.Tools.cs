@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
-using System.Runtime.Versioning;
 
 namespace Neo.CLI
 {
@@ -55,20 +54,27 @@ namespace Neo.CLI
             }
         }
 
-        [SupportedOSPlatformAttribute("windows")]
-        [SupportedOSPlatformAttribute("macos")]
         [ConsoleCommand("restart", Category = "Base Commands")]
         private void OnRestartCommand()
         {
-            foreach (var plugin in Plugin.Plugins) plugin.Dispose();
-
-            var psi = new ProcessStartInfo(@"dotnet")
+            if (PlatformID.Win32S <= Environment.OSVersion.Platform &&
+                Environment.OSVersion.Platform <= PlatformID.WinCE)
             {
-                Arguments = @"neo-cli-launcher.dll",
-                UseShellExecute = false,
-            };
-            Process.Start(psi);
-            Process.GetCurrentProcess().Kill();
+                foreach (var plugin in Plugin.Plugins) plugin.Dispose();
+
+                var psi = new ProcessStartInfo(@"dotnet")
+                {
+                    Arguments = @"neo-cli-launcher.dll",
+                    UseShellExecute = false,
+                };
+                Process.Start(psi);
+                Process.GetCurrentProcess().Kill();
+            }
+            else
+            {
+                Console.WriteLine("Not implemented for your platform, please restart manually.");
+            }
+
         }
 
         /// <summary>
