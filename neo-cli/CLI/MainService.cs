@@ -499,6 +499,14 @@ namespace Neo.CLI
             }
         }
 
+        private static void WriteLineWithoutFlicker(string message = "", int maxWidth = 80)
+        {
+            if (message.Length > 0) Console.Write(message);
+            var spacesToErase = maxWidth - message.Length;
+            if (spacesToErase < 0) spacesToErase = 0;
+            Console.WriteLine(new string(' ', spacesToErase));
+        }
+
         /// <summary>
         /// Make and send transaction with script, sender
         /// </summary>

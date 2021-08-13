@@ -65,15 +65,36 @@ namespace Neo.CLI
             Task task = Task.Run(async () =>
             {
                 int maxLines = 0;
+                int loadingProgress = 0;
+                uint previousHeight = 0;
                 while (!cancel.Token.IsCancellationRequested)
                 {
                     uint height = NativeContract.Ledger.CurrentIndex(NeoSystem.StoreView);
                     uint headerHeight = NeoSystem.HeaderCache.Last?.Index ?? height;
+                    if (previousHeight == 0) previousHeight = headerHeight;
 
                     Console.SetCursorPosition(0, 0);
-                    Console.WriteLine($"\rblock: {height}/{headerHeight}  connected: {LocalNode.ConnectedCount}  unconnected: {LocalNode.UnconnectedCount}", Console.WindowWidth - 1);
+                    WriteLineWithoutFlicker($"block: {height}/{headerHeight}  connected: {LocalNode.ConnectedCount}  unconnected: {LocalNode.UnconnectedCount}", Console.WindowWidth - 1);
 
                     int linesWritten = 1;
+                    string placeHolder = ". ";
+                    if (headerHeight > previousHeight || loadingProgress > 30)
+                    {
+                        previousHeight = headerHeight;
+                        loadingProgress = 0;
+                        foreach (var value in Enumerable.Range(0, Console.WindowWidth))
+                            placeHolder += " ";
+                    }
+                    else
+                        foreach (var value in Enumerable.Range(0, loadingProgress))
+                            placeHolder += ". ";
+
+                    Console.WriteLine($"\r {placeHolder}");
+
+                    loadingProgress++;
+                    linesWritten++;
+
+
                     foreach (RemoteNode node in LocalNode.GetRemoteNodes().OrderByDescending(u => u.LastBlockIndex).Take(Console.WindowHeight - 2).ToArray())
                     {
                         ShowState($"  ip: ",
@@ -92,7 +113,7 @@ namespace Neo.CLI
 
                     while (linesWritten < maxLines)
                     {
-                        Console.WriteLine("\r ", Console.WindowWidth - 1);
+                        WriteLineWithoutFlicker(" ", Console.WindowWidth - 1);
                         maxLines--;
                     }
 
