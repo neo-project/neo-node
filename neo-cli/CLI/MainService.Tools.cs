@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.Versioning;
 
 namespace Neo.CLI
 {
@@ -54,6 +55,8 @@ namespace Neo.CLI
             }
         }
 
+        [SupportedOSPlatformAttribute("windows")]
+        [SupportedOSPlatformAttribute("macos")]
         [ConsoleCommand("restart", Category = "Base Commands")]
         private void OnRestartCommand()
         {
