@@ -76,7 +76,7 @@ namespace Neo.CLI
                     int linesWritten = 1;
                     foreach (RemoteNode node in LocalNode.GetRemoteNodes().OrderByDescending(u => u.LastBlockIndex).Take(Console.WindowHeight - 2).ToArray())
                     {
-                        ShowState($"\r  ip: ",
+                        ShowState($"  ip: ",
                             $"{ node.Remote.Address,-15}\t",
                             $"port: ",
                             $"{node.Remote.Port,-5}\t",
@@ -111,7 +111,7 @@ namespace Neo.CLI
             for (int i = 0; i < values.Length; i++)
             {
                 Console.ForegroundColor = ConsoleColor.Green;
-                if (i%2 == 1)
+                if (i % 2 == 1)
                     Console.ForegroundColor = ConsoleColor.White;
                 Console.Write(values[i]);
             }
