@@ -71,13 +71,20 @@ namespace Neo.CLI
                     uint headerHeight = NeoSystem.HeaderCache.Last?.Index ?? height;
 
                     Console.SetCursorPosition(0, 0);
-                    WriteLineWithoutFlicker($"block: {height}/{headerHeight}  connected: {LocalNode.ConnectedCount}  unconnected: {LocalNode.UnconnectedCount}", Console.WindowWidth - 1);
+                    Console.WriteLine($"\rblock: {height}/{headerHeight}  connected: {LocalNode.ConnectedCount}  unconnected: {LocalNode.UnconnectedCount}", Console.WindowWidth - 1);
 
                     int linesWritten = 1;
                     foreach (RemoteNode node in LocalNode.GetRemoteNodes().OrderByDescending(u => u.LastBlockIndex).Take(Console.WindowHeight - 2).ToArray())
                     {
-                        Console.WriteLine(
-                            $"  ip: {node.Remote.Address,-15}\tport: {node.Remote.Port,-5}\tlisten: {node.ListenerTcpPort,-5}\theight: {node.LastBlockIndex,-7}");
+                        ShowState($"\r  ip: ",
+                            $"{ node.Remote.Address,-15}\t",
+                            $"port: ",
+                            $"{node.Remote.Port,-5}\t",
+                            $"listen: ",
+                            $"{node.ListenerTcpPort,-5}\t",
+                            $"height: ",
+                            $"{node.LastBlockIndex,-7}");
+
                         linesWritten++;
                     }
 
@@ -85,7 +92,7 @@ namespace Neo.CLI
 
                     while (linesWritten < maxLines)
                     {
-                        WriteLineWithoutFlicker("", Console.WindowWidth - 1);
+                        Console.WriteLine("\r ", Console.WindowWidth - 1);
                         maxLines--;
                     }
 
@@ -97,6 +104,20 @@ namespace Neo.CLI
             try { Task.WaitAll(task, broadcast); } catch { }
             Console.WriteLine();
             Console.CursorVisible = true;
+        }
+
+        private void ShowState(params string[] values)
+        {
+            for (int i = 0; i < values.Length; i++)
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                if (i%2 == 1)
+                    Console.ForegroundColor = ConsoleColor.White;
+                Console.Write(values[i]);
+            }
+
+            Console.WriteLine();
+
         }
     }
 }
