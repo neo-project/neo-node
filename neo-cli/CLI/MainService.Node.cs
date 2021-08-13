@@ -94,10 +94,9 @@ namespace Neo.CLI
                     loadingProgress++;
                     linesWritten++;
 
-
                     foreach (RemoteNode node in LocalNode.GetRemoteNodes().OrderByDescending(u => u.LastBlockIndex).Take(Console.WindowHeight - 2).ToArray())
                     {
-                        ShowState($"  ip: ",
+                        ShowState($"\r  ip: ",
                             $"{ node.Remote.Address,-15}\t",
                             $"port: ",
                             $"{node.Remote.Port,-5}\t",
@@ -111,9 +110,9 @@ namespace Neo.CLI
 
                     maxLines = Math.Max(maxLines, linesWritten);
 
-                    while (linesWritten < maxLines)
+                    while (linesWritten <= maxLines)
                     {
-                        WriteLineWithoutFlicker(" ", Console.WindowWidth - 1);
+                        WriteLineWithoutFlicker("", Console.WindowWidth - 1);
                         maxLines--;
                     }
 
