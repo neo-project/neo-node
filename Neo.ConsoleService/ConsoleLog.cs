@@ -32,14 +32,12 @@ namespace Neo.ConsoleService
             Log("Error", ConsoleColor.Red, msg);
         }
 
-        private static void Log(string tag, ConsoleColor tagColor,  string msg, ConsoleColor msgColor = ConsoleColor.White)
+        private static void Log(string tag, ConsoleColor tagColor, string msg, ConsoleColor msgColor = ConsoleColor.White)
         {
             Console.ForegroundColor = tagColor;
             Console.Write($"{tag}: ");
             Console.ForegroundColor = msgColor;
             Console.WriteLine(msg);
         }
-
-
     }
 }
