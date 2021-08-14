@@ -54,7 +54,7 @@ namespace Neo.CLI
                 try
                 {
                     zip.ExtractToDirectory(".");
-                    Console.WriteLine($"Install successful, please restart neo-cli.");
+                    ConsoleLog.Warning($"Install successful, please restart neo-cli.");
                 }
                 catch (IOException)
                 {
@@ -73,12 +73,12 @@ namespace Neo.CLI
             var plugin = Plugin.Plugins.FirstOrDefault(p => p.Name == pluginName);
             if (plugin is null)
             {
-                Console.WriteLine("Plugin not found");
+                ConsoleLog.Warning("Plugin not found");
                 return;
             }
             if (plugin is Logger)
             {
-                Console.WriteLine("You cannot uninstall a built-in plugin.");
+                ConsoleLog.Error("You cannot uninstall a built-in plugin.");
                 return;
             }
 
@@ -91,7 +91,7 @@ namespace Neo.CLI
             catch (IOException)
             {
             }
-            Console.WriteLine($"Uninstall successful, please restart neo-cli.");
+            ConsoleLog.Warning($"Uninstall successful, please restart neo-cli.");
         }
 
         /// <summary>
@@ -106,7 +106,7 @@ namespace Neo.CLI
                 foreach (Plugin plugin in Plugin.Plugins)
                 {
                     if (plugin is Logger) continue;
-                    Console.WriteLine($"\t{plugin.Name,-20}{plugin.Description}");
+                    ConsoleLog.Info($"\t{plugin.Name,-20}", $"{plugin.Description}");
                 }
             }
             else

@@ -435,15 +435,15 @@ namespace Neo.CLI
                 }
                 catch (FileNotFoundException)
                 {
-                    Console.WriteLine($"Warning: wallet file \"{Settings.Default.UnlockWallet.Path}\" not found.");
+                    ConsoleLog.Warning($"wallet file \"{Settings.Default.UnlockWallet.Path}\" not found.");
                 }
                 catch (System.Security.Cryptography.CryptographicException)
                 {
-                    Console.WriteLine($"Failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
+                    ConsoleLog.Error($"Failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"error: {ex.GetBaseException().Message}");
+                    ConsoleLog.Error($"{ex.GetBaseException().Message}");
                 }
             }
         }
@@ -546,7 +546,7 @@ namespace Neo.CLI
             }
             catch (InvalidOperationException e)
             {
-                Console.WriteLine("Error: " + GetExceptionMessage(e));
+                ConsoleLog.Error(GetExceptionMessage(e));
                 return;
             }
 
@@ -579,7 +579,7 @@ namespace Neo.CLI
             ContractState contract = NativeContract.ContractManagement.GetContract(NeoSystem.StoreView, scriptHash);
             if (contract == null)
             {
-                Console.WriteLine("Contract does not exist.");
+                ConsoleLog.Warning("Contract does not exist.");
                 result = StackItem.Null;
                 return false;
             }
@@ -587,7 +587,7 @@ namespace Neo.CLI
             {
                 if (contract.Manifest.Abi.GetMethod(operation, parameters.Count) == null)
                 {
-                    Console.WriteLine("This method does not not exist in this contract.");
+                    ConsoleLog.Warning("This method does not not exist in this contract.");
                     result = StackItem.Null;
                     return false;
                 }
@@ -615,14 +615,14 @@ namespace Neo.CLI
 
         private void PrintExecutionOutput(ApplicationEngine engine, bool showStack = true)
         {
-            Console.WriteLine($"VM State: {engine.State}");
-            Console.WriteLine($"Gas Consumed: {new BigDecimal((BigInteger)engine.GasConsumed, NativeContract.GAS.Decimals)}");
+            ConsoleLog.Info($"VM State:", $" {engine.State}");
+            ConsoleLog.Info($"Gas Consumed:", $" {new BigDecimal((BigInteger)engine.GasConsumed, NativeContract.GAS.Decimals)}");
 
             if (showStack)
-                Console.WriteLine($"Result Stack: {new JArray(engine.ResultStack.Select(p => p.ToJson()))}");
+                ConsoleLog.Info($"Result Stack:", $" {new JArray(engine.ResultStack.Select(p => p.ToJson()))}");
 
             if (engine.State == VMState.FAULT)
-                Console.WriteLine("Error: " + GetExceptionMessage(engine.FaultException));
+                ConsoleLog.Error(GetExceptionMessage(engine.FaultException));
         }
 
         static string GetExceptionMessage(Exception exception)

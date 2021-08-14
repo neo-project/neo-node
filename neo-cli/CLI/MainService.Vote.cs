@@ -25,7 +25,7 @@ namespace Neo.CLI
 
             if (NoWallet())
             {
-                Console.WriteLine("Need open wallet!");
+                ConsoleLog.Warning("Need open wallet!");
                 return;
             }
 
@@ -33,14 +33,14 @@ namespace Neo.CLI
 
             if (currentAccount == null)
             {
-                Console.WriteLine("This address isn't in your wallet!");
+                ConsoleLog.Warning("This address isn't in your wallet!");
                 return;
             }
             else
             {
                 if (currentAccount.Lock || currentAccount.WatchOnly)
                 {
-                    Console.WriteLine("Locked or WatchOnly address.");
+                    ConsoleLog.Warning("Locked or WatchOnly address.");
                     return;
                 }
             }
@@ -65,7 +65,7 @@ namespace Neo.CLI
         {
             if (NoWallet())
             {
-                Console.WriteLine("Need open wallet!");
+                ConsoleLog.Warning("Need open wallet!");
                 return;
             }
 
@@ -73,14 +73,14 @@ namespace Neo.CLI
 
             if (currentAccount == null)
             {
-                Console.WriteLine("This address isn't in your wallet!");
+                ConsoleLog.Warning("This address isn't in your wallet!");
                 return;
             }
             else
             {
                 if (currentAccount.Lock || currentAccount.WatchOnly)
                 {
-                    Console.WriteLine("Locked or WatchOnly address.");
+                    ConsoleLog.Warning("Locked or WatchOnly address.");
                     return;
                 }
             }
@@ -106,7 +106,7 @@ namespace Neo.CLI
         {
             if (NoWallet())
             {
-                Console.WriteLine("Need open wallet!");
+                ConsoleLog.Warning("Need open wallet!");
                 return;
             }
 
@@ -129,7 +129,7 @@ namespace Neo.CLI
         {
             if (NoWallet())
             {
-                Console.WriteLine("Need open wallet!");
+                ConsoleLog.Warning("Need open wallet!");
                 return;
             }
 
@@ -156,7 +156,7 @@ namespace Neo.CLI
             if (resJArray.Count > 0)
             {
                 Console.WriteLine();
-                Console.WriteLine("Candidates:");
+                ConsoleLog.Info("Candidates:");
 
                 foreach (var item in resJArray)
                 {
@@ -181,7 +181,7 @@ namespace Neo.CLI
             if (resJArray.Count > 0)
             {
                 Console.WriteLine();
-                Console.WriteLine("Committee:");
+                ConsoleLog.Info("Committee:");
 
                 foreach (var item in resJArray)
                 {
@@ -203,7 +203,7 @@ namespace Neo.CLI
             if (resJArray.Count > 0)
             {
                 Console.WriteLine();
-                Console.WriteLine("Next validators:");
+                ConsoleLog.Info("Next validators:");
 
                 foreach (var item in resJArray)
                 {
@@ -240,9 +240,9 @@ namespace Neo.CLI
                 }
             }
             var publickey = ECPoint.Parse(((ByteString)resJArray?[2])?.GetSpan().ToHexString(), ECCurve.Secp256r1);
-            Console.WriteLine("Voted: " + Contract.CreateSignatureRedeemScript(publickey).ToScriptHash().ToAddress(NeoSystem.Settings.AddressVersion));
-            Console.WriteLine("Amount: " + new BigDecimal(((Integer)resJArray?[0]).GetInteger(), NativeContract.NEO.Decimals));
-            Console.WriteLine("Block: " + ((Integer)resJArray?[1]).GetInteger());
+            ConsoleLog.Info("Voted: ", Contract.CreateSignatureRedeemScript(publickey).ToScriptHash().ToAddress(NeoSystem.Settings.AddressVersion));
+            ConsoleLog.Info("Amount: ", $"{new BigDecimal(((Integer)resJArray?[0]).GetInteger(), NativeContract.NEO.Decimals)}");
+            ConsoleLog.Info("Block: ", $"{((Integer)resJArray?[1]).GetInteger()}");
         }
     }
 }
