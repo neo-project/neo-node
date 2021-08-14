@@ -131,9 +131,9 @@ namespace Neo.CLI
                     {
                         UserWallet wallet = UserWallet.Create(path, password, NeoSystem.Settings);
                         WalletAccount account = wallet.CreateAccount();
-                        Console.WriteLine($"   Address: {account.Address}");
-                        Console.WriteLine($"    Pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                        Console.WriteLine($"ScriptHash: {account.ScriptHash}");
+                        ConsoleLog.Info($"   Address:", $" {account.Address}");
+                        ConsoleLog.Info($"    Pubkey:", $" {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+                        ConsoleLog.Info($"ScriptHash:", $" {account.ScriptHash}");
                         CurrentWallet = wallet;
                     }
                     break;
@@ -143,9 +143,9 @@ namespace Neo.CLI
                         wallet.Unlock(password);
                         WalletAccount account = wallet.CreateAccount();
                         wallet.Save();
-                        Console.WriteLine($"   Address: {account.Address}");
-                        Console.WriteLine($"    Pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                        Console.WriteLine($"ScriptHash: {account.ScriptHash}");
+                        ConsoleLog.Info($"   Address:", $" {account.Address}");
+                        ConsoleLog.Info($"    Pubkey:", $" {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+                        ConsoleLog.Info($"ScriptHash:", $" {account.ScriptHash}");
                         CurrentWallet = wallet;
                     }
                     break;
