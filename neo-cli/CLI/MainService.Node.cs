@@ -137,7 +137,6 @@ namespace Neo.CLI
             }
 
             Console.WriteLine();
-
         }
     }
 }
