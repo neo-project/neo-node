@@ -131,9 +131,9 @@ namespace Neo.CLI
                     {
                         UserWallet wallet = UserWallet.Create(path, password, NeoSystem.Settings);
                         WalletAccount account = wallet.CreateAccount();
-                        ConsoleLog.Info($"   Address:", $" {account.Address}");
-                        ConsoleLog.Info($"    Pubkey:", $" {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                        ConsoleLog.Info($"ScriptHash:", $" {account.ScriptHash}");
+                        ConsoleWrite.Info($"   Address:", $" {account.Address}");
+                        ConsoleWrite.Info($"    Pubkey:", $" {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+                        ConsoleWrite.Info($"ScriptHash:", $" {account.ScriptHash}");
                         CurrentWallet = wallet;
                     }
                     break;
@@ -143,9 +143,9 @@ namespace Neo.CLI
                         wallet.Unlock(password);
                         WalletAccount account = wallet.CreateAccount();
                         wallet.Save();
-                        ConsoleLog.Info($"   Address:", $" {account.Address}");
-                        ConsoleLog.Info($"    Pubkey:", $" {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                        ConsoleLog.Info($"ScriptHash:", $" {account.ScriptHash}");
+                        ConsoleWrite.Info($"   Address:", $" {account.Address}");
+                        ConsoleWrite.Info($"    Pubkey:", $" {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+                        ConsoleWrite.Info($"ScriptHash:", $" {account.ScriptHash}");
                         CurrentWallet = wallet;
                     }
                     break;
@@ -435,15 +435,15 @@ namespace Neo.CLI
                 }
                 catch (FileNotFoundException)
                 {
-                    ConsoleLog.Warning($"wallet file \"{Settings.Default.UnlockWallet.Path}\" not found.");
+                    ConsoleWrite.Warning($"wallet file \"{Settings.Default.UnlockWallet.Path}\" not found.");
                 }
                 catch (System.Security.Cryptography.CryptographicException)
                 {
-                    ConsoleLog.Error($"Failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
+                    ConsoleWrite.Error($"Failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
                 }
                 catch (Exception ex)
                 {
-                    ConsoleLog.Error($"{ex.GetBaseException().Message}");
+                    ConsoleWrite.Error($"{ex.GetBaseException().Message}");
                 }
             }
         }
@@ -546,7 +546,7 @@ namespace Neo.CLI
             }
             catch (InvalidOperationException e)
             {
-                ConsoleLog.Error(GetExceptionMessage(e));
+                ConsoleWrite.Error(GetExceptionMessage(e));
                 return;
             }
 
@@ -579,7 +579,7 @@ namespace Neo.CLI
             ContractState contract = NativeContract.ContractManagement.GetContract(NeoSystem.StoreView, scriptHash);
             if (contract == null)
             {
-                ConsoleLog.Warning("Contract does not exist.");
+                ConsoleWrite.Warning("Contract does not exist.");
                 result = StackItem.Null;
                 return false;
             }
@@ -587,7 +587,7 @@ namespace Neo.CLI
             {
                 if (contract.Manifest.Abi.GetMethod(operation, parameters.Count) == null)
                 {
-                    ConsoleLog.Warning("This method does not not exist in this contract.");
+                    ConsoleWrite.Warning("This method does not not exist in this contract.");
                     result = StackItem.Null;
                     return false;
                 }
@@ -615,14 +615,14 @@ namespace Neo.CLI
 
         private void PrintExecutionOutput(ApplicationEngine engine, bool showStack = true)
         {
-            ConsoleLog.Info($"VM State:", $" {engine.State}");
-            ConsoleLog.Info($"Gas Consumed:", $" {new BigDecimal((BigInteger)engine.GasConsumed, NativeContract.GAS.Decimals)}");
+            ConsoleWrite.Info($"VM State:", $" {engine.State}");
+            ConsoleWrite.Info($"Gas Consumed:", $" {new BigDecimal((BigInteger)engine.GasConsumed, NativeContract.GAS.Decimals)}");
 
             if (showStack)
-                ConsoleLog.Info($"Result Stack:", $" {new JArray(engine.ResultStack.Select(p => p.ToJson()))}");
+                ConsoleWrite.Info($"Result Stack:", $" {new JArray(engine.ResultStack.Select(p => p.ToJson()))}");
 
             if (engine.State == VMState.FAULT)
-                ConsoleLog.Error(GetExceptionMessage(engine.FaultException));
+                ConsoleWrite.Error(GetExceptionMessage(engine.FaultException));
         }
 
         static string GetExceptionMessage(Exception exception)

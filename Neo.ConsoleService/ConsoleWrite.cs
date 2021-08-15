@@ -2,7 +2,7 @@ using System;
 
 namespace Neo.ConsoleService
 {
-    public class ConsoleLog
+    public class ConsoleWrite
     {
         public static void WriteLine(string msg)
         {
