@@ -4,10 +4,6 @@ namespace Neo.ConsoleService
 {
     public class ConsoleWrite
     {
-        public static void WriteLine(string msg)
-        {
-            Console.WriteLine(msg);
-        }
 
         public static void Info(params string[] values)
         {
