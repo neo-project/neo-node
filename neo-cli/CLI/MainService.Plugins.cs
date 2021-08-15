@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Neo.ConsoleService;
 using Neo.IO.Json;
 using Neo.Plugins;
@@ -131,8 +132,8 @@ namespace Neo.CLI
 
             try
             {
-                InstallDependency(pluginName, pluginToInstall, zip);
                 zip.ExtractToDirectory(".", overWrite);
+                InstallDependency(pluginName, pluginToInstall);
                 Console.WriteLine($"Install successful, please restart neo-cli.");
                 pluginToInstall.Pop();
             }
@@ -148,27 +149,30 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="pluginName">plugin name</param>
         /// <param name="pluginToInstall">installing plugin stack</param>
-        /// <param name="zip">archive of the plugin</param>
-        private void InstallDependency(string pluginName, Stack<string> pluginToInstall, ZipArchive zip)
+        private void InstallDependency(string pluginName, Stack<string> pluginToInstall)
         {
             try
             {
-                ZipArchiveEntry entry = zip.GetEntry($"Plugins/{pluginName}/DEPENDENCY");
-                using (StreamReader reader = new StreamReader(entry.Open()))
-                {
-                    Console.WriteLine("Installing dependencies.");
-                    while (!reader.EndOfStream)
-                    {
-                        var plugin = reader.ReadLine();
-                        if (plugin.Length == 0) continue;
+                IConfigurationSection dependency = new ConfigurationBuilder()
+                    .AddJsonFile($"Plugins/{pluginName}/config.json", optional: true)
+                    .Build()
+                    .GetSection("Dependency");
 
-                        if (PluginExists(plugin))
-                        {
-                            Console.WriteLine("Dependency already installed.");
-                            continue;
-                        }
-                        InstallPlugin(DownloadPlugin(plugin), plugin, pluginToInstall);
+                var dependencies = dependency.GetChildren().Select(p => p.Get<string>()).ToArray();
+
+                if (dependencies.Length == 0) return;
+
+                Console.WriteLine("Installing dependencies.");
+                foreach (string plugin in dependencies)
+                {
+                    if (plugin.Length == 0) continue;
+
+                    if (PluginExists(plugin))
+                    {
+                        Console.WriteLine("Dependency already installed.");
+                        continue;
                     }
+                    InstallPlugin(DownloadPlugin(plugin), plugin, pluginToInstall);
                 }
             }
             catch
