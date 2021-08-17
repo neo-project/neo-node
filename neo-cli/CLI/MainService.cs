@@ -158,6 +158,7 @@ namespace Neo.CLI
                 default:
                     Console.WriteLine("Wallet files in that format are not supported, please use a .json or .db3 file extension.");
                     break;
+                    
             }
         }
 
