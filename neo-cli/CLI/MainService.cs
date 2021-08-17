@@ -130,10 +130,13 @@ namespace Neo.CLI
                 case ".db3":
                     {
                         UserWallet wallet = UserWallet.Create(path, password, NeoSystem.Settings);
-                        WalletAccount account = wallet.CreateAccount();
-                        Console.WriteLine($"   Address: {account.Address}");
-                        Console.WriteLine($"    Pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                        Console.WriteLine($"ScriptHash: {account.ScriptHash}");
+                        if (ReadUserInput("Create an address? (no|yes)").IsYes())
+                        {
+                            WalletAccount account = wallet.CreateAccount();
+                            Console.WriteLine($"   Address: {account.Address}");
+                            Console.WriteLine($"    Pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+                            Console.WriteLine($"ScriptHash: {account.ScriptHash}");
+                        }
                         CurrentWallet = wallet;
                     }
                     break;
@@ -141,11 +144,14 @@ namespace Neo.CLI
                     {
                         NEP6Wallet wallet = new NEP6Wallet(path, NeoSystem.Settings);
                         wallet.Unlock(password);
-                        WalletAccount account = wallet.CreateAccount();
+                        if (ReadUserInput("Create an address? (no|yes)").IsYes())
+                        {
+                            WalletAccount account = wallet.CreateAccount();
+                            Console.WriteLine($"   Address: {account.Address}");
+                            Console.WriteLine($"    Pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+                            Console.WriteLine($"ScriptHash: {account.ScriptHash}");
+                        }
                         wallet.Save();
-                        Console.WriteLine($"   Address: {account.Address}");
-                        Console.WriteLine($"    Pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                        Console.WriteLine($"ScriptHash: {account.ScriptHash}");
                         CurrentWallet = wallet;
                     }
                     break;
@@ -220,8 +226,8 @@ namespace Neo.CLI
 
         private bool NoWallet()
         {
-            if (CurrentWallet != null) return false;
-            Console.WriteLine("You have to open the wallet first.");
+            if (CurrentWallet != null && CurrentWallet.GetAccounts().Any()) return false;
+            Console.WriteLine("No wallet or no address exists.");
             return true;
         }
 
