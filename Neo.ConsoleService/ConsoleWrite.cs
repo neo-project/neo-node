@@ -4,7 +4,6 @@ namespace Neo.ConsoleService
 {
     public class ConsoleWrite
     {
-
         public static void Info(params string[] values)
         {
             for (int i = 0; i < values.Length; i++)
