@@ -5,7 +5,7 @@
 set timeout 10
 
 # Start neo-cli
-spawn dotnet out/neo-cli.dll --rpc
+spawn dotnet out/neo-cli.dll
 
 # Expect the main input prompt
 expect {
@@ -15,15 +15,32 @@ expect {
 }
 
 #
+# Test 'create empty wallet'
+#
+send "create wallet test-empty.json\n"
+
+expect {
+    "password:" { send "asd\n" }
+    "error" { exit 2 }
+    timeout { exit 1 }
+}
+
+expect {
+    "password:" { send "asd\n" }
+    "error" { exit 2 }
+    timeout { exit 1 }
+}
+
+expect {
+    "Create an address? (no|yes):" { send "n\n"}
+}
+
+#
 # Test 'create wallet'
 #
 send "create wallet test-wallet.json\n"
 
 expect {
-    "*(yes|no)" { send "yes\n"}
-}
-
-expect {
     "password:" { send "asd\n" }
     "error" { exit 2 }
     timeout { exit 1 }
@@ -33,6 +50,10 @@ expect {
     "password:" { send "asd\n" }
     "error" { exit 2 }
     timeout { exit 1 }
+}
+
+expect {
+    "Create an address? (no|yes):" { send "y\n"}
 }
 
 expect {
