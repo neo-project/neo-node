@@ -143,7 +143,7 @@ namespace Neo.CLI
                 }
                 tx.Witnesses = context.GetWitnesses();
                 NeoSystem.Blockchain.Tell(tx);
-                ConsoleHelper.Info("Data relay success, the hash is shown as follows:", $"{Environment.NewLine}{tx.Hash}");
+                Console.WriteLine($"Data relay success, the hash is shown as follows: {Environment.NewLine}{tx.Hash}");
             }
             catch (Exception e)
             {

@@ -197,7 +197,7 @@ namespace Neo.CLI
             }
             else
             {
-                Console.WriteLine("This wallet already exists, please create another one.");
+                ConsoleHelper.Warning("This wallet already exists, please create another one.");
             }
         }
 
