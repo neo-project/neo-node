@@ -1,4 +1,4 @@
-// Copyright (C) 2016-2021 NEO GLOBAL DEVELOPMENT.
+// Copyright (C) 2016-2021 The Neo Project.
 // 
 // The neo-consolservice is free software distributed under the MIT software license, 
 // see the accompanying file LICENSE in the main directory of the
