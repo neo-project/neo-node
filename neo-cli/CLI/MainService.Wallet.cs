@@ -134,6 +134,36 @@ namespace Neo.CLI
         }
 
         /// <summary>
+        /// Process "delete address" command
+        /// </summary>
+        /// <param name="address">Address</param>
+        [ConsoleCommand("delete address", Category = "Wallet Commands")]
+        private void OnDeleteAddressCommand(UInt160 address)
+        {
+            if (NoWallet())
+            {
+                Console.WriteLine("Need open wallet!");
+                return;
+            }
+
+            if (ReadUserInput($"Warning: Deleted address can no longer be back.\nAre you sure to delete address {address.ToAddress(NeoSystem.Settings.AddressVersion)}? (no|yes)").IsYes())
+            {
+                if (CurrentWallet.DeleteAccount(address))
+                {
+                    if (CurrentWallet is NEP6Wallet wallet)
+                    {
+                        wallet.Save();
+                    }
+                    Console.WriteLine($"Address {address} deleted.");
+                }
+                else
+                {
+                    Console.WriteLine($"Address {address} doesn't exist.");
+                }
+            }
+        }
+
+        /// <summary>
         /// Process "export key" command
         /// </summary>
         /// <param name="path">Path</param>
