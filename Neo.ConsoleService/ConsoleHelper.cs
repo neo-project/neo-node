@@ -4,9 +4,10 @@ namespace Neo.ConsoleService
 {
     public static class ConsoleHelper
     {
-        private static readonly ConsoleColorSet InfoColor = new ConsoleColorSet(ConsoleColor.Cyan);
-        private static readonly ConsoleColorSet WarningColor = new ConsoleColorSet(ConsoleColor.Yellow);
-        private static readonly ConsoleColorSet ErrorColor = new ConsoleColorSet(ConsoleColor.Red);
+        private static readonly ConsoleColorSet InfoColor = new(ConsoleColor.Cyan);
+        private static readonly ConsoleColorSet WarningColor = new(ConsoleColor.Yellow);
+        private static readonly ConsoleColorSet ErrorColor = new(ConsoleColor.Red);
+
         public static void Info(params string[] values)
         {
             var currentColor = new ConsoleColorSet();
