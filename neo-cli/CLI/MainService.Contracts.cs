@@ -162,7 +162,7 @@ namespace Neo.CLI
                 ConsoleHelper.Error(GetExceptionMessage(e));
                 return;
             }
-            ConsoleHelper.Info($"Network fee: ",
+            ConsoleHelper.Info("Network fee: ",
                 $"{new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)}",
                 "Total fee: ",
                 $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");

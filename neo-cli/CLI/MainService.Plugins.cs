@@ -111,7 +111,7 @@ namespace Neo.CLI
             }
             else
             {
-                Console.WriteLine("No loaded plugins");
+                ConsoleHelper.Warning("No loaded plugins");
             }
         }
     }
