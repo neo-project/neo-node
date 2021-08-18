@@ -138,7 +138,7 @@ namespace Neo.CLI
                 }
                 if (!(context.Verifiable is Transaction tx))
                 {
-                    ConsoleHelper.Warning($"Only support to relay transaction.");
+                    ConsoleHelper.Warning("Only support to relay transaction.");
                     return;
                 }
                 tx.Witnesses = context.GetWitnesses();

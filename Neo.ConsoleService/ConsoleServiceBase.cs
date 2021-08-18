@@ -614,11 +614,11 @@ namespace Neo.ConsoleService
                 }
                 catch (TargetInvocationException ex)
                 {
-                    ConsoleHelper.Error($" {ex.InnerException.Message}");
+                    ConsoleHelper.Error(ex.InnerException.Message);
                 }
                 catch (Exception ex)
                 {
-                    ConsoleHelper.Error($" {ex.Message}");
+                    ConsoleHelper.Error(ex.Message);
                 }
             }
 

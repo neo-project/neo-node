@@ -28,7 +28,7 @@ namespace Neo.CLI
         {
             if (!File.Exists(path))
             {
-                ConsoleHelper.Error($"File does not exist");
+                ConsoleHelper.Error("File does not exist");
                 return;
             }
             string password = ReadUserInput("password", true);
@@ -55,7 +55,7 @@ namespace Neo.CLI
         {
             if (CurrentWallet == null)
             {
-                ConsoleHelper.Warning($"Wallet is not opened");
+                ConsoleHelper.Warning("Wallet is not opened");
                 return;
             }
             CurrentWallet = null;
@@ -129,7 +129,7 @@ namespace Neo.CLI
             if (CurrentWallet is NEP6Wallet wallet)
                 wallet.Save();
 
-            ConsoleHelper.Info($"Export addresses to", $" {path}");
+            Console.WriteLine($"Export addresses to {path}");
             File.WriteAllLines(path, addresses);
         }
 
@@ -278,8 +278,8 @@ namespace Neo.CLI
             {
                 WalletAccount account = CurrentWallet.CreateAccount(prikey);
                 Array.Clear(prikey, 0, prikey.Length);
-                ConsoleHelper.Info($"Address:", $" {account.Address}");
-                ConsoleHelper.Info($" Pubkey:", $" {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+                ConsoleHelper.Info("Address: ", account.Address);
+                ConsoleHelper.Info(" Pubkey: ", account.GetKey().PublicKey.EncodePoint(true).ToHexString());
             }
             if (CurrentWallet is NEP6Wallet wallet)
                 wallet.Save();
@@ -329,7 +329,7 @@ namespace Neo.CLI
             else
             {
                 WalletAccount account = CurrentWallet.CreateAccount(address);
-                ConsoleHelper.Info($"Address:", $" {account.Address}");
+                ConsoleHelper.Info("Address: ", account.Address);
             }
             if (CurrentWallet is NEP6Wallet wallet)
                 wallet.Save();
@@ -366,8 +366,8 @@ namespace Neo.CLI
                     type = "Deployed-Nonstandard";
                 }
 
-                ConsoleHelper.Info($"{"   Address: "}", $"{account.Address}\t{type}");
-                ConsoleHelper.Info($"{"ScriptHash: "}", $"{account.ScriptHash}\n");
+                ConsoleHelper.Info("   Address: ", $"{account.Address}\t{type}");
+                ConsoleHelper.Info("ScriptHash: ", $"{account.ScriptHash}\n");
             }
         }
 
@@ -387,10 +387,10 @@ namespace Neo.CLI
                 Console.WriteLine();
             }
             Console.WriteLine("----------------------------------------------------");
-            ConsoleHelper.Info($"Total:   NEO:", $" {CurrentWallet.GetAvailable(snapshot, NativeContract.NEO.Hash),10}     GAS: {CurrentWallet.GetAvailable(snapshot, NativeContract.GAS.Hash),18}");
+            ConsoleHelper.Info("Total:   NEO: ", $"{CurrentWallet.GetAvailable(snapshot, NativeContract.NEO.Hash),10}     GAS: {CurrentWallet.GetAvailable(snapshot, NativeContract.GAS.Hash),18}");
             Console.WriteLine();
-            ConsoleHelper.Info("NEO hash: ", $" {NativeContract.NEO.Hash}");
-            ConsoleHelper.Info("GAS hash: ", $" {NativeContract.GAS.Hash}");
+            ConsoleHelper.Info("NEO hash: ", NativeContract.NEO.Hash.ToString());
+            ConsoleHelper.Info("GAS hash: ", NativeContract.GAS.Hash.ToString());
         }
 
         /// <summary>
@@ -402,9 +402,10 @@ namespace Neo.CLI
             if (NoWallet()) return;
             foreach (WalletAccount account in CurrentWallet.GetAccounts().Where(p => p.HasKey))
             {
-                ConsoleHelper.Info($"   Address:", $" { account.Address}");
-                ConsoleHelper.Info($"ScriptHash:", $" { account.ScriptHash}");
-                ConsoleHelper.Info($" PublicKey:", $" { account.GetKey().PublicKey.EncodePoint(true).ToHexString()}\n");
+                ConsoleHelper.Info("   Address: ", account.Address);
+                ConsoleHelper.Info("ScriptHash: ", account.ScriptHash.ToString());
+                ConsoleHelper.Info(" PublicKey: ", account.GetKey().PublicKey.EncodePoint(true).ToHexString());
+                Console.WriteLine();
             }
         }
 
@@ -513,7 +514,7 @@ namespace Neo.CLI
             {
                 tx.Witnesses = context.GetWitnesses();
                 NeoSystem.Blockchain.Tell(tx);
-                ConsoleHelper.Info($"TXID:", $" {tx.Hash}");
+                ConsoleHelper.Info("TXID: ", tx.Hash.ToString());
             }
             else
             {
@@ -533,7 +534,7 @@ namespace Neo.CLI
             uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
             foreach (UInt160 account in CurrentWallet.GetAccounts().Select(p => p.ScriptHash))
                 gas += NativeContract.NEO.UnclaimedGas(snapshot, account, height);
-            ConsoleHelper.Info($"Unclaimed gas:", $" {new BigDecimal(gas, NativeContract.GAS.Decimals)}");
+            ConsoleHelper.Info("Unclaimed gas: ", new BigDecimal(gas, NativeContract.GAS.Decimals).ToString());
         }
 
         /// <summary>
@@ -603,7 +604,7 @@ namespace Neo.CLI
             }
             catch (InvalidOperationException e)
             {
-                ConsoleHelper.Error($"Failed creating contract params: " + GetExceptionMessage(e));
+                ConsoleHelper.Error("Failed creating contract params: " + GetExceptionMessage(e));
                 throw;
             }
             CurrentWallet.Sign(context);

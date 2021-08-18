@@ -241,8 +241,8 @@ namespace Neo.CLI
             }
             var publickey = ECPoint.Parse(((ByteString)resJArray?[2])?.GetSpan().ToHexString(), ECCurve.Secp256r1);
             ConsoleHelper.Info("Voted: ", Contract.CreateSignatureRedeemScript(publickey).ToScriptHash().ToAddress(NeoSystem.Settings.AddressVersion));
-            ConsoleHelper.Info("Amount: ", $"{new BigDecimal(((Integer)resJArray?[0]).GetInteger(), NativeContract.NEO.Decimals)}");
-            ConsoleHelper.Info("Block: ", $"{((Integer)resJArray?[1]).GetInteger()}");
+            ConsoleHelper.Info("Amount: ", new BigDecimal(((Integer)resJArray?[0]).GetInteger(), NativeContract.NEO.Decimals).ToString());
+            ConsoleHelper.Info("Block: ", ((Integer)resJArray?[1]).GetInteger().ToString());
         }
     }
 }

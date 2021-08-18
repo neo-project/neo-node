@@ -131,9 +131,9 @@ namespace Neo.CLI
                     {
                         UserWallet wallet = UserWallet.Create(path, password, NeoSystem.Settings);
                         WalletAccount account = wallet.CreateAccount();
-                        ConsoleHelper.Info($"   Address:", $" {account.Address}");
-                        ConsoleHelper.Info($"    Pubkey:", $" {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                        ConsoleHelper.Info($"ScriptHash:", $" {account.ScriptHash}");
+                        ConsoleHelper.Info("   Address: ", account.Address);
+                        ConsoleHelper.Info("    Pubkey: ", account.GetKey().PublicKey.EncodePoint(true).ToHexString());
+                        ConsoleHelper.Info("ScriptHash: ", account.ScriptHash.ToString());
                         CurrentWallet = wallet;
                     }
                     break;
@@ -143,9 +143,9 @@ namespace Neo.CLI
                         wallet.Unlock(password);
                         WalletAccount account = wallet.CreateAccount();
                         wallet.Save();
-                        ConsoleHelper.Info($"   Address:", $" {account.Address}");
-                        ConsoleHelper.Info($"    Pubkey:", $" {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                        ConsoleHelper.Info($"ScriptHash:", $" {account.ScriptHash}");
+                        ConsoleHelper.Info("   Address: ", account.Address);
+                        ConsoleHelper.Info("    Pubkey: ", account.GetKey().PublicKey.EncodePoint(true).ToHexString());
+                        ConsoleHelper.Info("ScriptHash: ", account.ScriptHash.ToString());
                         CurrentWallet = wallet;
                     }
                     break;
@@ -443,7 +443,7 @@ namespace Neo.CLI
                 }
                 catch (Exception ex)
                 {
-                    ConsoleHelper.Error($"{ex.GetBaseException().Message}");
+                    ConsoleHelper.Error(ex.GetBaseException().Message);
                 }
             }
         }
@@ -615,11 +615,11 @@ namespace Neo.CLI
 
         private void PrintExecutionOutput(ApplicationEngine engine, bool showStack = true)
         {
-            ConsoleHelper.Info($"VM State:", $" {engine.State}");
-            ConsoleHelper.Info($"Gas Consumed:", $" {new BigDecimal((BigInteger)engine.GasConsumed, NativeContract.GAS.Decimals)}");
+            ConsoleHelper.Info("VM State: ", engine.State.ToString());
+            ConsoleHelper.Info("Gas Consumed: ", new BigDecimal((BigInteger)engine.GasConsumed, NativeContract.GAS.Decimals).ToString());
 
             if (showStack)
-                ConsoleHelper.Info($"Result Stack:", $" {new JArray(engine.ResultStack.Select(p => p.ToJson()))}");
+                ConsoleHelper.Info("Result Stack: ", new JArray(engine.ResultStack.Select(p => p.ToJson())).ToString());
 
             if (engine.State == VMState.FAULT)
                 ConsoleHelper.Error(GetExceptionMessage(engine.FaultException));
