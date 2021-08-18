@@ -57,7 +57,7 @@ namespace Neo.CLI
             Signer[] signers = Array.Empty<Signer>();
 
             if (NoWallet()) return;
-            if (!NoWallet() && sender != null)
+            if (sender != null)
             {
                 if (signerAccounts == null)
                     signerAccounts = new UInt160[1] { sender };

@@ -23,11 +23,7 @@ namespace Neo.CLI
         {
             var testGas = NativeContract.NEO.GetRegisterPrice(NeoSystem.StoreView) + (BigInteger)Math.Pow(10, NativeContract.GAS.Decimals) * 10;
 
-            if (NoWallet())
-            {
-                Console.WriteLine("Need open wallet!");
-                return;
-            }
+            if (NoWallet()) return;
 
             WalletAccount currentAccount = CurrentWallet.GetAccount(account);
 
@@ -63,11 +59,7 @@ namespace Neo.CLI
         [ConsoleCommand("unregister candidate", Category = "Vote Commands")]
         private void OnUnregisterCandidateCommand(UInt160 account)
         {
-            if (NoWallet())
-            {
-                Console.WriteLine("Need open wallet!");
-                return;
-            }
+            if (NoWallet()) return;
 
             WalletAccount currentAccount = CurrentWallet.GetAccount(account);
 
@@ -104,11 +96,7 @@ namespace Neo.CLI
         [ConsoleCommand("vote", Category = "Vote Commands")]
         private void OnVoteCommand(UInt160 senderAccount, ECPoint publicKey)
         {
-            if (NoWallet())
-            {
-                Console.WriteLine("Need open wallet!");
-                return;
-            }
+            if (NoWallet()) return;
 
             byte[] script;
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
@@ -127,11 +115,7 @@ namespace Neo.CLI
         [ConsoleCommand("unvote", Category = "Vote Commands")]
         private void OnUnvoteCommand(UInt160 senderAccount)
         {
-            if (NoWallet())
-            {
-                Console.WriteLine("Need open wallet!");
-                return;
-            }
+            if (NoWallet()) return;
 
             byte[] script;
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())

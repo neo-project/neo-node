@@ -140,11 +140,7 @@ namespace Neo.CLI
         [ConsoleCommand("delete address", Category = "Wallet Commands")]
         private void OnDeleteAddressCommand(UInt160 address)
         {
-            if (NoWallet())
-            {
-                Console.WriteLine("Need open wallet!");
-                return;
-            }
+            if (NoWallet()) return;
 
             if (ReadUserInput($"Warning: Deleted address can no longer be back.\nAre you sure to delete address {address.ToAddress(NeoSystem.Settings.AddressVersion)}? (no|yes)").IsYes())
             {
