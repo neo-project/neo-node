@@ -387,7 +387,7 @@ namespace Neo.CLI
                 Console.WriteLine();
             }
             Console.WriteLine("----------------------------------------------------");
-            ConsoleHelper.Info("Total:   NEO: ", $"{CurrentWallet.GetAvailable(snapshot, NativeContract.NEO.Hash),10}     GAS: {CurrentWallet.GetAvailable(snapshot, NativeContract.GAS.Hash),18}");
+            ConsoleHelper.Info("Total:   NEO: ", $"{CurrentWallet.GetAvailable(snapshot, NativeContract.NEO.Hash),10}     ", "GAS: ", $"{CurrentWallet.GetAvailable(snapshot, NativeContract.GAS.Hash),18}");
             Console.WriteLine();
             ConsoleHelper.Info("NEO hash: ", NativeContract.NEO.Hash.ToString());
             ConsoleHelper.Info("GAS hash: ", NativeContract.GAS.Hash.ToString());
