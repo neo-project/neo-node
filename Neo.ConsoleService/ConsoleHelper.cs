@@ -14,8 +14,9 @@ namespace Neo.ConsoleService
 
             for (int i = 0; i < values.Length; i++)
             {
-                InfoColor.Apply();
-                if (i % 2 == 1)
+                if (i % 2 == 0)
+                    InfoColor.Apply();
+                else
                     currentColor.Apply();
                 Console.Write(values[i]);
             }
