@@ -529,7 +529,7 @@ namespace Neo.CLI
             try
             {
                 Transaction tx = CurrentWallet.MakeTransaction(snapshot, script, account, signers, maxGas: gas);
-                Console.WriteLine($"Invoking script with: '{tx.Script.ToBase64String()}'");
+                ConsoleHelper.Info("Invoking script with: ", $"'{tx.Script.ToBase64String()}'");
 
                 using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, snapshot, container: tx, settings: NeoSystem.Settings, gas: gas))
                 {
@@ -599,7 +599,7 @@ namespace Neo.CLI
             {
                 scriptBuilder.EmitDynamicCall(scriptHash, operation, parameters.ToArray());
                 script = scriptBuilder.ToArray();
-                Console.WriteLine($"Invoking script with: '{script.ToBase64String()}'");
+                ConsoleHelper.Info("Invoking script with: ", $"'{script.ToBase64String()}'");
             }
 
             if (verificable is Transaction tx)

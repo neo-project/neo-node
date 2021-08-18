@@ -93,7 +93,7 @@ namespace Neo.CLI
         {
             ContractState contract = NativeContract.ContractManagement.GetContract(NeoSystem.StoreView, tokenHash);
             if (contract == null) Console.WriteLine($"Contract hash not exist: {tokenHash}");
-            else Console.WriteLine($"Result : {contract.Manifest.Name.ToString()}");
+            else ConsoleHelper.Info("Result : ", $"{contract.Manifest.Name.ToString()}");
         }
 
         /// <summary>
@@ -105,7 +105,7 @@ namespace Neo.CLI
         {
             if (!OnInvokeWithResult(tokenHash, "decimals", out StackItem result, null)) return;
 
-            Console.WriteLine($"Result : {((PrimitiveType)result).GetInteger()}");
+            ConsoleHelper.Info("Result : ", $"{((PrimitiveType)result).GetInteger()}");
         }
 
         /// <summary>
@@ -120,7 +120,7 @@ namespace Neo.CLI
             var asset = new AssetDescriptor(NeoSystem.StoreView, NeoSystem.Settings, tokenHash);
             var totalSupply = new BigDecimal(((PrimitiveType)result).GetInteger(), asset.Decimals);
 
-            Console.WriteLine($"Result : {totalSupply}");
+            ConsoleHelper.Info("Result : ", $"{totalSupply}");
         }
     }
 }

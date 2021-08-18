@@ -88,14 +88,14 @@ namespace Neo.CLI
             }
             catch (InvalidOperationException e)
             {
-                Console.WriteLine("Error: " + GetExceptionMessage(e));
+                ConsoleHelper.Error(GetExceptionMessage(e));
                 return;
             }
 
             ContractState contract = NativeContract.ContractManagement.GetContract(NeoSystem.StoreView, scriptHash);
             if (contract == null)
             {
-                Console.WriteLine($"Can't upgrade, contract hash not exist: {scriptHash}");
+                ConsoleHelper.Warning($"Can't upgrade, contract hash not exist: {scriptHash}");
             }
             else
             {
@@ -159,11 +159,13 @@ namespace Neo.CLI
             }
             catch (InvalidOperationException e)
             {
-                Console.WriteLine("Error: " + GetExceptionMessage(e));
+                ConsoleHelper.Error(GetExceptionMessage(e));
                 return;
             }
-            Console.WriteLine($"Network fee: {new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)}");
-            Console.WriteLine($"Total fee: {new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
+            ConsoleHelper.Info($"Network fee: ",
+                $"{new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)}",
+                "Total fee: ",
+                $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
             if (!ReadUserInput("Relay tx? (no|yes)").IsYes())
             {
                 return;
