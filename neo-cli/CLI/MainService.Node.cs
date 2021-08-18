@@ -78,11 +78,11 @@ namespace Neo.CLI
                     {
                         ConsoleHelper.Info($"  ip: ",
                             $"{ node.Remote.Address,-15}\t",
-                            $"port: ",
+                            "port: ",
                             $"{node.Remote.Port,-5}\t",
-                            $"listen: ",
+                            "listen: ",
                             $"{node.ListenerTcpPort,-5}\t",
-                            $"height: ",
+                            "height: ",
                             $"{node.LastBlockIndex,-7}");
                         linesWritten++;
                     }

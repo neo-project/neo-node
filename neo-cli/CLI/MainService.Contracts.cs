@@ -99,11 +99,11 @@ namespace Neo.CLI
             }
             else
             {
-                Console.WriteLine($"Contract hash: {scriptHash}");
-                Console.WriteLine($"Updated times: {contract.UpdateCounter}");
-                Console.WriteLine($"Gas consumed: {new BigDecimal((BigInteger)tx.SystemFee, NativeContract.GAS.Decimals)}");
-                Console.WriteLine($"Network fee: {new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)}");
-                Console.WriteLine($"Total fee: {new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
+                ConsoleHelper.Info("Contract hash: ", $"{scriptHash}");
+                ConsoleHelper.Info("Updated times: ", $"{contract.UpdateCounter}");
+                ConsoleHelper.Info("Gas consumed: ", $"{new BigDecimal((BigInteger)tx.SystemFee, NativeContract.GAS.Decimals)}");
+                ConsoleHelper.Info("Network fee: ", $"{new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)}");
+                ConsoleHelper.Info("Total fee: ", $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
                 if (!ReadUserInput("Relay tx? (no|yes)").IsYes()) // Add this in case just want to get hash but not relay
                 {
                     return;

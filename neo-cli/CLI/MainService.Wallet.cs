@@ -382,8 +382,8 @@ namespace Neo.CLI
             foreach (UInt160 account in CurrentWallet.GetAccounts().Select(p => p.ScriptHash))
             {
                 Console.WriteLine(account.ToAddress(NeoSystem.Settings.AddressVersion));
-                Console.WriteLine($"NEO: {CurrentWallet.GetBalance(snapshot, NativeContract.NEO.Hash, account)}");
-                Console.WriteLine($"GAS: {CurrentWallet.GetBalance(snapshot, NativeContract.GAS.Hash, account)}");
+                ConsoleHelper.Info("NEO: ", $"{CurrentWallet.GetBalance(snapshot, NativeContract.NEO.Hash, account)}");
+                ConsoleHelper.Info("GAS: ", $"{CurrentWallet.GetBalance(snapshot, NativeContract.GAS.Hash, account)}");
                 Console.WriteLine();
             }
             Console.WriteLine("----------------------------------------------------");
@@ -434,10 +434,10 @@ namespace Neo.CLI
                 }
                 else if (!CurrentWallet.Sign(context))
                 {
-                    Console.WriteLine("Non-existent private key in wallet.");
+                    ConsoleHelper.Warning("Non-existent private key in wallet.");
                     return;
                 }
-                Console.WriteLine($"Signed Output:{Environment.NewLine}{context}");
+                ConsoleHelper.Info("Signed Output: ", $"{Environment.NewLine}{context}");
             }
             catch (Exception e)
             {
@@ -466,7 +466,7 @@ namespace Neo.CLI
             }
             if (!CurrentWallet.VerifyPassword(password))
             {
-                ConsoleHelper.Warning("Incorrect password");
+                ConsoleHelper.Error("Incorrect password");
                 return;
             }
             var snapshot = NeoSystem.StoreView;
@@ -474,7 +474,7 @@ namespace Neo.CLI
             AssetDescriptor descriptor = new AssetDescriptor(snapshot, NeoSystem.Settings, asset);
             if (!BigDecimal.TryParse(amount, descriptor.Decimals, out BigDecimal decimalAmount) || decimalAmount.Sign <= 0)
             {
-                ConsoleHelper.Warning("Incorrect Amount Format");
+                ConsoleHelper.Error("Incorrect Amount Format");
                 return;
             }
             try
