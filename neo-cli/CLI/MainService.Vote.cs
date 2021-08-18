@@ -1,8 +1,8 @@
 using Neo.ConsoleService;
 using Neo.Cryptography.ECC;
 using Neo.IO.Json;
-using Neo.SmartContract.Native;
 using Neo.SmartContract;
+using Neo.SmartContract.Native;
 using Neo.VM;
 using Neo.VM.Types;
 using Neo.Wallets;
@@ -25,7 +25,7 @@ namespace Neo.CLI
 
             if (NoWallet())
             {
-                ConsoleWrite.Warning("Need open wallet!");
+                ConsoleHelper.Warning("Need open wallet!");
                 return;
             }
 
@@ -33,14 +33,14 @@ namespace Neo.CLI
 
             if (currentAccount == null)
             {
-                ConsoleWrite.Warning("This address isn't in your wallet!");
+                ConsoleHelper.Warning("This address isn't in your wallet!");
                 return;
             }
             else
             {
                 if (currentAccount.Lock || currentAccount.WatchOnly)
                 {
-                    ConsoleWrite.Warning("Locked or WatchOnly address.");
+                    ConsoleHelper.Warning("Locked or WatchOnly address.");
                     return;
                 }
             }
@@ -65,7 +65,7 @@ namespace Neo.CLI
         {
             if (NoWallet())
             {
-                ConsoleWrite.Warning("Need open wallet!");
+                ConsoleHelper.Warning("Need open wallet!");
                 return;
             }
 
@@ -73,14 +73,14 @@ namespace Neo.CLI
 
             if (currentAccount == null)
             {
-                ConsoleWrite.Warning("This address isn't in your wallet!");
+                ConsoleHelper.Warning("This address isn't in your wallet!");
                 return;
             }
             else
             {
                 if (currentAccount.Lock || currentAccount.WatchOnly)
                 {
-                    ConsoleWrite.Warning("Locked or WatchOnly address.");
+                    ConsoleHelper.Warning("Locked or WatchOnly address.");
                     return;
                 }
             }
@@ -106,7 +106,7 @@ namespace Neo.CLI
         {
             if (NoWallet())
             {
-                ConsoleWrite.Warning("Need open wallet!");
+                ConsoleHelper.Warning("Need open wallet!");
                 return;
             }
 
@@ -129,7 +129,7 @@ namespace Neo.CLI
         {
             if (NoWallet())
             {
-                ConsoleWrite.Warning("Need open wallet!");
+                ConsoleHelper.Warning("Need open wallet!");
                 return;
             }
 
@@ -156,7 +156,7 @@ namespace Neo.CLI
             if (resJArray.Count > 0)
             {
                 Console.WriteLine();
-                ConsoleWrite.Info("Candidates:");
+                ConsoleHelper.Info("Candidates:");
 
                 foreach (var item in resJArray)
                 {
@@ -181,7 +181,7 @@ namespace Neo.CLI
             if (resJArray.Count > 0)
             {
                 Console.WriteLine();
-                ConsoleWrite.Info("Committee:");
+                ConsoleHelper.Info("Committee:");
 
                 foreach (var item in resJArray)
                 {
@@ -203,7 +203,7 @@ namespace Neo.CLI
             if (resJArray.Count > 0)
             {
                 Console.WriteLine();
-                ConsoleWrite.Info("Next validators:");
+                ConsoleHelper.Info("Next validators:");
 
                 foreach (var item in resJArray)
                 {
@@ -240,9 +240,9 @@ namespace Neo.CLI
                 }
             }
             var publickey = ECPoint.Parse(((ByteString)resJArray?[2])?.GetSpan().ToHexString(), ECCurve.Secp256r1);
-            ConsoleWrite.Info("Voted: ", Contract.CreateSignatureRedeemScript(publickey).ToScriptHash().ToAddress(NeoSystem.Settings.AddressVersion));
-            ConsoleWrite.Info("Amount: ", $"{new BigDecimal(((Integer)resJArray?[0]).GetInteger(), NativeContract.NEO.Decimals)}");
-            ConsoleWrite.Info("Block: ", $"{((Integer)resJArray?[1]).GetInteger()}");
+            ConsoleHelper.Info("Voted: ", Contract.CreateSignatureRedeemScript(publickey).ToScriptHash().ToAddress(NeoSystem.Settings.AddressVersion));
+            ConsoleHelper.Info("Amount: ", $"{new BigDecimal(((Integer)resJArray?[0]).GetInteger(), NativeContract.NEO.Decimals)}");
+            ConsoleHelper.Info("Block: ", $"{((Integer)resJArray?[1]).GetInteger()}");
         }
     }
 }

@@ -2,7 +2,7 @@ using System;
 
 namespace Neo.ConsoleService
 {
-    public static class ConsoleWrite
+    public static class ConsoleHelper
     {
         public static void Info(params string[] values)
         {

@@ -24,7 +24,7 @@ namespace Neo.CLI
         {
             if (payload == null)
             {
-                ConsoleWrite.Warning("You must input the payload to relay.");
+                ConsoleHelper.Warning("You must input the payload to relay.");
                 return;
             }
 
@@ -124,7 +124,7 @@ namespace Neo.CLI
         {
             if (jsonObjectToRelay == null)
             {
-                ConsoleWrite.Warning("You must input JSON object to relay.");
+                ConsoleHelper.Warning("You must input JSON object to relay.");
                 return;
             }
 
@@ -133,12 +133,12 @@ namespace Neo.CLI
                 ContractParametersContext context = ContractParametersContext.Parse(jsonObjectToRelay.ToString(), NeoSystem.StoreView);
                 if (!context.Completed)
                 {
-                    ConsoleWrite.Error("The signature is incomplete.");
+                    ConsoleHelper.Error("The signature is incomplete.");
                     return;
                 }
                 if (!(context.Verifiable is Transaction tx))
                 {
-                    ConsoleWrite.Warning($"Only support to relay transaction.");
+                    ConsoleHelper.Warning($"Only support to relay transaction.");
                     return;
                 }
                 tx.Witnesses = context.GetWitnesses();
@@ -147,7 +147,7 @@ namespace Neo.CLI
             }
             catch (Exception e)
             {
-                ConsoleWrite.Error(GetExceptionMessage(e));
+                ConsoleHelper.Error(GetExceptionMessage(e));
             }
         }
     }

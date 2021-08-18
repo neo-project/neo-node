@@ -514,7 +514,7 @@ namespace Neo.ConsoleService
                 {
                     if (Environment.OSVersion.Platform != PlatformID.Win32NT)
                     {
-                        ConsoleWrite.Warning("Only support for installing services on Windows.");
+                        ConsoleHelper.Warning("Only support for installing services on Windows.");
                         return;
                     }
                     string arguments = string.Format("create {0} start= auto binPath= \"{1}\"", ServiceName, Process.GetCurrentProcess().MainModule.FileName);
@@ -536,7 +536,7 @@ namespace Neo.ConsoleService
                 {
                     if (Environment.OSVersion.Platform != PlatformID.Win32NT)
                     {
-                        ConsoleWrite.Warning("Only support for installing services on Windows.");
+                        ConsoleHelper.Warning("Only support for installing services on Windows.");
                         return;
                     }
                     Process process = Process.Start(new ProcessStartInfo
@@ -609,16 +609,16 @@ namespace Neo.ConsoleService
                 {
                     if (!OnCommand(line))
                     {
-                        ConsoleWrite.Error("Command not found");
+                        ConsoleHelper.Error("Command not found");
                     }
                 }
                 catch (TargetInvocationException ex)
                 {
-                    ConsoleWrite.Error($" {ex.InnerException.Message}");
+                    ConsoleHelper.Error($" {ex.InnerException.Message}");
                 }
                 catch (Exception ex)
                 {
-                    ConsoleWrite.Error($" {ex.Message}");
+                    ConsoleHelper.Error($" {ex.Message}");
                 }
             }
 
