@@ -4,34 +4,41 @@ namespace Neo.ConsoleService
 {
     public static class ConsoleHelper
     {
+        private static readonly ConsoleColorSet InfoColor = new ConsoleColorSet(ConsoleColor.Cyan);
+        private static readonly ConsoleColorSet WarningColor = new ConsoleColorSet(ConsoleColor.Yellow);
+        private static readonly ConsoleColorSet ErrorColor = new ConsoleColorSet(ConsoleColor.Red);
         public static void Info(params string[] values)
         {
+            var currentColor = new ConsoleColorSet();
+
             for (int i = 0; i < values.Length; i++)
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
+                InfoColor.Apply();
                 if (i % 2 == 1)
-                    Console.ForegroundColor = ConsoleColor.White;
+                    currentColor.Apply();
                 Console.Write(values[i]);
             }
-            Console.ForegroundColor = ConsoleColor.White;
+            currentColor.Apply();
             Console.WriteLine();
         }
 
         public static void Warning(string msg)
         {
-            Log("Warning", ConsoleColor.Yellow, msg);
+            Log("Warning", WarningColor, msg);
         }
 
         public static void Error(string msg)
         {
-            Log("Error", ConsoleColor.Red, msg);
+            Log("Error", ErrorColor, msg);
         }
 
-        private static void Log(string tag, ConsoleColor tagColor, string msg, ConsoleColor msgColor = ConsoleColor.White)
+        private static void Log(string tag, ConsoleColorSet colorSet, string msg)
         {
-            Console.ForegroundColor = tagColor;
+            var currentColor = new ConsoleColorSet();
+
+            colorSet.Apply();
             Console.Write($"{tag}: ");
-            Console.ForegroundColor = msgColor;
+            currentColor.Apply();
             Console.WriteLine(msg);
         }
     }
