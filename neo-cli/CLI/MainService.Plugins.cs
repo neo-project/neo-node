@@ -67,9 +67,11 @@ namespace Neo.CLI
         {
             HttpWebRequest request = WebRequest.CreateHttp($"https://github.com/neo-project/neo-modules/releases/download/v{typeof(Plugin).Assembly.GetVersion()}/{pluginName}.zip");
             HttpWebResponse response;
+            string url;
             try
             {
                 response = (HttpWebResponse)request.GetResponse();
+                url = request.RequestUri.ToString();
             }
             catch (WebException ex) when (((HttpWebResponse)ex.Response).StatusCode == HttpStatusCode.NotFound)
             {
@@ -93,6 +95,7 @@ namespace Neo.CLI
                 if (asset is null) throw new Exception("Plugin doesn't exist.");
                 request = WebRequest.CreateHttp(asset["browser_download_url"].GetString());
                 response = (HttpWebResponse)request.GetResponse();
+                url = request.RequestUri.ToString();
             }
             using (response)
             {
@@ -101,7 +104,7 @@ namespace Neo.CLI
                 int read;
 
                 using Stream stream = response.GetResponseStream();
-
+                Console.WriteLine($"From {url}");
                 var output = new MemoryStream();
                 while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
                 {
