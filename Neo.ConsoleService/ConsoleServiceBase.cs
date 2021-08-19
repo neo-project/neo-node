@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -146,44 +147,7 @@ namespace Neo.ConsoleService
         [ConsoleCommand("help", Category = "Base Commands")]
         protected void OnHelpCommand(string key)
         {
-            var withHelp = new List<ConsoleCommandMethod>();
-
-            // Try to find a plugin with this name
-
-            if (_instances.TryGetValue(key.Trim().ToLowerInvariant(), out var instance))
-            {
-                // Filter only the help of this plugin
-
-                key = "";
-                foreach (var commands in _verbs.Values.Select(u => u))
-                {
-                    withHelp.AddRange
-                        (
-                        commands.Where(u => !string.IsNullOrEmpty(u.HelpCategory) && u.Instance == instance)
-                        );
-                }
-            }
-            else
-            {
-                // Fetch commands
-
-                foreach (var commands in _verbs.Values.Select(u => u))
-                {
-                    withHelp.AddRange(commands.Where(u => !string.IsNullOrEmpty(u.HelpCategory)));
-                }
-            }
-
-            // Sort and show
-
-            withHelp.Sort((a, b) =>
-            {
-                var cate = a.HelpCategory.CompareTo(b.HelpCategory);
-                if (cate == 0)
-                {
-                    cate = a.Key.CompareTo(b.Key);
-                }
-                return cate;
-            });
+            GetAllCommands(key, out List<ConsoleCommandMethod> withHelp);
 
             if (string.IsNullOrEmpty(key) || key.Equals("help", StringComparison.InvariantCultureIgnoreCase))
             {
@@ -333,6 +297,43 @@ namespace Neo.ConsoleService
             if (password) ReadingPassword = false;
             Console.WriteLine();
             return sb.ToString();
+        }
+
+        private void GetAllCommands(string key, out List<ConsoleCommandMethod> withHelp)
+        {
+            withHelp = new List<ConsoleCommandMethod>();
+            // Try to find a plugin with this name
+            if (_instances.TryGetValue(key.Trim().ToLowerInvariant(), out var instance))
+            {
+                // Filter only the help of this plugin
+                key = "";
+                foreach (var commands in _verbs.Values.Select(u => u))
+                {
+                    withHelp.AddRange
+                        (
+                        commands.Where(u => !string.IsNullOrEmpty(u.HelpCategory) && u.Instance == instance)
+                        );
+                }
+            }
+            else
+            {
+                // Fetch commands
+                foreach (var commands in _verbs.Values.Select(u => u))
+                {
+                    withHelp.AddRange(commands.Where(u => !string.IsNullOrEmpty(u.HelpCategory)));
+                }
+            }
+
+            // Sort and show
+            withHelp.Sort((a, b) =>
+            {
+                var cate = a.HelpCategory.CompareTo(b.HelpCategory);
+                if (cate == 0)
+                {
+                    cate = a.Key.CompareTo(b.Key);
+                }
+                return cate;
+            });
         }
 
         public SecureString ReadSecureString(string prompt)
@@ -563,9 +564,13 @@ namespace Neo.ConsoleService
             }
         }
 
+
         protected string ReadLine()
         {
-            Task<string> readLineTask = Task.Run(() => Console.ReadLine());
+            Task<string> readLineTask = Task.Run(() =>
+            {
+                return Console.ReadLine();
+            });
 
             try
             {
@@ -582,6 +587,11 @@ namespace Neo.ConsoleService
         public virtual void RunConsole()
         {
             _running = true;
+
+            var consoleAutofill = new ConsoleAutofill();
+            GetAllCommands("", out List<ConsoleCommandMethod> withHelp);
+            List<string> commands = withHelp.Select(p => p.Key).ToList();
+
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
                 try
                 {
@@ -596,12 +606,55 @@ namespace Neo.ConsoleService
             {
                 if (ShowPrompt)
                 {
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.Write($"{Prompt}> ");
+                    PrintPrompt(Prompt);
                 }
 
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                string line = ReadLine()?.Trim();
+                string line;//= ReadLine()?.Trim();
+                var builder = new StringBuilder();
+                var input = Console.ReadKey(intercept: true);
+                while (input.Key != ConsoleKey.Enter)
+                {
+                    var currentInput = builder.ToString();
+                    if (input.Key == ConsoleKey.Tab)
+                    {
+                        var match =
+                            consoleAutofill.Autofill(currentInput,
+                                commands, CyclingDirections.Forward);
+
+                        if (string.IsNullOrEmpty(match))
+                        {
+                            input = Console.ReadKey(intercept: true);
+                            continue;
+                        }
+
+                        ClearCurrentLine(Prompt);
+                        builder.Clear();
+
+                        Console.Write(match);
+                        builder.Append(match);
+                    }
+                    else
+                    {
+                        if (input.Key == ConsoleKey.Backspace && currentInput.Length > 0)
+                        {
+                            builder.Remove(builder.Length - 1, 1);
+                            ClearCurrentLine(Prompt);
+
+                            currentInput = currentInput.Remove(currentInput.Length - 1);
+                            Console.Write(currentInput);
+                        }
+                        else
+                        {
+                            var key = input.KeyChar;
+                            builder.Append(key);
+                            Console.Write(key);
+                        }
+                    }
+                    input = Console.ReadKey(intercept: true);
+                }
+                line = builder.ToString();
+
                 if (line == null) break;
                 Console.ForegroundColor = ConsoleColor.White;
 
@@ -623,6 +676,21 @@ namespace Neo.ConsoleService
             }
 
             Console.ResetColor();
+        }
+
+        private static void ClearCurrentLine(string Prompt)
+        {
+            var currentLine = Console.CursorTop;
+            Console.SetCursorPosition(0, Console.CursorTop);
+            Console.Write(new string(' ', Console.WindowWidth));
+            Console.SetCursorPosition(0, currentLine);
+            PrintPrompt(Prompt);
+            Console.ForegroundColor = ConsoleColor.Yellow;
+        }
+        private static void PrintPrompt(string Prompt)
+        {
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.Write($"{Prompt}> ");
         }
     }
 }
