@@ -93,7 +93,7 @@ namespace Neo.CLI
         {
             ContractState contract = NativeContract.ContractManagement.GetContract(NeoSystem.StoreView, tokenHash);
             if (contract == null) Console.WriteLine($"Contract hash not exist: {tokenHash}");
-            else ConsoleHelper.Info("Result: ", $"{contract.Manifest.Name.ToString()}");
+            else ConsoleHelper.Info("Result: ", contract.Manifest.Name);
         }
 
         /// <summary>
