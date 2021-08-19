@@ -8,6 +8,8 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using System;
+
 namespace Neo.CLI
 {
     internal static class Helper
@@ -19,6 +21,21 @@ namespace Neo.CLI
             input = input.ToLowerInvariant();
 
             return input == "yes" || input == "y";
+        }
+
+        public static bool DoubleCheckPwd(string password, string password2)
+        {
+            if (password.Length == 0)
+            {
+                Console.WriteLine("Cancelled");
+                return false;
+            }
+            if (password != password2)
+            {
+                Console.WriteLine("Two passwords are inconsistent.");
+                return false;
+            }
+            return true;
         }
 
         public static string ToBase64String(this byte[] input) => System.Convert.ToBase64String(input);

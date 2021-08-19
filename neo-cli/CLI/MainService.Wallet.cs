@@ -111,7 +111,7 @@ namespace Neo.CLI
         [ConsoleCommand("create address", Category = "Wallet Commands")]
         private void OnCreateAddressCommand(ushort count = 1)
         {
-            if (NoWallet()) return;
+            if (CurrentWallet == null) return;
 
             string path = "address.txt";
             if (File.Exists(path))
@@ -189,21 +189,9 @@ namespace Neo.CLI
         [ConsoleCommand("create wallet", Category = "Wallet Commands")]
         private void OnCreateWalletCommand(string path)
         {
-            string password = ReadUserInput("password", true);
-            if (password.Length == 0)
-            {
-                Console.WriteLine("Cancelled");
-                return;
-            }
-            string password2 = ReadUserInput("password", true);
-            if (password != password2)
-            {
-                Console.WriteLine("Error");
-                return;
-            }
             if (!File.Exists(path))
             {
-                CreateWallet(path, password);
+                CreateWallet(path);
             }
             else
             {
@@ -219,7 +207,7 @@ namespace Neo.CLI
         [ConsoleCommand("import multisigaddress", Category = "Wallet Commands")]
         private void OnImportMultisigAddress(ushort m, ECPoint[] publicKeys)
         {
-            if (NoWallet()) return;
+            if (CurrentWallet == null) return;
 
             int n = publicKeys.Length;
 

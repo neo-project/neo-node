@@ -133,12 +133,15 @@ namespace Neo.CLI
             base.RunConsole();
         }
 
-        public void CreateWallet(string path, string password)
+        public void CreateWallet(string path)
         {
             switch (Path.GetExtension(path))
             {
                 case ".db3":
                     {
+                        string password = ReadUserInput("password", true);
+                        string password2 = ReadUserInput("password", true);
+                        if (!Helper.DoubleCheckPwd(password, password2)) return;
                         UserWallet wallet = UserWallet.Create(path, password, NeoSystem.Settings);
                         if (ReadUserInput("Create an address? (no|yes)").IsYes())
                         {
@@ -153,9 +156,12 @@ namespace Neo.CLI
                 case ".json":
                     {
                         NEP6Wallet wallet = new NEP6Wallet(path, NeoSystem.Settings);
-                        wallet.Unlock(password);
                         if (ReadUserInput("Create an address? (no|yes)").IsYes())
                         {
+                            string password = ReadUserInput("password", true);
+                            string password2 = ReadUserInput("password", true);
+                            if (!Helper.DoubleCheckPwd(password, password2)) return;
+                            wallet.Unlock(password);
                             WalletAccount account = wallet.CreateAccount();
                             Console.WriteLine($"   Address: {account.Address}");
                             Console.WriteLine($"    Pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
@@ -168,6 +174,7 @@ namespace Neo.CLI
                 default:
                     Console.WriteLine("Wallet files in that format are not supported, please use a .json or .db3 file extension.");
                     break;
+                    
             }
         }
 
@@ -378,6 +385,17 @@ namespace Neo.CLI
                 case ".json":
                     {
                         NEP6Wallet nep6wallet = new NEP6Wallet(path, NeoSystem.Settings);
+                        if (!nep6wallet.GetAccounts().Any())
+                        {
+                            Console.WriteLine("No address is found, please reconfirm your password.");
+                            string password2 = ReadUserInput("password", true);
+                            if (password != password2)
+                            {
+                                Console.WriteLine("Two passwords are inconsistent.");
+                                return;
+                            }
+                            nep6wallet.UnlockEmpty(password);
+                        }
                         nep6wallet.Unlock(password);
                         CurrentWallet = nep6wallet;
                         break;
