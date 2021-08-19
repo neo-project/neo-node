@@ -604,11 +604,8 @@ namespace Neo.ConsoleService
             while (_running)
             {
                 if (ShowPrompt)
-                {
                     PrintPrompt(Prompt);
-                }
 
-                Console.ForegroundColor = ConsoleColor.Yellow;
                 string line;//= ReadLine()?.Trim();
                 var builder = new StringBuilder();
                 var input = Console.ReadKey(intercept: true);
@@ -684,12 +681,12 @@ namespace Neo.ConsoleService
             Console.Write(new string(' ', Console.WindowWidth));
             Console.SetCursorPosition(0, currentLine);
             PrintPrompt(Prompt);
-            Console.ForegroundColor = ConsoleColor.Yellow;
         }
         private static void PrintPrompt(string Prompt)
         {
             Console.ForegroundColor = ConsoleColor.Green;
             Console.Write($"{Prompt}> ");
+            Console.ForegroundColor = ConsoleColor.Yellow;
         }
     }
 }
