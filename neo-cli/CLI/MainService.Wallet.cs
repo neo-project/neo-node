@@ -303,7 +303,7 @@ namespace Neo.CLI
 
                 if (!fileInfo.Exists)
                 {
-                    ConsoleHelper.Error($"File '{fileInfo.FullName}' doesn't exists");
+                    ConsoleHelper.Warning($"File '{fileInfo.FullName}' doesn't exists");
                     return;
                 }
 

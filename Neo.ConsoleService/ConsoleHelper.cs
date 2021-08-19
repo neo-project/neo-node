@@ -8,6 +8,11 @@ namespace Neo.ConsoleService
         private static readonly ConsoleColorSet WarningColor = new(ConsoleColor.Yellow);
         private static readonly ConsoleColorSet ErrorColor = new(ConsoleColor.Red);
 
+        /// <summary>
+        /// Info handles message in the form of "[tag]:[msg]",
+        /// avoid using Info if the `tag` is too long
+        /// </summary>
+        /// <param name="values"></param>
         public static void Info(params string[] values)
         {
             var currentColor = new ConsoleColorSet();
@@ -24,11 +29,24 @@ namespace Neo.ConsoleService
             Console.WriteLine();
         }
 
+        /// <summary>
+        /// Use warning if something unexpected happens
+        /// or the execution result is not correct.
+        /// Also use warning if you just want to remind
+        /// user of doing something.
+        /// </summary>
+        /// <param name="msg"></param>
         public static void Warning(string msg)
         {
             Log("Warning", WarningColor, msg);
         }
 
+        /// <summary>
+        /// Use Error if the verification or input format check fails
+        /// or exception that breaks the execution of interactive
+        /// command throws.
+        /// </summary>
+        /// <param name="msg"></param>
         public static void Error(string msg)
         {
             Log("Error", ErrorColor, msg);

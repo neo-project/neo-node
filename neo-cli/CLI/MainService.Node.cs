@@ -76,7 +76,7 @@ namespace Neo.CLI
                     int linesWritten = 1;
                     foreach (RemoteNode node in LocalNode.GetRemoteNodes().OrderByDescending(u => u.LastBlockIndex).Take(Console.WindowHeight - 2).ToArray())
                     {
-                        ConsoleHelper.Info($"  ip: ",
+                        ConsoleHelper.Info("  ip: ",
                             $"{ node.Remote.Address,-15}\t",
                             "port: ",
                             $"{node.Remote.Port,-5}\t",

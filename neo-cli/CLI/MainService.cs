@@ -221,7 +221,7 @@ namespace Neo.CLI
         private bool NoWallet()
         {
             if (CurrentWallet != null) return false;
-            Console.WriteLine("You have to open the wallet first.");
+            ConsoleHelper.Error("You have to open the wallet first.");
             return true;
         }
 
@@ -579,7 +579,7 @@ namespace Neo.CLI
             ContractState contract = NativeContract.ContractManagement.GetContract(NeoSystem.StoreView, scriptHash);
             if (contract == null)
             {
-                ConsoleHelper.Warning("Contract does not exist.");
+                ConsoleHelper.Error("Contract does not exist.");
                 result = StackItem.Null;
                 return false;
             }
@@ -587,7 +587,7 @@ namespace Neo.CLI
             {
                 if (contract.Manifest.Abi.GetMethod(operation, parameters.Count) == null)
                 {
-                    ConsoleHelper.Warning("This method does not not exist in this contract.");
+                    ConsoleHelper.Error("This method does not not exist in this contract.");
                     result = StackItem.Null;
                     return false;
                 }
