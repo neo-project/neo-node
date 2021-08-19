@@ -620,7 +620,7 @@ namespace Neo.ConsoleService
                     {
                         var match =
                             consoleAutofill.Autofill(currentInput,
-                                commands, CyclingDirections.Forward);
+                                commands, true);
 
                         if (string.IsNullOrEmpty(match))
                         {
