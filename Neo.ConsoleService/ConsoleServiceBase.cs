@@ -654,7 +654,7 @@ namespace Neo.ConsoleService
                     input = Console.ReadKey(intercept: true);
                 }
                 line = builder.ToString();
-
+                Console.WriteLine();
                 if (line == null) break;
                 Console.ForegroundColor = ConsoleColor.White;
 
