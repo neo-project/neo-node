@@ -687,10 +687,9 @@ namespace Neo.ConsoleService
         private static void ClearCurrentLine(string Prompt)
         {
             var currentLine = Console.CursorTop;
-            Console.SetCursorPosition(0, Console.CursorTop);
+            Console.SetCursorPosition(Prompt.Length + 2, Console.CursorTop);
             Console.Write(new string(' ', Console.WindowWidth));
-            Console.SetCursorPosition(0, currentLine);
-            PrintPrompt(Prompt);
+            Console.SetCursorPosition(Prompt.Length + 2, currentLine);
         }
         private static void PrintPrompt(string Prompt)
         {
