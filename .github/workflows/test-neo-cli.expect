@@ -15,9 +15,9 @@ expect {
 }
 
 #
-# Test 'create empty wallet'
+# Test 'create wallet'
 #
-send "create wallet test-empty.json\n"
+send "create wallet test-wallet1.json\n"
 
 expect {
     "password:" { send "asd\n" }
@@ -32,13 +32,15 @@ expect {
 }
 
 expect {
-    "Create an address? (no|yes):" { send "n\n"}
+    "   Address:" { }
+    "error" { exit 2 }
+    timeout { exit 1 }
 }
 
 #
 # Test 'create wallet'
 #
-send "create wallet test-wallet.json\n"
+send "create wallet test-wallet2.json L2ArHTuiDL4FHu4nfyhamrG8XVYB4QyRbmhj7vD6hFMB5iAMSTf6\n"
 
 expect {
     "password:" { send "asd\n" }
@@ -53,11 +55,7 @@ expect {
 }
 
 expect {
-    "Create an address? (no|yes):" { send "y\n"}
-}
-
-expect {
-    "   Address:" { }
+    "Address: NUj249PQg9EMJfAuxKizdJwMG7GSBzYX2Y  Standard" { }
     "error" { exit 2 }
     timeout { exit 1 }
 }

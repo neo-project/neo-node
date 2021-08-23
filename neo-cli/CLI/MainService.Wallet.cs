@@ -187,11 +187,23 @@ namespace Neo.CLI
         /// Process "create wallet" command
         /// </summary>
         [ConsoleCommand("create wallet", Category = "Wallet Commands")]
-        private void OnCreateWalletCommand(string path)
+        private void OnCreateWalletCommand(string path, string wifOrFile = null)
         {
+            string password = ReadUserInput("password", true);
+            if (password.Length == 0)
+            {
+                Console.WriteLine("Cancelled");
+                return;
+            }
+            string password2 = ReadUserInput("password", true);
+            if (password != password2)
+            {
+                Console.WriteLine("Error");
+                return;
+            }
             if (!File.Exists(path))
             {
-                CreateWallet(path);
+                CreateWallet(path, password, wifOrFile); 
             }
             else
             {
