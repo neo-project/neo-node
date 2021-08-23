@@ -55,7 +55,7 @@ expect {
 }
 
 expect {
-    "Address: NUj249PQg9EMJfAuxKizdJwMG7GSBzYX2Y  Standard" { }
+    "Address: NUj249PQg9EMJfAuxKizdJwMG7GSBzYX2Y" { }
     "error" { exit 2 }
     timeout { exit 1 }
 }
