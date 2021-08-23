@@ -203,7 +203,7 @@ namespace Neo.CLI
             }
             if (!File.Exists(path))
             {
-                CreateWallet(path, password, wifOrFile); 
+                CreateWallet(path, password, wifOrFile);
             }
             else
             {
