@@ -195,7 +195,7 @@ namespace Neo.CLI
                 Console.WriteLine("Cancelled");
                 return;
             }
-            string password2 = ReadUserInput("password", true);
+            string password2 = ReadUserInput("repeat password", true);
             if (password != password2)
             {
                 Console.WriteLine("Error");
@@ -245,6 +245,7 @@ namespace Neo.CLI
         [ConsoleCommand("import key", Category = "Wallet Commands")]
         private void OnImportKeyCommand(string wifOrFile)
         {
+            if (CurrentWallet == null) return;
             byte[] prikey = null;
             try
             {
@@ -301,10 +302,13 @@ namespace Neo.CLI
         [ConsoleCommand("import watchonly", Category = "Wallet Commands")]
         private void OnImportWatchOnlyCommand(string addressOrFile)
         {
+            if (CurrentWallet == null) return;
             UInt160 address = null;
             try
             {
                 address = StringToAddress(addressOrFile, NeoSystem.Settings.AddressVersion);
+                WalletAccount currentAccount = CurrentWallet.GetAccount(address);
+                if (currentAccount != null) return;
             }
             catch (FormatException) { }
             if (address is null)
