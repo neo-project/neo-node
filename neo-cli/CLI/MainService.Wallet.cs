@@ -111,7 +111,11 @@ namespace Neo.CLI
         [ConsoleCommand("create address", Category = "Wallet Commands")]
         private void OnCreateAddressCommand(ushort count = 1)
         {
-            if (CurrentWallet == null) return;
+            if (CurrentWallet == null)
+            {
+                Console.WriteLine($"Wallet is not opened");
+                return;
+            }
 
             string path = "address.txt";
             if (File.Exists(path))
@@ -219,7 +223,11 @@ namespace Neo.CLI
         [ConsoleCommand("import multisigaddress", Category = "Wallet Commands")]
         private void OnImportMultisigAddress(ushort m, ECPoint[] publicKeys)
         {
-            if (CurrentWallet == null) return;
+            if (CurrentWallet == null)
+            {
+                Console.WriteLine($"Wallet is not opened");
+                return;
+            }
 
             int n = publicKeys.Length;
 
@@ -245,7 +253,12 @@ namespace Neo.CLI
         [ConsoleCommand("import key", Category = "Wallet Commands")]
         private void OnImportKeyCommand(string wifOrFile)
         {
-            if (CurrentWallet == null) return;
+            if (CurrentWallet == null)
+            {
+                Console.WriteLine($"Wallet is not opened");
+                return;
+            }
+
             byte[] prikey = null;
             try
             {
@@ -302,7 +315,12 @@ namespace Neo.CLI
         [ConsoleCommand("import watchonly", Category = "Wallet Commands")]
         private void OnImportWatchOnlyCommand(string addressOrFile)
         {
-            if (CurrentWallet == null) return;
+            if (CurrentWallet == null)
+            {
+                Console.WriteLine($"Wallet is not opened");
+                return;
+            }
+
             UInt160 address = null;
             try
             {
@@ -355,7 +373,11 @@ namespace Neo.CLI
         [ConsoleCommand("list address", Category = "Wallet Commands")]
         private void OnListAddressCommand()
         {
-            if (NoWallet()) return;
+            if (CurrentWallet == null)
+            {
+                Console.WriteLine($"Wallet is not opened");
+                return;
+            }
 
             var snapshot = NeoSystem.StoreView;
             foreach (var account in CurrentWallet.GetAccounts())
