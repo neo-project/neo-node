@@ -147,7 +147,7 @@ namespace Neo.CLI
         {
             if (NoWallet()) return;
 
-            if (ReadUserInput($"Warning: Deleted address can no longer be back.\nAre you sure to delete address {address.ToAddress(NeoSystem.Settings.AddressVersion)}? (no|yes)").IsYes())
+            if (ReadUserInput($"Warning: Irrevocable operation!\nAre you sure to delete account {address.ToAddress(NeoSystem.Settings.AddressVersion)}? (no|yes)").IsYes())
             {
                 if (CurrentWallet.DeleteAccount(address))
                 {
