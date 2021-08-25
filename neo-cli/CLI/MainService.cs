@@ -246,8 +246,8 @@ namespace Neo.CLI
 
         private bool NoWallet()
         {
-            if (CurrentWallet != null && CurrentWallet.GetAccounts().Any()) return false;
-            Console.WriteLine("No wallet or no address exists.");
+            if (CurrentWallet != null) return false;
+            Console.WriteLine("You have to open the wallet first.");
             return true;
         }
 
