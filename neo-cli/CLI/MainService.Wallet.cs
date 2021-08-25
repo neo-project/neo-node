@@ -1,3 +1,13 @@
+// Copyright (C) 2016-2021 The Neo Project.
+// 
+// The neo-cli is free software distributed under the MIT software 
+// license, see the accompanying file LICENSE in the main directory of
+// the project or http://www.opensource.org/licenses/mit-license.php 
+// for more details.
+// 
+// Redistribution and use in source and binary forms with or without
+// modifications are permitted.
+
 using Akka.Actor;
 using Neo.ConsoleService;
 using Neo.Cryptography.ECC;
@@ -53,11 +63,7 @@ namespace Neo.CLI
         [ConsoleCommand("close wallet", Category = "Wallet Commands")]
         private void OnCloseWalletCommand()
         {
-            if (CurrentWallet == null)
-            {
-                Console.WriteLine($"Wallet is not opened");
-                return;
-            }
+            if (NoWallet()) return;
             CurrentWallet = null;
             Console.WriteLine($"Wallet is closed");
         }
@@ -102,7 +108,6 @@ namespace Neo.CLI
         private void OnCreateAddressCommand(ushort count = 1)
         {
             if (NoWallet()) return;
-
             string path = "address.txt";
             if (File.Exists(path))
             {
@@ -203,7 +208,7 @@ namespace Neo.CLI
         /// Process "create wallet" command
         /// </summary>
         [ConsoleCommand("create wallet", Category = "Wallet Commands")]
-        private void OnCreateWalletCommand(string path)
+        private void OnCreateWalletCommand(string path, string wifOrFile = null)
         {
             string password = ReadUserInput("password", true);
             if (password.Length == 0)
@@ -211,20 +216,20 @@ namespace Neo.CLI
                 Console.WriteLine("Cancelled");
                 return;
             }
-            string password2 = ReadUserInput("password", true);
+            string password2 = ReadUserInput("repeat password", true);
             if (password != password2)
             {
                 Console.WriteLine("Error");
                 return;
             }
-            if (!File.Exists(path))
-            {
-                CreateWallet(path, password);
-            }
-            else
+            if (File.Exists(path))
             {
                 Console.WriteLine("This wallet already exists, please create another one.");
+                return;
             }
+            bool createDefaultAccount = wifOrFile is null;
+            CreateWallet(path, password, createDefaultAccount);
+            if (!createDefaultAccount) OnImportKeyCommand(wifOrFile);
         }
 
         /// <summary>
@@ -236,7 +241,6 @@ namespace Neo.CLI
         private void OnImportMultisigAddress(ushort m, ECPoint[] publicKeys)
         {
             if (NoWallet()) return;
-
             int n = publicKeys.Length;
 
             if (m < 1 || m > n || n > 1024)
@@ -261,6 +265,7 @@ namespace Neo.CLI
         [ConsoleCommand("import key", Category = "Wallet Commands")]
         private void OnImportKeyCommand(string wifOrFile)
         {
+            if (NoWallet()) return;
             byte[] prikey = null;
             try
             {
@@ -317,6 +322,7 @@ namespace Neo.CLI
         [ConsoleCommand("import watchonly", Category = "Wallet Commands")]
         private void OnImportWatchOnlyCommand(string addressOrFile)
         {
+            if (NoWallet()) return;
             UInt160 address = null;
             try
             {
@@ -354,8 +360,16 @@ namespace Neo.CLI
             }
             else
             {
-                WalletAccount account = CurrentWallet.CreateAccount(address);
-                Console.WriteLine($"Address: {account.Address}");
+                WalletAccount account = CurrentWallet.GetAccount(address);
+                if (account is not null)
+                {
+                    Console.WriteLine("This address is already in your wallet");
+                }
+                else
+                {
+                    account = CurrentWallet.CreateAccount(address);
+                    Console.WriteLine($"Address: {account.Address}");
+                }
             }
             if (CurrentWallet is NEP6Wallet wallet)
                 wallet.Save();
@@ -368,7 +382,6 @@ namespace Neo.CLI
         private void OnListAddressCommand()
         {
             if (NoWallet()) return;
-
             var snapshot = NeoSystem.StoreView;
             foreach (var account in CurrentWallet.GetAccounts())
             {
