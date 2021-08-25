@@ -650,7 +650,7 @@ namespace Neo.ConsoleService
                             currentInput = currentInput.Remove(currentInput.Length - 1);
                             Console.Write(currentInput);
                         }
-                        else if(input.Key != ConsoleKey.Backspace)
+                        else if (input.Key != ConsoleKey.Backspace)
                         {
                             var key = input.KeyChar;
                             builder.Append(key);
