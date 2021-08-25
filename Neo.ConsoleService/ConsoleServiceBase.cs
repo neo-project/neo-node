@@ -616,7 +616,7 @@ namespace Neo.ConsoleService
                 if (ShowPrompt)
                     PrintPrompt(Prompt);
 
-                string line;//= ReadLine()?.Trim();
+                string line;
                 var builder = new StringBuilder();
                 var input = Console.ReadKey(intercept: true);
                 while (input.Key != ConsoleKey.Enter)
@@ -650,7 +650,7 @@ namespace Neo.ConsoleService
                             currentInput = currentInput.Remove(currentInput.Length - 1);
                             Console.Write(currentInput);
                         }
-                        else
+                        else if(input.Key != ConsoleKey.Backspace)
                         {
                             var key = input.KeyChar;
                             builder.Append(key);
