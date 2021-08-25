@@ -388,16 +388,6 @@ namespace Neo.CLI
                 case ".json":
                     {
                         NEP6Wallet nep6wallet = new NEP6Wallet(path, NeoSystem.Settings);
-                        if (!nep6wallet.GetAccounts().Any())
-                        {
-                            Console.WriteLine("No address is found, please reconfirm your password.");
-                            string password2 = ReadUserInput("repeat password", true);
-                            if (password != password2)
-                            {
-                                Console.WriteLine("Two passwords are inconsistent.");
-                                return;
-                            }
-                        }
                         nep6wallet.Unlock(password);
                         CurrentWallet = nep6wallet;
                         break;
