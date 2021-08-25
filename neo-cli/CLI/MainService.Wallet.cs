@@ -196,14 +196,14 @@ namespace Neo.CLI
                 Console.WriteLine("Error");
                 return;
             }
-            if (!File.Exists(path))
-            {
-                CreateWallet(path, password, wifOrFile);
-            }
-            else
+            if (File.Exists(path))
             {
                 Console.WriteLine("This wallet already exists, please create another one.");
+                return;
             }
+            bool createDefaultAccount = wifOrFile is null;
+            CreateWallet(path, password, createDefaultAccount);
+            if (!createDefaultAccount) OnImportKeyCommand(wifOrFile);
         }
 
         /// <summary>
