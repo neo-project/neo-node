@@ -196,14 +196,14 @@ namespace Neo.CLI
                 Console.WriteLine("Error");
                 return;
             }
-            if (!File.Exists(path))
-            {
-                CreateWallet(path, password, wifOrFile);
-            }
-            else
+            if (File.Exists(path))
             {
                 Console.WriteLine("This wallet already exists, please create another one.");
+                return;
             }
+            bool createDefaultAccount = wifOrFile is null;
+            CreateWallet(path, password, createDefaultAccount);
+            if (!createDefaultAccount) OnImportKeyCommand(wifOrFile);
         }
 
         /// <summary>
@@ -301,12 +301,6 @@ namespace Neo.CLI
             try
             {
                 address = StringToAddress(addressOrFile, NeoSystem.Settings.AddressVersion);
-                WalletAccount currentAccount = CurrentWallet.GetAccount(address);
-                if (currentAccount != null)
-                {
-                    Console.WriteLine("This address is already in your wallet");
-                    return;
-                }
             }
             catch (FormatException) { }
             if (address is null)
@@ -340,8 +334,16 @@ namespace Neo.CLI
             }
             else
             {
-                WalletAccount account = CurrentWallet.CreateAccount(address);
-                Console.WriteLine($"Address: {account.Address}");
+                WalletAccount account = CurrentWallet.GetAccount(address);
+                if (account is not null)
+                {
+                    Console.WriteLine("This address is already in your wallet");
+                }
+                else
+                {
+                    account = CurrentWallet.CreateAccount(address);
+                    Console.WriteLine($"Address: {account.Address}");
+                }
             }
             if (CurrentWallet is NEP6Wallet wallet)
                 wallet.Save();

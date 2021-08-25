@@ -133,52 +133,30 @@ namespace Neo.CLI
             base.RunConsole();
         }
 
-        public void CreateWallet(string path, string password, string wifOrFile)
+        public void CreateWallet(string path, string password, bool createDefaultAccount = true)
         {
             switch (Path.GetExtension(path))
             {
                 case ".db3":
-                    {
-                        UserWallet wallet = UserWallet.Create(path, password, NeoSystem.Settings);
-                        if (wifOrFile == null)
-                        {
-                            WalletAccount account = wallet.CreateAccount();
-                            Console.WriteLine($"   Address: {account.Address}");
-                            Console.WriteLine($"    Pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                            Console.WriteLine($"ScriptHash: {account.ScriptHash}");
-                        }
-                        else
-                        {
-                            CurrentWallet = wallet;
-                            OnImportKeyCommand(wifOrFile);
-                        }
-                        CurrentWallet = wallet;
-                    }
+                    CurrentWallet = UserWallet.Create(path, password, NeoSystem.Settings);
                     break;
                 case ".json":
-                    {
-                        NEP6Wallet wallet = new NEP6Wallet(path, NeoSystem.Settings);
-                        wallet.Unlock(password);
-                        if (wifOrFile == null)
-                        {
-                            WalletAccount account = wallet.CreateAccount();
-                            Console.WriteLine($"   Address: {account.Address}");
-                            Console.WriteLine($"    Pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                            Console.WriteLine($"ScriptHash: {account.ScriptHash}");
-                        }
-                        else
-                        {
-                            CurrentWallet = wallet;
-                            OnImportKeyCommand(wifOrFile);
-                        }
-                        wallet.Save();
-                        CurrentWallet = wallet;
-                    }
+                    CurrentWallet = new NEP6Wallet(path, NeoSystem.Settings);
+                    ((NEP6Wallet)CurrentWallet).Unlock(password);
                     break;
                 default:
                     Console.WriteLine("Wallet files in that format are not supported, please use a .json or .db3 file extension.");
-                    break;
+                    return;
             }
+            if (createDefaultAccount)
+            {
+                WalletAccount account = CurrentWallet.CreateAccount();
+                Console.WriteLine($"   Address: {account.Address}");
+                Console.WriteLine($"    Pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+                Console.WriteLine($"ScriptHash: {account.ScriptHash}");
+            }
+            if (CurrentWallet is NEP6Wallet wallet)
+                wallet.Save();
         }
 
         private IEnumerable<Block> GetBlocks(Stream stream, bool read_start = false)
