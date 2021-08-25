@@ -301,12 +301,6 @@ namespace Neo.CLI
             try
             {
                 address = StringToAddress(addressOrFile, NeoSystem.Settings.AddressVersion);
-                WalletAccount currentAccount = CurrentWallet.GetAccount(address);
-                if (currentAccount != null)
-                {
-                    Console.WriteLine("This address is already in your wallet");
-                    return;
-                }
             }
             catch (FormatException) { }
             if (address is null)
@@ -340,8 +334,16 @@ namespace Neo.CLI
             }
             else
             {
-                WalletAccount account = CurrentWallet.CreateAccount(address);
-                Console.WriteLine($"Address: {account.Address}");
+                WalletAccount account = CurrentWallet.GetAccount(address);
+                if (account is not null)
+                {
+                    Console.WriteLine("This address is already in your wallet");
+                }
+                else
+                {
+                    account = CurrentWallet.CreateAccount(address);
+                    Console.WriteLine($"Address: {account.Address}");
+                }
             }
             if (CurrentWallet is NEP6Wallet wallet)
                 wallet.Save();
