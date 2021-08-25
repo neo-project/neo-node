@@ -302,7 +302,11 @@ namespace Neo.CLI
             {
                 address = StringToAddress(addressOrFile, NeoSystem.Settings.AddressVersion);
                 WalletAccount currentAccount = CurrentWallet.GetAccount(address);
-                if (currentAccount != null) return;
+                if (currentAccount != null)
+                {
+                    Console.WriteLine("This address is already in your wallet");
+                    return;
+                }
             }
             catch (FormatException) { }
             if (address is null)
