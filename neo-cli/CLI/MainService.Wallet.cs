@@ -63,13 +63,9 @@ namespace Neo.CLI
         [ConsoleCommand("close wallet", Category = "Wallet Commands")]
         private void OnCloseWalletCommand()
         {
-            if (CurrentWallet == null)
-            {
-                ConsoleHelper.Warning("Wallet is not opened");
-                return;
-            }
+            if (NoWallet()) return;
             CurrentWallet = null;
-            Console.WriteLine($"Wallet is closed");
+            ConsoleHelper.Warning("Wallet is closed");
         }
 
         /// <summary>
@@ -112,7 +108,6 @@ namespace Neo.CLI
         private void OnCreateAddressCommand(ushort count = 1)
         {
             if (NoWallet()) return;
-
             string path = "address.txt";
             if (File.Exists(path))
             {
@@ -187,7 +182,7 @@ namespace Neo.CLI
         /// Process "create wallet" command
         /// </summary>
         [ConsoleCommand("create wallet", Category = "Wallet Commands")]
-        private void OnCreateWalletCommand(string path)
+        private void OnCreateWalletCommand(string path, string wifOrFile = null)
         {
             string password = ReadUserInput("password", true);
             if (password.Length == 0)
@@ -195,20 +190,20 @@ namespace Neo.CLI
                 Console.WriteLine("Cancelled");
                 return;
             }
-            string password2 = ReadUserInput("password", true);
+            string password2 = ReadUserInput("repeat password", true);
             if (password != password2)
             {
                 ConsoleHelper.Error("Two passwords not match.");
                 return;
             }
-            if (!File.Exists(path))
+            if (File.Exists(path))
             {
-                CreateWallet(path, password);
+                Console.WriteLine("This wallet already exists, please create another one.");
+                return;
             }
-            else
-            {
-                ConsoleHelper.Warning("This wallet already exists, please create another one.");
-            }
+            bool createDefaultAccount = wifOrFile is null;
+            CreateWallet(path, password, createDefaultAccount);
+            if (!createDefaultAccount) OnImportKeyCommand(wifOrFile);
         }
 
         /// <summary>
@@ -220,7 +215,6 @@ namespace Neo.CLI
         private void OnImportMultisigAddress(ushort m, ECPoint[] publicKeys)
         {
             if (NoWallet()) return;
-
             int n = publicKeys.Length;
 
             if (m < 1 || m > n || n > 1024)
@@ -245,6 +239,7 @@ namespace Neo.CLI
         [ConsoleCommand("import key", Category = "Wallet Commands")]
         private void OnImportKeyCommand(string wifOrFile)
         {
+            if (NoWallet()) return;
             byte[] prikey = null;
             try
             {
@@ -301,6 +296,7 @@ namespace Neo.CLI
         [ConsoleCommand("import watchonly", Category = "Wallet Commands")]
         private void OnImportWatchOnlyCommand(string addressOrFile)
         {
+            if (NoWallet()) return;
             UInt160 address = null;
             try
             {
@@ -338,8 +334,16 @@ namespace Neo.CLI
             }
             else
             {
-                WalletAccount account = CurrentWallet.CreateAccount(address);
-                ConsoleHelper.Info("Address: ", account.Address);
+                WalletAccount account = CurrentWallet.GetAccount(address);
+                if (account is not null)
+                {
+                    Console.WriteLine("This address is already in your wallet");
+                }
+                else
+                {
+                    account = CurrentWallet.CreateAccount(address);
+                    ConsoleHelper.Info("Address: ", account.Address);
+                }
             }
             if (CurrentWallet is NEP6Wallet wallet)
                 wallet.Save();
@@ -352,7 +356,6 @@ namespace Neo.CLI
         private void OnListAddressCommand()
         {
             if (NoWallet()) return;
-
             var snapshot = NeoSystem.StoreView;
             foreach (var account in CurrentWallet.GetAccounts())
             {
