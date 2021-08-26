@@ -47,7 +47,7 @@ namespace Neo.CLI
         /// existing plugin files, in case of any file missing or
         /// damage to the old version.
         /// </summary>
-        /// <param name="pluginName"></param>
+        /// <param name="pluginName">name of the plugin</param>
         [ConsoleCommand("reinstall", Category = "Plugin Commands", Description = "Overwrite existing plugin by force.")]
         private void OnReinstallCommand(string pluginName)
         {
@@ -62,7 +62,7 @@ namespace Neo.CLI
         /// might be added in the future.
         /// </summary>
         /// <param name="pluginName">name of the plugin</param>
-        /// <returns></returns>
+        /// <returns>Downloaded content</returns>
         private MemoryStream DownloadPlugin(string pluginName)
         {
             HttpWebRequest request = WebRequest.CreateHttp($"https://github.com/neo-project/neo-modules/releases/download/v{typeof(Plugin).Assembly.GetVersion()}/{pluginName}.zip");
