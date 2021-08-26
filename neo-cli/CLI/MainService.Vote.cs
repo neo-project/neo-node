@@ -34,10 +34,7 @@ namespace Neo.CLI
             var testGas = NativeContract.NEO.GetRegisterPrice(NeoSystem.StoreView) + (BigInteger)Math.Pow(10, NativeContract.GAS.Decimals) * 10;
 
             if (NoWallet())
-            {
-                ConsoleHelper.Warning("Need open wallet!");
                 return;
-            }
 
             WalletAccount currentAccount = CurrentWallet.GetAccount(account);
 
@@ -74,10 +71,7 @@ namespace Neo.CLI
         private void OnUnregisterCandidateCommand(UInt160 account)
         {
             if (NoWallet())
-            {
-                ConsoleHelper.Warning("Need open wallet!");
                 return;
-            }
 
             WalletAccount currentAccount = CurrentWallet.GetAccount(account);
 
@@ -115,10 +109,7 @@ namespace Neo.CLI
         private void OnVoteCommand(UInt160 senderAccount, ECPoint publicKey)
         {
             if (NoWallet())
-            {
-                ConsoleHelper.Warning("Need open wallet!");
                 return;
-            }
 
             byte[] script;
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
@@ -138,10 +129,7 @@ namespace Neo.CLI
         private void OnUnvoteCommand(UInt160 senderAccount)
         {
             if (NoWallet())
-            {
-                ConsoleHelper.Warning("Need open wallet!");
                 return;
-            }
 
             byte[] script;
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
@@ -228,7 +216,7 @@ namespace Neo.CLI
         [ConsoleCommand("get accountstate", Category = "Vote Commands")]
         private void OnGetAccountState(UInt160 address)
         {
-            string notice = "Notice: No vote record!";
+            string notice = "No vote record!";
             var arg = new JObject();
             arg["type"] = "Hash160";
             arg["value"] = address.ToString();
@@ -237,7 +225,7 @@ namespace Neo.CLI
             Console.WriteLine();
             if (result.IsNull)
             {
-                Console.WriteLine(notice);
+                ConsoleHelper.Warning(notice);
                 return;
             }
             var resJArray = (VM.Types.Array)result;
@@ -245,7 +233,7 @@ namespace Neo.CLI
             {
                 if (value.IsNull)
                 {
-                    Console.WriteLine(notice);
+                    ConsoleHelper.Warning(notice);
                     return;
                 }
             }
