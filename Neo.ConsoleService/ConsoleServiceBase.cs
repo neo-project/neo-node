@@ -610,7 +610,7 @@ namespace Neo.ConsoleService
 
             Console.ForegroundColor = ConsoleColor.DarkGreen;
             Console.SetIn(new StreamReader(Console.OpenStandardInput(), Console.InputEncoding, false, ushort.MaxValue));
-
+            var promptLen = Prompt.Length + 2;
             while (_running)
             {
                 if (ShowPrompt)
@@ -621,48 +621,63 @@ namespace Neo.ConsoleService
                 var input = Console.ReadKey(intercept: true);
                 while (input.Key != ConsoleKey.Enter)
                 {
-                    var currentInput = builder.ToString();
-                    if (input.Key == ConsoleKey.Tab)
+                    if (input.Key == ConsoleKey.UpArrow || input.Key == ConsoleKey.UpArrow)
                     {
-                        var match =
-                            consoleAutofill.Autofill(currentInput,
-                                commands, true);
-
-                        if (string.IsNullOrEmpty(match))
-                        {
-                            input = Console.ReadKey(intercept: true);
-                            continue;
-                        }
-
-                        ClearCurrentLine(Prompt);
-                        builder.Clear();
-
-                        Console.Write(match);
-                        builder.Append(match);
+                        input = Console.ReadKey(intercept: true);
+                        continue;
                     }
-                    else
-                    {
-                        if (input.Key == ConsoleKey.Backspace && currentInput.Length > 0)
-                        {
-                            builder.Remove(builder.Length - 1, 1);
-                            ClearCurrentLine(Prompt);
 
-                            currentInput = currentInput.Remove(currentInput.Length - 1);
-                            Console.Write(currentInput);
-                        }
-                        else if (input.Key != ConsoleKey.Backspace)
-                        {
-                            if (input.Key == ConsoleKey.LeftArrow)
+                    var currentInput = builder.ToString();
+
+
+                    switch (input.Key)
+                    {
+                        case ConsoleKey.Tab:
                             {
-                                if (Console.CursorLeft > Prompt.Length + 2)
+                                var match = consoleAutofill.Autofill(currentInput, commands, true);
+
+                                if (string.IsNullOrEmpty(match))
+                                {
+                                    input = Console.ReadKey(intercept: true);
+                                    continue;
+                                }
+
+                                ClearCurrentLine(Prompt);
+                                builder.Clear();
+
+                                Console.Write(match);
+                                builder.Append(match);
+                                break;
+                            }
+                        case ConsoleKey.Backspace:
+                            {
+
+                                var currentCursor = Console.CursorLeft;
+
+                                if (currentCursor > promptLen)
+                                {
+                                    builder.Remove(currentCursor - promptLen - 1, 1);
+                                    ClearCurrentLine(Prompt);
+
+                                    currentInput = builder.ToString();
+                                    Console.Write(currentInput);
+                                    Console.CursorLeft = currentCursor - 1;
+                                }
+                                break;
+                            }
+                        case ConsoleKey.LeftArrow:
+                            {
+                                if (Console.CursorLeft > promptLen)
                                     Console.SetCursorPosition(Console.CursorLeft - 1, Console.CursorTop);
+                                break;
                             }
-                            else if (input.Key == ConsoleKey.RightArrow)
+                        case ConsoleKey.RightArrow:
                             {
-                                if (Console.CursorLeft < (Prompt.Length + 2 + builder.Length))
+                                if (Console.CursorLeft < (promptLen + builder.Length))
                                     Console.SetCursorPosition(Console.CursorLeft + 1, Console.CursorTop);
+                                break;
                             }
-                            else if (input.Key != ConsoleKey.UpArrow && input.Key != ConsoleKey.DownArrow)
+                        default:
                             {
                                 var currentCursor = Console.CursorLeft;
                                 var key = input.KeyChar;
@@ -671,9 +686,11 @@ namespace Neo.ConsoleService
                                 ClearCurrentLine(Prompt);
                                 Console.Write(currentInput);
                                 Console.SetCursorPosition(currentCursor + 1, Console.CursorTop);
+                                break;
                             }
-                        }
                     }
+
+
                     input = Console.ReadKey(intercept: true);
                 }
                 line = builder.ToString();
