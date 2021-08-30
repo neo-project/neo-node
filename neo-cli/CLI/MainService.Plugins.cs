@@ -153,7 +153,7 @@ namespace Neo.CLI
             catch (IOException)
             {
                 pluginToInstall.Pop();
-                Console.WriteLine($"Plugin already exist.");
+                Console.WriteLine($"Plugin already exist. Try to run `reinstall {pluginName}`");
             };
         }
 
