@@ -652,9 +652,26 @@ namespace Neo.ConsoleService
                         }
                         else if (input.Key != ConsoleKey.Backspace)
                         {
-                            var key = input.KeyChar;
-                            builder.Append(key);
-                            Console.Write(key);
+                            if (input.Key == ConsoleKey.LeftArrow)
+                            {
+                                if (Console.CursorLeft > Prompt.Length + 2)
+                                    Console.SetCursorPosition(Console.CursorLeft - 1, Console.CursorTop);
+                            }
+                            else if (input.Key == ConsoleKey.RightArrow)
+                            {
+                                if (Console.CursorLeft < (Prompt.Length + 2 + builder.Length))
+                                    Console.SetCursorPosition(Console.CursorLeft + 1, Console.CursorTop);
+                            }
+                            else if (input.Key != ConsoleKey.UpArrow && input.Key != ConsoleKey.DownArrow)
+                            {
+                                var currentCursor = Console.CursorLeft;
+                                var key = input.KeyChar;
+                                builder.Insert(Console.CursorLeft - Prompt.Length - 2, key);
+                                currentInput = builder.ToString();
+                                ClearCurrentLine(Prompt);
+                                Console.Write(currentInput);
+                                Console.SetCursorPosition(currentCursor + 1, Console.CursorTop);
+                            }
                         }
                     }
                     input = Console.ReadKey(intercept: true);
@@ -687,10 +704,19 @@ namespace Neo.ConsoleService
         private static void ClearCurrentLine(string Prompt)
         {
             var currentLine = Console.CursorTop;
-            Console.SetCursorPosition(Prompt.Length + 2, Console.CursorTop);
-            Console.Write(new string(' ', Console.WindowWidth));
+            Console.CursorVisible = false;
+            Console.SetCursorPosition(0, Console.CursorTop);
+
+            PrintPrompt(Prompt);
+
+            var spacesToErase = Console.WindowWidth - Prompt.Length - 2;
+            if (spacesToErase < 0) spacesToErase = 0;
+            Console.WriteLine(new string(' ', spacesToErase));
+
             Console.SetCursorPosition(Prompt.Length + 2, currentLine);
+            Console.CursorVisible = true;
         }
+
         private static void PrintPrompt(string Prompt)
         {
             Console.ForegroundColor = ConsoleColor.Green;
