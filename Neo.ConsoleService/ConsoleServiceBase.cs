@@ -636,11 +636,7 @@ namespace Neo.ConsoleService
                             {
                                 var match = consoleAutofill.Autofill(currentInput, commands, true);
 
-                                if (string.IsNullOrEmpty(match))
-                                {
-                                    input = Console.ReadKey(intercept: true);
-                                    continue;
-                                }
+                                if (string.IsNullOrEmpty(match)) break;
 
                                 ClearCurrentLine(Prompt);
                                 builder.Clear();
@@ -695,6 +691,7 @@ namespace Neo.ConsoleService
                 }
                 line = builder.ToString();
                 Console.WriteLine();
+
                 if (line == null) break;
                 Console.ForegroundColor = ConsoleColor.White;
 
