@@ -68,7 +68,7 @@ namespace Neo.CLI
                 }
                 catch (IOException)
                 {
-                    Console.WriteLine($"Plugin already exist.");
+                    ConsoleHelper.Warning($"Plugin already exist.");
                 }
             }
         }
@@ -88,7 +88,7 @@ namespace Neo.CLI
             }
             if (plugin is Logger)
             {
-                ConsoleHelper.Error("You cannot uninstall a built-in plugin.");
+                ConsoleHelper.Warning("You cannot uninstall a built-in plugin.");
                 return;
             }
 

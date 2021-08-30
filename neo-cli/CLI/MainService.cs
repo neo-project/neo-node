@@ -145,15 +145,15 @@ namespace Neo.CLI
                     ((NEP6Wallet)CurrentWallet).Unlock(password);
                     break;
                 default:
-                    Console.WriteLine("Wallet files in that format are not supported, please use a .json or .db3 file extension.");
+                    ConsoleHelper.Warning("Wallet files in that format are not supported, please use a .json or .db3 file extension.");
                     return;
             }
             if (createDefaultAccount)
             {
                 WalletAccount account = CurrentWallet.CreateAccount();
-                Console.WriteLine($"   Address: {account.Address}");
-                Console.WriteLine($"    Pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                Console.WriteLine($"ScriptHash: {account.ScriptHash}");
+                ConsoleHelper.Info($"   Address: {account.Address}");
+                ConsoleHelper.Info($"    Pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+                ConsoleHelper.Info($"ScriptHash: {account.ScriptHash}");
             }
             if (CurrentWallet is NEP6Wallet wallet)
                 wallet.Save();

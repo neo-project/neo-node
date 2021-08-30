@@ -65,7 +65,7 @@ namespace Neo.CLI
         {
             if (NoWallet()) return;
             CurrentWallet = null;
-            ConsoleHelper.Warning("Wallet is closed");
+            ConsoleHelper.Info("Wallet is closed");
         }
 
         /// <summary>
@@ -76,7 +76,7 @@ namespace Neo.CLI
         {
             if (Path.GetExtension(path).ToLowerInvariant() != ".db3")
             {
-                ConsoleHelper.Warning("Can't upgrade the wallet file.");
+                ConsoleHelper.Warning("Can't upgrade the wallet file. Check if your wallet is in db3 format.");
                 return;
             }
             if (!File.Exists(path))
@@ -93,7 +93,7 @@ namespace Neo.CLI
             string path_new = Path.ChangeExtension(path, ".json");
             if (File.Exists(path_new))
             {
-                Console.WriteLine($"File '{path_new}' already exists");
+                ConsoleHelper.Warning($"File '{path_new}' already exists");
                 return;
             }
             NEP6Wallet.Migrate(path_new, path, password, NeoSystem.Settings).Save();
@@ -363,7 +363,7 @@ namespace Neo.CLI
                 WalletAccount account = CurrentWallet.GetAccount(address);
                 if (account is not null)
                 {
-                    Console.WriteLine("This address is already in your wallet");
+                    ConsoleHelper.Info("This address is already in your wallet");
                 }
                 else
                 {
@@ -651,12 +651,13 @@ namespace Neo.CLI
             {
                 tx.Witnesses = context.GetWitnesses();
                 NeoSystem.Blockchain.Tell(tx);
-                Console.WriteLine($"Signed and relayed transaction with hash={tx.Hash}");
+                ConsoleHelper.Warning("Signed and relayed transaction with hash: ");
+                ConsoleHelper.Info(tx.Hash.ToString());
             }
             else
             {
-                ConsoleHelper.Error("Incomplete signature:");
-                Console.WriteLine(context.ToString());
+                ConsoleHelper.Warning("Incomplete signature: ");
+                ConsoleHelper.Info(context.ToString());
             }
         }
     }

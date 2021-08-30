@@ -35,10 +35,10 @@ namespace Neo.CLI
                 NeoSystem.MemPool.GetVerifiedAndUnverifiedTransactions(
                     out IEnumerable<Transaction> verifiedTransactions,
                     out IEnumerable<Transaction> unverifiedTransactions);
-                Console.WriteLine("Verified Transactions:");
+                ConsoleHelper.Info("Verified Transactions:");
                 foreach (Transaction tx in verifiedTransactions)
                     Console.WriteLine($" {tx.Hash} {tx.GetType().Name} {tx.NetworkFee} GAS_NetFee");
-                Console.WriteLine("Unverified Transactions:");
+                ConsoleHelper.Info("Unverified Transactions:");
                 foreach (Transaction tx in unverifiedTransactions)
                     Console.WriteLine($" {tx.Hash} {tx.GetType().Name} {tx.NetworkFee} GAS_NetFee");
 
