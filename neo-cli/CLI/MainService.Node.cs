@@ -35,10 +35,10 @@ namespace Neo.CLI
                 NeoSystem.MemPool.GetVerifiedAndUnverifiedTransactions(
                     out IEnumerable<Transaction> verifiedTransactions,
                     out IEnumerable<Transaction> unverifiedTransactions);
-                Console.WriteLine("Verified Transactions:");
+                ConsoleHelper.Info("Verified Transactions:");
                 foreach (Transaction tx in verifiedTransactions)
                     Console.WriteLine($" {tx.Hash} {tx.GetType().Name} {tx.NetworkFee} GAS_NetFee");
-                Console.WriteLine("Unverified Transactions:");
+                ConsoleHelper.Info("Unverified Transactions:");
                 foreach (Transaction tx in unverifiedTransactions)
                     Console.WriteLine($" {tx.Hash} {tx.GetType().Name} {tx.NetworkFee} GAS_NetFee");
 
@@ -86,8 +86,14 @@ namespace Neo.CLI
                     int linesWritten = 1;
                     foreach (RemoteNode node in LocalNode.GetRemoteNodes().OrderByDescending(u => u.LastBlockIndex).Take(Console.WindowHeight - 2).ToArray())
                     {
-                        Console.WriteLine(
-                            $"  ip: {node.Remote.Address,-15}\tport: {node.Remote.Port,-5}\tlisten: {node.ListenerTcpPort,-5}\theight: {node.LastBlockIndex,-7}");
+                        ConsoleHelper.Info("  ip: ",
+                            $"{ node.Remote.Address,-15}\t",
+                            "port: ",
+                            $"{node.Remote.Port,-5}\t",
+                            "listen: ",
+                            $"{node.ListenerTcpPort,-5}\t",
+                            "height: ",
+                            $"{node.LastBlockIndex,-7}");
                         linesWritten++;
                     }
 

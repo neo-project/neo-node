@@ -62,7 +62,7 @@ namespace Neo.CLI
             }
             catch (InvalidOperationException e)
             {
-                Console.WriteLine("Error: " + GetExceptionMessage(e));
+                ConsoleHelper.Error(GetExceptionMessage(e));
                 return;
             }
             if (!ReadUserInput("Relay tx(no|yes)").IsYes())
@@ -91,7 +91,7 @@ namespace Neo.CLI
             var balance = new BigDecimal(((PrimitiveType)balanceResult).GetInteger(), asset.Decimals);
 
             Console.WriteLine();
-            Console.WriteLine($"{asset.AssetName} balance: {balance}");
+            ConsoleHelper.Info($"{asset.AssetName} balance: ", $"{balance}");
         }
 
         /// <summary>
@@ -103,7 +103,7 @@ namespace Neo.CLI
         {
             ContractState contract = NativeContract.ContractManagement.GetContract(NeoSystem.StoreView, tokenHash);
             if (contract == null) Console.WriteLine($"Contract hash not exist: {tokenHash}");
-            else Console.WriteLine($"Result : {contract.Manifest.Name.ToString()}");
+            else ConsoleHelper.Info("Result: ", contract.Manifest.Name);
         }
 
         /// <summary>
@@ -115,7 +115,7 @@ namespace Neo.CLI
         {
             if (!OnInvokeWithResult(tokenHash, "decimals", out StackItem result, null)) return;
 
-            Console.WriteLine($"Result : {((PrimitiveType)result).GetInteger()}");
+            ConsoleHelper.Info("Result: ", $"{((PrimitiveType)result).GetInteger()}");
         }
 
         /// <summary>
@@ -130,7 +130,7 @@ namespace Neo.CLI
             var asset = new AssetDescriptor(NeoSystem.StoreView, NeoSystem.Settings, tokenHash);
             var totalSupply = new BigDecimal(((PrimitiveType)result).GetInteger(), asset.Decimals);
 
-            Console.WriteLine($"Result : {totalSupply}");
+            ConsoleHelper.Info("Result: ", $"{totalSupply}");
         }
     }
 }

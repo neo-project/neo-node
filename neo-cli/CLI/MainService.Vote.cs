@@ -11,8 +11,8 @@
 using Neo.ConsoleService;
 using Neo.Cryptography.ECC;
 using Neo.IO.Json;
-using Neo.SmartContract.Native;
 using Neo.SmartContract;
+using Neo.SmartContract.Native;
 using Neo.VM;
 using Neo.VM.Types;
 using Neo.Wallets;
@@ -32,21 +32,19 @@ namespace Neo.CLI
         private void OnRegisterCandidateCommand(UInt160 account)
         {
             var testGas = NativeContract.NEO.GetRegisterPrice(NeoSystem.StoreView) + (BigInteger)Math.Pow(10, NativeContract.GAS.Decimals) * 10;
-
             if (NoWallet()) return;
-
             WalletAccount currentAccount = CurrentWallet.GetAccount(account);
 
             if (currentAccount == null)
             {
-                Console.WriteLine("This address isn't in your wallet!");
+                ConsoleHelper.Warning("This address isn't in your wallet!");
                 return;
             }
             else
             {
                 if (currentAccount.Lock || currentAccount.WatchOnly)
                 {
-                    Console.WriteLine("Locked or WatchOnly address.");
+                    ConsoleHelper.Warning("Locked or WatchOnly address.");
                     return;
                 }
             }
@@ -70,19 +68,18 @@ namespace Neo.CLI
         private void OnUnregisterCandidateCommand(UInt160 account)
         {
             if (NoWallet()) return;
-
             WalletAccount currentAccount = CurrentWallet.GetAccount(account);
 
             if (currentAccount == null)
             {
-                Console.WriteLine("This address isn't in your wallet!");
+                ConsoleHelper.Warning("This address isn't in your wallet!");
                 return;
             }
             else
             {
                 if (currentAccount.Lock || currentAccount.WatchOnly)
                 {
-                    Console.WriteLine("Locked or WatchOnly address.");
+                    ConsoleHelper.Warning("Locked or WatchOnly address.");
                     return;
                 }
             }
@@ -107,7 +104,6 @@ namespace Neo.CLI
         private void OnVoteCommand(UInt160 senderAccount, ECPoint publicKey)
         {
             if (NoWallet()) return;
-
             byte[] script;
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
             {
@@ -126,7 +122,6 @@ namespace Neo.CLI
         private void OnUnvoteCommand(UInt160 senderAccount)
         {
             if (NoWallet()) return;
-
             byte[] script;
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
             {
@@ -150,7 +145,7 @@ namespace Neo.CLI
             if (resJArray.Count > 0)
             {
                 Console.WriteLine();
-                Console.WriteLine("Candidates:");
+                ConsoleHelper.Info("Candidates:");
 
                 foreach (var item in resJArray)
                 {
@@ -175,7 +170,7 @@ namespace Neo.CLI
             if (resJArray.Count > 0)
             {
                 Console.WriteLine();
-                Console.WriteLine("Committee:");
+                ConsoleHelper.Info("Committee:");
 
                 foreach (var item in resJArray)
                 {
@@ -197,7 +192,7 @@ namespace Neo.CLI
             if (resJArray.Count > 0)
             {
                 Console.WriteLine();
-                Console.WriteLine("Next validators:");
+                ConsoleHelper.Info("Next validators:");
 
                 foreach (var item in resJArray)
                 {
@@ -212,7 +207,7 @@ namespace Neo.CLI
         [ConsoleCommand("get accountstate", Category = "Vote Commands")]
         private void OnGetAccountState(UInt160 address)
         {
-            string notice = "Notice: No vote record!";
+            string notice = "No vote record!";
             var arg = new JObject();
             arg["type"] = "Hash160";
             arg["value"] = address.ToString();
@@ -221,7 +216,7 @@ namespace Neo.CLI
             Console.WriteLine();
             if (result.IsNull)
             {
-                Console.WriteLine(notice);
+                ConsoleHelper.Warning(notice);
                 return;
             }
             var resJArray = (VM.Types.Array)result;
@@ -229,14 +224,14 @@ namespace Neo.CLI
             {
                 if (value.IsNull)
                 {
-                    Console.WriteLine(notice);
+                    ConsoleHelper.Warning(notice);
                     return;
                 }
             }
             var publickey = ECPoint.Parse(((ByteString)resJArray?[2])?.GetSpan().ToHexString(), ECCurve.Secp256r1);
-            Console.WriteLine("Voted: " + Contract.CreateSignatureRedeemScript(publickey).ToScriptHash().ToAddress(NeoSystem.Settings.AddressVersion));
-            Console.WriteLine("Amount: " + new BigDecimal(((Integer)resJArray?[0]).GetInteger(), NativeContract.NEO.Decimals));
-            Console.WriteLine("Block: " + ((Integer)resJArray?[1]).GetInteger());
+            ConsoleHelper.Info("Voted: ", Contract.CreateSignatureRedeemScript(publickey).ToScriptHash().ToAddress(NeoSystem.Settings.AddressVersion));
+            ConsoleHelper.Info("Amount: ", new BigDecimal(((Integer)resJArray?[0]).GetInteger(), NativeContract.NEO.Decimals).ToString());
+            ConsoleHelper.Info("Block: ", ((Integer)resJArray?[1]).GetInteger().ToString());
         }
     }
 }
