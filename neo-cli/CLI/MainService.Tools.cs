@@ -58,7 +58,7 @@ namespace Neo.CLI
 
             if (!any)
             {
-                Console.WriteLine($"Was not possible to convert: '{value}'");
+                ConsoleHelper.Warning($"Was not possible to convert: '{value}'");
             }
         }
 

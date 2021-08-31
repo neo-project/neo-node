@@ -28,7 +28,7 @@ namespace Neo.CLI
             uint height = NativeContract.Ledger.CurrentIndex(NeoSystem.StoreView);
             if (height < start)
             {
-                Console.WriteLine("Error: invalid start height.");
+                ConsoleHelper.Error("invalid start height.");
                 return;
             }
 
