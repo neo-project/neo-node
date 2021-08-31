@@ -44,7 +44,7 @@ namespace Neo.CLI
             string password = ReadUserInput("password", true);
             if (password.Length == 0)
             {
-                Console.WriteLine("Cancelled");
+                ConsoleHelper.Info("Cancelled");
                 return;
             }
             try
@@ -87,7 +87,7 @@ namespace Neo.CLI
             string password = ReadUserInput("password", true);
             if (password.Length == 0)
             {
-                Console.WriteLine("Cancelled");
+                ConsoleHelper.Info("Cancelled");
                 return;
             }
             string path_new = Path.ChangeExtension(path, ".json");
@@ -181,12 +181,12 @@ namespace Neo.CLI
             string password = ReadUserInput("password", true);
             if (password.Length == 0)
             {
-                Console.WriteLine("Cancelled");
+                ConsoleHelper.Info("Cancelled");
                 return;
             }
             if (!CurrentWallet.VerifyPassword(password))
             {
-                Console.WriteLine("Incorrect password");
+                ConsoleHelper.Error("Incorrect password");
                 return;
             }
             IEnumerable<KeyPair> keys;
@@ -213,7 +213,7 @@ namespace Neo.CLI
             string password = ReadUserInput("password", true);
             if (password.Length == 0)
             {
-                Console.WriteLine("Cancelled");
+                ConsoleHelper.Info("Cancelled");
                 return;
             }
             string password2 = ReadUserInput("repeat password", true);
@@ -500,7 +500,7 @@ namespace Neo.CLI
             string password = ReadUserInput("password", true);
             if (password.Length == 0)
             {
-                Console.WriteLine("Cancelled");
+                ConsoleHelper.Info("Cancelled");
                 return;
             }
             if (!CurrentWallet.VerifyPassword(password))
@@ -586,7 +586,7 @@ namespace Neo.CLI
             string oldPassword = ReadUserInput("password", true);
             if (oldPassword.Length == 0)
             {
-                Console.WriteLine("Cancelled");
+                ConsoleHelper.Info("Cancelled");
                 return;
             }
             if (!CurrentWallet.VerifyPassword(oldPassword))
