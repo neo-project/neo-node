@@ -64,7 +64,7 @@ namespace Neo.CLI
                 try
                 {
                     zip.ExtractToDirectory(".");
-                    ConsoleHelper.Warning("Install successful, please restart neo-cli.");
+                    ConsoleHelper.Info("Install successful, please restart neo-cli.");
                 }
                 catch (IOException)
                 {
@@ -101,7 +101,7 @@ namespace Neo.CLI
             catch (IOException)
             {
             }
-            ConsoleHelper.Warning("Uninstall successful, please restart neo-cli.");
+            ConsoleHelper.Info("Uninstall successful, please restart neo-cli.");
         }
 
         /// <summary>

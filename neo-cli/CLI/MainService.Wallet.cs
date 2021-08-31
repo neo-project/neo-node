@@ -155,11 +155,11 @@ namespace Neo.CLI
                     {
                         wallet.Save();
                     }
-                    Console.WriteLine($"Address {address} deleted.");
+                    ConsoleHelper.Info($"Address {address} deleted.");
                 }
                 else
                 {
-                    Console.WriteLine($"Address {address} doesn't exist.");
+                    ConsoleHelper.Warning($"Address {address} doesn't exist.");
                 }
             }
         }
@@ -363,7 +363,7 @@ namespace Neo.CLI
                 WalletAccount account = CurrentWallet.GetAccount(address);
                 if (account is not null)
                 {
-                    ConsoleHelper.Info("This address is already in your wallet");
+                    ConsoleHelper.Warning("This address is already in your wallet");
                 }
                 else
                 {
@@ -553,11 +553,11 @@ namespace Neo.CLI
             {
                 tx.Witnesses = context.GetWitnesses();
                 NeoSystem.Blockchain.Tell(tx);
-                ConsoleHelper.Info("TXID: ", tx.Hash.ToString());
+                ConsoleHelper.Info("TXID:\n", $"{tx.Hash}");
             }
             else
             {
-                ConsoleHelper.Info("SignatureContext:\n", context.ToString());
+                ConsoleHelper.Info("SignatureContext:\n", $"{context}");
             }
         }
 
@@ -651,13 +651,11 @@ namespace Neo.CLI
             {
                 tx.Witnesses = context.GetWitnesses();
                 NeoSystem.Blockchain.Tell(tx);
-                ConsoleHelper.Warning("Signed and relayed transaction with hash: ");
-                ConsoleHelper.Info(tx.Hash.ToString());
+                ConsoleHelper.Info("Signed and relayed transaction with hash:\n", $"{tx.Hash}");
             }
             else
             {
-                ConsoleHelper.Warning("Incomplete signature: ");
-                ConsoleHelper.Info(context.ToString());
+                ConsoleHelper.Info("Incomplete signature:\n", $"{context}");
             }
         }
     }
