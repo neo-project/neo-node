@@ -23,7 +23,7 @@ namespace Neo.CLI
         [ConsoleCommand("list nativecontract", Category = "Native Contract")]
         private void OnListNativeContract()
         {
-            NativeContract.Contracts.ToList().ForEach(p => Console.WriteLine($"\t{p.Name,-20}{p.Hash}"));
+            NativeContract.Contracts.ToList().ForEach(p => ConsoleHelper.Info($"\t{p.Name,-20}", $"{p.Hash}"));
         }
     }
 }
