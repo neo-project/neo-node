@@ -610,7 +610,7 @@ namespace Neo.ConsoleService
 
             Console.ForegroundColor = ConsoleColor.DarkGreen;
             Console.SetIn(new StreamReader(Console.OpenStandardInput(), Console.InputEncoding, false, ushort.MaxValue));
-            var promptLen = Prompt.Length + 2;
+            var cursorStart = Prompt.Length + 2;
             while (_running)
             {
                 if (ShowPrompt)
@@ -628,19 +628,22 @@ namespace Neo.ConsoleService
                     }
 
                     var currentInput = builder.ToString();
-
+                    var currentLine = Console.CursorTop;
+                    var currentCursor = Console.CursorLeft;
 
                     switch (input.Key)
                     {
                         case ConsoleKey.Tab:
                             {
+
                                 var match = consoleAutofill.Autofill(currentInput, commands, true);
 
                                 if (string.IsNullOrEmpty(match)) break;
 
-                                ClearCurrentLine(Prompt);
                                 builder.Clear();
-
+                                Console.SetCursorPosition(cursorStart, currentLine);
+                                Console.Write(new string(' ', Console.WindowWidth - cursorStart));
+                                Console.SetCursorPosition(cursorStart, currentLine);
                                 Console.Write(match);
                                 builder.Append(match);
                                 break;
@@ -648,40 +651,51 @@ namespace Neo.ConsoleService
                         case ConsoleKey.Backspace:
                             {
 
-                                var currentCursor = Console.CursorLeft;
-
-                                if (currentCursor > promptLen)
+                                if (currentCursor > cursorStart)
                                 {
-                                    builder.Remove(currentCursor - promptLen - 1, 1);
-                                    ClearCurrentLine(Prompt);
+                                    builder.Remove(currentCursor - cursorStart - 1, 1);
 
-                                    currentInput = builder.ToString();
-                                    Console.Write(currentInput);
-                                    Console.CursorLeft = currentCursor - 1;
+                                    Console.SetCursorPosition(currentCursor - 1, currentLine);
+
+                                    if (currentCursor - cursorStart < currentInput.Length)
+                                    {
+                                        var remain = currentInput.Substring(currentCursor - cursorStart);
+                                        Console.Write(remain);
+                                    }
+
+                                    Console.Write(new string(' ', Console.WindowWidth - currentInput.Length - cursorStart));
+
+                                    Console.SetCursorPosition(currentCursor - 1, currentLine);
+
                                 }
                                 break;
                             }
                         case ConsoleKey.LeftArrow:
                             {
-                                if (Console.CursorLeft > promptLen)
-                                    Console.SetCursorPosition(Console.CursorLeft - 1, Console.CursorTop);
+                                if (currentCursor > cursorStart)
+                                    Console.SetCursorPosition(currentCursor - 1, currentLine);
                                 break;
                             }
                         case ConsoleKey.RightArrow:
                             {
-                                if (Console.CursorLeft < (promptLen + builder.Length))
-                                    Console.SetCursorPosition(Console.CursorLeft + 1, Console.CursorTop);
+                                if (currentCursor < (cursorStart + currentInput.Length))
+                                    Console.SetCursorPosition(currentCursor + 1, currentLine);
                                 break;
                             }
                         default:
                             {
-                                var currentCursor = Console.CursorLeft;
                                 var key = input.KeyChar;
-                                builder.Insert(Console.CursorLeft - Prompt.Length - 2, key);
-                                currentInput = builder.ToString();
-                                ClearCurrentLine(Prompt);
-                                Console.Write(currentInput);
-                                Console.SetCursorPosition(currentCursor + 1, Console.CursorTop);
+                                if (currentCursor - cursorStart < currentInput.Length)
+                                    builder.Insert(currentCursor - cursorStart, key);
+                                else
+                                    builder.Append(key);
+
+                                var fill = currentInput.Substring(currentCursor - cursorStart);
+
+                                //Console.SetCursorPosition(currentCursor, currentLine);
+                                Console.Write($"{key}{fill}");
+                                Console.Write(new string(' ', Console.WindowWidth - currentInput.Length - 1 - cursorStart));
+                                Console.SetCursorPosition(currentCursor + 1, currentLine);
                                 break;
                             }
                     }
@@ -713,22 +727,6 @@ namespace Neo.ConsoleService
             }
 
             Console.ResetColor();
-        }
-
-        private static void ClearCurrentLine(string Prompt)
-        {
-            var currentLine = Console.CursorTop;
-            Console.CursorVisible = false;
-            Console.SetCursorPosition(0, Console.CursorTop);
-
-            PrintPrompt(Prompt);
-
-            var spacesToErase = Console.WindowWidth - Prompt.Length - 2;
-            if (spacesToErase < 0) spacesToErase = 0;
-            Console.WriteLine(new string(' ', spacesToErase));
-
-            Console.SetCursorPosition(Prompt.Length + 2, currentLine);
-            Console.CursorVisible = true;
         }
 
         private static void PrintPrompt(string Prompt)
