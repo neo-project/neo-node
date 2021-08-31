@@ -151,9 +151,9 @@ namespace Neo.CLI
             if (createDefaultAccount)
             {
                 WalletAccount account = CurrentWallet.CreateAccount();
-                ConsoleHelper.Info($"   Address: {account.Address}");
-                ConsoleHelper.Info($"    Pubkey: {account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
-                ConsoleHelper.Info($"ScriptHash: {account.ScriptHash}");
+                ConsoleHelper.Info("   Address: ", $"{account.Address}");
+                ConsoleHelper.Info("    Pubkey: ", $"{account.GetKey().PublicKey.EncodePoint(true).ToHexString()}");
+                ConsoleHelper.Info("ScriptHash: ", $"{account.ScriptHash}");
             }
             if (CurrentWallet is NEP6Wallet wallet)
                 wallet.Save();
