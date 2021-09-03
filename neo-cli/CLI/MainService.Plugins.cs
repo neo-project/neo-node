@@ -220,8 +220,7 @@ namespace Neo.CLI
             }
 
             DeleteFiles(plugin.Path,
-                plugin.ConfigFile,
-                $"{Plugin.PluginsDirectory}/{pluginName}/DEPENDENCY");
+                plugin.ConfigFile);
 
             try
             {
