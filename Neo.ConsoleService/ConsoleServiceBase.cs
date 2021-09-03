@@ -650,11 +650,9 @@ namespace Neo.ConsoleService
                             }
                         case ConsoleKey.Backspace:
                             {
-
                                 if (currentCursor > cursorStart)
                                 {
                                     builder.Remove(currentCursor - cursorStart - 1, 1);
-
                                     Console.SetCursorPosition(currentCursor - 1, currentLine);
 
                                     if (currentCursor - cursorStart < currentInput.Length)
@@ -662,9 +660,7 @@ namespace Neo.ConsoleService
                                         var remain = currentInput.Substring(currentCursor - cursorStart);
                                         Console.Write(remain);
                                     }
-
                                     Console.Write(new string(' ', Console.WindowWidth - currentInput.Length - cursorStart));
-
                                     Console.SetCursorPosition(currentCursor - 1, currentLine);
 
                                 }
@@ -691,8 +687,6 @@ namespace Neo.ConsoleService
                                     builder.Append(key);
 
                                 var fill = currentInput.Substring(currentCursor - cursorStart);
-
-                                //Console.SetCursorPosition(currentCursor, currentLine);
                                 Console.Write($"{key}{fill}");
                                 Console.Write(new string(' ', Console.WindowWidth - currentInput.Length - 1 - cursorStart));
                                 Console.SetCursorPosition(currentCursor + 1, currentLine);
