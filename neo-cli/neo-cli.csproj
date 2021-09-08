@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   
   <PropertyGroup>
-    <Copyright>2016-2020 The Neo Project</Copyright>
+    <Copyright>2016-2021 The Neo Project</Copyright>
     <AssemblyTitle>Neo.CLI</AssemblyTitle>
-    <Version>2.12.2</Version>
+    <Version>2.13.0</Version>
     <Authors>The Neo Project</Authors>
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <AssemblyName>neo-cli</AssemblyName>
@@ -28,7 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Neo" Version="2.12.2" />
+    <PackageReference Include="Neo" Version="2.13.0" />
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="4.5.0" />
   </ItemGroup>
 
