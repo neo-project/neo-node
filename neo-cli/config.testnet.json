@@ -11,7 +11,10 @@
     },
     "P2P": {
       "Port": 20333,
-      "WsPort": 20334
+      "WsPort": 20334,
+      "MinDesiredConnections": 10,
+      "MaxConnections": 40,
+      "MaxConnectionsPerAddress": 3
     },
     "UnlockWallet": {
       "Path": "",
