@@ -510,7 +510,7 @@ namespace Neo.CLI
             }
             var snapshot = NeoSystem.StoreView;
             Transaction tx;
-            AssetDescriptor descriptor = new AssetDescriptor(snapshot, NeoSystem.Settings, asset);
+            AssetDescriptor descriptor = new(snapshot, NeoSystem.Settings, asset);
             if (!BigDecimal.TryParse(amount, descriptor.Decimals, out BigDecimal decimalAmount) || decimalAmount.Sign <= 0)
             {
                 ConsoleHelper.Error("Incorrect Amount Format");
@@ -533,7 +533,7 @@ namespace Neo.CLI
                     Scopes = WitnessScope.CalledByEntry,
                     Account = p
                 })
-                .ToArray() ?? new Signer[0]);
+                .ToArray() ?? Array.Empty<Signer>());
             }
             catch (Exception e)
             {
@@ -547,18 +547,15 @@ namespace Neo.CLI
                 return;
             }
 
-            ContractParametersContext context = new ContractParametersContext(snapshot, tx, neoSystem.Settings.Network);
-            CurrentWallet.Sign(context);
-            if (context.Completed)
+            ConsoleHelper.Info("Network fee: ",
+                $"{new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)}\t",
+                "Total fee: ",
+                $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
+            if (!ReadUserInput("Relay tx? (no|yes)").IsYes())
             {
-                tx.Witnesses = context.GetWitnesses();
-                NeoSystem.Blockchain.Tell(tx);
-                ConsoleHelper.Info("TXID:\n", $"{tx.Hash}");
+                return;
             }
-            else
-            {
-                ConsoleHelper.Info("SignatureContext:\n", $"{context}");
-            }
+            SignAndSendTx(NeoSystem.StoreView, tx);
         }
 
         /// <summary>
