@@ -576,47 +576,12 @@ namespace Neo.ConsoleService
 
         protected string ReadLine()
         {
-            Task<string> readLineTask = Task.Run(() =>
-            {
-                return Console.ReadLine();
-            });
-
-            try
-            {
-                readLineTask.Wait(_shutdownTokenSource.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                return null;
-            }
-
-            return readLineTask.Result;
-        }
-
-        public virtual void RunConsole()
-        {
-            _running = true;
-
             var consoleAutofill = new ConsoleAutofill();
             GetAllCommands("", out List<ConsoleCommandMethod> withHelp);
             List<string> commands = withHelp.Select(p => p.Key).ToList();
-
-            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
-                try
-                {
-                    Console.Title = ServiceName;
-                }
-                catch { }
-
-            Console.ForegroundColor = ConsoleColor.DarkGreen;
-            Console.SetIn(new StreamReader(Console.OpenStandardInput(), Console.InputEncoding, false, ushort.MaxValue));
             var cursorStart = Prompt.Length + 2;
-            while (_running)
+            Task<string> readLineTask = Task.Run(() =>
             {
-                if (ShowPrompt)
-                    PrintPrompt(Prompt);
-
-                string line;
                 var builder = new StringBuilder();
                 var input = Console.ReadKey(intercept: true);
                 while (input.Key != ConsoleKey.Enter)
@@ -689,7 +654,13 @@ namespace Neo.ConsoleService
                                 var fill = currentInput.Substring(currentCursor - cursorStart);
                                 Console.Write($"{key}{fill}");
                                 Console.Write(new string(' ', Console.WindowWidth - currentInput.Length - 1 - cursorStart));
-                                Console.SetCursorPosition(currentCursor + 1, currentLine);
+                                if (currentCursor == Console.WindowWidth)
+                                {
+                                    currentLine++;
+                                    Console.SetCursorPosition(0, currentLine);
+                                }
+                                else
+                                    Console.SetCursorPosition(currentCursor + 1, currentLine);
                                 break;
                             }
                     }
@@ -697,7 +668,43 @@ namespace Neo.ConsoleService
 
                     input = Console.ReadKey(intercept: true);
                 }
-                line = builder.ToString();
+
+
+                return builder.ToString();
+            });
+
+            try
+            {
+                readLineTask.Wait(_shutdownTokenSource.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return null;
+            }
+
+            return readLineTask.Result;
+        }
+
+        public virtual void RunConsole()
+        {
+            _running = true;
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+                try
+                {
+                    Console.Title = ServiceName;
+                }
+                catch { }
+
+            Console.ForegroundColor = ConsoleColor.DarkGreen;
+            Console.SetIn(new StreamReader(Console.OpenStandardInput(), Console.InputEncoding, false, ushort.MaxValue));
+
+            while (_running)
+            {
+                if (ShowPrompt)
+                    PrintPrompt(Prompt);
+
+                string line = ReadLine()?.Trim();
+
                 Console.WriteLine();
 
                 if (line == null) break;
