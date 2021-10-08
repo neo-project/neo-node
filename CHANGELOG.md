@@ -1,6 +1,20 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [3.0.3]
+
+### Changed
+- ([#812](https://github.com/neo-project/neo-node/pull/812/)) User friendly cli console write system
+- ([#815](https://github.com/neo-project/neo-node/pull/815/)) Enable private key import in initial wallet creation
+- ([#823](https://github.com/neo-project/neo-node/pull/823/)) Show gas before send
+
+### Added
+- ([#813](https://github.com/neo-project/neo-node/pull/813/)) Add Copyright
+- ([#817](https://github.com/neo-project/neo-node/pull/817/)) Add delete address command
+- ([#825](https://github.com/neo-project/neo-node/pull/825/)) Add connections config
+
+
+
 ## [3.0.2]
 
 ### Changed
