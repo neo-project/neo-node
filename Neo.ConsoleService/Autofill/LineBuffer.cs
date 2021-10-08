@@ -1,8 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Neo.ConsoleService
 {
@@ -42,8 +38,13 @@ namespace Neo.ConsoleService
                 return false;
 
             Index++;
+
             if (Index > _previousLines.Count - 1)
-                Index = 0;
+            {
+                Index = _previousLines.Count - 1;
+                return false;
+            }
+
             return true;
         }
     }

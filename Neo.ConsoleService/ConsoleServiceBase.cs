@@ -686,7 +686,7 @@ namespace Neo.ConsoleService
 
                         case ConsoleKey.DownArrow:
                             var lineDown = ConsoleAutofill.CycleDown();
-                            if (string.IsNullOrEmpty(lineDown)) break;
+                            if (lineDown is null) break;
 
                             builder.Clear();
                             Console.SetCursorPosition(cursorStart, lineStart);
