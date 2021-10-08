@@ -580,34 +580,28 @@ namespace Neo.ConsoleService
             GetAllCommands("", out List<ConsoleCommandMethod> withHelp);
             List<string> commands = withHelp.Select(p => p.Key).ToList();
             var cursorStart = Prompt.Length + 2;
+            var lineStart = Console.CursorTop;
             Task<string> readLineTask = Task.Run(() =>
             {
                 var builder = new StringBuilder();
                 var input = Console.ReadKey(intercept: true);
+                var currentLine = lineStart;
+
                 while (input.Key != ConsoleKey.Enter)
                 {
-                    if (input.Key == ConsoleKey.UpArrow || input.Key == ConsoleKey.UpArrow)
-                    {
-                        input = Console.ReadKey(intercept: true);
-                        continue;
-                    }
-
                     var currentInput = builder.ToString();
-                    var currentLine = Console.CursorTop;
                     var currentCursor = Console.CursorLeft;
-
                     switch (input.Key)
                     {
                         case ConsoleKey.Tab:
                             {
-
                                 var match = consoleAutofill.Autofill(currentInput, commands, true);
 
                                 if (string.IsNullOrEmpty(match)) break;
 
                                 builder.Clear();
                                 Console.SetCursorPosition(cursorStart, currentLine);
-                                Console.Write(new string(' ', Console.WindowWidth - cursorStart));
+                                Console.Write(new string(' ', Console.WindowWidth * (currentInput.Length / Console.BufferWidth + 1) - cursorStart));
                                 Console.SetCursorPosition(cursorStart, currentLine);
                                 Console.Write(match);
                                 builder.Append(match);
@@ -615,16 +609,22 @@ namespace Neo.ConsoleService
                             }
                         case ConsoleKey.Backspace:
                             {
-                                if (currentCursor > cursorStart)
+                                if (currentCursor > cursorStart || currentLine > lineStart)
                                 {
                                     builder.Remove(currentCursor - cursorStart - 1, 1);
+                                    // The cursor can not be less than cursorStart in the startLine
+                                    // If the cursor is 0, it means that the input is longer than one line
+                                    if (currentCursor == 0) { currentCursor = Console.WindowWidth; currentLine--; }
+
                                     Console.SetCursorPosition(currentCursor - 1, currentLine);
 
+                                    // ---x|------
                                     if (currentCursor - cursorStart < currentInput.Length)
                                     {
                                         var remain = currentInput.Substring(currentCursor - cursorStart);
                                         Console.Write(remain);
                                     }
+
                                     Console.Write(new string(' ', Console.WindowWidth - currentInput.Length - cursorStart));
                                     Console.SetCursorPosition(currentCursor - 1, currentLine);
 
@@ -633,28 +633,85 @@ namespace Neo.ConsoleService
                             }
                         case ConsoleKey.LeftArrow:
                             {
-                                if (currentCursor > cursorStart)
+                                if (currentCursor > cursorStart || currentLine > lineStart)
+                                {
+                                    // The cursor can not be less than cursorStart in the startLine
+                                    // If the cursor is 0, it means that the input is longer than one line
+                                    if (currentCursor == 0) { currentCursor = Console.WindowWidth; currentLine--; }
+
                                     Console.SetCursorPosition(currentCursor - 1, currentLine);
+                                }
+
                                 break;
                             }
                         case ConsoleKey.RightArrow:
                             {
-                                if (currentCursor < (cursorStart + currentInput.Length))
-                                    Console.SetCursorPosition(currentCursor + 1, currentLine);
+                                var currentMaxLines = (cursorStart + currentInput.Length) / Console.WindowWidth + 1;
+
+                                // Not the last line, then the current line is full
+                                if (currentLine < lineStart + currentMaxLines - 1)
+                                {
+                                    if (currentCursor < Console.WindowWidth)
+                                        Console.SetCursorPosition(currentCursor + 1, currentLine);
+                                    else // Since it is not the last line, just change line
+                                    {
+                                        currentLine++;
+                                        currentCursor = 0;
+                                        Console.SetCursorPosition(currentCursor, currentLine);
+                                    }
+                                }
+
+                                // Last line
+                                else
+                                {
+                                    // If not reach end yet, move right, otherwise, do nothing
+                                    if (currentCursor + (currentLine - lineStart) * Console.WindowWidth - cursorStart < currentInput.Length)
+                                    {
+                                        Console.SetCursorPosition(currentCursor + 1, currentLine);
+                                    }
+                                }
                                 break;
                             }
+                        case ConsoleKey.UpArrow:
+                            var line = ConsoleAutofill.CycleUp();
+                            if (string.IsNullOrEmpty(line)) break;
+
+                            builder.Clear();
+                            Console.SetCursorPosition(cursorStart, lineStart);
+                            Console.Write(new string(' ', Console.WindowWidth * (currentInput.Length / Console.BufferWidth + 1) - cursorStart));
+                            Console.SetCursorPosition(cursorStart, currentLine);
+                            Console.Write(line);
+                            builder.Append(line);
+                            break;
+
+                        case ConsoleKey.DownArrow:
+                            var lineDown = ConsoleAutofill.CycleDown();
+                            if (string.IsNullOrEmpty(lineDown)) break;
+
+                            builder.Clear();
+                            Console.SetCursorPosition(cursorStart, lineStart);
+                            Console.Write(new string(' ', Console.WindowWidth * (currentInput.Length / Console.BufferWidth + 1) - cursorStart));
+                            Console.SetCursorPosition(cursorStart, lineStart);
+                            Console.Write(lineDown);
+                            builder.Append(lineDown);
+                            break;
                         default:
                             {
                                 var key = input.KeyChar;
-                                if (currentCursor - cursorStart < currentInput.Length)
-                                    builder.Insert(currentCursor - cursorStart, key);
+
+                                // Insert
+                                if (currentCursor + (currentLine - lineStart) * Console.WindowWidth - cursorStart < currentInput.Length)
+                                    builder.Insert(currentCursor + (currentLine - lineStart) * Console.WindowWidth - cursorStart, key);
                                 else
                                     builder.Append(key);
 
-                                var fill = currentInput.Substring(currentCursor - cursorStart);
+                                var fill = currentInput.Substring(currentCursor + (currentLine - lineStart) * Console.WindowWidth - cursorStart);
                                 Console.Write($"{key}{fill}");
-                                Console.Write(new string(' ', Console.WindowWidth - currentInput.Length - 1 - cursorStart));
-                                if (currentCursor == Console.WindowWidth)
+                                var reminder = currentInput.Length - currentInput.Length / Console.WindowWidth * Console.WindowWidth - cursorStart;
+                                Console.Write(new string(' ', Console.WindowWidth - reminder));
+
+                                // if it reach the end of the line
+                                if (currentCursor == Console.WindowWidth - 1)
                                 {
                                     currentLine++;
                                     Console.SetCursorPosition(0, currentLine);
@@ -669,7 +726,7 @@ namespace Neo.ConsoleService
                     input = Console.ReadKey(intercept: true);
                 }
 
-
+                ConsoleAutofill.AddToBuffer(builder.ToString());
                 return builder.ToString();
             });
 
