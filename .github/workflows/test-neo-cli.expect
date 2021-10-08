@@ -26,7 +26,7 @@ expect {
 }
 
 expect {
-    "password:" { send "asd\n" }
+    "repeat password:" { send "asd\n" }
     "error" { exit 2 }
     timeout { exit 1 }
 }
@@ -49,7 +49,7 @@ expect {
 }
 
 expect {
-    "password:" { send "asd\n" }
+    "repeat password:" { send "asd\n" }
     "error" { exit 2 }
     timeout { exit 1 }
 }
