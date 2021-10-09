@@ -697,27 +697,36 @@ namespace Neo.ConsoleService
                             break;
                         default:
                             {
-                                var key = input.KeyChar;
-
-                                // Insert
-                                if (currentCursor + (currentLine - lineStart) * Console.WindowWidth - cursorStart < currentInput.Length)
-                                    builder.Insert(currentCursor + (currentLine - lineStart) * Console.WindowWidth - cursorStart, key);
-                                else
-                                    builder.Append(key);
-
-                                var fill = currentInput.Substring(currentCursor + (currentLine - lineStart) * Console.WindowWidth - cursorStart);
-                                Console.Write($"{key}{fill}");
-                                var reminder = currentInput.Length - currentInput.Length / Console.WindowWidth * Console.WindowWidth - cursorStart;
-                                Console.Write(new string(' ', Console.WindowWidth - reminder));
-
-                                // if it reach the end of the line
-                                if (currentCursor == Console.WindowWidth - 1)
+                                try
                                 {
-                                    currentLine++;
-                                    Console.SetCursorPosition(0, currentLine);
+                                    var key = input.KeyChar;
+
+                                    // Insert
+                                    if (currentCursor + (currentLine - lineStart) * Console.WindowWidth - cursorStart < currentInput.Length)
+                                        builder.Insert(currentCursor + (currentLine - lineStart) * Console.WindowWidth - cursorStart, key);
+                                    else
+                                        builder.Append(key);
+
+                                    var fill = currentInput.Substring(currentCursor + (currentLine - lineStart) * Console.WindowWidth - cursorStart);
+                                    Console.Write($"{key}{fill}");
+                                    var reminder = currentInput.Length - currentInput.Length / Console.WindowWidth * Console.WindowWidth - cursorStart;
+                                    Console.Write(new string(' ', Console.WindowWidth - reminder));
+
+                                    // if it reach the end of the line
+                                    if (currentCursor == Console.WindowWidth - 1)
+                                    {
+                                        currentLine++;
+                                        Console.SetCursorPosition(0, currentLine);
+                                    }
+                                    else
+                                        Console.SetCursorPosition(currentCursor + 1, currentLine);
                                 }
-                                else
-                                    Console.SetCursorPosition(currentCursor + 1, currentLine);
+                                catch (ArgumentOutOfRangeException e)
+                                {
+                                    continue;
+                                }
+
+
                                 break;
                             }
                     }
