@@ -15,6 +15,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices;
+
 namespace Upgrader
 {
     class Program
@@ -29,6 +31,91 @@ namespace Upgrader
             GetLatestVersion(fileEntries);
         }
 
+        private static void UpdateNeoCli(string version)
+        {
+            string file = "neo-cli-win-x64";
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                file = "neo-cli-osx-x64";
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                file = "neo-cli-linux-x64";
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                file = "neo-cli-win-x64";
+
+            HttpWebRequest request = WebRequest.CreateHttp($"https://github.com/neo-project/neo-node/releases/download/{version}/{file}.zip");
+            HttpWebResponse response;
+            try
+            {
+                response = (HttpWebResponse)request.GetResponse();
+            }
+            catch (WebException ex) when (((HttpWebResponse)ex.Response).StatusCode == HttpStatusCode.NotFound)
+            {
+                version = version.Substring(1);
+                Version version_core = Version.Parse(version);
+                request = WebRequest.CreateHttp("https://api.github.com/repos/neo-project/neo-node/releases/latest");
+                request.UserAgent = "Foo";
+                using HttpWebResponse response_api = (HttpWebResponse)request.GetResponse();
+                using Stream stream = response_api.GetResponseStream();
+                using StreamReader reader = new(stream);
+                JObject releases = JObject.Parse(reader.ReadToEnd());
+                JObject asset = releases.GetArray()
+                    .Where(p => !p["tag_name"].GetString().Contains('-'))
+                    .Select(p => new
+                    {
+                        Version = Version.Parse(p["tag_name"].GetString().TrimStart('v')),
+                        Assets = p["assets"].GetArray()
+                    })
+                    .OrderByDescending(p => p.Version)
+                    .First(p => p.Version <= version_core).Assets
+                    .FirstOrDefault(p => p["name"].GetString() == $"{file}.zip");
+                if (asset is null) throw new Exception("No new version avaliable.");
+                request = WebRequest.CreateHttp(asset["browser_download_url"].GetString());
+                response = (HttpWebResponse)request.GetResponse();
+            }
+            using (response)
+            {
+                using Stream stream = response.GetResponseStream();
+                using ZipArchive zip = new(stream, ZipArchiveMode.Read);
+                try
+                {
+                    var temp = Path.Combine(Path.GetTempPath());
+
+                    zip.ExtractToDirectory(temp, true);
+
+                    CopyFilesRecursively($"{temp}/neo-cli", ".");
+                    Console.WriteLine($"{file} updated successfully");
+
+                }
+                catch (IOException)
+                {
+                }
+            }
+        }
+
+        private static void CopyFilesRecursively(string sourcePath, string targetPath)
+        {
+            //Now Create all of the directories
+            foreach (string dirPath in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
+            {
+                var path = dirPath.Replace(sourcePath, targetPath);
+                if (Directory.Exists(path)) return;
+                Directory.CreateDirectory(path);
+            }
+
+            //Copy all the files & Replaces any files with the same name
+            foreach (string newPath in Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories))
+            {
+                try
+                {
+                    File.Copy(newPath, newPath.Replace(sourcePath, targetPath), true);
+                }
+                catch
+                {
+                    continue;
+                }
+
+
+            }
+        }
 
         /// <summary>
         /// Install the plugin
@@ -98,6 +185,10 @@ namespace Upgrader
                 var objects = JObject.Parse(json); // parse as array
                 var version = objects["name"].GetString();
                 var assets = objects["assets"].GetArray();
+
+                // Update the neo-cli
+                UpdateNeoCli(version);
+
                 foreach (var plugin in assets)
                 {
                     var pluginName = Path.GetFileNameWithoutExtension(plugin["name"].GetString());
