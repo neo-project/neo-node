@@ -660,9 +660,7 @@ namespace Neo.ConsoleService
                                         Console.SetCursorPosition(currentCursor, currentLine);
                                     }
                                 }
-
-                                // Last line
-                                else
+                                else // Last line
                                 {
                                     // If not reach end yet, move right, otherwise, do nothing
                                     if (currentCursor + (currentLine - lineStart) * Console.WindowWidth - cursorStart < currentInput.Length)
@@ -721,18 +719,10 @@ namespace Neo.ConsoleService
                                         Console.SetCursorPosition(currentCursor + 1, currentLine);
                                 }
                                 catch (ArgumentOutOfRangeException e)
-                                {
-                                    while (Console.In.Peek() != -1)
-                                        Console.ReadKey();
-                                    continue;
-                                }
-
-
+                                { }
                                 break;
                             }
                     }
-
-
                     input = Console.ReadKey(intercept: true);
                 }
 
