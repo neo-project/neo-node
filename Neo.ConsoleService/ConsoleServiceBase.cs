@@ -700,7 +700,6 @@ namespace Neo.ConsoleService
                                 try
                                 {
                                     var key = input.KeyChar;
-
                                     // Insert
                                     if (currentCursor + (currentLine - lineStart) * Console.WindowWidth - cursorStart < currentInput.Length)
                                         builder.Insert(currentCursor + (currentLine - lineStart) * Console.WindowWidth - cursorStart, key);
@@ -723,6 +722,8 @@ namespace Neo.ConsoleService
                                 }
                                 catch (ArgumentOutOfRangeException e)
                                 {
+                                    while (Console.In.Peek() != -1)
+                                        Console.ReadKey();
                                     continue;
                                 }
 
