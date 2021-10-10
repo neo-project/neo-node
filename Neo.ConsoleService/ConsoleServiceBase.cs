@@ -591,6 +591,7 @@ namespace Neo.ConsoleService
                 {
                     var currentInput = builder.ToString();
                     var currentCursor = Console.CursorLeft;
+                    currentLine = Console.CursorTop;
                     switch (input.Key)
                     {
                         case ConsoleKey.Tab:
