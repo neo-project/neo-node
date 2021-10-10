@@ -78,9 +78,7 @@ namespace Upgrader
                 try
                 {
                     var temp = Path.Combine(Path.GetTempPath());
-
                     zip.ExtractToDirectory(temp, true);
-
                     CopyFilesRecursively($"{temp}/neo-cli", ".");
                     Console.WriteLine($"{file} updated successfully");
 
@@ -97,7 +95,7 @@ namespace Upgrader
             foreach (string dirPath in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
             {
                 var path = dirPath.Replace(sourcePath, targetPath);
-                if (Directory.Exists(path)) return;
+                if (Directory.Exists(path)) continue;
                 Directory.CreateDirectory(path);
             }
 
@@ -106,6 +104,8 @@ namespace Upgrader
             {
                 try
                 {
+                    // Avoid config.json
+                    if (Path.GetExtension(newPath) == ".json") continue;
                     File.Copy(newPath, newPath.Replace(sourcePath, targetPath), true);
                 }
                 catch
@@ -162,7 +162,9 @@ namespace Upgrader
                 using ZipArchive zip = new(stream, ZipArchiveMode.Read);
                 try
                 {
-                    zip.ExtractToDirectory(".", true);
+                    var temp = Path.Combine(Path.GetTempPath());
+                    zip.ExtractToDirectory(temp, true);
+                    CopyFilesRecursively($"{temp}/Plugins/{pluginName}", $"./Plugins/{pluginName}");
 
                     Console.WriteLine($"{pluginName} updated successfully");
                 }
