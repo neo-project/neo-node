@@ -80,7 +80,7 @@ namespace Upgrader
                     var temp = Path.Combine(Path.GetTempPath());
                     zip.ExtractToDirectory(temp, true);
                     CopyFilesRecursively($"{temp}/neo-cli", ".");
-                    Console.WriteLine($"{file} updated successfully");
+                    Console.WriteLine($"{file}\t updated successfully");
 
                 }
                 catch (IOException)
@@ -166,7 +166,7 @@ namespace Upgrader
                     zip.ExtractToDirectory(temp, true);
                     CopyFilesRecursively($"{temp}/Plugins/{pluginName}", $"./Plugins/{pluginName}");
 
-                    Console.WriteLine($"{pluginName} updated successfully");
+                    Console.WriteLine($"{pluginName}\t updated successfully");
                 }
                 catch (IOException)
                 {
@@ -189,8 +189,10 @@ namespace Upgrader
                 var assets = objects["assets"].GetArray();
 
                 // Update the neo-cli
+                Console.WriteLine($"Update the neo-cli to {version}:");
                 UpdateNeoCli(version);
 
+                Console.WriteLine($"\nUpdate the plugins to {version}:");
                 foreach (var plugin in assets)
                 {
                     var pluginName = Path.GetFileNameWithoutExtension(plugin["name"].GetString());
