@@ -29,6 +29,43 @@ namespace Upgrader
             GetLatestVersion(fileEntries);
         }
 
+
+        /// <summary>
+        /// Download the most lattest file
+        /// </summary>
+        /// <param name="dllFiles">The dll file in the local `Plugins` folder</param>
+        private static void GetLatestVersion(List<string> dllFiles)
+        {
+            HttpWebRequest request = WebRequest.CreateHttp($"https://api.github.com/repos/neo-project/neo-modules/releases/latest");
+            request.UserAgent = "Foo";
+            request.Accept = "application/json";
+            try
+            {
+                HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+                using StreamReader stream = new StreamReader(response.GetResponseStream());
+                string json = stream.ReadToEnd();
+                var objects = JObject.Parse(json); // parse as array
+                var version = objects["name"].GetString();
+                var assets = objects["assets"].GetArray();
+
+                // Update the neo-cli
+                Console.WriteLine($"Updating the neo-cli to {version}:");
+                UpdateNeoCli(version);
+
+                Console.WriteLine($"\nUpdating the plugins to {version}:");
+                foreach (var plugin in assets)
+                {
+                    var pluginName = Path.GetFileNameWithoutExtension(plugin["name"].GetString());
+                    if (dllFiles.Contains(pluginName))
+                        UpdatePlugin(pluginName, version);
+                }
+            }
+            catch (WebException ex) when (((HttpWebResponse)ex.Response).StatusCode == HttpStatusCode.NotFound)
+            {
+                return;
+            }
+        }
+
         private static void UpdateNeoCli(string version)
         {
             string file = "neo-cli-win-x64";
@@ -62,32 +99,7 @@ namespace Upgrader
                 }
                 catch (IOException)
                 {
-                }
-            }
-        }
-
-        private static void CopyFilesRecursively(string sourcePath, string targetPath)
-        {
-            //Now Create all of the directories
-            foreach (string dirPath in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
-            {
-                var path = dirPath.Replace(sourcePath, targetPath);
-                if (Directory.Exists(path)) continue;
-                Directory.CreateDirectory(path);
-            }
-
-            //Copy all the files & Replaces any files with the same name
-            foreach (string newPath in Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories))
-            {
-                try
-                {
-                    // Avoid config.json
-                    if (Path.GetExtension(newPath) == ".json") continue;
-                    File.Copy(newPath, newPath.Replace(sourcePath, targetPath), true);
-                }
-                catch
-                {
-                    continue;
+                    Console.WriteLine("Error: Failed to update the neo-cli, please close neo-cli first.");
                 }
             }
         }
@@ -96,7 +108,7 @@ namespace Upgrader
         /// Install the plugin
         /// </summary>
         /// <param name="pluginName">the name of the plugin</param>
-        /// <param name="byForce">whether to overwrite existing plugin files</param>
+        /// <param name="version">the version of the latest neo</param>
         private static void UpdatePlugin(string pluginName, string version)
         {
             HttpWebRequest request = WebRequest.CreateHttp($"https://github.com/neo-project/neo-modules/releases/download/v{version}/{pluginName}.zip");
@@ -126,38 +138,13 @@ namespace Upgrader
             }
         }
 
-        private static void GetLatestVersion(List<string> ddlFiles)
-        {
-            HttpWebRequest request = WebRequest.CreateHttp($"https://api.github.com/repos/neo-project/neo-modules/releases/latest");
-            request.UserAgent = "Foo";
-            request.Accept = "application/json";
-            try
-            {
-                HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-                using StreamReader stream = new StreamReader(response.GetResponseStream());
-                string json = stream.ReadToEnd();
-                var objects = JObject.Parse(json); // parse as array
-                var version = objects["name"].GetString();
-                var assets = objects["assets"].GetArray();
-
-                // Update the neo-cli
-                Console.WriteLine($"Update the neo-cli to {version}:");
-                UpdateNeoCli(version);
-
-                Console.WriteLine($"\nUpdate the plugins to {version}:");
-                foreach (var plugin in assets)
-                {
-                    var pluginName = Path.GetFileNameWithoutExtension(plugin["name"].GetString());
-                    if (ddlFiles.Contains(pluginName))
-                        UpdatePlugin(pluginName, version);
-                }
-            }
-            catch (WebException ex) when (((HttpWebResponse)ex.Response).StatusCode == HttpStatusCode.NotFound)
-            {
-                return;
-            }
-        }
-
+        /// <summary>
+        /// Download the file from url of the api.github
+        /// </summary>
+        /// <param name="version">the latest neo version</param>
+        /// <param name="repo">github repo of the target project</param>
+        /// <param name="fileName">the name of the file to download</param>
+        /// <returns></returns>
         private static HttpWebResponse DownloadFromAPI(string version, string repo, string fileName)
         {
             version = version.Substring(1);
@@ -181,6 +168,32 @@ namespace Upgrader
             if (asset is null) throw new Exception("Plugin doesn't exist.");
             request = WebRequest.CreateHttp(asset["browser_download_url"].GetString());
             return (HttpWebResponse)request.GetResponse();
+        }
+
+        private static void CopyFilesRecursively(string sourcePath, string targetPath)
+        {
+            //Now Create all of the directories
+            foreach (string dirPath in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
+            {
+                var path = dirPath.Replace(sourcePath, targetPath);
+                if (Directory.Exists(path)) continue;
+                Directory.CreateDirectory(path);
+            }
+
+            //Copy all the files & Replaces any files with the same name
+            foreach (string newPath in Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories))
+            {
+                try
+                {
+                    // Avoid config.json
+                    if (Path.GetExtension(newPath) == ".json") continue;
+                    File.Copy(newPath, newPath.Replace(sourcePath, targetPath), true);
+                }
+                catch
+                {
+                    continue;
+                }
+            }
         }
     }
 }
