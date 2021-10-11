@@ -49,10 +49,10 @@ namespace Upgrader
                 var assets = objects["assets"].GetArray();
 
                 // Update the neo-cli
-                Console.WriteLine($"Updating the neo-cli to {version}:");
+                Console.WriteLine($"Upgrade the neo-cli to {version}:");
                 UpdateNeoCli(version);
 
-                Console.WriteLine($"\nUpdating the plugins to {version}:");
+                Console.WriteLine($"\nUpgrade the plugins to {version}:");
                 foreach (var plugin in assets)
                 {
                     var pluginName = Path.GetFileNameWithoutExtension(plugin["name"].GetString());
@@ -95,11 +95,11 @@ namespace Upgrader
                     var temp = Path.Combine(Path.GetTempPath());
                     zip.ExtractToDirectory(temp, true);
                     CopyFilesRecursively($"{temp}/neo-cli", ".");
-                    Console.WriteLine($"{file}\t updated successfully");
+                    Console.WriteLine($"{file}\t upgrade successfully");
                 }
                 catch (IOException)
                 {
-                    Console.WriteLine("Error: Failed to update the neo-cli, please close neo-cli first.");
+                    Console.WriteLine("Error: Failed to upgrade the neo-cli, please close neo-cli first.");
                 }
             }
         }
@@ -130,7 +130,7 @@ namespace Upgrader
                     var temp = Path.Combine(Path.GetTempPath());
                     zip.ExtractToDirectory(temp, true);
                     CopyFilesRecursively($"{temp}/Plugins/{pluginName}", $"./Plugins/{pluginName}");
-                    Console.WriteLine($"{pluginName}\t updated successfully");
+                    Console.WriteLine($"{pluginName}\t upgrade successfully");
                 }
                 catch (IOException)
                 {
