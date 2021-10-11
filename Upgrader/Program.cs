@@ -25,9 +25,7 @@ namespace Upgrader
         {
             var pluginPath = "Plugins";
             if (!Directory.Exists(pluginPath)) return;
-
             var fileEntries = Directory.GetFiles(pluginPath, "*.dll").Select(file => Path.GetFileNameWithoutExtension(file)).ToList();
-
             GetLatestVersion(fileEntries);
         }
 
@@ -49,27 +47,7 @@ namespace Upgrader
             }
             catch (WebException ex) when (((HttpWebResponse)ex.Response).StatusCode == HttpStatusCode.NotFound)
             {
-                version = version.Substring(1);
-                Version version_core = Version.Parse(version);
-                request = WebRequest.CreateHttp("https://api.github.com/repos/neo-project/neo-node/releases/latest");
-                request.UserAgent = "Foo";
-                using HttpWebResponse response_api = (HttpWebResponse)request.GetResponse();
-                using Stream stream = response_api.GetResponseStream();
-                using StreamReader reader = new(stream);
-                JObject releases = JObject.Parse(reader.ReadToEnd());
-                JObject asset = releases.GetArray()
-                    .Where(p => !p["tag_name"].GetString().Contains('-'))
-                    .Select(p => new
-                    {
-                        Version = Version.Parse(p["tag_name"].GetString().TrimStart('v')),
-                        Assets = p["assets"].GetArray()
-                    })
-                    .OrderByDescending(p => p.Version)
-                    .First(p => p.Version <= version_core).Assets
-                    .FirstOrDefault(p => p["name"].GetString() == $"{file}.zip");
-                if (asset is null) throw new Exception("No new version avaliable.");
-                request = WebRequest.CreateHttp(asset["browser_download_url"].GetString());
-                response = (HttpWebResponse)request.GetResponse();
+                response = DownloadFromAPI(version, "neo-node", file);
             }
             using (response)
             {
@@ -81,7 +59,6 @@ namespace Upgrader
                     zip.ExtractToDirectory(temp, true);
                     CopyFilesRecursively($"{temp}/neo-cli", ".");
                     Console.WriteLine($"{file}\t updated successfully");
-
                 }
                 catch (IOException)
                 {
@@ -112,8 +89,6 @@ namespace Upgrader
                 {
                     continue;
                 }
-
-
             }
         }
 
@@ -124,8 +99,6 @@ namespace Upgrader
         /// <param name="byForce">whether to overwrite existing plugin files</param>
         private static void UpdatePlugin(string pluginName, string version)
         {
-            //var recentVersion = // https://api.github.com/repos/neo-project/neo-modules/releases/latest;
-
             HttpWebRequest request = WebRequest.CreateHttp($"https://github.com/neo-project/neo-modules/releases/download/v{version}/{pluginName}.zip");
             HttpWebResponse response;
             try
@@ -134,27 +107,7 @@ namespace Upgrader
             }
             catch (WebException ex) when (((HttpWebResponse)ex.Response).StatusCode == HttpStatusCode.NotFound)
             {
-                version = version.Substring(1);
-                Version version_core = Version.Parse(version);
-                request = WebRequest.CreateHttp("https://api.github.com/repos/neo-project/neo-modules/releases");
-                request.UserAgent = "Foo";
-                using HttpWebResponse response_api = (HttpWebResponse)request.GetResponse();
-                using Stream stream = response_api.GetResponseStream();
-                using StreamReader reader = new(stream);
-                JObject releases = JObject.Parse(reader.ReadToEnd());
-                JObject asset = releases.GetArray()
-                    .Where(p => !p["tag_name"].GetString().Contains('-'))
-                    .Select(p => new
-                    {
-                        Version = Version.Parse(p["tag_name"].GetString().TrimStart('v')),
-                        Assets = p["assets"].GetArray()
-                    })
-                    .OrderByDescending(p => p.Version)
-                    .First(p => p.Version <= version_core).Assets
-                    .FirstOrDefault(p => p["name"].GetString() == $"{pluginName}.zip");
-                if (asset is null) throw new Exception("Plugin doesn't exist.");
-                request = WebRequest.CreateHttp(asset["browser_download_url"].GetString());
-                response = (HttpWebResponse)request.GetResponse();
+                response = DownloadFromAPI(version, "neo-modules", pluginName);
             }
             using (response)
             {
@@ -165,7 +118,6 @@ namespace Upgrader
                     var temp = Path.Combine(Path.GetTempPath());
                     zip.ExtractToDirectory(temp, true);
                     CopyFilesRecursively($"{temp}/Plugins/{pluginName}", $"./Plugins/{pluginName}");
-
                     Console.WriteLine($"{pluginName}\t updated successfully");
                 }
                 catch (IOException)
@@ -198,7 +150,6 @@ namespace Upgrader
                     var pluginName = Path.GetFileNameWithoutExtension(plugin["name"].GetString());
                     if (ddlFiles.Contains(pluginName))
                         UpdatePlugin(pluginName, version);
-
                 }
             }
             catch (WebException ex) when (((HttpWebResponse)ex.Response).StatusCode == HttpStatusCode.NotFound)
@@ -207,5 +158,29 @@ namespace Upgrader
             }
         }
 
+        private static HttpWebResponse DownloadFromAPI(string version, string repo, string fileName)
+        {
+            version = version.Substring(1);
+            Version version_core = Version.Parse(version);
+            var request = WebRequest.CreateHttp($"https://api.github.com/repos/neo-project/{repo}/releases");
+            request.UserAgent = "Foo";
+            using HttpWebResponse response_api = (HttpWebResponse)request.GetResponse();
+            using Stream stream = response_api.GetResponseStream();
+            using StreamReader reader = new(stream);
+            JObject releases = JObject.Parse(reader.ReadToEnd());
+            JObject asset = releases.GetArray()
+                .Where(p => !p["tag_name"].GetString().Contains('-'))
+                .Select(p => new
+                {
+                    Version = Version.Parse(p["tag_name"].GetString().TrimStart('v')),
+                    Assets = p["assets"].GetArray()
+                })
+                .OrderByDescending(p => p.Version)
+                .First(p => p.Version <= version_core).Assets
+                .FirstOrDefault(p => p["name"].GetString() == $"{fileName}.zip");
+            if (asset is null) throw new Exception("Plugin doesn't exist.");
+            request = WebRequest.CreateHttp(asset["browser_download_url"].GetString());
+            return (HttpWebResponse)request.GetResponse();
+        }
     }
 }
