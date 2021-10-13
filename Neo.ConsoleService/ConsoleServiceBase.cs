@@ -592,8 +592,21 @@ namespace Neo.ConsoleService
                     var currentInput = builder.ToString();
                     var currentCursor = Console.CursorLeft;
                     currentLine = Console.CursorTop;
+                    // The console has longer message than command,
+                    // this means that the console starts the log
+                    if (currentCursor + (currentLine - lineStart) * Console.WindowWidth - cursorStart > currentInput.Length)
+                    {
+                        RecoverCommand(currentInput);
+                        input = Console.ReadKey(intercept: true);
+                        lineStart = Console.CursorTop;
+                        currentCursor = Console.CursorLeft;
+                        currentLine = lineStart;
+                        continue;
+                    }
+
                     switch (input.Key)
                     {
+
                         case ConsoleKey.Tab:
                             {
                                 var match = consoleAutofill.Autofill(currentInput, commands, true);
@@ -628,7 +641,6 @@ namespace Neo.ConsoleService
 
                                     Console.Write(new string(' ', Console.WindowWidth - currentInput.Length - cursorStart));
                                     Console.SetCursorPosition(currentCursor - 1, currentLine);
-
                                 }
                                 break;
                             }
@@ -786,6 +798,13 @@ namespace Neo.ConsoleService
             }
 
             Console.ResetColor();
+        }
+
+        private static void RecoverCommand(string command)
+        {
+            Console.WriteLine();
+            PrintPrompt("neo");
+            Console.Write(command);
         }
 
         private static void PrintPrompt(string Prompt)
