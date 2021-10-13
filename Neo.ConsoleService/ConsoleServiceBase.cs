@@ -28,9 +28,8 @@ namespace Neo.ConsoleService
     {
         protected virtual string Depends => null;
         protected virtual string Prompt => "service";
-
         public abstract string ServiceName { get; }
-
+        static readonly object _object = new object();
         protected bool ShowPrompt { get; set; } = true;
         public bool ReadingPassword { get; set; } = false;
 
@@ -599,8 +598,6 @@ namespace Neo.ConsoleService
                         RecoverCommand(currentInput);
                         input = Console.ReadKey(intercept: true);
                         lineStart = Console.CursorTop;
-                        currentCursor = Console.CursorLeft;
-                        currentLine = lineStart;
                         continue;
                     }
 
@@ -802,9 +799,13 @@ namespace Neo.ConsoleService
 
         private static void RecoverCommand(string command)
         {
-            Console.WriteLine();
-            PrintPrompt("neo");
-            Console.Write(command);
+            lock (_object)
+            {
+                Console.WriteLine();
+                PrintPrompt("neo");
+                Console.Write(command);
+            }
+
         }
 
         private static void PrintPrompt(string Prompt)
