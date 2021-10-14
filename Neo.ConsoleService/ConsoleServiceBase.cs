@@ -585,8 +585,7 @@ namespace Neo.ConsoleService
                 var builder = new StringBuilder();
                 var input = Console.ReadKey(intercept: true);
                 var currentLine = lineStart;
-                bool endInput = false;
-                while (input.Key != ConsoleKey.Enter && !endInput)
+                while (input.Key != ConsoleKey.Enter && input.Key != ConsoleKey.Escape)
                 {
                     try
                     {
@@ -693,12 +692,6 @@ namespace Neo.ConsoleService
 
                                 builder.Append(lineDown);
                                 break;
-                            case ConsoleKey.End:
-                                endInput = true;
-                                break;
-                            case ConsoleKey.Execute:
-                                endInput = true;
-                                break;
                             default:
                                 try
                                 {
@@ -729,8 +722,6 @@ namespace Neo.ConsoleService
                     }
                     catch { }
                     input = Console.ReadKey(intercept: true);
-
-                    if (input.Key == ConsoleKey.Escape) endInput = true;
                 }
                 ConsoleAutofill.AddToBuffer(builder.ToString());
                 return builder.ToString();
