@@ -21,12 +21,13 @@ namespace Upgrader
 {
     class Program
     {
+        private static string Temp => Path.GetTempPath();
         static void Main(string[] args)
         {
             var pluginPath = "Plugins";
             if (!Directory.Exists(pluginPath)) return;
-            var fileEntries = Directory.GetFiles(pluginPath, "*.dll").Select(file => Path.GetFileNameWithoutExtension(file)).ToList();
-            GetLatestVersion(fileEntries);
+            var pluginEntries = Directory.GetFiles(pluginPath, "*.dll").Select(file => Path.GetFileNameWithoutExtension(file)).ToList();
+            GetLatestVersion(pluginEntries);
         }
 
 
@@ -57,11 +58,12 @@ namespace Upgrader
                 {
                     var pluginName = Path.GetFileNameWithoutExtension(plugin["name"].GetString());
                     if (dllFiles.Contains(pluginName))
-                        UpdatePlugin(pluginName, version);
+                        UpgradePlugin(pluginName, version);
                 }
             }
             catch (WebException ex) when (((HttpWebResponse)ex.Response).StatusCode == HttpStatusCode.NotFound)
             {
+                Console.WriteLine($"Error {ex.ToString()}");
                 return;
             }
         }
@@ -92,9 +94,8 @@ namespace Upgrader
                 using ZipArchive zip = new(stream, ZipArchiveMode.Read);
                 try
                 {
-                    var temp = Path.Combine(Path.GetTempPath());
-                    zip.ExtractToDirectory(temp, true);
-                    CopyFilesRecursively($"{temp}/neo-cli", ".");
+                    zip.ExtractToDirectory(Temp, true);
+                    CopyFilesRecursively($"{Temp}/neo-cli", ".");
                     Console.WriteLine($"{file}\t upgrade successfully");
                 }
                 catch (IOException)
@@ -109,7 +110,7 @@ namespace Upgrader
         /// </summary>
         /// <param name="pluginName">the name of the plugin</param>
         /// <param name="version">the version of the latest neo</param>
-        private static void UpdatePlugin(string pluginName, string version)
+        private static void UpgradePlugin(string pluginName, string version)
         {
             HttpWebRequest request = WebRequest.CreateHttp($"https://github.com/neo-project/neo-modules/releases/download/v{version}/{pluginName}.zip");
             HttpWebResponse response;
@@ -128,12 +129,13 @@ namespace Upgrader
                 try
                 {
                     var temp = Path.Combine(Path.GetTempPath());
-                    zip.ExtractToDirectory(temp, true);
-                    CopyFilesRecursively($"{temp}/Plugins/{pluginName}", $"./Plugins/{pluginName}");
+                    zip.ExtractToDirectory($"{temp}/{pluginName}", true);
+                    CopyFilesRecursively($"{temp}/{pluginName}/", $"./");
                     Console.WriteLine($"{pluginName}\t upgrade successfully");
                 }
-                catch (IOException)
+                catch (IOException ex)
                 {
+                    Console.WriteLine($"Error: Failed to upgrade the neo-cli, please close neo-cli first.");
                 }
             }
         }
@@ -191,6 +193,7 @@ namespace Upgrader
                 }
                 catch
                 {
+                    Console.WriteLine($"Error: Failed to upgrade the neo-cli, please close neo-cli first.");
                     continue;
                 }
             }
