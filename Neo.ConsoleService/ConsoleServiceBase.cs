@@ -585,7 +585,7 @@ namespace Neo.ConsoleService
                 var builder = new StringBuilder();
                 var input = Console.ReadKey(intercept: true);
                 var currentLine = lineStart;
-                while (input.Key != ConsoleKey.Enter && input.Key != ConsoleKey.Escape)
+                while (input.Key != ConsoleKey.Enter)
                 {
                     try
                     {
@@ -696,7 +696,6 @@ namespace Neo.ConsoleService
                                 try
                                 {
                                     var key = input.KeyChar;
-
                                     // Insert
                                     if (currentCursor + (currentLine - lineStart) * Console.WindowWidth - cursorStart < currentInput.Length)
                                         builder.Insert(currentCursor + (currentLine - lineStart) * Console.WindowWidth - cursorStart, key);
