@@ -585,7 +585,8 @@ namespace Neo.ConsoleService
                 var builder = new StringBuilder();
                 var input = Console.ReadKey(intercept: true);
                 var currentLine = lineStart;
-                while (input.Key != ConsoleKey.Enter && input.KeyChar != 0x0D)
+                var endInput = false;
+                while (input.Key != ConsoleKey.Enter && !endInput)
                 {
                     try
                     {
@@ -691,6 +692,9 @@ namespace Neo.ConsoleService
                                 Console.Write(lineDown);
 
                                 builder.Append(lineDown);
+                                break;
+                            case ConsoleKey.M:
+                                if ((input.Modifiers & ConsoleModifiers.Control) == ConsoleModifiers.Control) endInput = true; ;
                                 break;
                             default:
                                 try
