@@ -1,6 +1,6 @@
 name: .NET Core Test
 
-on: pull_request
+on: push
 
 env:
   DOTNET_VERSION: 5.0.100
