@@ -588,11 +588,16 @@ namespace Neo.ConsoleService
                 var endInput = false;
                 while (input.Key != ConsoleKey.Enter && !endInput)
                 {
+
                     try
                     {
                         var currentInput = builder.ToString();
                         var currentCursor = Console.CursorLeft;
                         currentLine = Console.CursorTop;
+
+                        Console.SetCursorPosition(currentCursor, currentLine + 1);
+                        Console.Write(input.KeyChar);
+                        Console.SetCursorPosition(currentCursor, currentLine);
                         // The console has longer message than command,
                         // this means that the console starts the log
                         if (currentCursor + (currentLine - lineStart) * Console.WindowWidth - cursorStart > currentInput.Length)
