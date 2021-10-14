@@ -693,6 +693,9 @@ namespace Neo.ConsoleService
 
                                 builder.Append(lineDown);
                                 break;
+                            case ConsoleKey.End:
+                                endInput = true;
+                                break;
                             default:
                                 try
                                 {
