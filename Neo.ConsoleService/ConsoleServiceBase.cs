@@ -694,7 +694,8 @@ namespace Neo.ConsoleService
                                 builder.Append(lineDown);
                                 break;
                             case ConsoleKey.M:
-                                if ((input.Modifiers & ConsoleModifiers.Control) == ConsoleModifiers.Control) endInput = true; ;
+                                if ((input.Modifiers & ConsoleModifiers.Control) == ConsoleModifiers.Control) endInput = true;
+                                Console.WriteLine("1111");
                                 break;
                             default:
                                 try
