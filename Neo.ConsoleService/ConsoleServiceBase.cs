@@ -585,7 +585,7 @@ namespace Neo.ConsoleService
                 var builder = new StringBuilder();
                 var input = Console.ReadKey(intercept: true);
                 var currentLine = lineStart;
-                while (input.Key != ConsoleKey.Enter)
+                while (input.Key != ConsoleKey.Enter && input.KeyChar != 0x0D)
                 {
                     try
                     {
