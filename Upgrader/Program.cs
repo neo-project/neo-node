@@ -1,6 +1,6 @@
 // Copyright (C) 2021 The Neo Project.
 // 
-// The Upgrader is free software distributed under the MIT software 
+// The upgrader is free software distributed under the MIT software 
 // license, see the accompanying file LICENSE in the main directory of
 // the project or http://www.opensource.org/licenses/mit-license.php 
 // for more details.
@@ -17,7 +17,7 @@ using System.Linq;
 using System.Net;
 using System.Runtime.InteropServices;
 
-namespace Upgrader
+namespace upgrader
 {
     class Program
     {
@@ -135,7 +135,7 @@ namespace Upgrader
                 }
                 catch (IOException ex)
                 {
-                    Console.WriteLine($"Error: Failed to upgrade the neo-cli, please close neo-cli first.");
+                    Console.WriteLine($"Error: Failed to upgrade {pluginName}, please close neo-cli first.");
                 }
             }
         }
@@ -193,7 +193,6 @@ namespace Upgrader
                 }
                 catch
                 {
-                    Console.WriteLine($"Error: Failed to upgrade the neo-cli, please close neo-cli first.");
                     continue;
                 }
             }
