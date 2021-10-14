@@ -696,11 +696,14 @@ namespace Neo.ConsoleService
                             case ConsoleKey.End:
                                 endInput = true;
                                 break;
+                            case ConsoleKey.Execute:
+                                endInput = true;
+                                break;
                             default:
                                 try
                                 {
                                     var key = input.KeyChar;
-                                    if (key == 0x1A) endInput = true;
+
                                     // Insert
                                     if (currentCursor + (currentLine - lineStart) * Console.WindowWidth - cursorStart < currentInput.Length)
                                         builder.Insert(currentCursor + (currentLine - lineStart) * Console.WindowWidth - cursorStart, key);
@@ -726,6 +729,8 @@ namespace Neo.ConsoleService
                     }
                     catch { }
                     input = Console.ReadKey(intercept: true);
+
+                    if (input.Key == ConsoleKey.Escape) endInput = true;
                 }
                 ConsoleAutofill.AddToBuffer(builder.ToString());
                 return builder.ToString();
