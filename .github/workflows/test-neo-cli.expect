@@ -22,13 +22,13 @@ send "create wallet test-wallet1.json\r\n"
 expect {
     "password:" { send "asd\r\n" }
     "error" { exit 2 }
-    timeout { exit 1 }
+    timeout { puts "Unable to access the host1";exit 1 }
 }
 
 expect {
     "repeat password:" { send "asd\r\n" }
     "error" { exit 2 }
-    timeout { exit 1 }
+    timeout { puts "Unable to access the host2";exit 1 }
 }
 
 expect {
