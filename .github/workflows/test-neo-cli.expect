@@ -17,16 +17,16 @@ expect {
 #
 # Test 'create wallet'
 #
-send "create wallet test-wallet1.json\r"
+send "create wallet test-wallet1.json\r\n"
 
 expect {
-    "password:" { send "asd\r" }
+    "password:" { send "asd\r\n" }
     "error" { exit 2 }
     timeout { exit 1 }
 }
 
 expect {
-    "repeat password:" { send "asd\r" }
+    "repeat password:" { send "asd\r\n" }
     "error" { exit 2 }
     timeout { exit 1 }
 }
@@ -40,16 +40,16 @@ expect {
 #
 # Test 'create wallet'
 #
-send "create wallet test-wallet2.json L2ArHTuiDL4FHu4nfyhamrG8XVYB4QyRbmhj7vD6hFMB5iAMSTf6\r"
+send "create wallet test-wallet2.json L2ArHTuiDL4FHu4nfyhamrG8XVYB4QyRbmhj7vD6hFMB5iAMSTf6\r\n"
 
 expect {
-    "password:" { send "asd\r" }
+    "password:" { send "asd\r\n" }
     "error" { exit 2 }
     timeout { puts "Unable to access the host1"; exit 1 }
 }
 
 expect {
-    "repeat password:" { send "asd\r" }
+    "repeat password:" { send "asd\r\n" }
     "error" { exit 2 }
     timeout { puts "Unable to access the host2"; exit 1 }
 }
@@ -63,7 +63,7 @@ expect {
 #
 # Test 'list address'
 #
-send "list address\r"
+send "list address\r\n"
 
 expect {
     "neo> " { }
@@ -74,7 +74,7 @@ expect {
 #
 # Test 'create address'
 #
-send "create address\r"
+send "create address\r\n"
 
 expect {
     "neo> " { }
