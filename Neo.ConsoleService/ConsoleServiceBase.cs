@@ -585,8 +585,9 @@ namespace Neo.ConsoleService
                 var builder = new StringBuilder();
                 var input = Console.ReadKey(intercept: true);
                 var currentLine = lineStart;
-
-                while (input.Key != ConsoleKey.Enter)
+                bool isParseMode = false;
+                bool endInput = false;
+                while (input.Key != ConsoleKey.Enter && !endInput)
                 {
                     try
                     {
@@ -697,6 +698,17 @@ namespace Neo.ConsoleService
                                 try
                                 {
                                     var key = input.KeyChar;
+
+                                    if (isParseMode && key == 'n')
+                                    {
+                                        builder.Remove(builder.Length - 1, 1);
+                                        isParseMode = false;
+                                        endInput = true;
+                                        break;
+                                    }
+                                    else if (!isParseMode && key == '\\') isParseMode = true;
+                                    else isParseMode = false;
+
                                     // Insert
                                     if (currentCursor + (currentLine - lineStart) * Console.WindowWidth - cursorStart < currentInput.Length)
                                         builder.Insert(currentCursor + (currentLine - lineStart) * Console.WindowWidth - cursorStart, key);
