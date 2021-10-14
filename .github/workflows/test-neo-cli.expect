@@ -45,19 +45,19 @@ send "create wallet test-wallet2.json L2ArHTuiDL4FHu4nfyhamrG8XVYB4QyRbmhj7vD6hF
 expect {
     "password:" { send "asd\r" }
     "error" { exit 2 }
-    timeout { exit 1 }
+    timeout { puts "Unable to access the host1"; exit 1 }
 }
 
 expect {
     "repeat password:" { send "asd\r" }
     "error" { exit 2 }
-    timeout { exit 1 }
+    timeout { puts "Unable to access the host2"; exit 1 }
 }
 
 expect {
     "Address: NUj249PQg9EMJfAuxKizdJwMG7GSBzYX2Y" { }
     "error" { exit 2 }
-    timeout { exit 1 }
+    timeout {puts "Unable to access the host3";  exit 1 }
 }
 
 #
@@ -68,7 +68,7 @@ send "list address\r"
 expect {
     "neo> " { }
     "error" { exit 2 }
-    timeout { exit 1 }
+    timeout {puts "Unable to access the host4"; exit 1 }
 }
 
 #
@@ -79,7 +79,7 @@ send "create address\r"
 expect {
     "neo> " { }
     "error" { exit 2 }
-    timeout { exit 1 }
+    timeout { puts "Unable to access the host5"; exit 1 }
 }
 
 exit 0
