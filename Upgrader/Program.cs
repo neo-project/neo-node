@@ -187,9 +187,10 @@ namespace upgrader
             {
                 try
                 {
+                    var targetFile = newPath.Replace(sourcePath, targetPath);
                     // Avoid config.json
-                    if (Path.GetExtension(newPath) == ".json") continue;
-                    File.Copy(newPath, newPath.Replace(sourcePath, targetPath), true);
+                    if (Path.GetExtension(newPath) != ".json" || !File.Exists(targetFile))
+                        File.Copy(newPath, targetFile, true);
                 }
                 catch
                 {
