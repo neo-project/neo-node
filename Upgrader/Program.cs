@@ -96,7 +96,7 @@ namespace upgrader
                 {
                     zip.ExtractToDirectory(Temp, true);
                     CopyFilesRecursively($"{Temp}/neo-cli", ".");
-                    Console.WriteLine($"{file}\t upgrade successfully");
+                    Console.WriteLine($"{file}\t update completed.");
                 }
                 catch (IOException)
                 {
@@ -131,7 +131,7 @@ namespace upgrader
                     var temp = Path.Combine(Path.GetTempPath());
                     zip.ExtractToDirectory($"{temp}/{pluginName}", true);
                     CopyFilesRecursively($"{temp}/{pluginName}/", $"./");
-                    Console.WriteLine($"{pluginName}\t upgrade successfully");
+                    Console.WriteLine($"{pluginName}\t update completed.");
                 }
                 catch (IOException ex)
                 {
