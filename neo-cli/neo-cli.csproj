@@ -28,7 +28,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Neo.ConsoleService\Neo.ConsoleService.csproj" />
-    <ProjectReference Include="..\Upgrader\upgrader.csproj" />
+    <ProjectReference Include="..\upgrader\upgrader.csproj" />
   </ItemGroup>
 
 </Project>
