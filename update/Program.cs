@@ -61,7 +61,7 @@ namespace update
                         UpgradePlugin(pluginName, version);
                 }
             }
-            catch (WebException ex) when (((HttpWebResponse)ex.Response).StatusCode == HttpStatusCode.NotFound)
+            catch (Exception ex)
             {
                 Console.WriteLine($"Error {ex.ToString()}");
                 return;
@@ -118,7 +118,7 @@ namespace update
             {
                 response = (HttpWebResponse)request.GetResponse();
             }
-            catch (WebException ex) when (((HttpWebResponse)ex.Response).StatusCode == HttpStatusCode.NotFound)
+            catch
             {
                 response = DownloadFromAPI(version, "neo-modules", pluginName);
             }
