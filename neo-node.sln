@@ -15,7 +15,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{62F4DC79
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{705EBADA-05F7-45D1-9D63-D399E87525DB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "upgrader", "upgrader\upgrader.csproj", "{B73D071C-995E-4EFA-9A4C-F463BBBFF762}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "update", "update\update.csproj", "{B73D071C-995E-4EFA-9A4C-F463BBBFF762}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
