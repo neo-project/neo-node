@@ -108,6 +108,7 @@ dev_net:
 
 docker:
 	$(DOCKER) build -t neo-cli .
+	@echo "The project has been built on docker."
 
 run_docker:
 	$(DOCKER) run -p 10332:10332 -p 10333:10333 --name=neo-cli-mainnet neo-cli
