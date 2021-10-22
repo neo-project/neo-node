@@ -30,7 +30,7 @@ DOTNET_PATH ?= $(DOTNET)
 Build_Mode = Release
 output_dir = output
 Build_Network = MAIN_NETWORK
-
+DOCKER = docker
 
 
 .PHONY: all main test dev test publish clean
@@ -105,6 +105,13 @@ dev_net:
 	$(DOTNET) build --configuration Debug --output $(output_dir)
 	$(call build_dev)
 	@echo "The project has been built on private net."
+
+docker:
+	$(DOCKER) build -t neo-cli .
+
+run_docker:
+	$(DOCKER) run -p 10332:10332 -p 10333:10333 --name=neo-cli-mainnet neo-cli
+	$(DOCKER) exec -it neo-cli-mainnet /bin/bash
 
 run:
 	$(DOTNET) $(output_dir)/neo-cli.dll
