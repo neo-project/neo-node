@@ -96,21 +96,26 @@ all:
 main:
 	$(DOTNET) build --configuration Release --output $(output_dir)
 	$(call build_main)
+	@cp ./config/config.json $(output_dir)/config.json
 	@echo "The project has been built on main net."
 
 test:
 	$(DOTNET) build --configuration Release --output $(output_dir)
 	@rm -f $(output_dir)/config.json
-	@cp config.testnet.json $(output_dir)/config.json
+	@cp ./config/config.testnet.json $(output_dir)/config.json
 	$(call build_test)
 	@echo "The project has been built on test net."
 
 dev:
 	$(DOTNET) build --configuration Debug --output $(output_dir)
 	@rm -f $(output_dir)/config.json
-	@cp config.devnet.json $(output_dir)/config.json
+	@cp ./config/config.devnet.json $(output_dir)/config.json
+	@cp ./config/devnet.json $(output_dir)/devnet.json
 	$(call build_dev)
 	@echo "The project has been built on private net."
+
+run:
+	$(DOTNET) $(output_dir)/neo-cli.dll
 
 publish:main
 

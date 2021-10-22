@@ -1,0 +1,39 @@
+{
+    "ApplicationConfiguration": {
+        "Logger": {
+            "Path": "Logs",
+            "ConsoleOutput": false,
+            "Active": false
+        },
+        "Storage": {
+            "Engine": "LevelDBStore",
+            "Path": "Data_LevelDB_{0}"
+        },
+        "P2P": {
+            "Port": 10333,
+            "WsPort": 10334,
+            "MinDesiredConnections": 10,
+            "MaxConnections": 40,
+            "MaxConnectionsPerAddress": 3
+        },
+        "UnlockWallet": {
+            "Path": "devnet.json",
+            "Password": "devnet",
+            "IsActive": true
+        }
+    },
+    "ProtocolConfiguration": {
+        "Network": 860833102,
+        "AddressVersion": 53,
+        "MillisecondsPerBlock": 15000,
+        "MaxTransactionsPerBlock": 512,
+        "MemoryPoolMaxTransactions": 50000,
+        "MaxTraceableBlocks": 2102400,
+        "InitialGasDistribution": 5200000000000000,
+        "ValidatorsCount": 7,
+        "StandbyCommittee": [
+            "03b209fd4f53a7170ea4444e0cb0a6bb6a53c2bd016926989cf85f9b0fba17a70c",
+        ],
+        "SeedList": []
+    }
+}

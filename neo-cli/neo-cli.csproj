@@ -16,7 +16,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Update="config.json;config.mainnet.json;config.testnet.json">
+    <None Update="config\config.json;config\config.mainnet.json;config\config.testnet.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </None>
