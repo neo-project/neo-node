@@ -89,21 +89,20 @@ all:
 net_main:
 	$(DOTNET) build --configuration Release --output $(output_dir)
 	$(call build_main)
-	@cp ./config/config.json $(output_dir)/config.json
+	@cp ./config/config.json $(output_dir)/config/config.json
 	@echo "The project has been built on main net."
 
 net_test:
 	$(DOTNET) build --configuration Release --output $(output_dir)
 	@rm -f $(output_dir)/config.json
-	@cp ./config/config.testnet.json $(output_dir)/config.json
+	@cp ./config/config.testnet.json $(output_dir)/config/config.json
 	$(call build_test)
 	@echo "The project has been built on test net."
 
 net_dev:
 	$(DOTNET) build --configuration Debug --output $(output_dir)
 	@rm -f $(output_dir)/config.json
-	@cp ./config/config.devnet.json $(output_dir)/config.json
-	@cp ./config/devnet.json $(output_dir)/devnet.json
+	@cp ./config/config.devnet.json $(output_dir)/config/config.json
 	$(call build_dev)
 	@echo "The project has been built on private net."
 

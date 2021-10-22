@@ -27,7 +27,7 @@ namespace Neo.CLI
 
         public override string Name => "SystemLog";
         public override string Description => "Prints consensus log and is a built-in plugin which cannot be uninstalled";
-        public override string ConfigFile => Combine(GetDirectoryName(Path), "config.json");
+        public override string ConfigFile => Combine(GetDirectoryName(Path), "config/config.json");
         public override string Path => GetType().Assembly.Location;
 
         private static void GetErrorLogs(StringBuilder sb, Exception ex)

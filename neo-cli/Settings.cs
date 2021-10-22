@@ -40,7 +40,7 @@ namespace Neo
             {
                 if (_default == null)
                 {
-                    IConfigurationRoot config = new ConfigurationBuilder().AddJsonFile("config.json", optional: true).Build();
+                    IConfigurationRoot config = new ConfigurationBuilder().AddJsonFile("config/config.json", optional: true).Build();
                     Initialize(config);
                 }
 
