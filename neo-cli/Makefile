@@ -86,20 +86,20 @@ all:
 	$(DOTNET) build --configuration $(Build_Mode) --output $(output_dir)
 	@echo "The project has been built in $(Build_Mode) mode on $(Build_Network)."
 
-main:
+net_main:
 	$(DOTNET) build --configuration Release --output $(output_dir)
 	$(call build_main)
 	@cp ./config/config.json $(output_dir)/config.json
 	@echo "The project has been built on main net."
 
-test:
+net_test:
 	$(DOTNET) build --configuration Release --output $(output_dir)
 	@rm -f $(output_dir)/config.json
 	@cp ./config/config.testnet.json $(output_dir)/config.json
 	$(call build_test)
 	@echo "The project has been built on test net."
 
-dev:
+net_dev:
 	$(DOTNET) build --configuration Debug --output $(output_dir)
 	@rm -f $(output_dir)/config.json
 	@cp ./config/config.devnet.json $(output_dir)/config.json
