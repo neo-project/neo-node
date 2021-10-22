@@ -38,7 +38,7 @@ Build_Mode = Release
 output_dir = output
 Build_Network = MAIN_NETWORK
 
-.PHONY: all main test dev publish clean
+.PHONY: all main test dev test publish clean
 
 ifeq ($(DEBUG), 1)
 	Build_Mode = Debug
@@ -52,13 +52,13 @@ ifneq ($(OUTDIR),)
 endif
 
 define download_plugin
-    -curl -s https://api.github.com/repos/neo-project/neo-modules/releases/latest \
+	-curl -s https://api.github.com/repos/neo-project/neo-modules/releases/latest \
     | grep $(1).zip \
     | cut -d : -f 2,3 \
     | tr -d \" \
-    | wget -qi -
-	@unzip $(1).zip -d $(output_dir)/
-	@rm -f $(1).*
+    | wget -i -
+	unzip $(1).zip -d $(output_dir)/
+	rm -f $(1).*
 endef
 
 define build_main
@@ -117,7 +117,11 @@ dev:
 run:
 	$(DOTNET) $(output_dir)/neo-cli.dll
 
+test:
+	$(DOTNET) test
+
 publish:main
 
 clean:
 	@rm -rf $(output_dir)
+	@rm -f *.zip*
