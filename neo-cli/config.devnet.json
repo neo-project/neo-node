@@ -17,9 +17,9 @@
             "MaxConnectionsPerAddress": 3
         },
         "UnlockWallet": {
-            "Path": "",
-            "Password": "",
-            "IsActive": false
+            "Path": "devnet.json",
+            "Password": "devnet",
+            "IsActive": true
         }
     },
     "ProtocolConfiguration": {

@@ -57,7 +57,6 @@ define download_plugin
     | cut -d : -f 2,3 \
     | tr -d \" \
     | wget -qi -
-
 	@unzip $(1).zip -d $(output_dir)/
 	@rm -f $(1).*
 endef
