@@ -31,6 +31,8 @@ Build_Mode = Release
 output_dir = output
 Build_Network = MAIN_NETWORK
 
+
+
 .PHONY: all main test dev test publish clean
 
 ifeq ($(DEBUG), 1)
@@ -45,22 +47,22 @@ ifneq ($(OUTDIR),)
 endif
 
 define download_plugin
-	-curl -s https://api.github.com/repos/neo-project/neo-modules/releases/latest \
-    | grep $(1).zip \
-    | cut -d : -f 2,3 \
-    | tr -d \" \
-    | wget -i -
-	unzip $(1).zip -d $(output_dir)/
-	rm -f $(1).*
+	-@test -f $(output_dir)/Plugins/$(1).dll || (curl -s https://api.github.com/repos/neo-project/neo-modules/releases/latest | grep $(1).zip | cut -d : -f 2,3 | tr -d \" | wget -i -)
+	-@test -f $(1).zip && (unzip -q $(1).zip -d $(output_dir) && rm -f *.zip*)
 endef
 
 define build_main
 	$(call download_plugin,LevelDBStore)
+	@cp ./config/config.json $(output_dir)/config/config.json
+    @rm -f *.zip*
 endef
 
 define build_test
 	$(call download_plugin,LevelDBStore)
 	$(call download_plugin,RpcServer)
+	@rm -f $(output_dir)/config.json
+	@cp ./config/config.testnet.json $(output_dir)/config/config.json
+	@rm -f *.zip*
 endef
 
 define build_dev
@@ -68,6 +70,9 @@ define build_dev
 	$(call download_plugin,RpcServer)
 	$(call download_plugin,ApplicationLogs)
 	$(call download_plugin,DBFTPlugin)
+	@rm -f $(output_dir)/config.json
+	@cp ./config/config.devnet.json $(output_dir)/config/config.json
+	@rm -f *.zip*
 endef
 
 ifeq ($(NETWORK), MAIN)
@@ -86,23 +91,18 @@ all:
 	$(DOTNET) build --configuration $(Build_Mode) --output $(output_dir)
 	@echo "The project has been built in $(Build_Mode) mode on $(Build_Network)."
 
-net_main:
+main_net:
 	$(DOTNET) build --configuration Release --output $(output_dir)
 	$(call build_main)
-	@cp ./config/config.json $(output_dir)/config/config.json
 	@echo "The project has been built on main net."
 
-net_test:
+test_net:
 	$(DOTNET) build --configuration Release --output $(output_dir)
-	@rm -f $(output_dir)/config.json
-	@cp ./config/config.testnet.json $(output_dir)/config/config.json
 	$(call build_test)
 	@echo "The project has been built on test net."
 
-net_dev:
+dev_net:
 	$(DOTNET) build --configuration Debug --output $(output_dir)
-	@rm -f $(output_dir)/config.json
-	@cp ./config/config.devnet.json $(output_dir)/config/config.json
 	$(call build_dev)
 	@echo "The project has been built on private net."
 
