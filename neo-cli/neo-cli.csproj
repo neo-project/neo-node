@@ -18,7 +18,6 @@
   <ItemGroup>
     <None Update="config/config.json;config/config.mainnet.json;config/config.testnet.json;config/config.devnet.json;config/devnet.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <OutputDirectory></OutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </None>
   </ItemGroup>
