@@ -120,7 +120,7 @@ run:main_net
 test:
 	$(DOTNET) test
 
-publish:main
+publish:main_net
 
 clean:
 	@rm -rf $(output_dir)
