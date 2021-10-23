@@ -28,7 +28,7 @@ endif
 
 DOTNET_PATH ?= $(DOTNET)
 Build_Mode = Release
-output_dir = output
+Output_DIR = output
 Build_Network = MAIN_NETWORK
 DOCKER = docker
 
@@ -43,25 +43,25 @@ endif
 
 ifneq ($(OUTDIR),)
 	$(shell mkdir -p $(OUTDIR))
-	output_dir = $(OUTDIR)
+	Output_DIR = $(OUTDIR)
 endif
 
 define download_plugin
-	-@test -f $(output_dir)/Plugins/$(1).dll || (curl -s https://api.github.com/repos/neo-project/neo-modules/releases/latest | grep $(1).zip | cut -d : -f 2,3 | tr -d \" | wget -i -)
-	-@test -f $(1).zip && (unzip -q $(1).zip -d $(output_dir) && rm -f *.zip*)
+	-@test -f $(Output_DIR)/Plugins/$(1).dll || (curl -s https://api.github.com/repos/neo-project/neo-modules/releases/latest | grep $(1).zip | cut -d : -f 2,3 | tr -d \" | wget -i -)
+	-@test -f $(1).zip && (unzip -q $(1).zip -d $(Output_DIR) && rm -f *.zip*)
 endef
 
 define build_main
 	$(call download_plugin,LevelDBStore)
-	@cp ./config/config.json $(output_dir)/config/config.json
+	@cp ./config/config.json $(Output_DIR)/config/config.json
     @rm -f *.zip*
 endef
 
 define build_test
 	$(call download_plugin,LevelDBStore)
 	$(call download_plugin,RpcServer)
-	@rm -f $(output_dir)/config.json
-	@cp ./config/config.testnet.json $(output_dir)/config/config.json
+	@rm -f $(Output_DIR)/config.json
+	@cp ./config/config.testnet.json $(Output_DIR)/config/config.json
 	@rm -f *.zip*
 endef
 
@@ -70,8 +70,8 @@ define build_dev
 	$(call download_plugin,RpcServer)
 	$(call download_plugin,ApplicationLogs)
 	$(call download_plugin,DBFTPlugin)
-	@rm -f $(output_dir)/config.json
-	@cp ./config/config.devnet.json $(output_dir)/config/config.json
+	@rm -f $(Output_DIR)/config.json
+	@cp ./config/config.devnet.json $(Output_DIR)/config/config.json
 	@rm -f *.zip*
 endef
 
@@ -88,21 +88,21 @@ else
 endif
 
 all:
-	$(DOTNET) build --configuration $(Build_Mode) --output $(output_dir)
+	$(DOTNET) build --configuration $(Build_Mode) --output $(Output_DIR)
 	@echo "The project has been built in $(Build_Mode) mode on $(Build_Network)."
 
 main_net:
-	$(DOTNET) build --configuration Release --output $(output_dir)
+	$(DOTNET) build --configuration Release --output $(Output_DIR)
 	$(call build_main)
 	@echo "The project has been built on main net."
 
 test_net:
-	$(DOTNET) build --configuration Release --output $(output_dir)
+	$(DOTNET) build --configuration Release --output $(Output_DIR)
 	$(call build_test)
 	@echo "The project has been built on test net."
 
 dev_net:
-	$(DOTNET) build --configuration Debug --output $(output_dir)
+	$(DOTNET) build --configuration Debug --output $(Output_DIR)
 	$(call build_dev)
 	@echo "The project has been built on private net."
 
@@ -115,7 +115,7 @@ run_docker:docker
 	$(DOCKER) exec -it neo-cli-mainnet /bin/bash
 
 run:main_net
-	$(DOTNET) $(output_dir)/neo-cli.dll
+	$(DOTNET) $(Output_DIR)/neo-cli.dll
 
 test:
 	$(DOTNET) test
@@ -123,5 +123,5 @@ test:
 publish:main_net
 
 clean:
-	@rm -rf $(output_dir)
+	@rm -rf $(Output_DIR)
 	@rm -f *.zip*
