@@ -54,7 +54,6 @@ endef
 define build_main
 	$(call download_plugin,LevelDBStore)
 	@cp ./config/config.json $(Output_DIR)/config/config.json
-    @rm -f *.zip*
 endef
 
 define build_test
@@ -62,7 +61,6 @@ define build_test
 	$(call download_plugin,RpcServer)
 	@rm -f $(Output_DIR)/config.json
 	@cp ./config/config.testnet.json $(Output_DIR)/config/config.json
-	@rm -f *.zip*
 endef
 
 define build_dev
@@ -72,7 +70,6 @@ define build_dev
 	$(call download_plugin,DBFTPlugin)
 	@rm -f $(Output_DIR)/config.json
 	@cp ./config/config.devnet.json $(Output_DIR)/config/config.json
-	@rm -f *.zip*
 endef
 
 ifeq ($(NETWORK), MAIN)
