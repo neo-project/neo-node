@@ -33,7 +33,7 @@ Build_Network = MAIN_NETWORK
 DOCKER = docker
 URL = https://api.github.com/repos/neo-project/neo-modules/releases/latest
 
-.PHONY: all main test dev test publish clean
+.PHONY: all main_net test_net dev_net test publish clean
 
 ifeq ($(DEBUG), 1)
 	Build_Mode = Debug
@@ -47,8 +47,8 @@ ifneq ($(OUTDIR),)
 endif
 
 define download_plugin
-	-@test -f $(Output_DIR)/Plugins/$(1).dll || (curl -s $(URL) | grep $(1).zip | cut -d : -f 2,3 | tr -d \" | wget -i -)
-	-@test -f $(1).zip && (unzip -q $(1).zip -d $(Output_DIR) && rm -f *.zip*)
+	-@test -f $(Output_DIR)/Plugins/$(1).dll && >/dev/null || (curl -s $(URL) | grep $(1).zip | cut -d : -f 2,3 | tr -d \" | wget -i -)
+	@test -f $(1).zip && (unzip -q $(1).zip -d $(Output_DIR) && rm -f *.zip*) || >/dev/null
 endef
 
 define build_main
