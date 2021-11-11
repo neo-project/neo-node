@@ -1,10 +1,10 @@
 // Copyright (C) 2016-2021 The Neo Project.
-// 
-// The neo-cli is free software distributed under the MIT software 
+//
+// The neo-cli is free software distributed under the MIT software
 // license, see the accompanying file LICENSE in the main directory of
-// the project or http://www.opensource.org/licenses/mit-license.php 
+// the project or http://www.opensource.org/licenses/mit-license.php
 // for more details.
-// 
+//
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
@@ -27,21 +27,12 @@ namespace Neo.CLI
         /// <param name="filePath">File path</param>
         /// <param name="manifestPath">Manifest path</param>
         [ConsoleCommand("deploy", Category = "Contract Commands")]
-        private void OnDeployCommand(string filePath, string manifestPath = null)
+        private void OnDeployCommand(string filePath, string manifestPath = null, JObject data = null)
         {
             if (NoWallet()) return;
-            byte[] script = LoadDeploymentScript(filePath, manifestPath, out var nef, out var manifest);
+            byte[] script = LoadDeploymentScript(filePath, manifestPath, data, out var nef, out var manifest);
 
-            Transaction tx;
-            try
-            {
-                tx = CurrentWallet.MakeTransaction(NeoSystem.StoreView, script);
-            }
-            catch (InvalidOperationException e)
-            {
-                Console.WriteLine("Error: " + GetExceptionMessage(e));
-                return;
-            }
+            Transaction tx = CurrentWallet.MakeTransaction(NeoSystem.StoreView, script);
 
             UInt160 hash = SmartContract.Helper.GetContractHash(tx.Sender, nef.CheckSum, manifest.Name);
 
@@ -62,7 +53,7 @@ namespace Neo.CLI
         /// <param name="filePath">File path</param>
         /// <param name="manifestPath">Manifest path</param>
         [ConsoleCommand("update", Category = "Contract Commands")]
-        private void OnUpdateCommand(UInt160 scriptHash, string filePath, string manifestPath, UInt160 sender, UInt160[] signerAccounts = null)
+        private void OnUpdateCommand(UInt160 scriptHash, string filePath, string manifestPath, UInt160 sender, UInt160[] signerAccounts = null, JObject data = null)
         {
             Signer[] signers = Array.Empty<Signer>();
 
@@ -91,16 +82,8 @@ namespace Neo.CLI
                 Witnesses = Array.Empty<Witness>()
             };
 
-            try
-            {
-                byte[] script = LoadUpdateScript(scriptHash, filePath, manifestPath, out var nef, out var manifest);
-                tx = CurrentWallet.MakeTransaction(NeoSystem.StoreView, script, sender, signers);
-            }
-            catch (InvalidOperationException e)
-            {
-                ConsoleHelper.Error(GetExceptionMessage(e));
-                return;
-            }
+            byte[] script = LoadUpdateScript(scriptHash, filePath, manifestPath, data, out var nef, out var manifest);
+            tx = CurrentWallet.MakeTransaction(NeoSystem.StoreView, script, sender, signers);
 
             ContractState contract = NativeContract.ContractManagement.GetContract(NeoSystem.StoreView, scriptHash);
             if (contract == null)
