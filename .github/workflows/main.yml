@@ -20,8 +20,8 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
     - name: Check format
-      if: runner.os == 'Windows'
-      run: dotnet format --verify-no-changes --verbosity diagnostic
+      if: runner.os == 'Linux'
+      run: dotnet format --no-restore --verify-no-changes --verbosity diagnostic
     - name: Build CLI
       if: runner.os == 'Linux'
       run: |
