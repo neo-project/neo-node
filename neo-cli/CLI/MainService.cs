@@ -261,7 +261,15 @@ namespace Neo.CLI
 
             ContractParameter dataParameter = null;
             if (data is not null)
-                dataParameter = ContractParameter.FromJson(data);
+                try
+                {
+                    dataParameter = ContractParameter.FromJson(data);
+                }
+                catch
+                {
+                    throw new FormatException("invalid data");
+                }
+
 
             // Basic script checks
 
@@ -322,7 +330,14 @@ namespace Neo.CLI
 
             ContractParameter dataParameter = null;
             if (data is not null)
-                dataParameter = ContractParameter.FromJson(data);
+                try
+                {
+                    dataParameter = ContractParameter.FromJson(data);
+                }
+                catch
+                {
+                    throw new FormatException("invalid data");
+                }
 
             // Basic script checks
 
