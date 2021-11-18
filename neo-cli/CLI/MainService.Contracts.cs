@@ -31,9 +31,16 @@ namespace Neo.CLI
         {
             if (NoWallet()) return;
             byte[] script = LoadDeploymentScript(filePath, manifestPath, data, out var nef, out var manifest);
-
-            Transaction tx = CurrentWallet.MakeTransaction(NeoSystem.StoreView, script);
-
+            Transaction tx;
+            try
+            {
+                tx = CurrentWallet.MakeTransaction(NeoSystem.StoreView, script);
+            }
+            catch (InvalidOperationException e)
+            {
+                ConsoleHelper.Error(GetExceptionMessage(e));
+                return;
+            }
             UInt160 hash = SmartContract.Helper.GetContractHash(tx.Sender, nef.CheckSum, manifest.Name);
 
             ConsoleHelper.Info("Contract hash: ", $"{hash}");
@@ -83,8 +90,15 @@ namespace Neo.CLI
             };
 
             byte[] script = LoadUpdateScript(scriptHash, filePath, manifestPath, data, out var nef, out var manifest);
-            tx = CurrentWallet.MakeTransaction(NeoSystem.StoreView, script, sender, signers);
-
+            try
+            {
+                tx = CurrentWallet.MakeTransaction(NeoSystem.StoreView, script, sender, signers);
+            }
+            catch (InvalidOperationException e)
+            {
+                ConsoleHelper.Error(GetExceptionMessage(e));
+                return;
+            }
             ContractState contract = NativeContract.ContractManagement.GetContract(NeoSystem.StoreView, scriptHash);
             if (contract == null)
             {
