@@ -89,9 +89,9 @@ namespace Neo.CLI
                 Witnesses = Array.Empty<Witness>()
             };
 
-            byte[] script = LoadUpdateScript(scriptHash, filePath, manifestPath, data, out var nef, out var manifest);
             try
             {
+                byte[] script = LoadUpdateScript(scriptHash, filePath, manifestPath, data, out var nef, out var manifest);
                 tx = CurrentWallet.MakeTransaction(NeoSystem.StoreView, script, sender, signers);
             }
             catch (InvalidOperationException e)
