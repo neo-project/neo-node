@@ -3,9 +3,9 @@
   <PropertyGroup>
     <Copyright>2016-2021 The Neo Project</Copyright>
     <AssemblyTitle>Neo.CLI</AssemblyTitle>
-    <Version>3.0.3</Version>
+    <Version>3.1.0</Version>
     <Authors>The Neo Project</Authors>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <AssemblyName>neo-cli</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>Neo.CLI</PackageId>
@@ -16,14 +16,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Update="config.json;config.mainnet.json;config.testnet.json">
+    <None Update="config*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </None>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Neo" Version="3.0.3" />
+    <PackageReference Include="Neo" Version="3.1.0" />
   </ItemGroup>
 
   <ItemGroup>
