@@ -27,11 +27,10 @@ namespace Neo.CLI
         /// <param name="filePath">File path</param>
         /// <param name="manifestPath">Manifest path</param>
         [ConsoleCommand("deploy", Category = "Contract Commands")]
-        private void OnDeployCommand(string filePath, string manifestPath = null)
+        private void OnDeployCommand(string filePath, string manifestPath = null, JObject data = null)
         {
             if (NoWallet()) return;
-            byte[] script = LoadDeploymentScript(filePath, manifestPath, out var nef, out var manifest);
-
+            byte[] script = LoadDeploymentScript(filePath, manifestPath, data, out var nef, out var manifest);
             Transaction tx;
             try
             {
@@ -39,10 +38,9 @@ namespace Neo.CLI
             }
             catch (InvalidOperationException e)
             {
-                Console.WriteLine("Error: " + GetExceptionMessage(e));
+                ConsoleHelper.Error(GetExceptionMessage(e));
                 return;
             }
-
             UInt160 hash = SmartContract.Helper.GetContractHash(tx.Sender, nef.CheckSum, manifest.Name);
 
             ConsoleHelper.Info("Contract hash: ", $"{hash}");
@@ -62,7 +60,7 @@ namespace Neo.CLI
         /// <param name="filePath">File path</param>
         /// <param name="manifestPath">Manifest path</param>
         [ConsoleCommand("update", Category = "Contract Commands")]
-        private void OnUpdateCommand(UInt160 scriptHash, string filePath, string manifestPath, UInt160 sender, UInt160[] signerAccounts = null)
+        private void OnUpdateCommand(UInt160 scriptHash, string filePath, string manifestPath, UInt160 sender, UInt160[] signerAccounts = null, JObject data = null)
         {
             Signer[] signers = Array.Empty<Signer>();
 
@@ -93,7 +91,7 @@ namespace Neo.CLI
 
             try
             {
-                byte[] script = LoadUpdateScript(scriptHash, filePath, manifestPath, out var nef, out var manifest);
+                byte[] script = LoadUpdateScript(scriptHash, filePath, manifestPath, data, out var nef, out var manifest);
                 tx = CurrentWallet.MakeTransaction(NeoSystem.StoreView, script, sender, signers);
             }
             catch (InvalidOperationException e)
@@ -101,7 +99,6 @@ namespace Neo.CLI
                 ConsoleHelper.Error(GetExceptionMessage(e));
                 return;
             }
-
             ContractState contract = NativeContract.ContractManagement.GetContract(NeoSystem.StoreView, scriptHash);
             if (contract == null)
             {
