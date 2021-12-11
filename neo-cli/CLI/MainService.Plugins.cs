@@ -41,7 +41,7 @@ namespace Neo.CLI
             // To prevent circular dependency
             // put plugin-to-install into stack
             Stack<string> pluginToInstall = new();
-            InstallPlugin(DownloadPlugin(pluginName), pluginName, pluginToInstall);
+            await InstallPlugin(await DownloadPlugin(pluginName), pluginName, pluginToInstall);
         }
 
         /// <summary>
@@ -51,10 +51,10 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="pluginName">name of the plugin</param>
         [ConsoleCommand("reinstall", Category = "Plugin Commands", Description = "Overwrite existing plugin by force.")]
-        private void OnReinstallCommand(string pluginName)
+        private async Task OnReinstallCommand(string pluginName)
         {
             Stack<string> pluginToInstall = new();
-            InstallPlugin(DownloadPlugin(pluginName), pluginName, pluginToInstall, true);
+            await InstallPlugin(await DownloadPlugin(pluginName), pluginName, pluginToInstall, true);
         }
 
         /// <summary>
@@ -65,18 +65,19 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="pluginName">name of the plugin</param>
         /// <returns>Downloaded content</returns>
-        private MemoryStream DownloadPlugin(string pluginName)
+        private async Task<MemoryStream> DownloadPlugin(string pluginName)
         {
+            var url = $"https: //github.com/neo-project/neo-modules/releases/download/v{typeof(Plugin).Assembly.GetVersion()}/{pluginName}.zip";
             using HttpClient http = new();
-            HttpResponseMessage response = await http.GetAsync($"https://github.com/neo-project/neo-modules/releases/download/v{typeof(Plugin).Assembly.GetVersion()}/{pluginName}.zip");
+            HttpResponseMessage response = await http.GetAsync(url);
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 response.Dispose();
-                Version version_core = typeof(Plugin).Assembly.GetName().Version;
+                Version versionCore = typeof(Plugin).Assembly.GetName().Version;
                 HttpRequestMessage request = new(HttpMethod.Get, "https://api.github.com/repos/neo-project/neo-modules/releases");
                 request.Headers.UserAgent.ParseAdd($"{GetType().Assembly.GetName().Name}/{GetType().Assembly.GetVersion()}");
-                using HttpResponseMessage response_api = await http.SendAsync(request);
-                byte[] buffer = await response_api.Content.ReadAsByteArrayAsync();
+                using HttpResponseMessage responseApi = await http.SendAsync(request);
+                byte[] buffer = await responseApi.Content.ReadAsByteArrayAsync();
                 JObject releases = JObject.Parse(buffer);
                 JObject asset = releases.GetArray()
                     .Where(p => !p["tag_name"].GetString().Contains('-'))
@@ -86,25 +87,26 @@ namespace Neo.CLI
                         Assets = p["assets"].GetArray()
                     })
                     .OrderByDescending(p => p.Version)
-                    .First(p => p.Version <= version_core).Assets
+                    .First(p => p.Version <= versionCore).Assets
                     .FirstOrDefault(p => p["name"].GetString() == $"{pluginName}.zip");
                 if (asset is null) throw new Exception("Plugin doesn't exist.");
                 response = await http.GetAsync(asset["browser_download_url"].GetString());
             }
+
             using (response)
             {
                 var totalRead = 0L;
                 byte[] buffer = new byte[1024];
                 int read;
 
-                using Stream stream = response.GetResponseStream();
+                await using Stream stream = await response.Content.ReadAsStreamAsync();
                 Console.WriteLine($"From {url}");
                 var output = new MemoryStream();
                 while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
                 {
                     output.Write(buffer, 0, read);
                     totalRead += read;
-                    Console.Write($"\rDownloading {pluginName}.zip {totalRead / 1024}KB/{response.ContentLength / 1024}KB {(totalRead * 100) / response.ContentLength}%");
+                    Console.Write($"\rDownloading {pluginName}.zip {totalRead / 1024}KB/{response.Content.Headers.ContentLength / 1024}KB {(totalRead * 100) / response.Content.Headers.ContentLength}%");
                 }
                 Console.WriteLine();
 
@@ -119,7 +121,7 @@ namespace Neo.CLI
         /// <param name="pluginName">name of the plugin</param>
         /// <param name="pluginToInstall">installing plugin stack</param>
         /// <param name="overWrite">Install by force for `update`</param>
-        private void InstallPlugin(MemoryStream stream, string pluginName, Stack<string> pluginToInstall, bool overWrite = false)
+        private async Task InstallPlugin(MemoryStream stream, string pluginName, Stack<string> pluginToInstall, bool overWrite = false)
         {
             // If plugin already in the installing stack,
             // It means there has circular dependency.
@@ -140,7 +142,7 @@ namespace Neo.CLI
             try
             {
                 zip.ExtractToDirectory(".", overWrite);
-                InstallDependency(pluginName, pluginToInstall);
+                await InstallDependency(pluginName, pluginToInstall);
                 Console.WriteLine($"Install successful, please restart neo-cli.");
                 pluginToInstall.Pop();
             }
@@ -148,7 +150,8 @@ namespace Neo.CLI
             {
                 pluginToInstall.Pop();
                 Console.WriteLine($"Plugin already exist. Try to run `reinstall {pluginName}`");
-            };
+            }
+            ;
         }
 
         /// <summary>
@@ -156,7 +159,7 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="pluginName">plugin name</param>
         /// <param name="pluginToInstall">installing plugin stack</param>
-        private void InstallDependency(string pluginName, Stack<string> pluginToInstall)
+        private async Task InstallDependency(string pluginName, Stack<string> pluginToInstall)
         {
             try
             {
@@ -179,7 +182,7 @@ namespace Neo.CLI
                         Console.WriteLine("Dependency already installed.");
                         continue;
                     }
-                    InstallPlugin(DownloadPlugin(plugin), plugin, pluginToInstall);
+                    await InstallPlugin(await DownloadPlugin(plugin), plugin, pluginToInstall);
                 }
             }
             catch
