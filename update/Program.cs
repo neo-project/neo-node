@@ -128,7 +128,7 @@ namespace update
                 using ZipArchive zip = new(stream, ZipArchiveMode.Read);
                 try
                 {
-                    var temp = Path.Combine(Path.GetTempPath());
+                    var temp = Path.GetTempPath();
                     zip.ExtractToDirectory($"{temp}/{pluginName}", true);
                     CopyFilesRecursively($"{temp}/{pluginName}/", $"./");
                     Console.WriteLine($"{pluginName}\t upgrade successfully.");
