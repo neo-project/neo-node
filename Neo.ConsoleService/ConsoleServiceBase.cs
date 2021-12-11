@@ -114,7 +114,8 @@ namespace Neo.ConsoleService
                 case 1:
                     {
                         var (command, arguments) = availableCommands[0];
-                        command.Method.Invoke(command.Instance, arguments);
+                        object result = command.Method.Invoke(command.Instance, arguments);
+                        if (result is Task task) task.Wait();
                         return true;
                     }
                 default:

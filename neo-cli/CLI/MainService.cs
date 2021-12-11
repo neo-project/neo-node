@@ -229,7 +229,7 @@ namespace Neo.CLI
             return true;
         }
 
-        private byte[] LoadDeploymentScript(string nefFilePath, string manifestFilePath, out NefFile nef, out ContractManifest manifest)
+        private byte[] LoadDeploymentScript(string nefFilePath, string manifestFilePath, JObject data, out NefFile nef, out ContractManifest manifest)
         {
             if (string.IsNullOrEmpty(manifestFilePath))
             {
@@ -259,6 +259,18 @@ namespace Neo.CLI
                 nef = stream.ReadSerializable<NefFile>();
             }
 
+            ContractParameter dataParameter = null;
+            if (data is not null)
+                try
+                {
+                    dataParameter = ContractParameter.FromJson(data);
+                }
+                catch
+                {
+                    throw new FormatException("invalid data");
+                }
+
+
             // Basic script checks
 
             Script script = new Script(nef.Script);
@@ -278,12 +290,15 @@ namespace Neo.CLI
 
             using (ScriptBuilder sb = new ScriptBuilder())
             {
-                sb.EmitDynamicCall(NativeContract.ContractManagement.Hash, "deploy", nef.ToArray(), manifest.ToJson().ToString());
+                if (dataParameter is not null)
+                    sb.EmitDynamicCall(NativeContract.ContractManagement.Hash, "deploy", nef.ToArray(), manifest.ToJson().ToString(), dataParameter);
+                else
+                    sb.EmitDynamicCall(NativeContract.ContractManagement.Hash, "deploy", nef.ToArray(), manifest.ToJson().ToString());
                 return sb.ToArray();
             }
         }
 
-        private byte[] LoadUpdateScript(UInt160 scriptHash, string nefFilePath, string manifestFilePath, out NefFile nef, out ContractManifest manifest)
+        private byte[] LoadUpdateScript(UInt160 scriptHash, string nefFilePath, string manifestFilePath, JObject data, out NefFile nef, out ContractManifest manifest)
         {
             if (string.IsNullOrEmpty(manifestFilePath))
             {
@@ -313,6 +328,17 @@ namespace Neo.CLI
                 nef = stream.ReadSerializable<NefFile>();
             }
 
+            ContractParameter dataParameter = null;
+            if (data is not null)
+                try
+                {
+                    dataParameter = ContractParameter.FromJson(data);
+                }
+                catch
+                {
+                    throw new FormatException("invalid data");
+                }
+
             // Basic script checks
 
             Script script = new Script(nef.Script);
@@ -332,7 +358,10 @@ namespace Neo.CLI
 
             using (ScriptBuilder sb = new ScriptBuilder())
             {
-                sb.EmitDynamicCall(scriptHash, "update", nef.ToArray(), manifest.ToJson().ToString());
+                if (dataParameter is null)
+                    sb.EmitDynamicCall(scriptHash, "update", nef.ToArray(), manifest.ToJson().ToString());
+                else
+                    sb.EmitDynamicCall(scriptHash, "update", nef.ToArray(), manifest.ToJson().ToString(), dataParameter);
                 return sb.ToArray();
             }
         }

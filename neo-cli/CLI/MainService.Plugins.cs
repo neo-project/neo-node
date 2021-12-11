@@ -19,6 +19,8 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace Neo.CLI
 {
@@ -29,7 +31,7 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="pluginName">Plugin name</param>
         [ConsoleCommand("install", Category = "Plugin Commands")]
-        private void OnInstallCommand(string pluginName)
+        private async Task OnInstallCommandAsync(string pluginName)
         {
             if (PluginExists(pluginName))
             {
@@ -65,23 +67,17 @@ namespace Neo.CLI
         /// <returns>Downloaded content</returns>
         private MemoryStream DownloadPlugin(string pluginName)
         {
-            HttpWebRequest request = WebRequest.CreateHttp($"https://github.com/neo-project/neo-modules/releases/download/v{typeof(Plugin).Assembly.GetVersion()}/{pluginName}.zip");
-            HttpWebResponse response;
-            string url;
-            try
+            using HttpClient http = new();
+            HttpResponseMessage response = await http.GetAsync($"https://github.com/neo-project/neo-modules/releases/download/v{typeof(Plugin).Assembly.GetVersion()}/{pluginName}.zip");
+            if (response.StatusCode == HttpStatusCode.NotFound)
             {
-                response = (HttpWebResponse)request.GetResponse();
-                url = request.RequestUri.ToString();
-            }
-            catch (WebException ex) when (((HttpWebResponse)ex.Response).StatusCode == HttpStatusCode.NotFound)
-            {
+                response.Dispose();
                 Version version_core = typeof(Plugin).Assembly.GetName().Version;
-                request = WebRequest.CreateHttp($"https://api.github.com/repos/neo-project/neo-modules/releases");
-                request.UserAgent = $"{GetType().Assembly.GetName().Name}/{GetType().Assembly.GetVersion()}";
-                using HttpWebResponse response_api = (HttpWebResponse)request.GetResponse();
-                using Stream stream = response_api.GetResponseStream();
-                using StreamReader reader = new(stream);
-                JObject releases = JObject.Parse(reader.ReadToEnd());
+                HttpRequestMessage request = new(HttpMethod.Get, "https://api.github.com/repos/neo-project/neo-modules/releases");
+                request.Headers.UserAgent.ParseAdd($"{GetType().Assembly.GetName().Name}/{GetType().Assembly.GetVersion()}");
+                using HttpResponseMessage response_api = await http.SendAsync(request);
+                byte[] buffer = await response_api.Content.ReadAsByteArrayAsync();
+                JObject releases = JObject.Parse(buffer);
                 JObject asset = releases.GetArray()
                     .Where(p => !p["tag_name"].GetString().Contains('-'))
                     .Select(p => new
@@ -93,9 +89,7 @@ namespace Neo.CLI
                     .First(p => p.Version <= version_core).Assets
                     .FirstOrDefault(p => p["name"].GetString() == $"{pluginName}.zip");
                 if (asset is null) throw new Exception("Plugin doesn't exist.");
-                request = WebRequest.CreateHttp(asset["browser_download_url"].GetString());
-                response = (HttpWebResponse)request.GetResponse();
-                url = request.RequestUri.ToString();
+                response = await http.GetAsync(asset["browser_download_url"].GetString());
             }
             using (response)
             {
