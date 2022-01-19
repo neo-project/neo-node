@@ -43,35 +43,29 @@ namespace update
         {
             using HttpClient http = new();
             HttpResponseMessage response = await http.GetAsync($"https://api.github.com/repos/neo-project/neo-modules/releases/latest");
-            // request.UserAgent = "Foo";
-            // request.Accept = "application/json";
-            if (response.StatusCode == HttpStatusCode.NotFound)
+            try
             {
-                try
-                {
-                    response.Dispose();
-                    using var stream = new StreamReader(await response.Content.ReadAsStreamAsync());
-                    var json = await stream.ReadToEndAsync();
-                    var objects = JObject.Parse(json); // parse as array
-                    var version = objects["name"]?.ToString();
-                    var assets = objects["assets"]?.ToArray();
+                using var stream = new StreamReader(await response.Content.ReadAsStreamAsync());
+                var json = await stream.ReadToEndAsync();
+                var objects = JObject.Parse(json); // parse as array
+                var version = objects["name"]?.ToString();
+                var assets = objects["assets"]?.ToArray();
 
-                    // Update the neo-cli
-                    ConsoleHelper.Info($"Upgrade the neo-cli to {version}:");
-                    await UpdateNeoCli(version);
+                // Update the neo-cli
+                ConsoleHelper.Info($"Upgrade the neo-cli to {version}:");
+                await UpdateNeoCli(version);
 
-                    ConsoleHelper.Info($"\nUpgrade the plugins to {version}:");
-                    foreach (var plugin in assets!)
-                    {
-                        var pluginName = Path.GetFileNameWithoutExtension(plugin["name"]?.ToString());
-                        if (dllFiles.Contains(pluginName))
-                            await UpgradePlugin(pluginName, version);
-                    }
-                }
-                catch (Exception ex)
+                ConsoleHelper.Info($"\nUpgrade the plugins to {version}:");
+                foreach (var plugin in assets!)
                 {
-                    ConsoleHelper.Error(ex.ToString());
+                    var pluginName = Path.GetFileNameWithoutExtension(plugin["name"]?.ToString());
+                    if (dllFiles.Contains(pluginName))
+                        await UpgradePlugin(pluginName, version);
                 }
+            }
+            catch (Exception ex)
+            {
+                ConsoleHelper.Error(ex.ToString());
             }
         }
 
@@ -156,7 +150,7 @@ namespace update
             HttpRequestMessage request = new(HttpMethod.Get, $"https://api.github.com/repos/neo-project/{repo}/releases");
             request.Headers.UserAgent.ParseAdd(typeof(Update).ToString());
             using HttpResponseMessage responseApi = await http.SendAsync(request);
-           var buffer = await responseApi.Content.ReadAsStringAsync();
+            var buffer = await responseApi.Content.ReadAsStringAsync();
             var releases = JArray.Parse(buffer);
             var asset = releases
                 .Where(p => !p["tag_name"].ToString().Contains('-'))
