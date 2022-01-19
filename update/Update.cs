@@ -156,7 +156,7 @@ namespace update
             HttpRequestMessage request = new(HttpMethod.Get, $"https://api.github.com/repos/neo-project/{repo}/releases");
             request.Headers.UserAgent.ParseAdd(typeof(Update).ToString());
             using HttpResponseMessage responseApi = await http.SendAsync(request);
-           var buffer = await responseApi.Content.ReadAsStringAsync();
+            var buffer = await responseApi.Content.ReadAsStringAsync();
             var releases = JArray.Parse(buffer);
             var asset = releases
                 .Where(p => !p["tag_name"].ToString().Contains('-'))
