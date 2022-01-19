@@ -1,6 +1,16 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [3.1.0]
+
+### Changed
+- ([#840](https://github.com/neo-project/neo-node/pull/840/)) Dockerfile from dotnet 6.0 image
+- ([#838](https://github.com/neo-project/neo-node/pull/838/)) .NET 6.0
+- ([#837](https://github.com/neo-project/neo-node/pull/837/)) Add data parameter when deploy and update contract
+
+### Added
+- ([#835](https://github.com/neo-project/neo-node/pull/835/)) NeoFS side chain settings
+
 ## [3.0.3]
 
 ### Changed
@@ -12,8 +22,6 @@ All notable changes to this project will be documented in this file.
 - ([#813](https://github.com/neo-project/neo-node/pull/813/)) Add Copyright
 - ([#817](https://github.com/neo-project/neo-node/pull/817/)) Add delete address command
 - ([#825](https://github.com/neo-project/neo-node/pull/825/)) Add connections config
-
-
 
 ## [3.0.2]
 
