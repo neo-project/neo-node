@@ -59,7 +59,7 @@ namespace Neo.CLI
 
         /// <summary>
         /// Download plugin from github release
-        /// The function of download and install are devided
+        /// The function of download and install are divided
         /// for the consideration of `update` command that
         /// might be added in the future.
         /// </summary>
@@ -102,7 +102,7 @@ namespace Neo.CLI
                 await using Stream stream = await response.Content.ReadAsStreamAsync();
                 Console.WriteLine($"From {url}");
                 var output = new MemoryStream();
-                while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
+                while ((read = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
                 {
                     output.Write(buffer, 0, read);
                     totalRead += read;
@@ -135,7 +135,7 @@ namespace Neo.CLI
 
             using (SHA256 sha256 = SHA256.Create())
             {
-                Console.WriteLine("SHA256: " + sha256.ComputeHash(stream.ToArray()).ToHexString().ToString());
+                Console.WriteLine("SHA256: " + sha256.ComputeHash(stream.ToArray()).ToHexString());
             }
             using ZipArchive zip = new(stream, ZipArchiveMode.Read);
 
@@ -151,7 +151,6 @@ namespace Neo.CLI
                 pluginToInstall.Pop();
                 Console.WriteLine($"Plugin already exist. Try to run `reinstall {pluginName}`");
             }
-            ;
         }
 
         /// <summary>
@@ -188,7 +187,6 @@ namespace Neo.CLI
             catch
             {
                 // Fail to read DEPENDENCY means there is no dependency
-                return;
             }
         }
 
@@ -221,7 +219,7 @@ namespace Neo.CLI
 
             try
             {
-                Directory.Delete(Path.GetDirectoryName(plugin.ConfigFile), false);
+                Directory.Delete(Path.GetDirectoryName(plugin.ConfigFile)!, false);
             }
             catch (IOException)
             {
