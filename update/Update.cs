@@ -19,6 +19,7 @@ using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Neo.ConsoleService;
+using System.Net.Http.Headers;
 
 namespace update
 {
@@ -42,7 +43,9 @@ namespace update
         private static async Task GetLatestVersion(List<string> dllFiles)
         {
             using HttpClient http = new();
-            HttpResponseMessage response = await http.GetAsync($"https://api.github.com/repos/neo-project/neo-modules/releases/latest");
+            HttpRequestMessage request = new(HttpMethod.Get, $"https://api.github.com/repos/neo-project/neo-modules/releases/latest");
+            request.Headers.UserAgent.ParseAdd("Update");
+            var response = await http.SendAsync(request);
             try
             {
                 using var stream = new StreamReader(await response.Content.ReadAsStreamAsync());
@@ -93,7 +96,7 @@ namespace update
                 {
                     zip.ExtractToDirectory(Temp, true);
                     CopyFilesRecursively($"{Temp}/neo-cli", ".");
-                    ConsoleHelper.Info($"{file}\t upgrade successfully.");
+                    ConsoleHelper.Info($"{file}", "\t upgrade successfully.");
                 }
                 catch (IOException)
                 {
@@ -126,7 +129,7 @@ namespace update
                     var temp = Path.GetTempPath();
                     zip.ExtractToDirectory($"{temp}/{pluginName}", true);
                     CopyFilesRecursively($"{temp}/{pluginName}/", $"./");
-                    ConsoleHelper.Info($"{pluginName}\t upgrade successfully.");
+                    ConsoleHelper.Info($"{pluginName}", "\t upgrade successfully.");
                 }
                 catch
                 {
@@ -148,7 +151,7 @@ namespace update
             version = version.TrimStart('v');
             Version versionCore = Version.Parse(version);
             HttpRequestMessage request = new(HttpMethod.Get, $"https://api.github.com/repos/neo-project/{repo}/releases");
-            request.Headers.UserAgent.ParseAdd(typeof(Update).ToString());
+            request.Headers.UserAgent.ParseAdd("Update");
             using HttpResponseMessage responseApi = await http.SendAsync(request);
             var buffer = await responseApi.Content.ReadAsStringAsync();
             var releases = JArray.Parse(buffer);
