@@ -716,7 +716,7 @@ namespace Neo.ConsoleService
                                     else
                                         Console.SetCursorPosition(currentCursor + 1, currentLine);
                                 }
-                                catch (ArgumentOutOfRangeException e)
+                                catch (ArgumentOutOfRangeException)
                                 { }
                                 break;
                         }
