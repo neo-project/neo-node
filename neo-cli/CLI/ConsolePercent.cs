@@ -47,7 +47,7 @@ namespace Neo.CLI
         /// <summary>
         /// Maximum value
         /// </summary>
-        private long MaxValue
+        public long MaxValue
         {
             get => _maxValue;
             init
@@ -66,7 +66,7 @@ namespace Neo.CLI
         /// <summary>
         /// Percent
         /// </summary>
-        private decimal Percent
+        public decimal Percent
         {
             get
             {
@@ -97,7 +97,7 @@ namespace Neo.CLI
         /// <summary>
         /// Invalidate
         /// </summary>
-        private void Invalidate()
+        public void Invalidate()
         {
             var factor = Math.Round((Percent / 100M), 1);
             var percent = Percent.ToString("0.0").PadLeft(5, ' ');

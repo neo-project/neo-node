@@ -29,7 +29,7 @@ namespace Neo.ConsoleService
         private static string Depends => null;
         protected virtual string Prompt => "service";
 
-        protected abstract string ServiceName { get; }
+        public abstract string ServiceName { get; }
 
         private bool ShowPrompt { get; set; } = true;
         public bool ReadingPassword { get; private set; }
@@ -294,7 +294,7 @@ namespace Neo.ConsoleService
             _shutdownAcknowledged.Signal();
         }
 
-        protected string ReadUserInput(string prompt, bool password = false)
+        public string ReadUserInput(string prompt, bool password = false)
         {
             const string t = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
             var sb = new StringBuilder();
@@ -442,7 +442,7 @@ namespace Neo.ConsoleService
         /// <typeparam name="TRet">Return type</typeparam>
         /// <param name="canConsumeAll">Can consume all</param>
         /// <param name="handler">Handler</param>
-        protected void RegisterCommandHandler<T, TRet>(bool canConsumeAll, Func<T, object> handler)
+        public void RegisterCommandHandler<T, TRet>(bool canConsumeAll, Func<T, object> handler)
         {
             _handlers[typeof(TRet)] = (args, _) =>
             {
@@ -457,7 +457,7 @@ namespace Neo.ConsoleService
         /// <typeparam name="T">Base type</typeparam>
         /// <typeparam name="TRet">Return type</typeparam>
         /// <param name="handler">Handler</param>
-        protected void RegisterCommandHandler<T, TRet>(Func<T, object> handler)
+        public void RegisterCommandHandler<T, TRet>(Func<T, object> handler)
         {
             _handlers[typeof(TRet)] = (args, consumeAll) =>
             {
@@ -471,7 +471,7 @@ namespace Neo.ConsoleService
         /// </summary>
         /// <param name="instance">Instance</param>
         /// <param name="name">Name</param>
-        protected void RegisterCommand(object instance, string name = null)
+        public void RegisterCommand(object instance, string name = null)
         {
             if (!string.IsNullOrEmpty(name))
             {

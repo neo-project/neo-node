@@ -46,7 +46,7 @@ namespace Neo.CLI
     {
         public event EventHandler<Wallet> WalletChanged;
 
-        private const long TestModeGas = 20_00000000;
+        public const long TestModeGas = 20_00000000;
 
         private Wallet _currentWallet;
         public LocalNode LocalNode;
@@ -69,12 +69,12 @@ namespace Neo.CLI
         }
 
         protected override string Prompt => "neo";
-        protected override string ServiceName => "NEO-CLI";
+        public override string ServiceName => "NEO-CLI";
 
         /// <summary>
         /// Constructor
         /// </summary>
-        public MainService()
+        public MainService() : base()
         {
             RegisterCommandHandler<string, UInt160>(false, str => StringToAddress(str, NeoSystem.Settings.AddressVersion));
             RegisterCommandHandler<string, UInt256>(false, UInt256.Parse);
@@ -89,7 +89,7 @@ namespace Neo.CLI
             RegisterCommand(this);
         }
 
-        private static UInt160 StringToAddress(string input, byte version)
+        internal static UInt160 StringToAddress(string input, byte version)
         {
             switch (input.ToLowerInvariant())
             {
