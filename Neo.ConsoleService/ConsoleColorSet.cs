@@ -14,8 +14,8 @@ namespace Neo.ConsoleService
 {
     public class ConsoleColorSet
     {
-        public ConsoleColor Foreground;
-        public ConsoleColor Background;
+        private readonly ConsoleColor _foreground;
+        private readonly ConsoleColor _background;
 
         /// <summary>
         /// Create a new color set with the current console colors
@@ -33,10 +33,10 @@ namespace Neo.ConsoleService
         /// </summary>
         /// <param name="foreground">Foreground color</param>
         /// <param name="background">Background color</param>
-        public ConsoleColorSet(ConsoleColor foreground, ConsoleColor background)
+        private ConsoleColorSet(ConsoleColor foreground, ConsoleColor background)
         {
-            Foreground = foreground;
-            Background = background;
+            _foreground = foreground;
+            _background = background;
         }
 
         /// <summary>
@@ -44,8 +44,8 @@ namespace Neo.ConsoleService
         /// </summary>
         public void Apply()
         {
-            Console.ForegroundColor = Foreground;
-            Console.BackgroundColor = Background;
+            Console.ForegroundColor = _foreground;
+            Console.BackgroundColor = _background;
         }
     }
 }

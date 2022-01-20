@@ -29,7 +29,7 @@ namespace Neo.ConsoleService
         /// <summary>
         /// Value
         /// </summary>
-        public string Value { get; protected set; }
+        public string Value { get; protected init; }
 
         /// <summary>
         /// Constructor
@@ -152,7 +152,7 @@ namespace Neo.ConsoleService
 
             // Trim end
 
-            while (args.Count > 0 && args[args.Count - 1].Type == CommandTokenType.Space)
+            while (args.Count > 0 && args[^1].Type == CommandTokenType.Space)
             {
                 args.RemoveAt(args.Count - 1);
             }

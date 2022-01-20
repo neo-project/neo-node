@@ -26,7 +26,7 @@ namespace Neo.ConsoleService
 {
     public abstract class ConsoleServiceBase
     {
-        protected virtual string Depends => null;
+        private static string Depends => null;
         protected virtual string Prompt => "service";
 
         protected abstract string ServiceName { get; }
@@ -155,7 +155,7 @@ namespace Neo.ConsoleService
         /// Process "help" command
         /// </summary>
         [ConsoleCommand("help", Category = "Base Commands")]
-        private void OnHelpCommand(string key)
+        protected void OnHelpCommand(string key)
         {
             var withHelp = new List<ConsoleCommandMethod>();
 
