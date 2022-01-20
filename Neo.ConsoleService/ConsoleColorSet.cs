@@ -14,8 +14,8 @@ namespace Neo.ConsoleService
 {
     public class ConsoleColorSet
     {
-        private readonly ConsoleColor _foreground;
-        private readonly ConsoleColor _background;
+        public ConsoleColor _foreground;
+        public ConsoleColor _background;
 
         /// <summary>
         /// Create a new color set with the current console colors
