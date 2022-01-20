@@ -8,9 +8,20 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Net;
+using System.Numerics;
+using System.Reflection;
+using System.Security.Cryptography;
+using System.Text.RegularExpressions;
+using System.Threading;
 using Akka.Actor;
 using Neo.ConsoleService;
-using Neo.Cryptography.ECC;
 using Neo.IO;
 using Neo.IO.Json;
 using Neo.Ledger;
@@ -25,17 +36,9 @@ using Neo.VM.Types;
 using Neo.Wallets;
 using Neo.Wallets.NEP6;
 using Neo.Wallets.SQLite;
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.IO.Compression;
-using System.Linq;
-using System.Net;
-using System.Numerics;
-using System.Reflection;
-using System.Text.RegularExpressions;
-using System.Threading;
+using Array = System.Array;
+using ECCurve = Neo.Cryptography.ECC.ECCurve;
+using ECPoint = Neo.Cryptography.ECC.ECPoint;
 
 namespace Neo.CLI
 {
@@ -43,59 +46,50 @@ namespace Neo.CLI
     {
         public event EventHandler<Wallet> WalletChanged;
 
-        public const long TestModeGas = 20_00000000;
+        private const long TestModeGas = 20_00000000;
 
-        private Wallet currentWallet;
+        private Wallet _currentWallet;
         public LocalNode LocalNode;
 
         public Wallet CurrentWallet
         {
-            get
-            {
-                return currentWallet;
-            }
+            get => _currentWallet;
             private set
             {
-                currentWallet = value;
+                _currentWallet = value;
                 WalletChanged?.Invoke(this, value);
             }
         }
 
-        private NeoSystem neoSystem;
+        private NeoSystem _neoSystem;
         public NeoSystem NeoSystem
         {
-            get
-            {
-                return neoSystem;
-            }
-            private set
-            {
-                neoSystem = value;
-            }
+            get => _neoSystem;
+            private set => _neoSystem = value;
         }
 
         protected override string Prompt => "neo";
-        public override string ServiceName => "NEO-CLI";
+        protected override string ServiceName => "NEO-CLI";
 
         /// <summary>
         /// Constructor
         /// </summary>
-        public MainService() : base()
+        public MainService()
         {
-            RegisterCommandHander<string, UInt160>(false, (str) => StringToAddress(str, NeoSystem.Settings.AddressVersion));
-            RegisterCommandHander<string, UInt256>(false, (str) => UInt256.Parse(str));
-            RegisterCommandHander<string[], UInt256[]>((str) => str.Select(u => UInt256.Parse(u.Trim())).ToArray());
-            RegisterCommandHander<string[], UInt160[]>((arr) => arr.Select(str => StringToAddress(str, NeoSystem.Settings.AddressVersion)).ToArray());
-            RegisterCommandHander<string, ECPoint>((str) => ECPoint.Parse(str.Trim(), ECCurve.Secp256r1));
-            RegisterCommandHander<string[], ECPoint[]>((str) => str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray());
-            RegisterCommandHander<string, JObject>((str) => JObject.Parse(str));
-            RegisterCommandHander<string, decimal>((str) => decimal.Parse(str, CultureInfo.InvariantCulture));
-            RegisterCommandHander<JObject, JArray>((obj) => (JArray)obj);
+            RegisterCommandHandler<string, UInt160>(false, str => StringToAddress(str, NeoSystem.Settings.AddressVersion));
+            RegisterCommandHandler<string, UInt256>(false, UInt256.Parse);
+            RegisterCommandHandler<string[], UInt256[]>(str => str.Select(u => UInt256.Parse(u.Trim())).ToArray());
+            RegisterCommandHandler<string[], UInt160[]>(arr => arr.Select(str => StringToAddress(str, NeoSystem.Settings.AddressVersion)).ToArray());
+            RegisterCommandHandler<string, ECPoint>(str => ECPoint.Parse(str.Trim(), ECCurve.Secp256r1));
+            RegisterCommandHandler<string[], ECPoint[]>(str => str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray());
+            RegisterCommandHandler<string, JObject>(str => JObject.Parse(str));
+            RegisterCommandHandler<string, decimal>(str => decimal.Parse(str, CultureInfo.InvariantCulture));
+            RegisterCommandHandler<JObject, JArray>(obj => (JArray)obj);
 
             RegisterCommand(this);
         }
 
-        internal static UInt160 StringToAddress(string input, byte version)
+        private static UInt160 StringToAddress(string input, byte version)
         {
             switch (input.ToLowerInvariant())
             {
@@ -105,14 +99,9 @@ namespace Neo.CLI
 
             // Try to parse as UInt160
 
-            if (UInt160.TryParse(input, out var addr))
-            {
-                return addr;
-            }
+            return UInt160.TryParse(input, out var addr) ? addr : input.ToScriptHash(version);
 
             // Accept wallet format
-
-            return input.ToScriptHash(version);
         }
 
         Wallet IWalletProvider.GetWallet()
@@ -150,7 +139,7 @@ namespace Neo.CLI
             }
             if (createDefaultAccount)
             {
-                WalletAccount account = CurrentWallet.CreateAccount();
+                var account = CurrentWallet.CreateAccount();
                 ConsoleHelper.Info("   Address: ", account.Address);
                 ConsoleHelper.Info("    Pubkey: ", account.GetKey().PublicKey.EncodePoint(true).ToHexString());
                 ConsoleHelper.Info("ScriptHash: ", $"{account.ScriptHash}");
@@ -159,26 +148,24 @@ namespace Neo.CLI
                 wallet.Save();
         }
 
-        private IEnumerable<Block> GetBlocks(Stream stream, bool read_start = false)
+        private IEnumerable<Block> GetBlocks(Stream stream, bool readStart = false)
         {
             using BinaryReader r = new BinaryReader(stream);
-            uint start = read_start ? r.ReadUInt32() : 0;
-            uint count = r.ReadUInt32();
-            uint end = start + count - 1;
-            uint currentHeight = NativeContract.Ledger.CurrentIndex(NeoSystem.StoreView);
+            var start = readStart ? r.ReadUInt32() : 0;
+            var count = r.ReadUInt32();
+            var end = start + count - 1;
+            var currentHeight = NativeContract.Ledger.CurrentIndex(NeoSystem.StoreView);
             if (end <= currentHeight) yield break;
-            for (uint height = start; height <= end; height++)
+            for (var height = start; height <= end; height++)
             {
                 var size = r.ReadInt32();
                 if (size > Message.PayloadMaxSize)
                     throw new ArgumentException($"Block {height} exceeds the maximum allowed size");
 
-                byte[] array = r.ReadBytes(size);
-                if (height > currentHeight)
-                {
-                    Block block = array.AsSerializable<Block>();
-                    yield return block;
-                }
+                var array = r.ReadBytes(size);
+                if (height <= currentHeight) continue;
+                var block = array.AsSerializable<Block>();
+                yield return block;
             }
         }
 
@@ -229,7 +216,7 @@ namespace Neo.CLI
             return true;
         }
 
-        private byte[] LoadDeploymentScript(string nefFilePath, string manifestFilePath, JObject data, out NefFile nef, out ContractManifest manifest)
+        private static byte[] LoadDeploymentScript(string nefFilePath, string manifestFilePath, JObject data, out NefFile nef, out ContractManifest manifest)
         {
             if (string.IsNullOrEmpty(manifestFilePath))
             {
@@ -394,9 +381,9 @@ namespace Neo.CLI
                     }
                 case ".json":
                     {
-                        NEP6Wallet nep6wallet = new NEP6Wallet(path, NeoSystem.Settings);
-                        nep6wallet.Unlock(password);
-                        CurrentWallet = nep6wallet;
+                        var nep6Wallet = new NEP6Wallet(path, NeoSystem.Settings);
+                        nep6Wallet.Unlock(password);
+                        CurrentWallet = nep6Wallet;
                         break;
                     }
                 default: throw new NotSupportedException();
@@ -406,9 +393,9 @@ namespace Neo.CLI
         public async void Start(string[] args)
         {
             if (NeoSystem != null) return;
-            bool verifyImport = true;
-            for (int i = 0; i < args.Length; i++)
-                switch (args[i])
+            var verifyImport = true;
+            foreach (var t in args)
+                switch (t)
                 {
                     case "/noverify":
                     case "--noverify":
@@ -460,36 +447,34 @@ namespace Neo.CLI
                 MaxConnectionsPerAddress = Settings.Default.P2P.MaxConnectionsPerAddress
             });
 
-            if (Settings.Default.UnlockWallet.IsActive)
+            if (!Settings.Default.UnlockWallet.IsActive) return;
+            try
             {
-                try
-                {
-                    OpenWallet(Settings.Default.UnlockWallet.Path, Settings.Default.UnlockWallet.Password);
-                }
-                catch (FileNotFoundException)
-                {
-                    ConsoleHelper.Warning($"wallet file \"{Settings.Default.UnlockWallet.Path}\" not found.");
-                }
-                catch (System.Security.Cryptography.CryptographicException)
-                {
-                    ConsoleHelper.Error($"Failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
-                }
-                catch (Exception ex)
-                {
-                    ConsoleHelper.Error(ex.GetBaseException().Message);
-                }
+                OpenWallet(Settings.Default.UnlockWallet.Path, Settings.Default.UnlockWallet.Password);
+            }
+            catch (FileNotFoundException)
+            {
+                ConsoleHelper.Warning($"wallet file \"{Settings.Default.UnlockWallet.Path}\" not found.");
+            }
+            catch (CryptographicException)
+            {
+                ConsoleHelper.Error($"Failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
+            }
+            catch (Exception ex)
+            {
+                ConsoleHelper.Error(ex.GetBaseException().Message);
             }
         }
 
         public void Stop()
         {
-            Interlocked.Exchange(ref neoSystem, null)?.Dispose();
+            Interlocked.Exchange(ref _neoSystem, null)?.Dispose();
         }
 
         private void WriteBlocks(uint start, uint count, string path, bool writeStart)
         {
-            uint end = start + count - 1;
-            using FileStream fs = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.WriteThrough);
+            var end = start + count - 1;
+            using var fs = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.WriteThrough);
             if (fs.Length > 0)
             {
                 byte[] buffer = new byte[sizeof(uint)];
@@ -519,16 +504,14 @@ namespace Neo.CLI
             fs.Seek(0, SeekOrigin.End);
             Console.WriteLine("Export block from " + start + " to " + end);
 
-            using (var percent = new ConsolePercent(start, end))
+            using var percent = new ConsolePercent(start, end);
+            for (uint i = start; i <= end; i++)
             {
-                for (uint i = start; i <= end; i++)
-                {
-                    Block block = NativeContract.Ledger.GetBlock(NeoSystem.StoreView, i);
-                    byte[] array = block.ToArray();
-                    fs.Write(BitConverter.GetBytes(array.Length), 0, sizeof(int));
-                    fs.Write(array, 0, array.Length);
-                    percent.Value = i;
-                }
+                Block block = NativeContract.Ledger.GetBlock(NeoSystem.StoreView, i);
+                byte[] array = block.ToArray();
+                fs.Write(BitConverter.GetBytes(array.Length), 0, sizeof(int));
+                fs.Write(array, 0, array.Length);
+                percent.Value = i;
             }
         }
 
@@ -548,14 +531,14 @@ namespace Neo.CLI
         /// <param name="gas">Max fee for running the script</param>
         private void SendTransaction(byte[] script, UInt160 account = null, long gas = TestModeGas)
         {
-            Signer[] signers = System.Array.Empty<Signer>();
+            Signer[] signers = Array.Empty<Signer>();
             var snapshot = NeoSystem.StoreView;
 
             if (account != null)
             {
                 signers = CurrentWallet.GetAccounts()
                 .Where(p => !p.Lock && !p.WatchOnly && p.ScriptHash == account && NativeContract.GAS.BalanceOf(snapshot, p.ScriptHash).Sign > 0)
-                .Select(p => new Signer() { Account = p.ScriptHash, Scopes = WitnessScope.CalledByEntry })
+                .Select(p => new Signer { Account = p.ScriptHash, Scopes = WitnessScope.CalledByEntry })
                 .ToArray();
             }
 
@@ -580,10 +563,7 @@ namespace Neo.CLI
             catch (InvalidOperationException e)
             {
                 ConsoleHelper.Error(GetExceptionMessage(e));
-                return;
             }
-
-            return;
         }
 
         /// <summary>
@@ -592,21 +572,18 @@ namespace Neo.CLI
         /// <param name="scriptHash">Script hash</param>
         /// <param name="operation">Operation</param>
         /// <param name="result">Result</param>
-        /// <param name="verificable">Transaction</param>
+        /// <param name="verifiable">Transaction</param>
         /// <param name="contractParameters">Contract parameters</param>
         /// <param name="showStack">Show result stack if it is true</param>
         /// <param name="gas">Max fee for running the script</param>
         /// <returns>Return true if it was successful</returns>
-        private bool OnInvokeWithResult(UInt160 scriptHash, string operation, out StackItem result, IVerifiable verificable = null, JArray contractParameters = null, bool showStack = true, long gas = TestModeGas)
+        private bool OnInvokeWithResult(UInt160 scriptHash, string operation, out StackItem result, IVerifiable verifiable = null, JArray contractParameters = null, bool showStack = true, long gas = TestModeGas)
         {
             List<ContractParameter> parameters = new List<ContractParameter>();
 
             if (contractParameters != null)
             {
-                foreach (var contractParameter in contractParameters)
-                {
-                    parameters.Add(ContractParameter.FromJson(contractParameter));
-                }
+                parameters.AddRange(contractParameters.Select(ContractParameter.FromJson));
             }
 
             ContractState contract = NativeContract.ContractManagement.GetContract(NeoSystem.StoreView, scriptHash);
@@ -616,14 +593,12 @@ namespace Neo.CLI
                 result = StackItem.Null;
                 return false;
             }
-            else
+
+            if (contract.Manifest.Abi.GetMethod(operation, parameters.Count) == null)
             {
-                if (contract.Manifest.Abi.GetMethod(operation, parameters.Count) == null)
-                {
-                    ConsoleHelper.Error("This method does not not exist in this contract.");
-                    result = StackItem.Null;
-                    return false;
-                }
+                ConsoleHelper.Error("This method does not not exist in this contract.");
+                result = StackItem.Null;
+                return false;
             }
 
             byte[] script;
@@ -635,12 +610,12 @@ namespace Neo.CLI
                 ConsoleHelper.Info("Invoking script with: ", $"'{script.ToBase64String()}'");
             }
 
-            if (verificable is Transaction tx)
+            if (verifiable is Transaction tx)
             {
                 tx.Script = script;
             }
 
-            using ApplicationEngine engine = ApplicationEngine.Run(script, NeoSystem.StoreView, container: verificable, settings: NeoSystem.Settings, gas: gas);
+            using ApplicationEngine engine = ApplicationEngine.Run(script, NeoSystem.StoreView, container: verifiable, settings: NeoSystem.Settings, gas: gas);
             PrintExecutionOutput(engine, showStack);
             result = engine.State == VMState.FAULT ? null : engine.ResultStack.Peek();
             return engine.State != VMState.FAULT;
@@ -658,7 +633,7 @@ namespace Neo.CLI
                 ConsoleHelper.Error(GetExceptionMessage(engine.FaultException));
         }
 
-        static string GetExceptionMessage(Exception exception)
+        private static string GetExceptionMessage(Exception exception)
         {
             if (exception == null) return "Engine faulted.";
 

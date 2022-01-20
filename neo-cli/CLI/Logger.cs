@@ -27,26 +27,31 @@ namespace Neo.CLI
 
         public override string Name => "SystemLog";
         public override string Description => "Prints consensus log and is a built-in plugin which cannot be uninstalled";
-        public override string ConfigFile => Combine(GetDirectoryName(Path), "config.json");
+        public override string ConfigFile => Combine(GetDirectoryName(Path) ?? throw new InvalidOperationException(), "config.json");
         public override string Path => GetType().Assembly.Location;
 
         private static void GetErrorLogs(StringBuilder sb, Exception ex)
         {
-            sb.AppendLine(ex.GetType().ToString());
-            sb.AppendLine(ex.Message);
-            sb.AppendLine(ex.StackTrace);
-            if (ex is AggregateException ex2)
+            while (true)
             {
-                foreach (Exception inner in ex2.InnerExceptions)
+                sb.AppendLine(ex.GetType().ToString());
+                sb.AppendLine(ex.Message);
+                sb.AppendLine(ex.StackTrace);
+                if (ex is AggregateException ex2)
+                {
+                    foreach (var inner in ex2.InnerExceptions)
+                    {
+                        sb.AppendLine();
+                        GetErrorLogs(sb, inner);
+                    }
+                }
+                else if (ex.InnerException != null)
                 {
                     sb.AppendLine();
-                    GetErrorLogs(sb, inner);
+                    ex = ex.InnerException;
+                    continue;
                 }
-            }
-            else if (ex.InnerException != null)
-            {
-                sb.AppendLine();
-                GetErrorLogs(sb, ex.InnerException);
+                break;
             }
         }
 
@@ -78,28 +83,28 @@ namespace Neo.CLI
                         case LogLevel.Fatal: FatalColor.Apply(); break;
                         case LogLevel.Info: InfoColor.Apply(); break;
                         case LogLevel.Warning: WarningColor.Apply(); break;
+                        default:
+                            throw new ArgumentOutOfRangeException(nameof(level), level, null);
                     }
 
                     Console.WriteLine(log);
                     currentColor.Apply();
                 }
 
-                if (!string.IsNullOrEmpty(Settings.Default.Logger.Path))
+                if (string.IsNullOrEmpty(Settings.Default.Logger.Path)) return;
+                var sb = new StringBuilder(source);
+                foreach (var c in GetInvalidFileNameChars())
+                    sb.Replace(c, '-');
+                var path = Combine(Settings.Default.Logger.Path, sb.ToString());
+                Directory.CreateDirectory(path);
+                path = Combine(path, $"{now:yyyy-MM-dd}.log");
+                try
                 {
-                    StringBuilder sb = new StringBuilder(source);
-                    foreach (char c in GetInvalidFileNameChars())
-                        sb.Replace(c, '-');
-                    var path = Combine(Settings.Default.Logger.Path, sb.ToString());
-                    Directory.CreateDirectory(path);
-                    path = Combine(path, $"{now:yyyy-MM-dd}.log");
-                    try
-                    {
-                        File.AppendAllLines(path, new[] { $"[{level}]{log}" });
-                    }
-                    catch (IOException)
-                    {
-                        Console.WriteLine("Error writing the log file: " + path);
-                    }
+                    File.AppendAllLines(path, new[] { $"[{level}]{log}" });
+                }
+                catch (IOException)
+                {
+                    Console.WriteLine("Error writing the log file: " + path);
                 }
             }
         }

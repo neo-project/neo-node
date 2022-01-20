@@ -71,7 +71,7 @@ namespace Neo.CLI
                     NeoSystem.LocalNode.Tell(Message.Create(MessageCommand.Ping, PingPayload.Create(NativeContract.Ledger.CurrentIndex(NeoSystem.StoreView))));
                     await Task.Delay(NeoSystem.Settings.TimePerBlock, cancel.Token);
                 }
-            });
+            }, cancel.Token);
             Task task = Task.Run(async () =>
             {
                 int maxLines = 0;
@@ -107,10 +107,15 @@ namespace Neo.CLI
 
                     await Task.Delay(500, cancel.Token);
                 }
-            });
+            }, cancel.Token);
             ReadLine();
             cancel.Cancel();
-            try { Task.WaitAll(task, broadcast); } catch { }
+            try { Task.WaitAll(task, broadcast); }
+            catch
+            {
+                // ignored
+            }
+
             Console.WriteLine();
             Console.CursorVisible = true;
         }

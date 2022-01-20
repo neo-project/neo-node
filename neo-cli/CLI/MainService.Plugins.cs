@@ -1,10 +1,10 @@
 // Copyright (C) 2016-2021 The Neo Project.
-// 
-// The neo-cli is free software distributed under the MIT software 
+//
+// The neo-cli is free software distributed under the MIT software
 // license, see the accompanying file LICENSE in the main directory of
-// the project or http://www.opensource.org/licenses/mit-license.php 
+// the project or http://www.opensource.org/licenses/mit-license.php
 // for more details.
-// 
+//
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
@@ -35,11 +35,11 @@ namespace Neo.CLI
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 response.Dispose();
-                Version version_core = typeof(Plugin).Assembly.GetName().Version;
+                Version versionCore = typeof(Plugin).Assembly.GetName().Version;
                 HttpRequestMessage request = new(HttpMethod.Get, "https://api.github.com/repos/neo-project/neo-modules/releases");
                 request.Headers.UserAgent.ParseAdd($"{GetType().Assembly.GetName().Name}/{GetType().Assembly.GetVersion()}");
-                using HttpResponseMessage response_api = await http.SendAsync(request);
-                byte[] buffer = await response_api.Content.ReadAsByteArrayAsync();
+                using HttpResponseMessage responseApi = await http.SendAsync(request);
+                byte[] buffer = await responseApi.Content.ReadAsByteArrayAsync();
                 JObject releases = JObject.Parse(buffer);
                 JObject asset = releases.GetArray()
                     .Where(p => !p["tag_name"].GetString().Contains('-'))
@@ -49,14 +49,14 @@ namespace Neo.CLI
                         Assets = p["assets"].GetArray()
                     })
                     .OrderByDescending(p => p.Version)
-                    .First(p => p.Version <= version_core).Assets
+                    .First(p => p.Version <= versionCore).Assets
                     .FirstOrDefault(p => p["name"].GetString() == $"{pluginName}.zip");
                 if (asset is null) throw new Exception("Plugin doesn't exist.");
                 response = await http.GetAsync(asset["browser_download_url"].GetString());
             }
             using (response)
             {
-                using Stream stream = await response.Content.ReadAsStreamAsync();
+                await using Stream stream = await response.Content.ReadAsStreamAsync();
                 using ZipArchive zip = new(stream, ZipArchiveMode.Read);
                 try
                 {
@@ -110,9 +110,8 @@ namespace Neo.CLI
             if (Plugin.Plugins.Count > 0)
             {
                 Console.WriteLine("Loaded plugins:");
-                foreach (Plugin plugin in Plugin.Plugins)
+                foreach (var plugin in Plugin.Plugins.Where(plugin => plugin is not Logger))
                 {
-                    if (plugin is Logger) continue;
                     ConsoleHelper.Info($"\t{plugin.Name,-20}", plugin.Description);
                 }
             }

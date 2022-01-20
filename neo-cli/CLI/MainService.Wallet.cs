@@ -90,14 +90,14 @@ namespace Neo.CLI
                 ConsoleHelper.Info("Cancelled");
                 return;
             }
-            string path_new = Path.ChangeExtension(path, ".json");
-            if (File.Exists(path_new))
+            string pathNew = Path.ChangeExtension(path, ".json");
+            if (File.Exists(pathNew))
             {
-                ConsoleHelper.Warning($"File '{path_new}' already exists");
+                ConsoleHelper.Warning($"File '{pathNew}' already exists");
                 return;
             }
-            NEP6Wallet.Migrate(path_new, path, password, NeoSystem.Settings).Save();
-            Console.WriteLine($"Wallet file upgrade complete. New wallet file has been auto-saved at: {path_new}");
+            NEP6Wallet.Migrate(pathNew, path, password, NeoSystem.Settings).Save();
+            Console.WriteLine($"Wallet file upgrade complete. New wallet file has been auto-saved at: {pathNew}");
         }
 
         /// <summary>
@@ -120,7 +120,7 @@ namespace Neo.CLI
             List<string> addresses = new List<string>();
             using (var percent = new ConsolePercent(0, count))
             {
-                Parallel.For(0, count, (i) =>
+                Parallel.For(0, count, _ =>
                 {
                     WalletAccount account = CurrentWallet.CreateAccount();
                     lock (addresses)
@@ -147,20 +147,20 @@ namespace Neo.CLI
         {
             if (NoWallet()) return;
 
-            if (ReadUserInput($"Warning: Irrevocable operation!\nAre you sure to delete account {address.ToAddress(NeoSystem.Settings.AddressVersion)}? (no|yes)").IsYes())
+            if (!ReadUserInput(
+                        $"Warning: Irrevocable operation!\nAre you sure to delete account {address.ToAddress(NeoSystem.Settings.AddressVersion)}? (no|yes)")
+                    .IsYes()) return;
+            if (CurrentWallet.DeleteAccount(address))
             {
-                if (CurrentWallet.DeleteAccount(address))
+                if (CurrentWallet is NEP6Wallet wallet)
                 {
-                    if (CurrentWallet is NEP6Wallet wallet)
-                    {
-                        wallet.Save();
-                    }
-                    ConsoleHelper.Info($"Address {address} deleted.");
+                    wallet.Save();
                 }
-                else
-                {
-                    ConsoleHelper.Warning($"Address {address} doesn't exist.");
-                }
+                ConsoleHelper.Info($"Address {address} deleted.");
+            }
+            else
+            {
+                ConsoleHelper.Warning($"Address {address} doesn't exist.");
             }
         }
 
@@ -252,7 +252,7 @@ namespace Neo.CLI
             Contract multiSignContract = Contract.CreateMultiSigContract(m, publicKeys);
             KeyPair keyPair = CurrentWallet.GetAccounts().FirstOrDefault(p => p.HasKey && publicKeys.Contains(p.GetKey().PublicKey))?.GetKey();
 
-            WalletAccount account = CurrentWallet.CreateAccount(multiSignContract, keyPair);
+            CurrentWallet.CreateAccount(multiSignContract, keyPair);
             if (CurrentWallet is NEP6Wallet wallet)
                 wallet.Save();
 
@@ -291,18 +291,13 @@ namespace Neo.CLI
                 }
 
                 string[] lines = File.ReadAllLines(fileInfo.FullName).Where(u => !string.IsNullOrEmpty(u)).ToArray();
-                using (var percent = new ConsolePercent(0, lines.Length))
+                using var percent = new ConsolePercent(0, lines.Length);
+                foreach (var t in lines)
                 {
-                    for (int i = 0; i < lines.Length; i++)
-                    {
-                        if (lines[i].Length == 64)
-                            prikey = lines[i].HexToBytes();
-                        else
-                            prikey = Wallet.GetPrivateKeyFromWIF(lines[i]);
-                        CurrentWallet.CreateAccount(prikey);
-                        Array.Clear(prikey, 0, prikey.Length);
-                        percent.Value++;
-                    }
+                    prikey = t.Length == 64 ? t.HexToBytes() : Wallet.GetPrivateKeyFromWIF(t);
+                    CurrentWallet.CreateAccount(prikey);
+                    Array.Clear(prikey, 0, prikey.Length);
+                    percent.Value++;
                 }
             }
             else
@@ -348,14 +343,12 @@ namespace Neo.CLI
                 }
 
                 string[] lines = File.ReadAllLines(fileInfo.FullName).Where(u => !string.IsNullOrEmpty(u)).ToArray();
-                using (var percent = new ConsolePercent(0, lines.Length))
+                using var percent = new ConsolePercent(0, lines.Length);
+                foreach (var t in lines)
                 {
-                    for (int i = 0; i < lines.Length; i++)
-                    {
-                        address = StringToAddress(lines[i], NeoSystem.Settings.AddressVersion);
-                        CurrentWallet.CreateAccount(address);
-                        percent.Value++;
-                    }
+                    address = StringToAddress(t, NeoSystem.Settings.AddressVersion);
+                    CurrentWallet.CreateAccount(address);
+                    percent.Value++;
                 }
             }
             else
@@ -466,7 +459,7 @@ namespace Neo.CLI
             {
                 var snapshot = NeoSystem.StoreView;
                 ContractParametersContext context = ContractParametersContext.Parse(jsonObjectToSign.ToString(), snapshot);
-                if (context.Network != neoSystem.Settings.Network)
+                if (context.Network != _neoSystem.Settings.Network)
                 {
                     ConsoleHelper.Warning("Network mismatch.");
                     return;
@@ -568,8 +561,7 @@ namespace Neo.CLI
             BigInteger gas = BigInteger.Zero;
             var snapshot = NeoSystem.StoreView;
             uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
-            foreach (UInt160 account in CurrentWallet.GetAccounts().Select(p => p.ScriptHash))
-                gas += NativeContract.NEO.UnclaimedGas(snapshot, account, height);
+            gas = CurrentWallet.GetAccounts().Select(p => p.ScriptHash).Aggregate(gas, (current, account) => current + NativeContract.NEO.UnclaimedGas(snapshot, account, height));
             ConsoleHelper.Info("Unclaimed gas: ", new BigDecimal(gas, NativeContract.GAS.Decimals).ToString());
         }
 
@@ -636,7 +628,7 @@ namespace Neo.CLI
             ContractParametersContext context;
             try
             {
-                context = new ContractParametersContext(snapshot, tx, neoSystem.Settings.Network);
+                context = new ContractParametersContext(snapshot, tx, _neoSystem.Settings.Network);
             }
             catch (InvalidOperationException e)
             {

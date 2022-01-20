@@ -49,11 +49,9 @@ namespace Neo.CLI
                 var parseMethod = pair.Value;
                 var result = parseMethod(value);
 
-                if (result != null)
-                {
-                    Console.WriteLine($"{pair.Key,-30}\t{result}");
-                    any = true;
-                }
+                if (result == null) continue;
+                Console.WriteLine($"{pair.Key,-30}\t{result}");
+                any = true;
             }
 
             if (!any)
@@ -81,12 +79,7 @@ namespace Neo.CLI
                 var bytes = clearHexString.HexToBytes();
                 var utf8String = Utility.StrictUTF8.GetString(bytes);
 
-                if (!IsPrintable(utf8String))
-                {
-                    return null;
-                }
-
-                return utf8String;
+                return !IsPrintable(utf8String) ? null : utf8String;
             }
             catch
             {
@@ -175,7 +168,7 @@ namespace Neo.CLI
         /// Returns null when it is not possible to parse the string value to a hexadecimal
         /// value; otherwise returns the hexadecimal value that represents the converted string
         /// </returns>
-        private string StringToHex(string strParam)
+        private static string StringToHex(string strParam)
         {
             try
             {
@@ -201,7 +194,7 @@ namespace Neo.CLI
         /// <exception cref="ArgumentException">
         /// Throw .
         /// </exception>
-        private string StringToBase64(string strParam)
+        private static string StringToBase64(string strParam)
         {
             try
             {
@@ -226,7 +219,7 @@ namespace Neo.CLI
         /// it is not possible to parse the big integer value to hexadecimal; otherwise,
         /// returns the string that represents the converted hexadecimal value
         /// </returns>
-        private string NumberToHex(string strParam)
+        private static string NumberToHex(string strParam)
         {
             try
             {
@@ -253,7 +246,7 @@ namespace Neo.CLI
         /// it is not possible to parse the big integer value to Base64 value; otherwise,
         /// returns the string that represents the converted Base64 value
         /// </returns>
-        private string NumberToBase64(string strParam)
+        private static string NumberToBase64(string strParam)
         {
             try
             {
@@ -304,7 +297,7 @@ namespace Neo.CLI
         /// String that represents the address to be converted
         /// </param>
         /// <returns>
-        /// Returns null when the string does not represent an address or when it is 
+        /// Returns null when the string does not represent an address or when it is
         /// not possible to parse the address to Base64 value; otherwise returns
         /// the string that represents the converted Base64 value.
         /// </returns>
@@ -416,14 +409,14 @@ namespace Neo.CLI
             try
             {
                 byte[] result = Convert.FromBase64String(bytearray);
-                string utf8string = Utility.StrictUTF8.GetString(result);
+                string utf8String = Utility.StrictUTF8.GetString(result);
 
-                if (!IsPrintable(utf8string))
+                if (!IsPrintable(utf8String))
                 {
                     return null;
                 }
 
-                return utf8string;
+                return utf8String;
             }
             catch
             {
