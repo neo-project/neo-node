@@ -92,12 +92,13 @@ internal class Logger : Plugin, ILogPlugin
                     case LogLevel.Warning: logcolor = WarningColor; loglevel = "WARN"; break;
                     default: logcolor = InfoColor; loglevel = "INFO"; break;
                 }
+
                 logcolor.Apply();
                 Console.Write(loglevel + " ");
                 currentColor.Apply();
                 Console.Write($"{log} {messages[0]}");
 
-                for (var i = 0; i < 30 - messages[0].Length; i++) Console.Write(' ');
+                for (var i = 0; i < 34 - messages[0].Length-loglevel.Length; i++) Console.Write(' ');
                 for (int i = 1; i < messages.Length; i++)
                 {
                     if (i % 2 == 0)
