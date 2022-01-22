@@ -68,19 +68,36 @@ internal class Logger : Plugin, ILogPlugin
         {
             DateTime now = DateTime.Now;
             var log = $"[{now.TimeOfDay:hh\\:mm\\:ss\\.fff}]";
-
             if (Settings.Default.Logger.ConsoleOutput)
             {
-                WarningColor.Apply();
-                Console.Write(log + " ");
-                InfoColor.Apply();
-                var currentColor = new ConsoleColorSet();
+                var currentColor = InfoColor;
                 var messages = message is not string msg ? new[] { $"{ message}" } : Parse(msg);
-                Console.Write($"{messages[0]}");
+                ConsoleColorSet logcolor;
+                string loglevel;
+                switch (level)
+                {
+                    case LogLevel.Debug:
+                        {
+#if RELEASE
+                            return;
+#endif
+                            logcolor = DebugColor;
+                            loglevel = "DEBUG";
+                            break;
+                        }
+
+                    case LogLevel.Error: logcolor = ErrorColor; loglevel = "ERROR"; break;
+                    case LogLevel.Fatal: logcolor = FatalColor; loglevel = "FATAL"; break;
+                    case LogLevel.Info: logcolor = KeyColor; loglevel = "INFO"; break;
+                    case LogLevel.Warning: logcolor = WarningColor; loglevel = "WARN"; break;
+                    default: logcolor = InfoColor; loglevel = "INFO"; break;
+                }
+                logcolor.Apply();
+                Console.Write(loglevel + " ");
+                currentColor.Apply();
+                Console.Write($"{log} {messages[0]}");
 
                 for (var i = 0; i < 30 - messages[0].Length; i++) Console.Write(' ');
-
-
                 for (int i = 1; i < messages.Length; i++)
                 {
                     if (i % 2 == 0)
@@ -90,14 +107,7 @@ internal class Logger : Plugin, ILogPlugin
                     }
                     else
                     {
-                        switch (level)
-                        {
-                            case LogLevel.Debug: DebugColor.Apply(); break;
-                            case LogLevel.Error: ErrorColor.Apply(); break;
-                            case LogLevel.Fatal: FatalColor.Apply(); break;
-                            case LogLevel.Info: KeyColor.Apply(); break;
-                            case LogLevel.Warning: WarningColor.Apply(); break;
-                        }
+                        logcolor.Apply();
                         Console.Write($" {messages[i]}");
                     }
                 }
