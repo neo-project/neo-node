@@ -11,97 +11,141 @@
 using Neo.ConsoleService;
 using Neo.Plugins;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using static System.IO.Path;
 
-namespace Neo.CLI
+namespace Neo.CLI;
+
+internal class Logger : Plugin, ILogPlugin
 {
-    internal class Logger : Plugin, ILogPlugin
+    private static readonly ConsoleColorSet DebugColor = new ConsoleColorSet(ConsoleColor.Cyan);
+    private static readonly ConsoleColorSet InfoColor = new ConsoleColorSet(ConsoleColor.White);
+    private static readonly ConsoleColorSet WarningColor = new ConsoleColorSet(ConsoleColor.Yellow);
+    private static readonly ConsoleColorSet ErrorColor = new ConsoleColorSet(ConsoleColor.Red);
+    private static readonly ConsoleColorSet FatalColor = new ConsoleColorSet(ConsoleColor.Red);
+    private static readonly ConsoleColorSet KeyColor = new ConsoleColorSet(ConsoleColor.DarkGreen);
+    public override string Name => "SystemLog";
+    public override string Description => "Prints consensus log and is a built-in plugin which cannot be uninstalled";
+    public override string ConfigFile => Combine(GetDirectoryName(Path), "config.json");
+    public override string Path => GetType().Assembly.Location;
+
+    private static void GetErrorLogs(StringBuilder sb, Exception ex)
     {
-        private static readonly ConsoleColorSet DebugColor = new ConsoleColorSet(ConsoleColor.Cyan);
-        private static readonly ConsoleColorSet InfoColor = new ConsoleColorSet(ConsoleColor.White);
-        private static readonly ConsoleColorSet WarningColor = new ConsoleColorSet(ConsoleColor.Yellow);
-        private static readonly ConsoleColorSet ErrorColor = new ConsoleColorSet(ConsoleColor.Red);
-        private static readonly ConsoleColorSet FatalColor = new ConsoleColorSet(ConsoleColor.Red);
-
-        public override string Name => "SystemLog";
-        public override string Description => "Prints consensus log and is a built-in plugin which cannot be uninstalled";
-        public override string ConfigFile => Combine(GetDirectoryName(Path), "config.json");
-        public override string Path => GetType().Assembly.Location;
-
-        private static void GetErrorLogs(StringBuilder sb, Exception ex)
+        sb.AppendLine(ex.GetType().ToString());
+        sb.AppendLine(ex.Message);
+        sb.AppendLine(ex.StackTrace);
+        if (ex is AggregateException ex2)
         {
-            sb.AppendLine(ex.GetType().ToString());
-            sb.AppendLine(ex.Message);
-            sb.AppendLine(ex.StackTrace);
-            if (ex is AggregateException ex2)
-            {
-                foreach (Exception inner in ex2.InnerExceptions)
-                {
-                    sb.AppendLine();
-                    GetErrorLogs(sb, inner);
-                }
-            }
-            else if (ex.InnerException != null)
+            foreach (Exception inner in ex2.InnerExceptions)
             {
                 sb.AppendLine();
-                GetErrorLogs(sb, ex.InnerException);
+                GetErrorLogs(sb, inner);
             }
         }
-
-        void ILogPlugin.Log(string source, LogLevel level, object message)
+        else if (ex.InnerException != null)
         {
-            if (!Settings.Default.Logger.Active)
-                return;
+            sb.AppendLine();
+            GetErrorLogs(sb, ex.InnerException);
+        }
+    }
 
-            if (message is Exception ex)
+    void ILogPlugin.Log(string source, LogLevel level, object message)
+    {
+        if (!Settings.Default.Logger.Active)
+            return;
+
+        if (message is Exception ex)
+        {
+            var sb = new StringBuilder();
+            GetErrorLogs(sb, ex);
+            message = sb.ToString();
+        }
+
+        lock (typeof(Logger))
+        {
+            DateTime now = DateTime.Now;
+            var log = $"[{now.TimeOfDay:hh\\:mm\\:ss\\.fff}]";
+
+            if (Settings.Default.Logger.ConsoleOutput)
             {
-                var sb = new StringBuilder();
-                GetErrorLogs(sb, ex);
-                message = sb.ToString();
+                WarningColor.Apply();
+                Console.Write(log + " ");
+                InfoColor.Apply();
+                var currentColor = new ConsoleColorSet();
+                var messages = message is not string msg ? new[] { $"{ message}" } : Parse(msg);
+                Console.Write($"{messages[0]}");
+
+                for (var i = 0; i < 30 - messages[0].Length; i++) Console.Write(' ');
+
+
+                for (int i = 1; i < messages.Length; i++)
+                {
+                    if (i % 2 == 0)
+                    {
+                        currentColor.Apply();
+                        Console.Write($"={messages[i]} ");
+                    }
+                    else
+                    {
+                        switch (level)
+                        {
+                            case LogLevel.Debug: DebugColor.Apply(); break;
+                            case LogLevel.Error: ErrorColor.Apply(); break;
+                            case LogLevel.Fatal: FatalColor.Apply(); break;
+                            case LogLevel.Info: KeyColor.Apply(); break;
+                            case LogLevel.Warning: WarningColor.Apply(); break;
+                        }
+                        Console.Write($" {messages[i]}");
+                    }
+                }
+                currentColor.Apply();
+                Console.WriteLine();
             }
 
-            lock (typeof(Logger))
+            if (!string.IsNullOrEmpty(Settings.Default.Logger.Path))
             {
-                DateTime now = DateTime.Now;
-                var log = $"[{now.TimeOfDay:hh\\:mm\\:ss\\.fff}] {message}";
-
-                if (Settings.Default.Logger.ConsoleOutput)
+                StringBuilder sb = new StringBuilder(source);
+                foreach (char c in GetInvalidFileNameChars())
+                    sb.Replace(c, '-');
+                var path = Combine(Settings.Default.Logger.Path, sb.ToString());
+                Directory.CreateDirectory(path);
+                path = Combine(path, $"{now:yyyy-MM-dd}.log");
+                try
                 {
-                    var currentColor = new ConsoleColorSet();
-
-                    switch (level)
-                    {
-                        case LogLevel.Debug: DebugColor.Apply(); break;
-                        case LogLevel.Error: ErrorColor.Apply(); break;
-                        case LogLevel.Fatal: FatalColor.Apply(); break;
-                        case LogLevel.Info: InfoColor.Apply(); break;
-                        case LogLevel.Warning: WarningColor.Apply(); break;
-                    }
-
-                    Console.WriteLine(log);
-                    currentColor.Apply();
+                    File.AppendAllLines(path, new[] { $"[{level}]{log}" });
                 }
-
-                if (!string.IsNullOrEmpty(Settings.Default.Logger.Path))
+                catch (IOException)
                 {
-                    StringBuilder sb = new StringBuilder(source);
-                    foreach (char c in GetInvalidFileNameChars())
-                        sb.Replace(c, '-');
-                    var path = Combine(Settings.Default.Logger.Path, sb.ToString());
-                    Directory.CreateDirectory(path);
-                    path = Combine(path, $"{now:yyyy-MM-dd}.log");
-                    try
-                    {
-                        File.AppendAllLines(path, new[] { $"[{level}]{log}" });
-                    }
-                    catch (IOException)
-                    {
-                        Console.WriteLine("Error writing the log file: " + path);
-                    }
+                    Console.WriteLine("Error writing the log file: " + path);
                 }
             }
         }
     }
+
+    private string[] Parse(string message)
+    {
+        var equals = message.Trim().Split('=');
+
+        if (equals.Length == 1) return new[] { message };
+
+        var messages = new List<string>();
+        foreach (var t in @equals)
+        {
+            var msg = t.Trim();
+            var parts = msg.Split(' ');
+            var d = parts.Take(parts.Length - 1);
+
+            if (parts.Length > 1)
+            {
+                messages.Add(string.Join(" ", d));
+            }
+            messages.Add(parts.LastOrDefault());
+        }
+
+        return messages.ToArray();
+    }
+
 }
