@@ -1,10 +1,10 @@
 // Copyright (C) 2016-2021 The Neo Project.
-// 
-// The neo-cli is free software distributed under the MIT software 
+//
+// The neo-cli is free software distributed under the MIT software
 // license, see the accompanying file LICENSE in the main directory of
-// the project or http://www.opensource.org/licenses/mit-license.php 
+// the project or http://www.opensource.org/licenses/mit-license.php
 // for more details.
-// 
+//
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
@@ -83,23 +83,40 @@ internal class Logger : Plugin, ILogPlugin
 #endif
                             logcolor = DebugColor;
                             loglevel = "DEBUG";
+                            if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+                                messages[0] = $"🔨{messages[0]}";
                             break;
                         }
 
-                    case LogLevel.Error: logcolor = ErrorColor; loglevel = "ERROR"; break;
+                    case LogLevel.Error:
+                        logcolor = ErrorColor; loglevel = "ERROR";
+                        if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+                            messages[0] = $"❌{messages[0]}";
+                        break;
                     case LogLevel.Fatal: logcolor = FatalColor; loglevel = "FATAL"; break;
                     case LogLevel.Info: logcolor = KeyColor; loglevel = "INFO"; break;
-                    case LogLevel.Warning: logcolor = WarningColor; loglevel = "WARN"; break;
+                    case LogLevel.Warning:
+                        logcolor = WarningColor; loglevel = "WARN";
+                        if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+                            messages[0] = $"⚠{messages[0]}";
+                        break;
                     default: logcolor = InfoColor; loglevel = "INFO"; break;
                 }
+
+                Console.OutputEncoding = Encoding.Unicode;
 
                 logcolor.Apply();
                 Console.Write(loglevel + " ");
                 currentColor.Apply();
+                if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+                {
+                    if (messages[0].Contains("Sending")) messages[0] = $"✈{messages[0]}";
+                    if (messages[0].Contains("Received")) messages[0] = $"✉{messages[0]}";
+                    if (messages[0].Contains("Persisted")) messages[0] = $"📦{messages[0]}";
+                }
                 Console.Write($"{log} {messages[0]}");
-
-                for (var i = 0; i < 34 - messages[0].Length-loglevel.Length; i++) Console.Write(' ');
-                for (int i = 1; i < messages.Length; i++)
+                for (var i = 0; i < 35 - messages[0].Length - loglevel.Length; i++) Console.Write(' ');
+                for (var i = 1; i < messages.Length; i++)
                 {
                     if (i % 2 == 0)
                     {
@@ -116,27 +133,25 @@ internal class Logger : Plugin, ILogPlugin
                 Console.WriteLine();
             }
 
-            if (!string.IsNullOrEmpty(Settings.Default.Logger.Path))
+            if (string.IsNullOrEmpty(Settings.Default.Logger.Path)) return;
+            var sb = new StringBuilder(source);
+            foreach (var c in GetInvalidFileNameChars())
+                sb.Replace(c, '-');
+            var path = Combine(Settings.Default.Logger.Path, sb.ToString());
+            Directory.CreateDirectory(path);
+            path = Combine(path, $"{now:yyyy-MM-dd}.log");
+            try
             {
-                StringBuilder sb = new StringBuilder(source);
-                foreach (char c in GetInvalidFileNameChars())
-                    sb.Replace(c, '-');
-                var path = Combine(Settings.Default.Logger.Path, sb.ToString());
-                Directory.CreateDirectory(path);
-                path = Combine(path, $"{now:yyyy-MM-dd}.log");
-                try
-                {
-                    File.AppendAllLines(path, new[] { $"[{level}]{log}" });
-                }
-                catch (IOException)
-                {
-                    Console.WriteLine("Error writing the log file: " + path);
-                }
+                File.AppendAllLines(path, new[] { $"[{level}]{log}" });
+            }
+            catch (IOException)
+            {
+                Console.WriteLine("Error writing the log file: " + path);
             }
         }
     }
 
-    private string[] Parse(string message)
+    private static string[] Parse(string message)
     {
         var equals = message.Trim().Split('=');
 
