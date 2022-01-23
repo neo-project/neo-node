@@ -31,6 +31,26 @@ internal class Logger : Plugin, ILogPlugin
     public override string Description => "Prints consensus log and is a built-in plugin which cannot be uninstalled";
     public override string ConfigFile => Combine(GetDirectoryName(Path), "config.json");
     public override string Path => GetType().Assembly.Location;
+    private bool showLog = Settings.Default.Logger.ConsoleOutput;
+
+    /// <summary>
+    /// Process "log off" command
+    /// </summary>
+    [ConsoleCommand("log off", Category = "Log Commands")]
+    private void OnLogOffCommand()
+    {
+        showLog = false;
+    }
+
+    /// <summary>
+    /// Process "log on" command
+    /// </summary>
+    [ConsoleCommand("log on", Category = "Log Commands")]
+    private void OnLogOnCommand()
+    {
+        if (Settings.Default.Logger.ConsoleOutput) showLog = true;
+    }
+
 
     private static void GetErrorLogs(StringBuilder sb, Exception ex)
     {
@@ -68,7 +88,7 @@ internal class Logger : Plugin, ILogPlugin
         {
             DateTime now = DateTime.Now;
             var log = $"[{now.TimeOfDay:hh\\:mm\\:ss\\.fff}]";
-            if (Settings.Default.Logger.ConsoleOutput)
+            if (Settings.Default.Logger.ConsoleOutput && showLog)
             {
                 var currentColor = InfoColor;
                 var messages = message is not string msg ? new[] { $"{ message}" } : Parse(msg);
