@@ -26,13 +26,13 @@ namespace Neo.ConsoleService
 {
     public abstract class ConsoleServiceBase
     {
-        private static string Depends => null;
+        protected virtual string Depends => null;
         protected virtual string Prompt => "service";
 
         public abstract string ServiceName { get; }
 
-        private bool ShowPrompt { get; set; } = true;
-        public bool ReadingPassword { get; private set; }
+        protected bool ShowPrompt { get; set; } = true;
+        public bool ReadingPassword { get; set; } = false;
 
         private bool _running;
         private readonly CancellationTokenSource _shutdownTokenSource = new();
@@ -61,7 +61,7 @@ namespace Neo.ConsoleService
                         var arguments = new List<object>();
                         var args = commandArgs.Skip(consumedArgs).ToList();
 
-                        CommandToken.Trim(args);
+                        CommandSpaceToken.Trim(args);
 
                         try
                         {

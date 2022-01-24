@@ -33,7 +33,7 @@ namespace Neo.ConsoleService
         /// </summary>
         /// <param name="foreground">Foreground color</param>
         /// <param name="background">Background color</param>
-        private ConsoleColorSet(ConsoleColor foreground, ConsoleColor background)
+        public ConsoleColorSet(ConsoleColor foreground, ConsoleColor background)
         {
             Foreground = foreground;
             Background = background;

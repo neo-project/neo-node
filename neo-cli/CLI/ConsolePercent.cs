@@ -23,7 +23,7 @@ namespace Neo.CLI
 
         private readonly int _x, _y;
 
-        private readonly bool _inputRedirected;
+        private bool _inputRedirected;
 
         #endregion
 
