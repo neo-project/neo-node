@@ -507,59 +507,44 @@ namespace Neo.ConsoleService
 
         public void Run(string[] args)
         {
-            if (Environment.UserInteractive)
-            {
-                if (args.Length > 0 && args[0] == "/install")
-                {
-                    if (Environment.OSVersion.Platform != PlatformID.Win32NT)
-                    {
-                        ConsoleHelper.Warning("Only support for installing services on Windows.");
-                        return;
-                    }
-                    var arguments =
-                        $"create {ServiceName} start= auto binPath= \"{Process.GetCurrentProcess().MainModule?.FileName}\"";
-                    if (!string.IsNullOrEmpty(Depends))
-                    {
-                        arguments += $" depend= {Depends}";
-                    }
-                    Process process = Process.Start(new ProcessStartInfo
-                    {
-                        Arguments = arguments,
-                        FileName = Path.Combine(Environment.SystemDirectory, "sc.exe"),
-                        RedirectStandardOutput = true,
-                        UseShellExecute = false
-                    });
-                    process?.WaitForExit();
-                    Console.Write(process?.StandardOutput.ReadToEnd());
-                }
-                else if (args.Length > 0 && args[0] == "/uninstall")
-                {
-                    if (Environment.OSVersion.Platform != PlatformID.Win32NT)
-                    {
-                        ConsoleHelper.Warning("Only support for installing services on Windows.");
-                        return;
-                    }
-                    Process process = Process.Start(new ProcessStartInfo
-                    {
-                        Arguments = $"delete {ServiceName}",
-                        FileName = Path.Combine(Environment.SystemDirectory, "sc.exe"),
-                        RedirectStandardOutput = true,
-                        UseShellExecute = false
-                    });
-                    process?.WaitForExit();
-                    Console.Write(process?.StandardOutput.ReadToEnd());
-                }
-                else
-                {
-                    OnStart(args);
-                    RunConsole();
-                    OnStop();
-                }
-            }
-            else
+            if (!Environment.UserInteractive)
             {
                 Debug.Assert(OperatingSystem.IsWindows());
                 ServiceBase.Run(new ServiceProxy(this));
+            }
+
+            var arguments = args.Length switch
+            {
+                > 0 when args[0] == "/install" =>
+                    $"create {ServiceName} start= auto binPath= \"{Process.GetCurrentProcess().MainModule.FileName}\"" +
+                    (string.IsNullOrEmpty(Depends) ? "" : $" depend= {Depends}"),
+                > 0 when args[0] == "/uninstall" => $"delete {ServiceName}",
+                _ => ""
+            };
+
+            if (arguments.Length > 0)
+            {
+                if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                {
+                    ConsoleHelper.Warning("Only support for installing services on Windows.");
+                    return;
+                }
+
+                Process process = Process.Start(new ProcessStartInfo
+                {
+                    Arguments = arguments,
+                    FileName = Path.Combine(Environment.SystemDirectory, "sc.exe"),
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false
+                });
+                process.WaitForExit();
+                Console.Write(process.StandardOutput.ReadToEnd());
+            }
+            else
+            {
+                OnStart(args);
+                RunConsole();
+                OnStop();
             }
         }
 
