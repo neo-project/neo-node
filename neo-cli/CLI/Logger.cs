@@ -32,26 +32,21 @@ namespace Neo.CLI
 
         private static void GetErrorLogs(StringBuilder sb, Exception ex)
         {
-            while (true)
+            sb.AppendLine(ex.GetType().ToString());
+            sb.AppendLine(ex.Message);
+            sb.AppendLine(ex.StackTrace);
+            if (ex is AggregateException ex2)
             {
-                sb.AppendLine(ex.GetType().ToString());
-                sb.AppendLine(ex.Message);
-                sb.AppendLine(ex.StackTrace);
-                if (ex is AggregateException ex2)
-                {
-                    foreach (var inner in ex2.InnerExceptions)
-                    {
-                        sb.AppendLine();
-                        GetErrorLogs(sb, inner);
-                    }
-                }
-                else if (ex.InnerException != null)
+                foreach (Exception inner in ex2.InnerExceptions)
                 {
                     sb.AppendLine();
-                    ex = ex.InnerException;
-                    continue;
+                    GetErrorLogs(sb, inner);
                 }
-                break;
+            }
+            else if (ex.InnerException != null)
+            {
+                sb.AppendLine();
+                GetErrorLogs(sb, ex.InnerException);
             }
         }
 
