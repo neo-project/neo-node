@@ -50,6 +50,7 @@ namespace Neo.CLI
         private void OnLogOnCommand()
         {
             if (Settings.Default.Logger.ConsoleOutput) showLog = true;
+            else ConsoleHelper.Warning("Please enable log first.");
         }
 
 
@@ -91,7 +92,7 @@ namespace Neo.CLI
                 var log = $"[{now.TimeOfDay:hh\\:mm\\:ss\\.fff}]";
                 if (Settings.Default.Logger.ConsoleOutput && showLog)
                 {
-                    var currentColor = InfoColor;
+                    var currentColor = new ConsoleColorSet();
                     var messages = message is not string msg ? new[] { $"{ message}" } : Parse(msg);
                     ConsoleColorSet logcolor;
                     string loglevel;
@@ -128,20 +129,21 @@ namespace Neo.CLI
 
                     logcolor.Apply();
                     Console.Write(loglevel + " ");
-                    currentColor.Apply();
+                    InfoColor.Apply();
                     if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
                     {
                         if (messages[0].Contains("Sending")) messages[0] = $"✈{messages[0]}";
                         if (messages[0].Contains("Received")) messages[0] = $"✉{messages[0]}";
                         if (messages[0].Contains("Persisted")) messages[0] = $"📦{messages[0]}";
                     }
+
                     Console.Write($"{log} {messages[0]}");
                     for (var i = 0; i < 35 - messages[0].Length - loglevel.Length; i++) Console.Write(' ');
                     for (var i = 1; i < messages.Length; i++)
                     {
                         if (i % 2 == 0)
                         {
-                            currentColor.Apply();
+                            InfoColor.Apply();
                             Console.Write($"={messages[i]} ");
                         }
                         else
