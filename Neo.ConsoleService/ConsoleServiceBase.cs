@@ -267,7 +267,7 @@ namespace Neo.ConsoleService
         [ConsoleCommand("version", Category = "Base Commands", Description = "Show the current version.")]
         protected void OnVersion()
         {
-            Console.WriteLine(Assembly.GetEntryAssembly()?.GetName().Version);
+            Console.WriteLine(Assembly.GetEntryAssembly().GetName().Version);
         }
 
         /// <summary>
@@ -600,9 +600,9 @@ namespace Neo.ConsoleService
                         ConsoleHelper.Error("Command not found");
                     }
                 }
-                catch (TargetInvocationException ex)
+                catch (TargetInvocationException ex) when (ex.InnerException is not null)
                 {
-                    ConsoleHelper.Error(ex.InnerException?.Message);
+                    ConsoleHelper.Error(ex.InnerException.Message);
                 }
                 catch (Exception ex)
                 {
