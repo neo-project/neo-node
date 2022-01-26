@@ -509,26 +509,38 @@ namespace Neo.ConsoleService
         {
             if (Environment.UserInteractive)
             {
-                var arguments = args.Length switch
-                {
-                    > 0 when args[0] == "/install" =>
-                        $"create {ServiceName} start= auto binPath= \"{Process.GetCurrentProcess().MainModule.FileName}\"" +
-                        (string.IsNullOrEmpty(Depends) ? "" : $" depend= {Depends}"),
-                    > 0 when args[0] == "/uninstall" => $"delete {ServiceName}",
-                    _ => ""
-                };
-
-                if (arguments.Length > 0)
+                if (args.Length > 0 && args[0] == "/install")
                 {
                     if (Environment.OSVersion.Platform != PlatformID.Win32NT)
                     {
                         ConsoleHelper.Warning("Only support for installing services on Windows.");
                         return;
                     }
-
+                    string arguments = string.Format("create {0} start= auto binPath= \"{1}\"", ServiceName, Process.GetCurrentProcess().MainModule.FileName);
+                    if (!string.IsNullOrEmpty(Depends))
+                    {
+                        arguments += string.Format(" depend= {0}", Depends);
+                    }
                     Process process = Process.Start(new ProcessStartInfo
                     {
                         Arguments = arguments,
+                        FileName = Path.Combine(Environment.SystemDirectory, "sc.exe"),
+                        RedirectStandardOutput = true,
+                        UseShellExecute = false
+                    });
+                    process.WaitForExit();
+                    Console.Write(process.StandardOutput.ReadToEnd());
+                }
+                else if (args.Length > 0 && args[0] == "/uninstall")
+                {
+                    if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                    {
+                        ConsoleHelper.Warning("Only support for installing services on Windows.");
+                        return;
+                    }
+                    Process process = Process.Start(new ProcessStartInfo
+                    {
+                        Arguments = string.Format("delete {0}", ServiceName),
                         FileName = Path.Combine(Environment.SystemDirectory, "sc.exe"),
                         RedirectStandardOutput = true,
                         UseShellExecute = false
