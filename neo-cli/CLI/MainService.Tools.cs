@@ -49,9 +49,11 @@ namespace Neo.CLI
                 var parseMethod = pair.Value;
                 var result = parseMethod(value);
 
-                if (result == null) continue;
-                Console.WriteLine($"{pair.Key,-30}\t{result}");
-                any = true;
+                if (result != null)
+                {
+                    Console.WriteLine($"{pair.Key,-30}\t{result}");
+                    any = true;
+                }
             }
 
             if (!any)
