@@ -63,7 +63,7 @@ namespace Neo.CLI
         /// <param name="manifestPath">Manifest path</param>
         /// <param name="sender">Sender</param>
         /// <param name="signerAccounts">Signer Accounts</param>
-        /// <param name="data"></param>
+        /// <param name="data">Extra data for update</param>
         [ConsoleCommand("update", Category = "Contract Commands")]
         private void OnUpdateCommand(UInt160 scriptHash, string filePath, string manifestPath, UInt160 sender, UInt160[] signerAccounts = null, JObject data = null)
         {
