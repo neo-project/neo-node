@@ -90,7 +90,7 @@ namespace Neo.CLI
             Transaction tx;
             try
             {
-                byte[] script = LoadUpdateScript(scriptHash, filePath, manifestPath, data, out _, out _);
+                byte[] script = LoadUpdateScript(scriptHash, filePath, manifestPath, data, out var nef, out var manifest);
                 tx = CurrentWallet.MakeTransaction(NeoSystem.StoreView, script, sender, signers);
             }
             catch (InvalidOperationException e)
@@ -135,7 +135,7 @@ namespace Neo.CLI
             if (!NoWallet() && sender != null)
             {
                 if (signerAccounts == null)
-                    signerAccounts = new[] { sender };
+                    signerAccounts = new UInt160[1] { sender };
                 else if (signerAccounts.Contains(sender) && signerAccounts[0] != sender)
                 {
                     var signersList = signerAccounts.ToList();

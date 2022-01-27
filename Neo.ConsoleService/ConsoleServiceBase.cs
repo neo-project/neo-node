@@ -114,7 +114,7 @@ namespace Neo.ConsoleService
                 case 1:
                     {
                         var (command, arguments) = availableCommands[0];
-                        var result = command.Method.Invoke(command.Instance, arguments);
+                        object result = command.Method.Invoke(command.Instance, arguments);
                         if (result is Task task) task.Wait();
                         return true;
                     }
@@ -603,7 +603,7 @@ namespace Neo.ConsoleService
                 }
 
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                var line = ReadLine()?.Trim();
+                string line = ReadLine()?.Trim();
                 if (line == null) break;
                 Console.ForegroundColor = ConsoleColor.White;
 

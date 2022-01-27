@@ -86,20 +86,22 @@ namespace Neo.CLI
                     currentColor.Apply();
                 }
 
-                if (string.IsNullOrEmpty(Settings.Default.Logger.Path)) return;
-                var sb = new StringBuilder(source);
-                foreach (var c in GetInvalidFileNameChars())
-                    sb.Replace(c, '-');
-                var path = Combine(Settings.Default.Logger.Path, sb.ToString());
-                Directory.CreateDirectory(path);
-                path = Combine(path, $"{now:yyyy-MM-dd}.log");
-                try
+                if (!string.IsNullOrEmpty(Settings.Default.Logger.Path))
                 {
-                    File.AppendAllLines(path, new[] { $"[{level}]{log}" });
-                }
-                catch (IOException)
-                {
-                    Console.WriteLine("Error writing the log file: " + path);
+                    StringBuilder sb = new StringBuilder(source);
+                    foreach (char c in GetInvalidFileNameChars())
+                        sb.Replace(c, '-');
+                    var path = Combine(Settings.Default.Logger.Path, sb.ToString());
+                    Directory.CreateDirectory(path);
+                    path = Combine(path, $"{now:yyyy-MM-dd}.log");
+                    try
+                    {
+                        File.AppendAllLines(path, new[] { $"[{level}]{log}" });
+                    }
+                    catch (IOException)
+                    {
+                        Console.WriteLine("Error writing the log file: " + path);
+                    }
                 }
             }
         }

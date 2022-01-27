@@ -99,9 +99,14 @@ namespace Neo.CLI
 
             // Try to parse as UInt160
 
-            return UInt160.TryParse(input, out var addr) ? addr : input.ToScriptHash(version);
+            if (UInt160.TryParse(input, out var addr))
+            {
+                return addr;
+            }
 
             // Accept wallet format
+
+            return input.ToScriptHash(version);
         }
 
         Wallet IWalletProvider.GetWallet()
@@ -139,7 +144,7 @@ namespace Neo.CLI
             }
             if (createDefaultAccount)
             {
-                var account = CurrentWallet.CreateAccount();
+                WalletAccount account = CurrentWallet.CreateAccount();
                 ConsoleHelper.Info("   Address: ", account.Address);
                 ConsoleHelper.Info("    Pubkey: ", account.GetKey().PublicKey.EncodePoint(true).ToHexString());
                 ConsoleHelper.Info("ScriptHash: ", $"{account.ScriptHash}");
@@ -148,24 +153,26 @@ namespace Neo.CLI
                 wallet.Save();
         }
 
-        private IEnumerable<Block> GetBlocks(Stream stream, bool readStart = false)
+        private IEnumerable<Block> GetBlocks(Stream stream, bool read_start = false)
         {
             using BinaryReader r = new BinaryReader(stream);
-            var start = readStart ? r.ReadUInt32() : 0;
-            var count = r.ReadUInt32();
-            var end = start + count - 1;
-            var currentHeight = NativeContract.Ledger.CurrentIndex(NeoSystem.StoreView);
+            uint start = read_start ? r.ReadUInt32() : 0;
+            uint count = r.ReadUInt32();
+            uint end = start + count - 1;
+            uint currentHeight = NativeContract.Ledger.CurrentIndex(NeoSystem.StoreView);
             if (end <= currentHeight) yield break;
-            for (var height = start; height <= end; height++)
+            for (uint height = start; height <= end; height++)
             {
                 var size = r.ReadInt32();
                 if (size > Message.PayloadMaxSize)
                     throw new ArgumentException($"Block {height} exceeds the maximum allowed size");
 
-                var array = r.ReadBytes(size);
-                if (height <= currentHeight) continue;
-                var block = array.AsSerializable<Block>();
-                yield return block;
+                byte[] array = r.ReadBytes(size);
+                if (height > currentHeight)
+                {
+                    Block block = array.AsSerializable<Block>();
+                    yield return block;
+                }
             }
         }
 
