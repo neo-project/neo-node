@@ -26,7 +26,7 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="filePath">File path</param>
         /// <param name="manifestPath">Manifest path</param>
-        /// <param name="data"></param>
+        /// <param name="data">Extra data for deploy</param>
         [ConsoleCommand("deploy", Category = "Contract Commands")]
         private void OnDeployCommand(string filePath, string manifestPath = null, JObject data = null)
         {
