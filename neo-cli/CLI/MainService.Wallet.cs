@@ -120,7 +120,7 @@ namespace Neo.CLI
             List<string> addresses = new List<string>();
             using (var percent = new ConsolePercent(0, count))
             {
-                Parallel.For(0, count, _ =>
+                Parallel.For(0, count, (i) =>
                 {
                     WalletAccount account = CurrentWallet.CreateAccount();
                     lock (addresses)
@@ -147,20 +147,20 @@ namespace Neo.CLI
         {
             if (NoWallet()) return;
 
-            if (!ReadUserInput(
-                        $"Warning: Irrevocable operation!\nAre you sure to delete account {address.ToAddress(NeoSystem.Settings.AddressVersion)}? (no|yes)")
-                    .IsYes()) return;
-            if (CurrentWallet.DeleteAccount(address))
+            if (ReadUserInput($"Warning: Irrevocable operation!\nAre you sure to delete account {address.ToAddress(NeoSystem.Settings.AddressVersion)}? (no|yes)").IsYes())
             {
-                if (CurrentWallet is NEP6Wallet wallet)
+                if (CurrentWallet.DeleteAccount(address))
                 {
-                    wallet.Save();
+                    if (CurrentWallet is NEP6Wallet wallet)
+                    {
+                        wallet.Save();
+                    }
+                    ConsoleHelper.Info($"Address {address} deleted.");
                 }
-                ConsoleHelper.Info($"Address {address} deleted.");
-            }
-            else
-            {
-                ConsoleHelper.Warning($"Address {address} doesn't exist.");
+                else
+                {
+                    ConsoleHelper.Warning($"Address {address} doesn't exist.");
+                }
             }
         }
 
@@ -291,13 +291,18 @@ namespace Neo.CLI
                 }
 
                 string[] lines = File.ReadAllLines(fileInfo.FullName).Where(u => !string.IsNullOrEmpty(u)).ToArray();
-                using var percent = new ConsolePercent(0, lines.Length);
-                foreach (var t in lines)
+                using (var percent = new ConsolePercent(0, lines.Length))
                 {
-                    prikey = t.Length == 64 ? t.HexToBytes() : Wallet.GetPrivateKeyFromWIF(t);
-                    CurrentWallet.CreateAccount(prikey);
-                    Array.Clear(prikey, 0, prikey.Length);
-                    percent.Value++;
+                    for (int i = 0; i < lines.Length; i++)
+                    {
+                        if (lines[i].Length == 64)
+                            prikey = lines[i].HexToBytes();
+                        else
+                            prikey = Wallet.GetPrivateKeyFromWIF(lines[i]);
+                        CurrentWallet.CreateAccount(prikey);
+                        Array.Clear(prikey, 0, prikey.Length);
+                        percent.Value++;
+                    }
                 }
             }
             else
@@ -343,12 +348,14 @@ namespace Neo.CLI
                 }
 
                 string[] lines = File.ReadAllLines(fileInfo.FullName).Where(u => !string.IsNullOrEmpty(u)).ToArray();
-                using var percent = new ConsolePercent(0, lines.Length);
-                foreach (var t in lines)
+                using (var percent = new ConsolePercent(0, lines.Length))
                 {
-                    address = StringToAddress(t, NeoSystem.Settings.AddressVersion);
-                    CurrentWallet.CreateAccount(address);
-                    percent.Value++;
+                    for (int i = 0; i < lines.Length; i++)
+                    {
+                        address = StringToAddress(lines[i], NeoSystem.Settings.AddressVersion);
+                        CurrentWallet.CreateAccount(address);
+                        percent.Value++;
+                    }
                 }
             }
             else
@@ -561,7 +568,8 @@ namespace Neo.CLI
             BigInteger gas = BigInteger.Zero;
             var snapshot = NeoSystem.StoreView;
             uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
-            gas = CurrentWallet.GetAccounts().Select(p => p.ScriptHash).Aggregate(gas, (current, account) => current + NativeContract.NEO.UnclaimedGas(snapshot, account, height));
+            foreach (UInt160 account in CurrentWallet.GetAccounts().Select(p => p.ScriptHash))
+                gas += NativeContract.NEO.UnclaimedGas(snapshot, account, height);
             ConsoleHelper.Info("Unclaimed gas: ", new BigDecimal(gas, NativeContract.GAS.Decimals).ToString());
         }
 
