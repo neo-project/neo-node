@@ -110,11 +110,7 @@ namespace Neo.CLI
             }, cancel.Token);
             ReadLine();
             cancel.Cancel();
-            try { Task.WaitAll(task, broadcast); }
-            catch
-            {
-                // ignored
-            }
+            try { Task.WaitAll(task, broadcast); } catch { }
 
             Console.WriteLine();
             Console.CursorVisible = true;
