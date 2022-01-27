@@ -586,10 +586,7 @@ namespace Neo.ConsoleService
                 {
                     Console.Title = ServiceName;
                 }
-                catch
-                {
-                    // ignored
-                }
+                catch { }
 
             Console.ForegroundColor = ConsoleColor.DarkGreen;
             Console.SetIn(new StreamReader(Console.OpenStandardInput(), Console.InputEncoding, false, ushort.MaxValue));
