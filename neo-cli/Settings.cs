@@ -48,7 +48,7 @@ namespace Neo
             }
         }
 
-        public Settings(IConfiguration section)
+        public Settings(IConfigurationSection section)
         {
             this.Logger = new LoggerSettings(section.GetSection("Logger"));
             this.Storage = new StorageSettings(section.GetSection("Storage"));
@@ -63,7 +63,7 @@ namespace Neo
         public bool ConsoleOutput { get; }
         public bool Active { get; }
 
-        public LoggerSettings(IConfiguration section)
+        public LoggerSettings(IConfigurationSection section)
         {
             this.Path = section.GetValue("Path", "Logs");
             this.ConsoleOutput = section.GetValue("ConsoleOutput", false);
@@ -76,7 +76,7 @@ namespace Neo
         public string Engine { get; }
         public string Path { get; }
 
-        public StorageSettings(IConfiguration section)
+        public StorageSettings(IConfigurationSection section)
         {
             this.Engine = section.GetValue("Engine", "LevelDBStore");
             this.Path = section.GetValue("Path", "Data_LevelDB_{0}");
@@ -91,7 +91,7 @@ namespace Neo
         public int MaxConnections { get; }
         public int MaxConnectionsPerAddress { get; }
 
-        public P2PSettings(IConfiguration section)
+        public P2PSettings(IConfigurationSection section)
         {
             this.Port = ushort.Parse(section.GetValue("Port", "10333"));
             this.WsPort = ushort.Parse(section.GetValue("WsPort", "10334"));
@@ -109,10 +109,12 @@ namespace Neo
 
         public UnlockWalletSettings(IConfigurationSection section)
         {
-            if (!section.Exists()) return;
-            this.Path = section.GetValue("Path", "");
-            this.Password = section.GetValue("Password", "");
-            this.IsActive = bool.Parse(section.GetValue("IsActive", "false"));
+            if (section.Exists())
+            {
+                this.Path = section.GetValue("Path", "");
+                this.Password = section.GetValue("Password", "");
+                this.IsActive = bool.Parse(section.GetValue("IsActive", "false"));
+            }
         }
     }
 }
