@@ -388,9 +388,9 @@ namespace Neo.CLI
                     }
                 case ".json":
                     {
-                        var nep6Wallet = new NEP6Wallet(path, NeoSystem.Settings);
-                        nep6Wallet.Unlock(password);
-                        CurrentWallet = nep6Wallet;
+                        NEP6Wallet nep6wallet = new NEP6Wallet(path, NeoSystem.Settings);
+                        nep6wallet.Unlock(password);
+                        CurrentWallet = nep6wallet;
                         break;
                     }
                 default: throw new NotSupportedException();
@@ -400,9 +400,9 @@ namespace Neo.CLI
         public async void Start(string[] args)
         {
             if (NeoSystem != null) return;
-            var verifyImport = true;
-            foreach (var t in args)
-                switch (t)
+            bool verifyImport = true;
+            for (int i = 0; i < args.Length; i++)
+                switch (args[i])
                 {
                     case "/noverify":
                     case "--noverify":
@@ -454,22 +454,24 @@ namespace Neo.CLI
                 MaxConnectionsPerAddress = Settings.Default.P2P.MaxConnectionsPerAddress
             });
 
-            if (!Settings.Default.UnlockWallet.IsActive) return;
-            try
+            if (Settings.Default.UnlockWallet.IsActive)
             {
-                OpenWallet(Settings.Default.UnlockWallet.Path, Settings.Default.UnlockWallet.Password);
-            }
-            catch (FileNotFoundException)
-            {
-                ConsoleHelper.Warning($"wallet file \"{Settings.Default.UnlockWallet.Path}\" not found.");
-            }
-            catch (CryptographicException)
-            {
-                ConsoleHelper.Error($"Failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
-            }
-            catch (Exception ex)
-            {
-                ConsoleHelper.Error(ex.GetBaseException().Message);
+                try
+                {
+                    OpenWallet(Settings.Default.UnlockWallet.Path, Settings.Default.UnlockWallet.Password);
+                }
+                catch (FileNotFoundException)
+                {
+                    ConsoleHelper.Warning($"wallet file \"{Settings.Default.UnlockWallet.Path}\" not found.");
+                }
+                catch (System.Security.Cryptography.CryptographicException)
+                {
+                    ConsoleHelper.Error($"Failed to open file \"{Settings.Default.UnlockWallet.Path}\"");
+                }
+                catch (Exception ex)
+                {
+                    ConsoleHelper.Error(ex.GetBaseException().Message);
+                }
             }
         }
 
@@ -480,8 +482,8 @@ namespace Neo.CLI
 
         private void WriteBlocks(uint start, uint count, string path, bool writeStart)
         {
-            var end = start + count - 1;
-            using var fs = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.WriteThrough);
+            uint end = start + count - 1;
+            using FileStream fs = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.WriteThrough);
             if (fs.Length > 0)
             {
                 byte[] buffer = new byte[sizeof(uint)];
@@ -511,14 +513,16 @@ namespace Neo.CLI
             fs.Seek(0, SeekOrigin.End);
             Console.WriteLine("Export block from " + start + " to " + end);
 
-            using var percent = new ConsolePercent(start, end);
-            for (uint i = start; i <= end; i++)
+            using (var percent = new ConsolePercent(start, end))
             {
-                Block block = NativeContract.Ledger.GetBlock(NeoSystem.StoreView, i);
-                byte[] array = block.ToArray();
-                fs.Write(BitConverter.GetBytes(array.Length), 0, sizeof(int));
-                fs.Write(array, 0, array.Length);
-                percent.Value = i;
+                for (uint i = start; i <= end; i++)
+                {
+                    Block block = NativeContract.Ledger.GetBlock(NeoSystem.StoreView, i);
+                    byte[] array = block.ToArray();
+                    fs.Write(BitConverter.GetBytes(array.Length), 0, sizeof(int));
+                    fs.Write(array, 0, array.Length);
+                    percent.Value = i;
+                }
             }
         }
 
@@ -590,7 +594,10 @@ namespace Neo.CLI
 
             if (contractParameters != null)
             {
-                parameters.AddRange(contractParameters.Select(ContractParameter.FromJson));
+                foreach (var contractParameter in contractParameters)
+                {
+                    parameters.Add(ContractParameter.FromJson(contractParameter));
+                }
             }
 
             ContractState contract = NativeContract.ContractManagement.GetContract(NeoSystem.StoreView, scriptHash);
@@ -600,12 +607,14 @@ namespace Neo.CLI
                 result = StackItem.Null;
                 return false;
             }
-
-            if (contract.Manifest.Abi.GetMethod(operation, parameters.Count) == null)
+            else
             {
-                ConsoleHelper.Error("This method does not not exist in this contract.");
-                result = StackItem.Null;
-                return false;
+                if (contract.Manifest.Abi.GetMethod(operation, parameters.Count) == null)
+                {
+                    ConsoleHelper.Error("This method does not not exist in this contract.");
+                    result = StackItem.Null;
+                    return false;
+                }
             }
 
             byte[] script;
