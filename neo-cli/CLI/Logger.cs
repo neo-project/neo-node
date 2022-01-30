@@ -78,8 +78,6 @@ namespace Neo.CLI
                         case LogLevel.Fatal: FatalColor.Apply(); break;
                         case LogLevel.Info: InfoColor.Apply(); break;
                         case LogLevel.Warning: WarningColor.Apply(); break;
-                        default:
-                            throw new ArgumentOutOfRangeException(nameof(level), level, null);
                     }
 
                     Console.WriteLine(log);
