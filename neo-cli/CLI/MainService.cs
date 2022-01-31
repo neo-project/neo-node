@@ -221,7 +221,7 @@ namespace Neo.CLI
             return true;
         }
 
-        private static byte[] LoadDeploymentScript(string nefFilePath, string manifestFilePath, JObject data, out NefFile nef, out ContractManifest manifest)
+        private byte[] LoadDeploymentScript(string nefFilePath, string manifestFilePath, JObject data, out NefFile nef, out ContractManifest manifest)
         {
             if (string.IsNullOrEmpty(manifestFilePath))
             {
