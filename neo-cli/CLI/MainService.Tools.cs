@@ -170,7 +170,7 @@ namespace Neo.CLI
         /// Returns null when it is not possible to parse the string value to a hexadecimal
         /// value; otherwise returns the hexadecimal value that represents the converted string
         /// </returns>
-        private static string StringToHex(string strParam)
+        private string StringToHex(string strParam)
         {
             try
             {
@@ -196,7 +196,7 @@ namespace Neo.CLI
         /// <exception cref="ArgumentException">
         /// Throw .
         /// </exception>
-        private static string StringToBase64(string strParam)
+        private string StringToBase64(string strParam)
         {
             try
             {
@@ -221,7 +221,7 @@ namespace Neo.CLI
         /// it is not possible to parse the big integer value to hexadecimal; otherwise,
         /// returns the string that represents the converted hexadecimal value
         /// </returns>
-        private static string NumberToHex(string strParam)
+        private string NumberToHex(string strParam)
         {
             try
             {
@@ -248,7 +248,7 @@ namespace Neo.CLI
         /// it is not possible to parse the big integer value to Base64 value; otherwise,
         /// returns the string that represents the converted Base64 value
         /// </returns>
-        private static string NumberToBase64(string strParam)
+        private string NumberToBase64(string strParam)
         {
             try
             {
@@ -299,7 +299,7 @@ namespace Neo.CLI
         /// String that represents the address to be converted
         /// </param>
         /// <returns>
-        /// Returns null when the string does not represent an address or when it is
+        /// Returns null when the string does not represent an address or when it is 
         /// not possible to parse the address to Base64 value; otherwise returns
         /// the string that represents the converted Base64 value.
         /// </returns>

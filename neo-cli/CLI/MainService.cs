@@ -647,7 +647,7 @@ namespace Neo.CLI
                 ConsoleHelper.Error(GetExceptionMessage(engine.FaultException));
         }
 
-        private static string GetExceptionMessage(Exception exception)
+        static string GetExceptionMessage(Exception exception)
         {
             if (exception == null) return "Engine faulted.";
 
