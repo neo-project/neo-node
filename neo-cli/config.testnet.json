@@ -55,11 +55,11 @@
       "03184b018d6b2bc093e535519732b3fd3f7551c8cffaf4621dd5a0b89482ca66c9"
     ],
     "SeedList": [
-      "seed1t4.neo.org:20333",
-      "seed2t4.neo.org:20333",
-      "seed3t4.neo.org:20333",
-      "seed4t4.neo.org:20333",
-      "seed5t4.neo.org:20333"
+      "seed1.neo.org:20333",
+      "seed2.neo.org:20333",
+      "seed3.neo.org:20333",
+      "seed4.neo.org:20333",
+      "seed5.neo.org:20333"
     ]
   }
 }
