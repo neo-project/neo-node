@@ -107,7 +107,7 @@ namespace Neo.CLI
 
                     await Task.Delay(500, cancel.Token);
                 }
-            }, cancel.Token);
+            });
             ReadLine();
             cancel.Cancel();
             try { Task.WaitAll(task, broadcast); } catch { }
