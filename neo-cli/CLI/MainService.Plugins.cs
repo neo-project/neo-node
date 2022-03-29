@@ -35,7 +35,7 @@ namespace Neo.CLI
         {
             if (PluginExists(pluginName))
             {
-                Console.WriteLine($"Plugin already exist.");
+                ConsoleHelper.Warning($"Plugin already exist.");
                 return;
             }
             // To prevent circular dependency
@@ -100,13 +100,13 @@ namespace Neo.CLI
                 int read;
 
                 await using Stream stream = await response.Content.ReadAsStreamAsync();
-                Console.WriteLine($"From {url}");
+                ConsoleHelper.Info("From", $"{url}");
                 var output = new MemoryStream();
                 while ((read = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
                 {
                     output.Write(buffer, 0, read);
                     totalRead += read;
-                    Console.Write($"\rDownloading {pluginName}.zip {totalRead / 1024}KB/{response.Content.Headers.ContentLength / 1024}KB {(totalRead * 100) / response.Content.Headers.ContentLength}%");
+                    ConsoleHelper.Info($"\rDownloading {pluginName}.zip {totalRead / 1024}KB/{response.Content.Headers.ContentLength / 1024}KB {(totalRead * 100) / response.Content.Headers.ContentLength}%");
                 }
                 Console.WriteLine();
 
@@ -128,14 +128,14 @@ namespace Neo.CLI
             // Throw exception.
             if (pluginToInstall.Contains(pluginName))
             {
-                Console.WriteLine("Plugin has circular dependency");
+                ConsoleHelper.Error("Plugin has circular dependency");
                 throw new DuplicateWaitObjectException();
             }
             pluginToInstall.Push(pluginName);
 
             using (SHA256 sha256 = SHA256.Create())
             {
-                Console.WriteLine("SHA256: " + sha256.ComputeHash(stream.ToArray()).ToHexString());
+                ConsoleHelper.Info("SHA256: ", $"{sha256.ComputeHash(stream.ToArray()).ToHexString()}");
             }
             using ZipArchive zip = new(stream, ZipArchiveMode.Read);
 
@@ -143,13 +143,13 @@ namespace Neo.CLI
             {
                 zip.ExtractToDirectory(".", overWrite);
                 await InstallDependency(pluginName, pluginToInstall);
-                Console.WriteLine($"Install successful, please restart neo-cli.");
+                ConsoleHelper.Warning($"Install successful, please restart neo-cli.");
                 pluginToInstall.Pop();
             }
             catch (IOException)
             {
                 pluginToInstall.Pop();
-                Console.WriteLine($"Plugin already exist. Try to run `reinstall {pluginName}`");
+                ConsoleHelper.Warning($"Plugin already exist. Try to run `reinstall {pluginName}`");
             }
         }
 
@@ -171,14 +171,14 @@ namespace Neo.CLI
 
                 if (dependencies.Length == 0) return;
 
-                Console.WriteLine("Installing dependencies.");
+                ConsoleHelper.Info("Installing dependencies.");
                 foreach (string plugin in dependencies)
                 {
                     if (plugin.Length == 0) continue;
 
                     if (PluginExists(plugin))
                     {
-                        Console.WriteLine("Dependency already installed.");
+                        ConsoleHelper.Info("Dependency already installed.");
                         continue;
                     }
                     await InstallPlugin(await DownloadPlugin(plugin), plugin, pluginToInstall);
