@@ -36,6 +36,7 @@ using System.Numerics;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Array = System.Array;
 
 namespace Neo.CLI
 {
@@ -45,33 +46,24 @@ namespace Neo.CLI
 
         public const long TestModeGas = 20_00000000;
 
-        private Wallet currentWallet;
+        private Wallet _currentWallet;
         public LocalNode LocalNode;
 
         public Wallet CurrentWallet
         {
-            get
-            {
-                return currentWallet;
-            }
+            get => _currentWallet;
             private set
             {
-                currentWallet = value;
+                _currentWallet = value;
                 WalletChanged?.Invoke(this, value);
             }
         }
 
-        private NeoSystem neoSystem;
+        private NeoSystem _neoSystem;
         public NeoSystem NeoSystem
         {
-            get
-            {
-                return neoSystem;
-            }
-            private set
-            {
-                neoSystem = value;
-            }
+            get => _neoSystem;
+            private set => _neoSystem = value;
         }
 
         protected override string Prompt => "neo";
@@ -82,15 +74,15 @@ namespace Neo.CLI
         /// </summary>
         public MainService() : base()
         {
-            RegisterCommandHander<string, UInt160>(false, (str) => StringToAddress(str, NeoSystem.Settings.AddressVersion));
-            RegisterCommandHander<string, UInt256>(false, (str) => UInt256.Parse(str));
-            RegisterCommandHander<string[], UInt256[]>((str) => str.Select(u => UInt256.Parse(u.Trim())).ToArray());
-            RegisterCommandHander<string[], UInt160[]>((arr) => arr.Select(str => StringToAddress(str, NeoSystem.Settings.AddressVersion)).ToArray());
-            RegisterCommandHander<string, ECPoint>((str) => ECPoint.Parse(str.Trim(), ECCurve.Secp256r1));
-            RegisterCommandHander<string[], ECPoint[]>((str) => str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray());
-            RegisterCommandHander<string, JObject>((str) => JObject.Parse(str));
-            RegisterCommandHander<string, decimal>((str) => decimal.Parse(str, CultureInfo.InvariantCulture));
-            RegisterCommandHander<JObject, JArray>((obj) => (JArray)obj);
+            RegisterCommandHandler<string, UInt160>(false, str => StringToAddress(str, NeoSystem.Settings.AddressVersion));
+            RegisterCommandHandler<string, UInt256>(false, UInt256.Parse);
+            RegisterCommandHandler<string[], UInt256[]>(str => str.Select(u => UInt256.Parse(u.Trim())).ToArray());
+            RegisterCommandHandler<string[], UInt160[]>(arr => arr.Select(str => StringToAddress(str, NeoSystem.Settings.AddressVersion)).ToArray());
+            RegisterCommandHandler<string, ECPoint>(str => ECPoint.Parse(str.Trim(), ECCurve.Secp256r1));
+            RegisterCommandHandler<string[], ECPoint[]>(str => str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray());
+            RegisterCommandHandler<string, JObject>(str => JObject.Parse(str));
+            RegisterCommandHandler<string, decimal>(str => decimal.Parse(str, CultureInfo.InvariantCulture));
+            RegisterCommandHandler<JObject, JArray>(obj => (JArray)obj);
 
             RegisterCommand(this);
         }
@@ -483,7 +475,7 @@ namespace Neo.CLI
 
         public void Stop()
         {
-            Interlocked.Exchange(ref neoSystem, null)?.Dispose();
+            Interlocked.Exchange(ref _neoSystem, null)?.Dispose();
         }
 
         private void WriteBlocks(uint start, uint count, string path, bool writeStart)
@@ -548,14 +540,14 @@ namespace Neo.CLI
         /// <param name="gas">Max fee for running the script</param>
         private void SendTransaction(byte[] script, UInt160 account = null, long gas = TestModeGas)
         {
-            Signer[] signers = System.Array.Empty<Signer>();
+            Signer[] signers = Array.Empty<Signer>();
             var snapshot = NeoSystem.StoreView;
 
             if (account != null)
             {
                 signers = CurrentWallet.GetAccounts()
                 .Where(p => !p.Lock && !p.WatchOnly && p.ScriptHash == account && NativeContract.GAS.BalanceOf(snapshot, p.ScriptHash).Sign > 0)
-                .Select(p => new Signer() { Account = p.ScriptHash, Scopes = WitnessScope.CalledByEntry })
+                .Select(p => new Signer { Account = p.ScriptHash, Scopes = WitnessScope.CalledByEntry })
                 .ToArray();
             }
 
@@ -580,10 +572,7 @@ namespace Neo.CLI
             catch (InvalidOperationException e)
             {
                 ConsoleHelper.Error(GetExceptionMessage(e));
-                return;
             }
-
-            return;
         }
 
         /// <summary>
@@ -592,12 +581,12 @@ namespace Neo.CLI
         /// <param name="scriptHash">Script hash</param>
         /// <param name="operation">Operation</param>
         /// <param name="result">Result</param>
-        /// <param name="verificable">Transaction</param>
+        /// <param name="verifiable">Transaction</param>
         /// <param name="contractParameters">Contract parameters</param>
         /// <param name="showStack">Show result stack if it is true</param>
         /// <param name="gas">Max fee for running the script</param>
         /// <returns>Return true if it was successful</returns>
-        private bool OnInvokeWithResult(UInt160 scriptHash, string operation, out StackItem result, IVerifiable verificable = null, JArray contractParameters = null, bool showStack = true, long gas = TestModeGas)
+        private bool OnInvokeWithResult(UInt160 scriptHash, string operation, out StackItem result, IVerifiable verifiable = null, JArray contractParameters = null, bool showStack = true, long gas = TestModeGas)
         {
             List<ContractParameter> parameters = new List<ContractParameter>();
 
@@ -635,12 +624,12 @@ namespace Neo.CLI
                 ConsoleHelper.Info("Invoking script with: ", $"'{script.ToBase64String()}'");
             }
 
-            if (verificable is Transaction tx)
+            if (verifiable is Transaction tx)
             {
                 tx.Script = script;
             }
 
-            using ApplicationEngine engine = ApplicationEngine.Run(script, NeoSystem.StoreView, container: verificable, settings: NeoSystem.Settings, gas: gas);
+            using ApplicationEngine engine = ApplicationEngine.Run(script, NeoSystem.StoreView, container: verifiable, settings: NeoSystem.Settings, gas: gas);
             PrintExecutionOutput(engine, showStack);
             result = engine.State == VMState.FAULT ? null : engine.ResultStack.Peek();
             return engine.State != VMState.FAULT;

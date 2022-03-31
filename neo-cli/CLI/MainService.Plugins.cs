@@ -35,11 +35,11 @@ namespace Neo.CLI
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 response.Dispose();
-                Version version_core = typeof(Plugin).Assembly.GetName().Version;
+                Version versionCore = typeof(Plugin).Assembly.GetName().Version;
                 HttpRequestMessage request = new(HttpMethod.Get, "https://api.github.com/repos/neo-project/neo-modules/releases");
                 request.Headers.UserAgent.ParseAdd($"{GetType().Assembly.GetName().Name}/{GetType().Assembly.GetVersion()}");
-                using HttpResponseMessage response_api = await http.SendAsync(request);
-                byte[] buffer = await response_api.Content.ReadAsByteArrayAsync();
+                using HttpResponseMessage responseApi = await http.SendAsync(request);
+                byte[] buffer = await responseApi.Content.ReadAsByteArrayAsync();
                 JObject releases = JObject.Parse(buffer);
                 JObject asset = releases.GetArray()
                     .Where(p => !p["tag_name"].GetString().Contains('-'))
@@ -49,14 +49,14 @@ namespace Neo.CLI
                         Assets = p["assets"].GetArray()
                     })
                     .OrderByDescending(p => p.Version)
-                    .First(p => p.Version <= version_core).Assets
+                    .First(p => p.Version <= versionCore).Assets
                     .FirstOrDefault(p => p["name"].GetString() == $"{pluginName}.zip");
                 if (asset is null) throw new Exception("Plugin doesn't exist.");
                 response = await http.GetAsync(asset["browser_download_url"].GetString());
             }
             using (response)
             {
-                using Stream stream = await response.Content.ReadAsStreamAsync();
+                await using Stream stream = await response.Content.ReadAsStreamAsync();
                 using ZipArchive zip = new(stream, ZipArchiveMode.Read);
                 try
                 {
