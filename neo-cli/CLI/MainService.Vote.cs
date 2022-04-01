@@ -17,6 +17,7 @@ using Neo.VM;
 using Neo.VM.Types;
 using Neo.Wallets;
 using System;
+using System.Linq;
 using System.Numerics;
 
 namespace Neo.CLI
@@ -27,7 +28,6 @@ namespace Neo.CLI
         /// Process "register candidate" command
         /// </summary>
         /// <param name="account">register account scriptHash</param>
-        /// <param name="maxGas">Max fee for running the script</param>
         [ConsoleCommand("register candidate", Category = "Vote Commands")]
         private void OnRegisterCandidateCommand(UInt160 account)
         {
@@ -49,7 +49,7 @@ namespace Neo.CLI
                 }
             }
 
-            ECPoint publicKey = currentAccount?.GetKey()?.PublicKey;
+            ECPoint publicKey = currentAccount.GetKey()?.PublicKey;
             byte[] script;
             using (ScriptBuilder scriptBuilder = new ScriptBuilder())
             {
@@ -63,7 +63,7 @@ namespace Neo.CLI
         /// <summary>
         /// Process "unregister candidate" command
         /// </summary>
-        /// <param name="account">unregister account scriptHash</param>        
+        /// <param name="account">unregister account scriptHash</param>
         [ConsoleCommand("unregister candidate", Category = "Vote Commands")]
         private void OnUnregisterCandidateCommand(UInt160 account)
         {
@@ -208,9 +208,11 @@ namespace Neo.CLI
         private void OnGetAccountState(UInt160 address)
         {
             string notice = "No vote record!";
-            var arg = new JObject();
-            arg["type"] = "Hash160";
-            arg["value"] = address.ToString();
+            var arg = new JObject
+            {
+                ["type"] = "Hash160",
+                ["value"] = address.ToString()
+            };
 
             if (!OnInvokeWithResult(NativeContract.NEO.Hash, "getAccountState", out StackItem result, null, new JArray(arg))) return;
             Console.WriteLine();
