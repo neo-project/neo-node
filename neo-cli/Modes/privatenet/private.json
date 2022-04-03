@@ -1,0 +1,1 @@
+{"name":null,"version":"1.0","scrypt":{"n":16384,"r":8,"p":8},"accounts":[{"address":"NbNRXrkfMyrEyEv2euE63Xxxqkno7xvuk2","label":null,"isDefault":false,"lock":false,"key":"","contract":{"script":"","parameters":[{"name":"signature","type":"Signature"}],"deployed":false},"extra":null}],"extra":null}
