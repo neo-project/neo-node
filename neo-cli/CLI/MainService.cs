@@ -36,6 +36,7 @@ using System.Numerics;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Akka.Util.Internal;
 using Array = System.Array;
 
 namespace Neo.CLI
@@ -414,8 +415,10 @@ namespace Neo.CLI
                                 i++;
                                 // Get all the modes
                                 var modes = Directory.GetDirectories("./Modes/");
-                                if (modes.Any(p => string.Equals(p, args[i], StringComparison.CurrentCultureIgnoreCase)))
+                                // Find the expected mode
+                                if (modes.Any(p => string.Equals(new DirectoryInfo(p).Name, args[i], StringComparison.CurrentCultureIgnoreCase)))
                                 {
+                                    // Update the mode file
                                     SaveMode(args[i]);
                                 }
                                 else
@@ -426,6 +429,7 @@ namespace Neo.CLI
                         }
                         break;
                 }
+            // Load the mode (network)
             LoadMode();
             _ = new Logger();
 

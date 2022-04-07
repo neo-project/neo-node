@@ -9,15 +9,10 @@
 // modifications are permitted.
 
 using Neo.ConsoleService;
-using Neo.IO.Json;
-using Neo.Plugins;
 using System;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
-using System.Net;
 using System.Text;
-using System.Threading.Tasks;
 using Akka.Util.Internal;
 namespace Neo.CLI;
 
@@ -48,6 +43,7 @@ partial class MainService
     {
         // if no mode name assigned, save on current mode
         modeName ??= LoadCurrentMode();
+        modeName = modeName.ToLower();
         try
         {
             var dir = new DirectoryInfo($"./");
@@ -56,8 +52,8 @@ partial class MainService
             foreach (var file in dir.GetFiles().Where(p=> p.Extension == ".json"))
             {
                 var targetMode = new DirectoryInfo($"Modes/{modeName}");
+                // Create the mode if it does not exist
                 if (!targetMode.Exists) Directory.CreateDirectory(targetMode.FullName);
-
                 var targetFilePath = Path.Combine(targetMode.FullName, file.Name);
                 file.CopyTo(targetFilePath, true);
             }
@@ -69,9 +65,9 @@ partial class MainService
             // Save the Plugin files
             foreach (var plugin in dirs)
             {
-                foreach (var file in plugin.GetFiles())
+                foreach (var file in plugin.GetFiles().Where(p=> p.Extension == ".json"))
                 {
-                    var targetPlugin = new DirectoryInfo($"Modes/{modeName}/{plugin}");
+                    var targetPlugin = new DirectoryInfo($"Modes/{modeName}/{plugin.Name}");
                     if (!targetPlugin.Exists) Directory.CreateDirectory(targetPlugin.FullName);
                     var targetFilePath = Path.Combine(targetPlugin.FullName, file.Name);
                     file.CopyTo(targetFilePath, true);
@@ -115,7 +111,7 @@ partial class MainService
         try
         {
             var mode = LoadCurrentMode();
-            var dir = new DirectoryInfo(mode);
+            var dir = new DirectoryInfo($"./Modes/{mode}");
             if (!dir.Exists)
                 throw new DirectoryNotFoundException($"Mode not found: {dir.FullName}");
 
@@ -149,6 +145,8 @@ partial class MainService
     private static void SaveMode(string mode)
     {
         const string path = @"./Modes/Mode";
+        mode ??= "mainnet";
+        mode = mode.ToLower();
         try
         {
             // if(File.Exists(path)) File.Delete(path);
@@ -175,7 +173,9 @@ partial class MainService
         catch (Exception e)
         {
             // ignored
+            ConsoleHelper.Error("Mode system is crashed, please reinstall the node");
+            /// TODO: Maybe allow users to fix it automatically
         }
-        return mode;
+        return mode.ToLower();
     }
 }

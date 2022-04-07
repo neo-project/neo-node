@@ -13,34 +13,21 @@
     <Company>The Neo Project</Company>
     <Product>Neo.CLI</Product>
     <Description>Neo.CLI</Description>
+    <ApplicationIcon>neo.ico</ApplicationIcon>
   </PropertyGroup>
 
-  <ItemGroup>
+  <!-- <ItemGroup>
     <None Update="config*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </None>
-    <None Update="Modes\mainnet\config.fs.json">
+  </ItemGroup> -->
+<ItemGroup>
+    <ContentWithTargetPath Include="Modes\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </None>
-    <None Update="Modes\mainnet\config.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </None>
-    <None Update="Modes\testnet\config.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </None>
-    <None Update="Modes\testnet\config.fs.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </None>
-    <None Update="Modes\privatenet\config.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </None>
-  </ItemGroup>
+      <TargetPath>Modes\%(RecursiveDir)\%(Filename)%(Extension)</TargetPath>
+    </ContentWithTargetPath>
+</ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Neo" Version="3.1.0" />
