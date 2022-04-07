@@ -168,11 +168,9 @@ partial class MainService
         var mode = "mainnet";
         try
         {
-            using (var sr = File.OpenText(path))
-            {
-                // If there is no valid mode, load mainnet as default.
-                mode = sr.ReadLine() ?? mode;
-            }
+            using var sr = File.OpenText(path);
+            // If there is no valid mode, load mainnet as default.
+            mode = sr.ReadLine() ?? mode;
         }
         catch (Exception e)
         {
