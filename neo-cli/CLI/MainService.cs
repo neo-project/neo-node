@@ -410,7 +410,7 @@ namespace Neo.CLI
                     case "--mode":
                     case "/mode":
                         {
-                            if (i < args.Length-1)
+                            if (i < args.Length - 1)
                             {
                                 i++;
                                 // Get all the modes

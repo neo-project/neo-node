@@ -49,7 +49,7 @@ partial class MainService
             var dir = new DirectoryInfo($"./");
 
             // Get the config files of the node
-            foreach (var file in dir.GetFiles().Where(p=> p.Extension == ".json"))
+            foreach (var file in dir.GetFiles().Where(p => p.Extension == ".json"))
             {
                 var targetMode = new DirectoryInfo($"Modes/{modeName}");
                 // Create the mode if it does not exist
@@ -65,7 +65,7 @@ partial class MainService
             // Save the Plugin files
             foreach (var plugin in dirs)
             {
-                foreach (var file in plugin.GetFiles().Where(p=> p.Extension == ".json"))
+                foreach (var file in plugin.GetFiles().Where(p => p.Extension == ".json"))
                 {
                     var targetPlugin = new DirectoryInfo($"Modes/{modeName}/{plugin.Name}");
                     if (!targetPlugin.Exists) Directory.CreateDirectory(targetPlugin.FullName);
@@ -85,7 +85,7 @@ partial class MainService
     }
 
     /// <summary>
-    /// Process "plugins" command
+    /// Process "mode delete" command
     /// <param name="modeName">Mode name</param>
     /// </summary>
     [ConsoleCommand("mode delete", Category = "Mode Commands")]
@@ -170,7 +170,7 @@ partial class MainService
             // If there is no valid mode, load mainnet as default.
             mode = sr.ReadLine() ?? mode;
         }
-        catch (Exception e)
+        catch (Exception)
         {
             // ignored
             ConsoleHelper.Error("Mode system is crashed, please reinstall the node");
