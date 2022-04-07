@@ -416,7 +416,6 @@ namespace Neo.CLI
                                 var modes = Directory.GetDirectories("./Modes/");
                                 if (modes.Any(p => string.Equals(p, args[i], StringComparison.CurrentCultureIgnoreCase)))
                                 {
-                                    LoadConfig($"Modes/{args[i]}");
                                     SaveMode(args[i]);
                                 }
                                 else
@@ -427,7 +426,7 @@ namespace Neo.CLI
                         }
                         break;
                 }
-
+            LoadMode();
             _ = new Logger();
 
             ProtocolSettings protocol = ProtocolSettings.Load("config.json");

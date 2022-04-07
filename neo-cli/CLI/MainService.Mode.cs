@@ -56,74 +56,77 @@ namespace Neo.CLI;
         [ConsoleCommand("mode delete", Category = "Mode Commands")]
         private void OnDeleteMode(string modeName)
         {
-            // if (Plugin.Plugins.Count > 0)
-            // {
-            //     Console.WriteLine("Loaded plugins:");
-            //     foreach (Plugin plugin in Plugin.Plugins)
-            //     {
-            //         if (plugin is Logger) continue;
-            //         ConsoleHelper.Info($"\t{plugin.Name,-20}", plugin.Description);
-            //     }
-            // }
-            // else
-            // {
-            //     ConsoleHelper.Warning("No loaded plugins");
-            // }
+            try
+            {
+                var dir = new DirectoryInfo($"Modes/{modeName}");
+                if (!dir.Exists)
+                    return;
+                Directory.Delete(dir.FullName);
+                ConsoleHelper.Info("Mode ", modeName, " was deleted.");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
         }
 
-
-
-        private void LoadConfig(string mode)
+        private static void LoadMode()
         {
-            var dir = new DirectoryInfo(mode);
-            if (!dir.Exists)
-                throw new DirectoryNotFoundException($"Mode not found: {dir.FullName}");
-
-            // Cache directories before we start copying
-            var dirs = dir.GetDirectories();
-
-            // Get the config files of the node
-            foreach (var file in dir.GetFiles())
+            const string path = @"./Modes/Mode";
+            try
             {
-                var targetFilePath = Path.Combine("./", file.Name);
-                file.CopyTo(targetFilePath, true);
-            }
-
-            // Copy the Plugin files
-            foreach (var plugin in dirs)
-            {
-                foreach (var file in plugin.GetFiles())
+                var mode = "mainnet";
+                using (var sr = File.OpenText(path))
                 {
-                    var targetFilePath = Path.Combine($"Plugins/{plugin.Name}", file.Name);
+                    // If there is no valid mode, load mainnet as default.
+                    mode = sr.ReadLine()??mode;
+                }
+
+                var dir = new DirectoryInfo(mode);
+                if (!dir.Exists)
+                    throw new DirectoryNotFoundException($"Mode not found: {dir.FullName}");
+
+                // Cache directories before we start copying
+                var dirs = dir.GetDirectories();
+
+                // Get the config files of the node
+                foreach (var file in dir.GetFiles())
+                {
+                    var targetFilePath = Path.Combine("./", file.Name);
                     file.CopyTo(targetFilePath, true);
                 }
+
+                // Copy the Plugin files
+                foreach (var plugin in dirs)
+                {
+                    foreach (var file in plugin.GetFiles())
+                    {
+                        var targetFilePath = Path.Combine($"Plugins/{plugin.Name}", file.Name);
+                        file.CopyTo(targetFilePath, true);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
             }
         }
 
-        private void SaveMode(string mode)
+        private static void SaveMode(string mode)
         {
-            string path = @"./Modes/Mode";
-
+            const string path = @"./Modes/Mode";
             try
             {
                 // if(File.Exists(path)) File.Delete(path);
-                using (var fs = File.Create(path))
-                {
-                    byte[] info = new UTF8Encoding(true).GetBytes(mode);
-                    fs.Write(info, 0, info.Length);
-                }
+                using var fs = File.Create(path);
+                var info = new UTF8Encoding(true).GetBytes(mode);
+                fs.Write(info, 0, info.Length);
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
             }
-            // using (StreamReader sr = File.OpenText(path))
-            // {
-            //     string s = "";
-            //     while ((s = sr.ReadLine()) != null)
-            //     {
-            //         Console.WriteLine(s);
-            //     }
-            // }
         }
     }
