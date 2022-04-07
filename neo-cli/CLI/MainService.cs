@@ -406,6 +406,25 @@ namespace Neo.CLI
                     case "--noverify":
                         verifyImport = false;
                         break;
+                    case "--mode":
+                    case "/mode":
+                        {
+                            if (i < args.Length)
+                            {
+                                i++;
+                                // Get all the modes
+                                var modes = Directory.GetDirectories("./Modes/");
+                                if (modes.Any(p => string.Equals(p, args[i], StringComparison.CurrentCultureIgnoreCase)))
+                                {
+                                    LoadConfig($"Modes/{args[i]}");
+                                }
+                                else
+                                {
+                                    throw new Exception($"Invalid Mode {args[i]}.");
+                                }
+                            }
+                        }
+                        break;
                 }
 
             _ = new Logger();
@@ -657,6 +676,34 @@ namespace Neo.CLI
             }
 
             return exception.Message;
+        }
+
+
+        private void LoadConfig(string mode)
+        {
+            var dir = new DirectoryInfo(mode);
+            if (!dir.Exists)
+                throw new DirectoryNotFoundException($"Mode not found: {dir.FullName}");
+
+            // Cache directories before we start copying
+            var dirs = dir.GetDirectories();
+
+            // Get the config files of the node
+            foreach (var file in dir.GetFiles())
+            {
+                var targetFilePath = Path.Combine("./", file.Name);
+                file.CopyTo(targetFilePath, true);
+            }
+
+            // Copy the Plugin files
+            foreach (var plugin in dirs)
+            {
+                foreach (var file in plugin.GetFiles())
+                {
+                    var targetFilePath = Path.Combine($"Plugins/{plugin.Name}", file.Name);
+                    file.CopyTo(targetFilePath, true);
+                }
+            }
         }
     }
 }
