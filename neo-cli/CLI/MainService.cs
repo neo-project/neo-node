@@ -409,7 +409,7 @@ namespace Neo.CLI
                     case "--mode":
                     case "/mode":
                         {
-                            if (i < args.Length)
+                            if (i < args.Length-1)
                             {
                                 i++;
                                 // Get all the modes
@@ -417,6 +417,7 @@ namespace Neo.CLI
                                 if (modes.Any(p => string.Equals(p, args[i], StringComparison.CurrentCultureIgnoreCase)))
                                 {
                                     LoadConfig($"Modes/{args[i]}");
+                                    SaveMode(args[i]);
                                 }
                                 else
                                 {
@@ -676,34 +677,6 @@ namespace Neo.CLI
             }
 
             return exception.Message;
-        }
-
-
-        private void LoadConfig(string mode)
-        {
-            var dir = new DirectoryInfo(mode);
-            if (!dir.Exists)
-                throw new DirectoryNotFoundException($"Mode not found: {dir.FullName}");
-
-            // Cache directories before we start copying
-            var dirs = dir.GetDirectories();
-
-            // Get the config files of the node
-            foreach (var file in dir.GetFiles())
-            {
-                var targetFilePath = Path.Combine("./", file.Name);
-                file.CopyTo(targetFilePath, true);
-            }
-
-            // Copy the Plugin files
-            foreach (var plugin in dirs)
-            {
-                foreach (var file in plugin.GetFiles())
-                {
-                    var targetFilePath = Path.Combine($"Plugins/{plugin.Name}", file.Name);
-                    file.CopyTo(targetFilePath, true);
-                }
-            }
         }
     }
 }
