@@ -113,13 +113,10 @@ partial class MainService
             if (!dir.Exists)
                 throw new DirectoryNotFoundException($"Mode not found: {dir.FullName}");
 
-            // Cache directories before we start copying
-            var dirs = dir.GetDirectories();
-
             // Get the config files of the node
             foreach (var file in dir.GetFiles())
             {
-                if (file.Name == "config.json" || file.Name == "config.fs.json")
+                if (file.Name is "config.json" or "config.fs.json")
                 {
                     var targetFilePath = Path.Combine("./", file.Name);
                     file.CopyTo(targetFilePath, true);
@@ -127,6 +124,8 @@ partial class MainService
                 else
                 {
                     var plugin = file.Name.Split('.')[0];
+                    // if the plugin no longer exists, just ignore it.
+                    if(Directory.Exists($"Plugins/{plugin}/")) continue;
                     file.CopyTo($"Plugins/{plugin}/config.json", true);
                 }
             }
