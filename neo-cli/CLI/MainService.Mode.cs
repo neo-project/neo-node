@@ -52,20 +52,19 @@ partial class MainService
         {
             var dir = new DirectoryInfo($"./");
 
+            var targetMode = new DirectoryInfo($"Modes/{modeName}");
+            // Create the mode if it does not exist
+            if (!targetMode.Exists) Directory.CreateDirectory(targetMode.FullName);
+
             // Get the config files of the node
             foreach (var file in dir.GetFiles().Where(p => p.Extension == ".json"))
             {
-                var targetMode = new DirectoryInfo($"Modes/{modeName}");
-                // Create the mode if it does not exist
-                if (!targetMode.Exists) Directory.CreateDirectory(targetMode.FullName);
                 var targetFilePath = Path.Combine(targetMode.FullName, file.Name);
                 file.CopyTo(targetFilePath, true);
             }
-
             var plugins = new DirectoryInfo("./Plugins");
             // Cache directories before we start copying
             var dirs = plugins.GetDirectories();
-
             // Save the Plugin files
             foreach (var plugin in dirs)
             {
@@ -80,7 +79,6 @@ partial class MainService
             Console.WriteLine(e);
             throw;
         }
-
     }
 
     /// <summary>
@@ -95,7 +93,7 @@ partial class MainService
             var dir = new DirectoryInfo($"Modes/{modeName}");
             if (!dir.Exists)
                 return;
-            Directory.Delete(dir.FullName);
+            Directory.Delete(dir.FullName,true);
             ConsoleHelper.Info("Mode ", modeName, " was deleted.");
         }
         catch (Exception e)
