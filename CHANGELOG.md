@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [3.2.0]
+
+### Changed
+- ([#850](https://github.com/neo-project/neo-node/pull/850/)) Modify MaxTransactionsPerBlock for testnet
+- ([#852](https://github.com/neo-project/neo-node/pull/852/)) Add new testnet network id
+- ([#847](https://github.com/neo-project/neo-node/pull/847/)) typo, comment
+
 ## [3.1.0]
 
 ### Changed
