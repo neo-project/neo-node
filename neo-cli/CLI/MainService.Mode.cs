@@ -62,7 +62,7 @@ partial class MainService
                 file.CopyTo(targetFilePath, true);
             }
 
-            var plugins = new DirectoryInfo($"./Plugins");
+            var plugins = new DirectoryInfo("./Plugins");
             // Cache directories before we start copying
             var dirs = plugins.GetDirectories();
 
