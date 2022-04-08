@@ -61,6 +61,9 @@ namespace Neo.CLI
                 try
                 {
                     zip.ExtractToDirectory(".");
+
+                    // _currentMode
+                    File.Copy($"Plugins/{pluginName}/config.json", $"Modes/{_currentMode}/{pluginName}.json", true);
                     ConsoleHelper.Info("Install successful, please restart neo-cli.");
                 }
                 catch (IOException)

@@ -49,6 +49,7 @@ namespace Neo.CLI
 
         private Wallet _currentWallet;
         public LocalNode LocalNode;
+        private string _currentMode = "mainnet";
 
         public Wallet CurrentWallet
         {
@@ -421,6 +422,7 @@ namespace Neo.CLI
                                 if (modes.Any(p => string.Equals(new DirectoryInfo(p).Name, args[i], StringComparison.CurrentCultureIgnoreCase)))
                                 {
                                     mode = args[i].ToLower();
+                                    _currentMode = mode;
                                 }
                                 else
                                 {

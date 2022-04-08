@@ -93,7 +93,7 @@ partial class MainService
             var dir = new DirectoryInfo($"Modes/{modeName}");
             if (!dir.Exists)
                 return;
-            Directory.Delete(dir.FullName,true);
+            Directory.Delete(dir.FullName, true);
             ConsoleHelper.Info("Mode ", modeName, " was deleted.");
         }
         catch (Exception e)
@@ -123,7 +123,7 @@ partial class MainService
                 {
                     var plugin = file.Name.Split('.')[0];
                     // if the plugin no longer exists, just ignore it.
-                    if(!Directory.Exists($"Plugins/{plugin}/")) continue;
+                    if (!Directory.Exists($"Plugins/{plugin}/")) continue;
                     file.CopyTo($"Plugins/{plugin}/config.json", true);
                 }
             }
