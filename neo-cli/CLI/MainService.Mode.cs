@@ -71,10 +71,7 @@ partial class MainService
             {
                 foreach (var file in plugin.GetFiles().Where(p => p.Extension == ".json"))
                 {
-                    var targetPlugin = new DirectoryInfo($"Modes/{modeName}/{plugin.Name}");
-                    if (!targetPlugin.Exists) Directory.CreateDirectory(targetPlugin.FullName);
-                    var targetFilePath = Path.Combine(targetPlugin.FullName, file.Name);
-                    file.CopyTo(targetFilePath, true);
+                    file.CopyTo($"Modes/{modeName}/{plugin.Name}.json", true);
                 }
             }
         }
@@ -122,17 +119,15 @@ partial class MainService
             // Get the config files of the node
             foreach (var file in dir.GetFiles())
             {
-                var targetFilePath = Path.Combine("./", file.Name);
-                file.CopyTo(targetFilePath, true);
-            }
-
-            // Copy the Plugin files
-            foreach (var plugin in dirs)
-            {
-                foreach (var file in plugin.GetFiles())
+                if (file.Name == "config.json" || file.Name == "config.fs.json")
                 {
-                    var targetFilePath = Path.Combine($"Plugins/{plugin.Name}", file.Name);
+                    var targetFilePath = Path.Combine("./", file.Name);
                     file.CopyTo(targetFilePath, true);
+                }
+                else
+                {
+                    var plugin = file.Name.Split('.')[0];
+                    file.CopyTo($"Plugins/{plugin}/config.json", true);
                 }
             }
         }
