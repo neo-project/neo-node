@@ -67,7 +67,7 @@ namespace Neo.CLI
         /// <returns>Downloaded content</returns>
         private async Task<MemoryStream> DownloadPlugin(string pluginName)
         {
-            var url = $"https: //github.com/neo-project/neo-modules/releases/download/v{typeof(Plugin).Assembly.GetVersion()}/{pluginName}.zip";
+            var url = $"https://github.com/neo-project/neo-modules/releases/download/v{typeof(Plugin).Assembly.GetVersion()}/{pluginName}.zip";
             using HttpClient http = new();
             HttpResponseMessage response = await http.GetAsync(url);
             if (response.StatusCode == HttpStatusCode.NotFound)
