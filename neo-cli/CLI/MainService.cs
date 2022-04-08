@@ -400,6 +400,8 @@ namespace Neo.CLI
         {
             if (NeoSystem != null) return;
             bool verifyImport = true;
+            // set mainnet as default mode
+            string mode = "mainnet";
             for (int i = 0; i < args.Length; i++)
                 switch (args[i])
                 {
@@ -418,8 +420,7 @@ namespace Neo.CLI
                                 // Find the expected mode
                                 if (modes.Any(p => string.Equals(new DirectoryInfo(p).Name, args[i], StringComparison.CurrentCultureIgnoreCase)))
                                 {
-                                    // Update the mode file
-                                    SaveMode(args[i]);
+                                    mode = args[i].ToLower();
                                 }
                                 else
                                 {
@@ -430,7 +431,7 @@ namespace Neo.CLI
                         break;
                 }
             // Load the mode (network)
-            LoadMode();
+            LoadMode(mode);
             _ = new Logger();
 
             ProtocolSettings protocol = ProtocolSettings.Load("config.json");

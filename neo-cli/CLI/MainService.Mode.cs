@@ -41,8 +41,12 @@ partial class MainService
     [ConsoleCommand("mode save", Category = "Mode Commands")]
     private void OnSaveMode(string modeName)
     {
-        // if no mode name assigned, save on current mode
-        modeName ??= LoadCurrentMode();
+        // if no mode name assigned
+        if (modeName is null)
+        {
+            ConsoleHelper.Error("No mode name assigned.");
+            return;
+        }
         modeName = modeName.ToLower();
         try
         {
@@ -73,8 +77,6 @@ partial class MainService
                     file.CopyTo(targetFilePath, true);
                 }
             }
-            // Update the most recent mode
-            SaveMode(modeName);
         }
         catch (Exception e)
         {
@@ -106,11 +108,10 @@ partial class MainService
         }
     }
 
-    private static void LoadMode()
+    private static void LoadMode(string mode)
     {
         try
         {
-            var mode = LoadCurrentMode();
             var dir = new DirectoryInfo($"./Modes/{mode}");
             if (!dir.Exists)
                 throw new DirectoryNotFoundException($"Mode not found: {dir.FullName}");
@@ -140,42 +141,5 @@ partial class MainService
             Console.WriteLine(e);
             throw;
         }
-    }
-
-    private static void SaveMode(string mode)
-    {
-        const string path = @"./Modes/Mode";
-        mode ??= "mainnet";
-        mode = mode.ToLower();
-        try
-        {
-            // if(File.Exists(path)) File.Delete(path);
-            using var fs = File.Create(path);
-            var info = new UTF8Encoding(true).GetBytes(mode);
-            fs.Write(info, 0, info.Length);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.ToString());
-        }
-    }
-
-    private static string LoadCurrentMode()
-    {
-        const string path = @"./Modes/Mode";
-        var mode = "mainnet";
-        try
-        {
-            using var sr = File.OpenText(path);
-            // If there is no valid mode, load mainnet as default.
-            mode = sr.ReadLine() ?? mode;
-        }
-        catch (Exception)
-        {
-            // ignored
-            ConsoleHelper.Error("Mode system is crashed, please reinstall the node");
-            /// TODO: Maybe allow users to fix it automatically
-        }
-        return mode.ToLower();
     }
 }
