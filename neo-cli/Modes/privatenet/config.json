@@ -18,8 +18,8 @@
 
     },
     "UnlockWallet": {
-      "Path": "private.json",
-      "Password": "",
+      "Path": "NbVj8GhwToNv4WF2gVaoco6hbkMQ8hrHWP.json",
+      "Password": "12345678",
       "IsActive": true
     }
   },
@@ -33,7 +33,7 @@
     "InitialGasDistribution": 5200000000000000,
     "ValidatorsCount": 1,
     "StandbyCommittee": [
-      "02155400060a3612eba11267fe8acc545f843fe73ebbd3d3781b7ee270f8b882c7"
+      "03eecd363220d6e4de793abfebae09779768468c59a3b6e0132a9ea3b22010f7d8"
     ],
     "SeedList": []
   }
