@@ -125,7 +125,7 @@ partial class MainService
                 {
                     var plugin = file.Name.Split('.')[0];
                     // if the plugin no longer exists, just ignore it.
-                    if(Directory.Exists($"Plugins/{plugin}/")) continue;
+                    if(!Directory.Exists($"Plugins/{plugin}/")) continue;
                     file.CopyTo($"Plugins/{plugin}/config.json", true);
                 }
             }
