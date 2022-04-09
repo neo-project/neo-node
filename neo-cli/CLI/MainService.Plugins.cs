@@ -110,10 +110,39 @@ namespace Neo.CLI
             if (Plugin.Plugins.Count > 0)
             {
                 Console.WriteLine("Loaded plugins:");
-                foreach (Plugin plugin in Plugin.Plugins)
+                foreach (var plugin in Plugin.Plugins.Where(plugin => plugin is not Logger))
                 {
-                    if (plugin is Logger) continue;
                     ConsoleHelper.Info($"\t{plugin.Name,-20}", plugin.Description);
+                }
+            }
+            else
+            {
+                ConsoleHelper.Warning("No loaded plugins");
+            }
+        }
+
+        /// <summary>
+        /// Process "plugin network" command
+        /// </summary>
+        [ConsoleCommand("plugin network", Category = "Plugin Commands")]
+        private void OnPluginNetworkCommand()
+        {
+            if (Plugin.Plugins.Count > 0)
+            {
+                Console.WriteLine("Plugin Networks:");
+                foreach (var plugin in Plugin.Plugins.Where(plugin => plugin is not Logger))
+                {
+                    try
+                    {
+                        using var config = File.OpenText(plugin.ConfigFile);
+                        var json = JObject.Parse(config.ReadToEnd());
+                        var network = json["PluginConfiguration"]["Network"].GetString();
+                        ConsoleHelper.Info($"{plugin.Name} : ", network);
+                    }
+                    catch (Exception)
+                    {
+                        // ignored
+                    }
                 }
             }
             else
