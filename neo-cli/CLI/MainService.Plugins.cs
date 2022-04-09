@@ -18,6 +18,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Akka.Util.Internal;
 
 namespace Neo.CLI
 {
@@ -63,7 +64,10 @@ namespace Neo.CLI
                     zip.ExtractToDirectory(".");
 
                     // _currentMode
-                    File.Copy($"Plugins/{pluginName}/config.json", $"Modes/{_currentMode}/{pluginName}.json", true);
+                    Directory.GetDirectories("./Modes/").
+                        ForEach(p =>
+                            File.Copy($"Plugins/{pluginName}/config.json", $"Modes/{new DirectoryInfo(p).Name}/{pluginName}.json", true));
+
                     ConsoleHelper.Info("Install successful, please restart neo-cli.");
                 }
                 catch (IOException)
