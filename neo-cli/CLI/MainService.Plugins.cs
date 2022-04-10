@@ -146,7 +146,7 @@ namespace Neo.CLI
                     try
                     {
                         var temp = $"{Path.GetTempPath()}/{pluginName}/config.json";
-                        entry.ExtractToFile(temp,true);
+                        entry.ExtractToFile(temp, true);
                         await InstallDependency(temp, pluginToInstall);
                         File.Delete(temp);
                     }
@@ -173,27 +173,27 @@ namespace Neo.CLI
         /// <param name="pluginToInstall">installing plugin stack</param>
         private async Task InstallDependency(string configPath, Stack<string> pluginToInstall)
         {
-                IConfigurationSection dependency = new ConfigurationBuilder()
-                    .AddJsonFile(configPath, optional: true)
-                    .Build()
-                    .GetSection("Dependency");
+            IConfigurationSection dependency = new ConfigurationBuilder()
+                .AddJsonFile(configPath, optional: true)
+                .Build()
+                .GetSection("Dependency");
 
-                var dependencies = dependency.GetChildren().Select(p => p.Get<string>()).ToArray();
+            var dependencies = dependency.GetChildren().Select(p => p.Get<string>()).ToArray();
 
-                if (dependencies.Length == 0) return;
+            if (dependencies.Length == 0) return;
 
-                ConsoleHelper.Info("Installing dependencies.");
-                foreach (string plugin in dependencies)
+            ConsoleHelper.Info("Installing dependencies.");
+            foreach (string plugin in dependencies)
+            {
+                if (plugin.Length == 0) continue;
+
+                if (PluginExists(plugin))
                 {
-                    if (plugin.Length == 0) continue;
-
-                    if (PluginExists(plugin))
-                    {
-                        ConsoleHelper.Info("Dependency already installed.");
-                        continue;
-                    }
-                    await InstallPluginAsync(await DownloadPluginAsync(plugin), plugin, pluginToInstall);
+                    ConsoleHelper.Info("Dependency already installed.");
+                    continue;
                 }
+                await InstallPluginAsync(await DownloadPluginAsync(plugin), plugin, pluginToInstall);
+            }
         }
 
         private bool PluginExists(string pluginName)
