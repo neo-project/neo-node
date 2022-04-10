@@ -141,10 +141,17 @@ namespace Neo.CLI
 
             try
             {
-                zip.ExtractToDirectory(".", overWrite);
-                await InstallDependency(pluginName, pluginToInstall);
-                ConsoleHelper.Warning($"Install successful, please restart neo-cli.");
-                pluginToInstall.Pop();
+                foreach (var entry in zip.Entries.Where(p => p.Name == "config.json"))
+                {
+                    var temp = $"{Path.GetTempPath()}/config.json";
+                    entry.ExtractToFile(temp);
+                    await InstallDependency(temp, pluginToInstall);
+
+                    zip.ExtractToDirectory(".", overWrite);
+                    ConsoleHelper.Warning("Install successful, please restart neo-cli.");
+                    pluginToInstall.Pop();
+                    File.Delete(temp);
+                }
             }
             catch (IOException)
             {
@@ -156,14 +163,14 @@ namespace Neo.CLI
         /// <summary>
         /// Install the dependency of the plugin
         /// </summary>
-        /// <param name="pluginName">plugin name</param>
+        /// <param name="configPath">plugin config path in temp</param>
         /// <param name="pluginToInstall">installing plugin stack</param>
-        private async Task InstallDependency(string pluginName, Stack<string> pluginToInstall)
+        private async Task InstallDependency(string configPath, Stack<string> pluginToInstall)
         {
             try
             {
                 IConfigurationSection dependency = new ConfigurationBuilder()
-                    .AddJsonFile($"Plugins/{pluginName}/config.json", optional: true)
+                    .AddJsonFile(configPath, optional: true)
                     .Build()
                     .GetSection("Dependency");
 
