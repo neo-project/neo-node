@@ -143,15 +143,21 @@ namespace Neo.CLI
             {
                 foreach (var entry in zip.Entries.Where(p => p.Name == "config.json"))
                 {
-                    var temp = $"{Path.GetTempPath()}/{pluginName}/config.json";
-                    entry.ExtractToFile(temp,true);
-                    await InstallDependency(temp, pluginToInstall);
-
-                    zip.ExtractToDirectory(".", overWrite);
-                    ConsoleHelper.Warning("Install successful, please restart neo-cli.");
-                    pluginToInstall.Pop();
-                    File.Delete(temp);
+                    try
+                    {
+                        var temp = $"{Path.GetTempPath()}/{pluginName}/config.json";
+                        entry.ExtractToFile(temp,true);
+                        await InstallDependency(temp, pluginToInstall);
+                        File.Delete(temp);
+                    }
+                    catch
+                    {
+                        // Fail to read DEPENDENCY means there is no dependency
+                    }
                 }
+                zip.ExtractToDirectory(".", overWrite);
+                ConsoleHelper.Warning("Install successful, please restart neo-cli.");
+                pluginToInstall.Pop();
             }
             catch (IOException)
             {
@@ -167,8 +173,6 @@ namespace Neo.CLI
         /// <param name="pluginToInstall">installing plugin stack</param>
         private async Task InstallDependency(string configPath, Stack<string> pluginToInstall)
         {
-            try
-            {
                 IConfigurationSection dependency = new ConfigurationBuilder()
                     .AddJsonFile(configPath, optional: true)
                     .Build()
@@ -190,11 +194,6 @@ namespace Neo.CLI
                     }
                     await InstallPluginAsync(await DownloadPluginAsync(plugin), plugin, pluginToInstall);
                 }
-            }
-            catch
-            {
-                // Fail to read DEPENDENCY means there is no dependency
-            }
         }
 
         private bool PluginExists(string pluginName)
