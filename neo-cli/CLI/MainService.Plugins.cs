@@ -102,7 +102,7 @@ namespace Neo.CLI
                 await using Stream stream = await response.Content.ReadAsStreamAsync();
                 ConsoleHelper.Info("From", $"{url}");
                 var output = new MemoryStream();
-                while ((read = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                while ((read = await stream.ReadAsync(buffer)) > 0)
                 {
                     output.Write(buffer, 0, read);
                     totalRead += read;
