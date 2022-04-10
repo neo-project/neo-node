@@ -41,7 +41,7 @@ namespace Neo.CLI
             // To prevent circular dependency
             // put plugin-to-install into stack
             Stack<string> pluginToInstall = new();
-            await InstallPlugin(await DownloadPlugin(pluginName), pluginName, pluginToInstall);
+            await InstallPluginAsync(await DownloadPluginAsync(pluginName), pluginName, pluginToInstall);
         }
 
         /// <summary>
@@ -54,7 +54,7 @@ namespace Neo.CLI
         private async Task OnReinstallCommand(string pluginName)
         {
             Stack<string> pluginToInstall = new();
-            await InstallPlugin(await DownloadPlugin(pluginName), pluginName, pluginToInstall, true);
+            await InstallPluginAsync(await DownloadPluginAsync(pluginName), pluginName, pluginToInstall, true);
         }
 
         /// <summary>
@@ -65,7 +65,7 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="pluginName">name of the plugin</param>
         /// <returns>Downloaded content</returns>
-        private async Task<MemoryStream> DownloadPlugin(string pluginName)
+        private async Task<MemoryStream> DownloadPluginAsync(string pluginName)
         {
             var url = $"https://github.com/neo-project/neo-modules/releases/download/v{typeof(Plugin).Assembly.GetVersion()}/{pluginName}.zip";
             using HttpClient http = new();
@@ -121,7 +121,7 @@ namespace Neo.CLI
         /// <param name="pluginName">name of the plugin</param>
         /// <param name="pluginToInstall">installing plugin stack</param>
         /// <param name="overWrite">Install by force for `update`</param>
-        private async Task InstallPlugin(MemoryStream stream, string pluginName, Stack<string> pluginToInstall, bool overWrite = false)
+        private async Task InstallPluginAsync(MemoryStream stream, string pluginName, Stack<string> pluginToInstall, bool overWrite = false)
         {
             // If plugin already in the installing stack,
             // It means there has circular dependency.
@@ -181,7 +181,7 @@ namespace Neo.CLI
                         ConsoleHelper.Info("Dependency already installed.");
                         continue;
                     }
-                    await InstallPlugin(await DownloadPlugin(plugin), plugin, pluginToInstall);
+                    await InstallPluginAsync(await DownloadPluginAsync(plugin), plugin, pluginToInstall);
                 }
             }
             catch
