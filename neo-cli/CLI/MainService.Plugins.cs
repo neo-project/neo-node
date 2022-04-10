@@ -18,6 +18,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Akka.Util.Internal;
+using Microsoft.Extensions.Configuration;
 
 namespace Neo.CLI
 {
@@ -31,13 +33,16 @@ namespace Neo.CLI
         private async Task OnInstallCommandAsync(string pluginName)
         {
             using HttpClient http = new();
-            HttpResponseMessage response = await http.GetAsync($"https://github.com/neo-project/neo-modules/releases/download/v{typeof(Plugin).Assembly.GetVersion()}/{pluginName}.zip");
+            HttpResponseMessage response = await http.GetAsync(
+                $"https://github.com/neo-project/neo-modules/releases/download/v{typeof(Plugin).Assembly.GetVersion()}/{pluginName}.zip");
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 response.Dispose();
                 Version versionCore = typeof(Plugin).Assembly.GetName().Version;
-                HttpRequestMessage request = new(HttpMethod.Get, "https://api.github.com/repos/neo-project/neo-modules/releases");
-                request.Headers.UserAgent.ParseAdd($"{GetType().Assembly.GetName().Name}/{GetType().Assembly.GetVersion()}");
+                HttpRequestMessage request = new(HttpMethod.Get,
+                    "https://api.github.com/repos/neo-project/neo-modules/releases");
+                request.Headers.UserAgent.ParseAdd(
+                    $"{GetType().Assembly.GetName().Name}/{GetType().Assembly.GetVersion()}");
                 using HttpResponseMessage responseApi = await http.SendAsync(request);
                 byte[] buffer = await responseApi.Content.ReadAsByteArrayAsync();
                 JObject releases = JObject.Parse(buffer);
@@ -54,6 +59,7 @@ namespace Neo.CLI
                 if (asset is null) throw new Exception("Plugin doesn't exist.");
                 response = await http.GetAsync(asset["browser_download_url"].GetString());
             }
+
             using (response)
             {
                 await using Stream stream = await response.Content.ReadAsStreamAsync();
@@ -83,6 +89,7 @@ namespace Neo.CLI
                 ConsoleHelper.Warning("Plugin not found");
                 return;
             }
+
             if (plugin is Logger)
             {
                 ConsoleHelper.Warning("You cannot uninstall a built-in plugin.");
@@ -98,6 +105,7 @@ namespace Neo.CLI
             catch (IOException)
             {
             }
+
             ConsoleHelper.Info("Uninstall successful, please restart neo-cli.");
         }
 
@@ -135,9 +143,8 @@ namespace Neo.CLI
                     try
                     {
                         using var config = File.OpenText(plugin.ConfigFile);
-                        var json = JObject.Parse(config.ReadToEnd());
-                        var network = json["PluginConfiguration"]["Network"].GetString();
-                        ConsoleHelper.Info($"{plugin.Name} : ", network);
+                        var network = JObject.Parse(config.ReadToEnd()).JsonPath("$..Network");
+                        network.ForEach(p => ConsoleHelper.Info($"{plugin.Name} : ", p.GetString()));
                     }
                     catch (Exception)
                     {
