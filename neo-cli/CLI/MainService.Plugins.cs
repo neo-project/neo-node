@@ -143,8 +143,8 @@ namespace Neo.CLI
             {
                 foreach (var entry in zip.Entries.Where(p => p.Name == "config.json"))
                 {
-                    var temp = $"{Path.GetTempPath()}/config.json";
-                    entry.ExtractToFile(temp);
+                    var temp = $"{Path.GetTempPath()}/{pluginName}/config.json";
+                    entry.ExtractToFile(temp,true);
                     await InstallDependency(temp, pluginToInstall);
 
                     zip.ExtractToDirectory(".", overWrite);
