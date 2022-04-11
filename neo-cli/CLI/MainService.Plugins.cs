@@ -127,61 +127,38 @@ namespace Neo.CLI
                 ConsoleHelper.Info("SHA256: ", $"{sha256.ComputeHash(stream.ToArray()).ToHexString()}");
             }
             using ZipArchive zip = new(stream, ZipArchiveMode.Read);
-
-            try
+            ZipArchiveEntry entry = zip.Entries.FirstOrDefault(p => p.Name == "config.json");
+            if (entry is not null)
             {
-                foreach (var entry in zip.Entries.Where(p => p.Name == "config.json"))
-                {
-                    try
-                    {
-                        var temp = $"{Path.GetTempPath()}/{pluginName}/config.json";
-                        entry.ExtractToFile(temp, true);
-                        await InstallDependency(temp);
-                        File.Delete(temp);
-                    }
-                    catch
-                    {
-                        // Fail to read DEPENDENCY means there is no dependency
-                    }
-                }
-                zip.ExtractToDirectory(".", overWrite);
+                await using Stream es = entry.Open();
+                await InstallDependency(es);
             }
-            catch (IOException)
-            {
-                ConsoleHelper.Warning($"Plugin already exist. Try to run `reinstall {pluginName}`");
-            }
+            zip.ExtractToDirectory(".", overWrite);
         }
 
         /// <summary>
         /// Install the dependency of the plugin
         /// </summary>
         /// <param name="configPath">plugin config path in temp</param>
-        private async Task InstallDependency(string configPath)
+        private async Task InstallDependency(Stream config)
         {
             IConfigurationSection dependency = new ConfigurationBuilder()
-                .AddJsonFile(configPath, optional: true)
+                .AddJsonStream(config)
                 .Build()
                 .GetSection("Dependency");
 
+            if (!dependency.Exists()) return;
             var dependencies = dependency.GetChildren().Select(p => p.Get<string>()).ToArray();
-
             if (dependencies.Length == 0) return;
 
-            ConsoleHelper.Info("Installing dependencies.");
             foreach (string plugin in dependencies)
             {
-                if (plugin.Length == 0) continue;
-
-                if (PluginExists(plugin))
-                {
-                    ConsoleHelper.Info("Dependency already installed.");
-                    continue;
-                }
+                ConsoleHelper.Info($"Installing dependency: {plugin}");
                 await InstallPluginAsync(plugin);
             }
         }
 
-        private bool PluginExists(string pluginName)
+        private static bool PluginExists(string pluginName)
         {
             return File.Exists($"{Plugin.PluginsDirectory}/{pluginName}.dll");
         }
