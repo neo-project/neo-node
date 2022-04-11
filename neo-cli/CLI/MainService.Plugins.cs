@@ -13,7 +13,6 @@ using Neo.ConsoleService;
 using Neo.IO.Json;
 using Neo.Plugins;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -38,10 +37,7 @@ namespace Neo.CLI
                 ConsoleHelper.Warning($"Plugin already exist.");
                 return;
             }
-            // To prevent circular dependency
-            // put plugin-to-install into stack
-            Stack<string> pluginToInstall = new();
-            await InstallPluginAsync(pluginName, pluginToInstall);
+            await InstallPluginAsync(pluginName);
         }
 
         /// <summary>
@@ -53,8 +49,7 @@ namespace Neo.CLI
         [ConsoleCommand("reinstall", Category = "Plugin Commands", Description = "Overwrite existing plugin by force.")]
         private async Task OnReinstallCommand(string pluginName)
         {
-            Stack<string> pluginToInstall = new();
-            await InstallPluginAsync(pluginName, pluginToInstall, true);
+            await InstallPluginAsync(pluginName, true);
         }
 
         /// <summary>
@@ -119,21 +114,10 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="stream">stream of the plugin</param>
         /// <param name="pluginName">name of the plugin</param>
-        /// <param name="pluginToInstall">installing plugin stack</param>
         /// <param name="overWrite">Install by force for `update`</param>
-        private async Task InstallPluginAsync(string pluginName, Stack<string> pluginToInstall, bool overWrite = false)
+        private async Task InstallPluginAsync(string pluginName, bool overWrite = false)
         {
             if (!overWrite && PluginExists(pluginName)) return;
-
-            // If plugin already in the installing stack,
-            // It means there has circular dependency.
-            // Throw exception.
-            if (pluginToInstall.Contains(pluginName))
-            {
-                ConsoleHelper.Error("Plugin has circular dependency");
-                throw new DuplicateWaitObjectException();
-            }
-            pluginToInstall.Push(pluginName);
 
             await using MemoryStream stream = await DownloadPluginAsync(pluginName);
             using (SHA256 sha256 = SHA256.Create())
@@ -150,7 +134,7 @@ namespace Neo.CLI
                     {
                         var temp = $"{Path.GetTempPath()}/{pluginName}/config.json";
                         entry.ExtractToFile(temp, true);
-                        await InstallDependency(temp, pluginToInstall);
+                        await InstallDependency(temp);
                         File.Delete(temp);
                     }
                     catch
@@ -160,11 +144,9 @@ namespace Neo.CLI
                 }
                 zip.ExtractToDirectory(".", overWrite);
                 ConsoleHelper.Warning("Install successful, please restart neo-cli.");
-                pluginToInstall.Pop();
             }
             catch (IOException)
             {
-                pluginToInstall.Pop();
                 ConsoleHelper.Warning($"Plugin already exist. Try to run `reinstall {pluginName}`");
             }
         }
@@ -173,8 +155,7 @@ namespace Neo.CLI
         /// Install the dependency of the plugin
         /// </summary>
         /// <param name="configPath">plugin config path in temp</param>
-        /// <param name="pluginToInstall">installing plugin stack</param>
-        private async Task InstallDependency(string configPath, Stack<string> pluginToInstall)
+        private async Task InstallDependency(string configPath)
         {
             IConfigurationSection dependency = new ConfigurationBuilder()
                 .AddJsonFile(configPath, optional: true)
@@ -195,7 +176,7 @@ namespace Neo.CLI
                     ConsoleHelper.Info("Dependency already installed.");
                     continue;
                 }
-                await InstallPluginAsync(plugin, pluginToInstall);
+                await InstallPluginAsync(plugin);
             }
         }
 
