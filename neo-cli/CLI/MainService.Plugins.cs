@@ -18,8 +18,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
-using System.Security.Cryptography;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 
 namespace Neo.CLI
@@ -41,7 +41,7 @@ namespace Neo.CLI
             // To prevent circular dependency
             // put plugin-to-install into stack
             Stack<string> pluginToInstall = new();
-            await InstallPluginAsync(await DownloadPluginAsync(pluginName), pluginName, pluginToInstall);
+            await InstallPluginAsync(pluginName, pluginToInstall);
         }
 
         /// <summary>
@@ -54,7 +54,7 @@ namespace Neo.CLI
         private async Task OnReinstallCommand(string pluginName)
         {
             Stack<string> pluginToInstall = new();
-            await InstallPluginAsync(await DownloadPluginAsync(pluginName), pluginName, pluginToInstall, true);
+            await InstallPluginAsync(pluginName, pluginToInstall, true);
         }
 
         /// <summary>
@@ -121,8 +121,10 @@ namespace Neo.CLI
         /// <param name="pluginName">name of the plugin</param>
         /// <param name="pluginToInstall">installing plugin stack</param>
         /// <param name="overWrite">Install by force for `update`</param>
-        private async Task InstallPluginAsync(MemoryStream stream, string pluginName, Stack<string> pluginToInstall, bool overWrite = false)
+        private async Task InstallPluginAsync(string pluginName, Stack<string> pluginToInstall, bool overWrite = false)
         {
+            if (!overWrite && PluginExists(pluginName)) return;
+
             // If plugin already in the installing stack,
             // It means there has circular dependency.
             // Throw exception.
@@ -133,6 +135,7 @@ namespace Neo.CLI
             }
             pluginToInstall.Push(pluginName);
 
+            await using MemoryStream stream = await DownloadPluginAsync(pluginName);
             using (SHA256 sha256 = SHA256.Create())
             {
                 ConsoleHelper.Info("SHA256: ", $"{sha256.ComputeHash(stream.ToArray()).ToHexString()}");
@@ -192,7 +195,7 @@ namespace Neo.CLI
                     ConsoleHelper.Info("Dependency already installed.");
                     continue;
                 }
-                await InstallPluginAsync(await DownloadPluginAsync(plugin), plugin, pluginToInstall);
+                await InstallPluginAsync(plugin, pluginToInstall);
             }
         }
 
