@@ -131,7 +131,7 @@ namespace Neo.CLI
             if (entry is not null)
             {
                 await using Stream es = entry.Open();
-                await InstallDependency(es);
+                await InstallDependenciesAsync(es);
             }
             zip.ExtractToDirectory(".", overWrite);
         }
@@ -140,7 +140,7 @@ namespace Neo.CLI
         /// Install the dependency of the plugin
         /// </summary>
         /// <param name="configPath">plugin config path in temp</param>
-        private async Task InstallDependency(Stream config)
+        private async Task InstallDependenciesAsync(Stream config)
         {
             IConfigurationSection dependency = new ConfigurationBuilder()
                 .AddJsonStream(config)
