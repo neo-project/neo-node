@@ -38,6 +38,7 @@ namespace Neo.CLI
                 return;
             }
             await InstallPluginAsync(pluginName);
+            ConsoleHelper.Warning("Install successful, please restart neo-cli.");
         }
 
         /// <summary>
@@ -50,6 +51,7 @@ namespace Neo.CLI
         private async Task OnReinstallCommand(string pluginName)
         {
             await InstallPluginAsync(pluginName, true);
+            ConsoleHelper.Warning("Reinstall successful, please restart neo-cli.");
         }
 
         /// <summary>
@@ -143,7 +145,6 @@ namespace Neo.CLI
                     }
                 }
                 zip.ExtractToDirectory(".", overWrite);
-                ConsoleHelper.Warning("Install successful, please restart neo-cli.");
             }
             catch (IOException)
             {
