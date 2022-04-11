@@ -13,6 +13,7 @@ using Neo.ConsoleService;
 using Neo.IO.Json;
 using Neo.Plugins;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -50,7 +51,7 @@ namespace Neo.CLI
         [ConsoleCommand("reinstall", Category = "Plugin Commands", Description = "Overwrite existing plugin by force.")]
         private async Task OnReinstallCommand(string pluginName)
         {
-            await InstallPluginAsync(pluginName, true);
+            await InstallPluginAsync(pluginName, overWrite: true);
             ConsoleHelper.Warning("Reinstall successful, please restart neo-cli.");
         }
 
@@ -117,8 +118,10 @@ namespace Neo.CLI
         /// <param name="stream">stream of the plugin</param>
         /// <param name="pluginName">name of the plugin</param>
         /// <param name="overWrite">Install by force for `update`</param>
-        private async Task InstallPluginAsync(string pluginName, bool overWrite = false)
+        private async Task InstallPluginAsync(string pluginName, HashSet<string> installed = null, bool overWrite = false)
         {
+            installed ??= new();
+            if (!installed.Add(pluginName)) return;
             if (!overWrite && PluginExists(pluginName)) return;
 
             await using MemoryStream stream = await DownloadPluginAsync(pluginName);
@@ -131,7 +134,7 @@ namespace Neo.CLI
             if (entry is not null)
             {
                 await using Stream es = entry.Open();
-                await InstallDependenciesAsync(es);
+                await InstallDependenciesAsync(es, installed);
             }
             zip.ExtractToDirectory(".", overWrite);
         }
@@ -140,7 +143,7 @@ namespace Neo.CLI
         /// Install the dependency of the plugin
         /// </summary>
         /// <param name="configPath">plugin config path in temp</param>
-        private async Task InstallDependenciesAsync(Stream config)
+        private async Task InstallDependenciesAsync(Stream config, HashSet<string> installed)
         {
             IConfigurationSection dependency = new ConfigurationBuilder()
                 .AddJsonStream(config)
@@ -154,7 +157,7 @@ namespace Neo.CLI
             foreach (string plugin in dependencies)
             {
                 ConsoleHelper.Info($"Installing dependency: {plugin}");
-                await InstallPluginAsync(plugin);
+                await InstallPluginAsync(plugin, installed);
             }
         }
 
