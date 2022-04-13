@@ -101,7 +101,6 @@ namespace Neo.CLI
                 var totalRead = 0L;
                 byte[] buffer = new byte[1024];
                 int read;
-
                 await using Stream stream = await response.Content.ReadAsStreamAsync();
                 ConsoleHelper.Info("From ", $"{url}");
                 var output = new MemoryStream();
@@ -114,7 +113,6 @@ namespace Neo.CLI
                 }
 
                 Console.WriteLine();
-
                 return output;
             }
         }
@@ -127,7 +125,7 @@ namespace Neo.CLI
         private async Task InstallPluginAsync(string pluginName, HashSet<string> installed = null,
             bool overWrite = false)
         {
-            installed ??= new();
+            installed ??= new HashSet<string>();
             if (!installed.Add(pluginName)) return;
             if (!overWrite && PluginExists(pluginName)) return;
 
@@ -143,6 +141,12 @@ namespace Neo.CLI
             {
                 await using Stream es = entry.Open();
                 await InstallDependenciesAsync(es, installed);
+            }
+
+            await using (var uninstall = new StreamWriter($"Plugins/uninstall.{pluginName}.txt"))
+            {
+                foreach (var file in zip.Entries)
+                    await uninstall.WriteLineAsync(file.FullName);
             }
 
             zip.ExtractToDirectory("./", true);
@@ -164,17 +168,23 @@ namespace Neo.CLI
             var dependencies = dependency.GetChildren().Select(p => p.Get<string>()).ToArray();
             if (dependencies.Length == 0) return;
 
-            foreach (string plugin in dependencies)
+            foreach (string plugin in dependencies.Where(p => !PluginExists(p)))
             {
                 ConsoleHelper.Info($"Installing dependency: {plugin}");
                 await InstallPluginAsync(plugin, installed);
             }
         }
 
+        /// <summary>
+        /// Check that the plugin has all necessary files
+        /// </summary>
+        /// <param name="pluginName"> Name of the plugin</param>
+        /// <returns></returns>
         private static bool PluginExists(string pluginName)
         {
-            return File.Exists($"{Plugin.PluginsDirectory}/{pluginName}.dll") &&
-                   File.Exists($"{Plugin.PluginsDirectory}/{pluginName}/config.json");
+            return File.Exists($"Plugins/uninstall.{pluginName}.txt") &&
+                   File.ReadLines($"Plugins/uninstall.{pluginName}.txt")
+                       .Where(p => p.EndsWith(".dll") || p.EndsWith(".json")).All(File.Exists);
         }
 
         /// <summary>
@@ -198,11 +208,12 @@ namespace Neo.CLI
                     break;
             }
 
-            DeleteFiles(plugin.Path,
-                plugin.ConfigFile);
+            if (File.Exists($"Plugins/uninstall.{pluginName}.txt"))
+                DeleteFiles(File.ReadLines($"Plugins/uninstall.{pluginName}.txt"));
             try
             {
                 Directory.Delete(Path.GetDirectoryName(plugin.ConfigFile)!, false);
+                File.Delete($"Plugins/uninstall.{pluginName}.txt");
             }
             catch (IOException)
             {
@@ -211,12 +222,13 @@ namespace Neo.CLI
             ConsoleHelper.Info("Uninstall successful, please restart neo-cli.");
         }
 
-        private void DeleteFiles(params string[] list)
+        private static void DeleteFiles(IEnumerable<string> list)
         {
             foreach (var file in list)
             {
-                if (File.Exists(file))
-                    File.Delete(file);
+                if (!File.Exists(file)) continue;
+                ConsoleHelper.Info("Deleting ", file);
+                File.Delete(file);
             }
         }
 
