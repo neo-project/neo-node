@@ -21,6 +21,7 @@ using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
+using Akka.Util.Internal;
 
 namespace Neo.CLI
 {
@@ -38,6 +39,7 @@ namespace Neo.CLI
                 ConsoleHelper.Warning($"Plugin already exist.");
                 return;
             }
+
             await InstallPluginAsync(pluginName);
             ConsoleHelper.Warning("Install successful, please restart neo-cli.");
         }
@@ -65,15 +67,18 @@ namespace Neo.CLI
         /// <returns>Downloaded content</returns>
         private async Task<MemoryStream> DownloadPluginAsync(string pluginName)
         {
-            var url = $"https://github.com/neo-project/neo-modules/releases/download/v{typeof(Plugin).Assembly.GetVersion()}/{pluginName}.zip";
+            var url =
+                $"https://github.com/neo-project/neo-modules/releases/download/v{typeof(Plugin).Assembly.GetVersion()}/{pluginName}.zip";
             using HttpClient http = new();
             HttpResponseMessage response = await http.GetAsync(url);
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 response.Dispose();
                 Version versionCore = typeof(Plugin).Assembly.GetName().Version;
-                HttpRequestMessage request = new(HttpMethod.Get, "https://api.github.com/repos/neo-project/neo-modules/releases");
-                request.Headers.UserAgent.ParseAdd($"{GetType().Assembly.GetName().Name}/{GetType().Assembly.GetVersion()}");
+                HttpRequestMessage request = new(HttpMethod.Get,
+                    "https://api.github.com/repos/neo-project/neo-modules/releases");
+                request.Headers.UserAgent.ParseAdd(
+                    $"{GetType().Assembly.GetName().Name}/{GetType().Assembly.GetVersion()}");
                 using HttpResponseMessage responseApi = await http.SendAsync(request);
                 byte[] buffer = await responseApi.Content.ReadAsByteArrayAsync();
                 JObject releases = JObject.Parse(buffer);
@@ -98,14 +103,16 @@ namespace Neo.CLI
                 int read;
 
                 await using Stream stream = await response.Content.ReadAsStreamAsync();
-                ConsoleHelper.Info("From", $"{url}");
+                ConsoleHelper.Info("From ", $"{url}");
                 var output = new MemoryStream();
                 while ((read = await stream.ReadAsync(buffer)) > 0)
                 {
                     output.Write(buffer, 0, read);
                     totalRead += read;
-                    ConsoleHelper.Info($"\rDownloading {pluginName}.zip {totalRead / 1024}KB/{response.Content.Headers.ContentLength / 1024}KB {(totalRead * 100) / response.Content.Headers.ContentLength}%");
+                    Console.Write(
+                        $"\rDownloading {pluginName}.zip {totalRead / 1024}KB/{response.Content.Headers.ContentLength / 1024}KB {(totalRead * 100) / response.Content.Headers.ContentLength}%");
                 }
+
                 Console.WriteLine();
 
                 return output;
@@ -115,10 +122,10 @@ namespace Neo.CLI
         /// <summary>
         /// Install plugin from stream
         /// </summary>
-        /// <param name="stream">stream of the plugin</param>
         /// <param name="pluginName">name of the plugin</param>
         /// <param name="overWrite">Install by force for `update`</param>
-        private async Task InstallPluginAsync(string pluginName, HashSet<string> installed = null, bool overWrite = false)
+        private async Task InstallPluginAsync(string pluginName, HashSet<string> installed = null,
+            bool overWrite = false)
         {
             installed ??= new();
             if (!installed.Add(pluginName)) return;
@@ -129,6 +136,7 @@ namespace Neo.CLI
             {
                 ConsoleHelper.Info("SHA256: ", $"{sha256.ComputeHash(stream.ToArray()).ToHexString()}");
             }
+
             using ZipArchive zip = new(stream, ZipArchiveMode.Read);
             ZipArchiveEntry entry = zip.Entries.FirstOrDefault(p => p.Name == "config.json");
             if (entry is not null)
@@ -136,13 +144,15 @@ namespace Neo.CLI
                 await using Stream es = entry.Open();
                 await InstallDependenciesAsync(es, installed);
             }
-            zip.ExtractToDirectory(".", overWrite);
+
+            zip.ExtractToDirectory("./", true);
         }
 
         /// <summary>
         /// Install the dependency of the plugin
         /// </summary>
-        /// <param name="configPath">plugin config path in temp</param>
+        /// <param name="config">plugin config path in temp</param>
+        /// <param name="installed">Dependency set</param>
         private async Task InstallDependenciesAsync(Stream config, HashSet<string> installed)
         {
             IConfigurationSection dependency = new ConfigurationBuilder()
@@ -163,7 +173,8 @@ namespace Neo.CLI
 
         private static bool PluginExists(string pluginName)
         {
-            return File.Exists($"{Plugin.PluginsDirectory}/{pluginName}.dll");
+            return File.Exists($"{Plugin.PluginsDirectory}/{pluginName}.dll") &&
+                   File.Exists($"{Plugin.PluginsDirectory}/{pluginName}/config.json");
         }
 
         /// <summary>
@@ -174,20 +185,21 @@ namespace Neo.CLI
         private void OnUnInstallCommand(string pluginName)
         {
             var plugin = Plugin.Plugins.FirstOrDefault(p => p.Name == pluginName);
-            if (plugin is null)
+            switch (plugin)
             {
-                ConsoleHelper.Warning("Plugin not found");
-                return;
-            }
-            if (plugin is Logger)
-            {
-                ConsoleHelper.Warning("You cannot uninstall a built-in plugin.");
-                return;
+                case null:
+                    ConsoleHelper.Warning("Plugin not found");
+                    return;
+                case Logger:
+                    ConsoleHelper.Warning("You cannot uninstall a built-in plugin.");
+                    return;
+                default:
+                    Plugin.Plugins.Remove(plugin);
+                    break;
             }
 
             DeleteFiles(plugin.Path,
                 plugin.ConfigFile);
-
             try
             {
                 Directory.Delete(Path.GetDirectoryName(plugin.ConfigFile)!, false);
@@ -195,6 +207,7 @@ namespace Neo.CLI
             catch (IOException)
             {
             }
+
             ConsoleHelper.Info("Uninstall successful, please restart neo-cli.");
         }
 
