@@ -204,14 +204,14 @@ namespace Neo.CLI
             }
 
             var plugin = Plugin.Plugins.FirstOrDefault(p => p.Name == pluginName);
-            if (plugin is Logger)
-            {
-                ConsoleHelper.Warning("You cannot uninstall a built-in plugin.");
-                return;
-            }
-
             if (plugin is not null)
             {
+                if (plugin is Logger)
+                {
+                    ConsoleHelper.Warning("You cannot uninstall a built-in plugin.");
+                    return;
+                }
+
                 Plugin.Plugins.Remove(plugin);
             }
 
@@ -241,13 +241,15 @@ namespace Neo.CLI
 
             try
             {
-                if (File.Exists($"Plugins/uninstall.{pluginName}.txt"))
-                    DeleteFiles(File.ReadLines($"Plugins/uninstall.{pluginName}.txt"));
-                Directory.Delete(Path.GetDirectoryName(plugin.ConfigFile)!, false);
+                DeleteFiles(File.Exists($"Plugins/uninstall.{pluginName}.txt")
+                    ? File.ReadLines($"Plugins/uninstall.{pluginName}.txt")
+                    : new[] {$"Plugins/{pluginName}.dll", $"Plugins/{pluginName}/config.json"});
+                Directory.Delete($"Plugins/{pluginName}", false);
                 File.Delete($"Plugins/uninstall.{pluginName}.txt");
             }
-            catch (IOException)
+            catch (IOException e)
             {
+                Console.WriteLine(e.ToString());
             }
 
             ConsoleHelper.Info("Uninstall successful, please restart neo-cli.");
