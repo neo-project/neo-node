@@ -247,9 +247,8 @@ namespace Neo.CLI
                 Directory.Delete($"Plugins/{pluginName}", false);
                 File.Delete($"Plugins/uninstall.{pluginName}.txt");
             }
-            catch (IOException e)
+            catch (IOException)
             {
-                Console.WriteLine(e.ToString());
             }
 
             ConsoleHelper.Info("Uninstall successful, please restart neo-cli.");
@@ -259,9 +258,16 @@ namespace Neo.CLI
         {
             foreach (var file in list)
             {
-                if (!File.Exists(file)) continue;
-                ConsoleHelper.Info("Deleting ", file);
-                File.Delete(file);
+                try
+                {
+                    if (!File.Exists(file)) continue;
+                    ConsoleHelper.Info("Deleting ", file);
+                    File.Delete(file);
+                }
+                catch (Exception)
+                {
+                    // ignored
+                }
             }
         }
 
