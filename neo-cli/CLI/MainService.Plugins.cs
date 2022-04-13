@@ -243,7 +243,7 @@ namespace Neo.CLI
             {
                 DeleteFiles(File.Exists($"Plugins/uninstall.{pluginName}.txt")
                     ? File.ReadLines($"Plugins/uninstall.{pluginName}.txt")
-                    : new[] {$"Plugins/{pluginName}.dll", $"Plugins/{pluginName}/config.json"});
+                    : new[] { $"Plugins/{pluginName}.dll", $"Plugins/{pluginName}/config.json" });
                 Directory.Delete($"Plugins/{pluginName}", false);
                 File.Delete($"Plugins/uninstall.{pluginName}.txt");
             }
