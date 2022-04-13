@@ -43,6 +43,19 @@ namespace Neo.CLI
         }
 
         /// <summary>
+        /// Force to install a plugin again. This will overwrite
+        /// existing plugin files, in case of any file missing or
+        /// damage to the old version.
+        /// </summary>
+        /// <param name="pluginName">name of the plugin</param>
+        [ConsoleCommand("reinstall", Category = "Plugin Commands", Description = "Overwrite existing plugin by force.")]
+        private async Task OnReinstallCommand(string pluginName)
+        {
+            await InstallPluginAsync(pluginName, overWrite: true);
+            ConsoleHelper.Warning("Reinstall successful, please restart neo-cli.");
+        }
+
+        /// <summary>
         /// Download plugin from github release
         /// The function of download and install are divided
         /// for the consideration of `update` command that
@@ -102,12 +115,12 @@ namespace Neo.CLI
         /// <summary>
         /// Install plugin from stream
         /// </summary>
+        /// <param name="stream">stream of the plugin</param>
         /// <param name="pluginName">name of the plugin</param>
-        /// <param name="installed"></param>
         /// <param name="overWrite">Install by force for `update`</param>
         private async Task InstallPluginAsync(string pluginName, HashSet<string> installed = null, bool overWrite = false)
         {
-            installed ??= new HashSet<string>();
+            installed ??= new();
             if (!installed.Add(pluginName)) return;
             if (!overWrite && PluginExists(pluginName)) return;
 
@@ -129,8 +142,7 @@ namespace Neo.CLI
         /// <summary>
         /// Install the dependency of the plugin
         /// </summary>
-        /// <param name="config">plugin config path in temp</param>
-        /// <param name="installed"></param>
+        /// <param name="configPath">plugin config path in temp</param>
         private async Task InstallDependenciesAsync(Stream config, HashSet<string> installed)
         {
             IConfigurationSection dependency = new ConfigurationBuilder()
