@@ -21,7 +21,6 @@ using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
-using Akka.Util.Internal;
 
 namespace Neo.CLI
 {
@@ -145,8 +144,12 @@ namespace Neo.CLI
 
             await using (var uninstall = new StreamWriter($"Plugins/uninstall.{pluginName}.txt"))
             {
-                foreach (var file in zip.Entries)
+                foreach (var file in zip.Entries.Where(p =>
+                             p.FullName.EndsWith(".dll") || p.FullName.EndsWith(".json")))
+                {
+                    ConsoleHelper.Info("Installing ", file.FullName);
                     await uninstall.WriteLineAsync(file.FullName);
+                }
             }
 
             zip.ExtractToDirectory("./", true);
@@ -194,24 +197,52 @@ namespace Neo.CLI
         [ConsoleCommand("uninstall", Category = "Plugin Commands")]
         private void OnUnInstallCommand(string pluginName)
         {
-            var plugin = Plugin.Plugins.FirstOrDefault(p => p.Name == pluginName);
-            switch (plugin)
+            if (!PluginExists(pluginName))
             {
-                case null:
-                    ConsoleHelper.Warning("Plugin not found");
-                    return;
-                case Logger:
-                    ConsoleHelper.Warning("You cannot uninstall a built-in plugin.");
-                    return;
-                default:
-                    Plugin.Plugins.Remove(plugin);
-                    break;
+                ConsoleHelper.Warning("Plugin not found");
+                return;
             }
 
-            if (File.Exists($"Plugins/uninstall.{pluginName}.txt"))
-                DeleteFiles(File.ReadLines($"Plugins/uninstall.{pluginName}.txt"));
+            var plugin = Plugin.Plugins.FirstOrDefault(p => p.Name == pluginName);
+            if (plugin is Logger)
+            {
+                ConsoleHelper.Warning("You cannot uninstall a built-in plugin.");
+                return;
+            }
+
+            if (plugin is not null)
+            {
+                Plugin.Plugins.Remove(plugin);
+            }
+
+            foreach (var p in Plugin.Plugins)
+            {
+                try
+                {
+                    using var reader = File.OpenRead($"./Plugins/{p.Name}/config.json");
+                    if (new ConfigurationBuilder()
+                        .AddJsonStream(reader)
+                        .Build()
+                        .GetSection("Dependency")
+                        .GetChildren()
+                        .Select(d => d.Get<string>())
+                        .Any(v => v == pluginName))
+                    {
+                        ConsoleHelper.Error(
+                            $"Can not uninstall. Other plugins depend on this plugin, try `reinstall {pluginName}` if the plugin is broken.");
+                        return;
+                    }
+                }
+                catch (Exception)
+                {
+                    // ignored
+                }
+            }
+
             try
             {
+                if (File.Exists($"Plugins/uninstall.{pluginName}.txt"))
+                    DeleteFiles(File.ReadLines($"Plugins/uninstall.{pluginName}.txt"));
                 Directory.Delete(Path.GetDirectoryName(plugin.ConfigFile)!, false);
                 File.Delete($"Plugins/uninstall.{pluginName}.txt");
             }
