@@ -141,17 +141,6 @@ namespace Neo.CLI
                 await using Stream es = entry.Open();
                 await InstallDependenciesAsync(es, installed);
             }
-
-            await using (var uninstall = new StreamWriter($"Plugins/uninstall.{pluginName}.txt"))
-            {
-                foreach (var file in zip.Entries.Where(p =>
-                             p.FullName.EndsWith(".dll") || p.FullName.EndsWith(".json")))
-                {
-                    ConsoleHelper.Info("Installing ", file.FullName);
-                    await uninstall.WriteLineAsync(file.FullName);
-                }
-            }
-
             zip.ExtractToDirectory("./", true);
         }
 
@@ -185,9 +174,7 @@ namespace Neo.CLI
         /// <returns></returns>
         private static bool PluginExists(string pluginName)
         {
-            return File.Exists($"Plugins/uninstall.{pluginName}.txt") &&
-                   File.ReadLines($"Plugins/uninstall.{pluginName}.txt")
-                       .Where(p => p.EndsWith(".dll") || p.EndsWith(".json")).All(File.Exists);
+            return File.Exists($"Plugins/{pluginName}.dll");
         }
 
         /// <summary>
@@ -241,11 +228,8 @@ namespace Neo.CLI
 
             try
             {
-                DeleteFiles(File.Exists($"Plugins/uninstall.{pluginName}.txt")
-                    ? File.ReadLines($"Plugins/uninstall.{pluginName}.txt")
-                    : new[] { $"Plugins/{pluginName}.dll", $"Plugins/{pluginName}/config.json" });
+                DeleteFiles(new[] { $"Plugins/{pluginName}.dll", $"Plugins/{pluginName}/config.json" });
                 Directory.Delete($"Plugins/{pluginName}", false);
-                File.Delete($"Plugins/uninstall.{pluginName}.txt");
             }
             catch (IOException)
             {
