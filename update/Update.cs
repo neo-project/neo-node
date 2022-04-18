@@ -186,9 +186,9 @@ class Update
                 if (Path.GetExtension(newPath) != ".json" || !File.Exists(targetFile))
                     File.Copy(newPath, targetFile, true);
             }
-            catch
+            catch (Exception ex)
             {
-                // ignored
+                ConsoleHelper.Error(ex.ToString());
             }
         }
     }
