@@ -5,10 +5,6 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - ([#807](https://github.com/neo-project/neo-node/pull/807/)) Install plugin and dependencies
-
-## [3.2.0]
-
-### Changed
 - ([#850](https://github.com/neo-project/neo-node/pull/850/)) Modify MaxTransactionsPerBlock for testnet
 - ([#852](https://github.com/neo-project/neo-node/pull/852/)) Add new testnet network id
 - ([#847](https://github.com/neo-project/neo-node/pull/847/)) typo, comment
