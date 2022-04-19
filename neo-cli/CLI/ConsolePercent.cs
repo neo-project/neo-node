@@ -16,7 +16,8 @@ namespace Neo.CLI
     {
         #region Variables
 
-        private long _maxValue, _value;
+        private readonly long _maxValue;
+        private long _value;
         private decimal _lastFactor;
         private string _lastPercent;
 
@@ -33,7 +34,7 @@ namespace Neo.CLI
         /// </summary>
         public long Value
         {
-            get { return _value; }
+            get => _value;
             set
             {
                 if (value == _value) return;
@@ -48,8 +49,8 @@ namespace Neo.CLI
         /// </summary>
         public long MaxValue
         {
-            get { return _maxValue; }
-            set
+            get => _maxValue;
+            init
             {
                 if (value == _maxValue) return;
 

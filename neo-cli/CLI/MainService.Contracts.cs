@@ -26,6 +26,7 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="filePath">File path</param>
         /// <param name="manifestPath">Manifest path</param>
+        /// <param name="data">Extra data for deploy</param>
         [ConsoleCommand("deploy", Category = "Contract Commands")]
         private void OnDeployCommand(string filePath, string manifestPath = null, JObject data = null)
         {
@@ -57,8 +58,12 @@ namespace Neo.CLI
         /// <summary>
         /// Process "update" command
         /// </summary>
+        /// <param name="scriptHash">Script hash</param>
         /// <param name="filePath">File path</param>
         /// <param name="manifestPath">Manifest path</param>
+        /// <param name="sender">Sender</param>
+        /// <param name="signerAccounts">Signer Accounts</param>
+        /// <param name="data">Extra data for update</param>
         [ConsoleCommand("update", Category = "Contract Commands")]
         private void OnUpdateCommand(UInt160 scriptHash, string filePath, string manifestPath, UInt160 sender, UInt160[] signerAccounts = null, JObject data = null)
         {
@@ -68,7 +73,7 @@ namespace Neo.CLI
             if (sender != null)
             {
                 if (signerAccounts == null)
-                    signerAccounts = new UInt160[1] { sender };
+                    signerAccounts = new[] { sender };
                 else if (signerAccounts.Contains(sender) && signerAccounts[0] != sender)
                 {
                     var signersList = signerAccounts.ToList();
@@ -82,13 +87,7 @@ namespace Neo.CLI
                 signers = signerAccounts.Select(p => new Signer() { Account = p, Scopes = WitnessScope.CalledByEntry }).ToArray();
             }
 
-            Transaction tx = new Transaction
-            {
-                Signers = signers,
-                Attributes = Array.Empty<TransactionAttribute>(),
-                Witnesses = Array.Empty<Witness>()
-            };
-
+            Transaction tx;
             try
             {
                 byte[] script = LoadUpdateScript(scriptHash, filePath, manifestPath, data, out var nef, out var manifest);
@@ -127,7 +126,7 @@ namespace Neo.CLI
         /// <param name="contractParameters">Contract parameters</param>
         /// <param name="sender">Transaction's sender</param>
         /// <param name="signerAccounts">Signer's accounts</param>
-        /// <param name="masGas">Max fee for running the script</param>
+        /// <param name="maxGas">Max fee for running the script</param>
         [ConsoleCommand("invoke", Category = "Contract Commands")]
         private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray contractParameters = null, UInt160 sender = null, UInt160[] signerAccounts = null, decimal maxGas = 20)
         {

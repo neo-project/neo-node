@@ -52,7 +52,7 @@ namespace Neo.ConsoleService
         /// </summary>
         /// <param name="instance">Instance</param>
         /// <param name="method">Method</param>
-        /// <param name="verbs">Verbs</param>
+        /// <param name="attribute">Attribute</param>
         public ConsoleCommandMethod(object instance, MethodInfo method, ConsoleCommandAttribute attribute)
         {
             Method = method;
