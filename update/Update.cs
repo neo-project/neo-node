@@ -34,7 +34,6 @@ class Update
         await GetLatestVersion(pluginEntries);
     }
 
-
     /// <summary>
     /// Download the most latest file
     /// </summary>
