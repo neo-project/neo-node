@@ -174,7 +174,8 @@ namespace Neo.CLI
         /// <returns></returns>
         private static bool PluginExists(string pluginName)
         {
-            return File.Exists($"Plugins/{pluginName}.dll");
+            return Directory.Exists($"Plugins/{pluginName}")
+                   && File.Exists($"Plugins/{pluginName}/{pluginName}.dll");
         }
 
         /// <summary>
@@ -225,16 +226,12 @@ namespace Neo.CLI
                     // ignored
                 }
             }
-
             try
             {
-                DeleteFiles(new[] { $"Plugins/{pluginName}.dll", $"Plugins/{pluginName}/config.json" });
-                Directory.Delete($"Plugins/{pluginName}", false);
+                DeleteFiles(Directory.GetFiles($"Plugins/{pluginName}"));
+                Directory.Delete($"Plugins/{pluginName}", true);
             }
-            catch (IOException)
-            {
-            }
-
+            catch (IOException) { }
             ConsoleHelper.Info("Uninstall successful, please restart neo-cli.");
         }
 
