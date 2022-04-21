@@ -180,6 +180,67 @@ namespace Neo.CLI
         }
 
         /// <summary>
+        /// Install plugin from stream
+        /// </summary>
+        /// <param name="pluginName">name of the plugin</param>
+        /// <param name="overWrite">Install by force for `update`</param>
+        private async Task InstallPluginAsync(string pluginName, HashSet<string> installed = null,
+            bool overWrite = false)
+        {
+            installed ??= new HashSet<string>();
+            if (!installed.Add(pluginName)) return;
+            if (!overWrite && PluginExists(pluginName)) return;
+
+            await using MemoryStream stream = await DownloadPluginAsync(pluginName);
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                ConsoleHelper.Info("SHA256: ", $"{sha256.ComputeHash(stream.ToArray()).ToHexString()}");
+            }
+
+            using ZipArchive zip = new(stream, ZipArchiveMode.Read);
+            ZipArchiveEntry entry = zip.Entries.FirstOrDefault(p => p.Name == "config.json");
+            if (entry is not null)
+            {
+                await using Stream es = entry.Open();
+                await InstallDependenciesAsync(es, installed);
+            }
+            zip.ExtractToDirectory("./", true);
+        }
+
+        /// <summary>
+        /// Install the dependency of the plugin
+        /// </summary>
+        /// <param name="config">plugin config path in temp</param>
+        /// <param name="installed">Dependency set</param>
+        private async Task InstallDependenciesAsync(Stream config, HashSet<string> installed)
+        {
+            IConfigurationSection dependency = new ConfigurationBuilder()
+                .AddJsonStream(config)
+                .Build()
+                .GetSection("Dependency");
+
+            if (!dependency.Exists()) return;
+            var dependencies = dependency.GetChildren().Select(p => p.Get<string>()).ToArray();
+            if (dependencies.Length == 0) return;
+
+            foreach (string plugin in dependencies.Where(p => !PluginExists(p)))
+            {
+                ConsoleHelper.Info($"Installing dependency: {plugin}");
+                await InstallPluginAsync(plugin, installed);
+            }
+        }
+
+        /// <summary>
+        /// Check that the plugin has all necessary files
+        /// </summary>
+        /// <param name="pluginName"> Name of the plugin</param>
+        /// <returns></returns>
+        private static bool PluginExists(string pluginName)
+        {
+            return File.Exists($"Plugins/{pluginName}.dll");
+        }
+
+        /// <summary>
         /// Process "uninstall" command
         /// </summary>
         /// <param name="pluginName">Plugin name</param>
@@ -191,7 +252,7 @@ namespace Neo.CLI
                 ConsoleHelper.Warning("Plugin not found");
                 return;
             }
-          
+
             var plugin = Plugin.Plugins.FirstOrDefault(p => p.Name == pluginName);
             if (plugin is not null)
             {
