@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Copyright>2016-2021 The Neo Project</Copyright>
+    <Copyright>2016-2022 The Neo Project</Copyright>
     <AssemblyTitle>Neo.GUI</AssemblyTitle>
-    <Version>3.1.0</Version>
+    <Version>3.2.1</Version>
     <Authors>The Neo Project</Authors>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net6.0-windows</TargetFramework>

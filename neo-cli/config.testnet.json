@@ -23,10 +23,10 @@
     }
   },
   "ProtocolConfiguration": {
-    "Network": 877933390,
+    "Network": 894710606,
     "AddressVersion": 53,
     "MillisecondsPerBlock": 15000,
-    "MaxTransactionsPerBlock": 512,
+    "MaxTransactionsPerBlock": 5000,
     "MemoryPoolMaxTransactions": 50000,
     "MaxTraceableBlocks": 2102400,
     "InitialGasDistribution": 5200000000000000,
@@ -55,11 +55,11 @@
       "03184b018d6b2bc093e535519732b3fd3f7551c8cffaf4621dd5a0b89482ca66c9"
     ],
     "SeedList": [
-      "seed1t4.neo.org:20333",
-      "seed2t4.neo.org:20333",
-      "seed3t4.neo.org:20333",
-      "seed4t4.neo.org:20333",
-      "seed5t4.neo.org:20333"
+      "seed1t5.neo.org:20333",
+      "seed2t5.neo.org:20333",
+      "seed3t5.neo.org:20333",
+      "seed4t5.neo.org:20333",
+      "seed5t5.neo.org:20333"
     ]
   }
 }

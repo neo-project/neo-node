@@ -90,14 +90,14 @@ namespace Neo.CLI
                 ConsoleHelper.Info("Cancelled");
                 return;
             }
-            string path_new = Path.ChangeExtension(path, ".json");
-            if (File.Exists(path_new))
+            string pathNew = Path.ChangeExtension(path, ".json");
+            if (File.Exists(pathNew))
             {
-                ConsoleHelper.Warning($"File '{path_new}' already exists");
+                ConsoleHelper.Warning($"File '{pathNew}' already exists");
                 return;
             }
-            NEP6Wallet.Migrate(path_new, path, password, NeoSystem.Settings).Save();
-            Console.WriteLine($"Wallet file upgrade complete. New wallet file has been auto-saved at: {path_new}");
+            NEP6Wallet.Migrate(pathNew, path, password, NeoSystem.Settings).Save();
+            Console.WriteLine($"Wallet file upgrade complete. New wallet file has been auto-saved at: {pathNew}");
         }
 
         /// <summary>
@@ -252,7 +252,7 @@ namespace Neo.CLI
             Contract multiSignContract = Contract.CreateMultiSigContract(m, publicKeys);
             KeyPair keyPair = CurrentWallet.GetAccounts().FirstOrDefault(p => p.HasKey && publicKeys.Contains(p.GetKey().PublicKey))?.GetKey();
 
-            WalletAccount account = CurrentWallet.CreateAccount(multiSignContract, keyPair);
+            CurrentWallet.CreateAccount(multiSignContract, keyPair);
             if (CurrentWallet is NEP6Wallet wallet)
                 wallet.Save();
 
@@ -466,7 +466,7 @@ namespace Neo.CLI
             {
                 var snapshot = NeoSystem.StoreView;
                 ContractParametersContext context = ContractParametersContext.Parse(jsonObjectToSign.ToString(), snapshot);
-                if (context.Network != neoSystem.Settings.Network)
+                if (context.Network != _neoSystem.Settings.Network)
                 {
                     ConsoleHelper.Warning("Network mismatch.");
                     return;
@@ -636,7 +636,7 @@ namespace Neo.CLI
             ContractParametersContext context;
             try
             {
-                context = new ContractParametersContext(snapshot, tx, neoSystem.Settings.Network);
+                context = new ContractParametersContext(snapshot, tx, _neoSystem.Settings.Network);
             }
             catch (InvalidOperationException e)
             {

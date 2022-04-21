@@ -16,7 +16,9 @@ using Neo.SmartContract.Native;
 using Neo.VM.Types;
 using Neo.Wallets;
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using Array = System.Array;
 
 namespace Neo.CLI
 {
@@ -27,7 +29,7 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="tokenHash">Script hash</param>
         /// <param name="to">To</param>
-        /// <param name="amount">Ammount</param>
+        /// <param name="amount">Amount</param>
         /// <param name="from">From</param>
         /// <param name="data">Data</param>
         /// <param name="signersAccounts">Signer's accounts</param>
@@ -58,7 +60,7 @@ namespace Neo.CLI
                     Scopes = WitnessScope.CalledByEntry,
                     Account = p
                 })
-                .ToArray() ?? new Signer[0]);
+                .ToArray() ?? Array.Empty<Signer>());
             }
             catch (InvalidOperationException e)
             {
@@ -80,9 +82,11 @@ namespace Neo.CLI
         [ConsoleCommand("balanceOf", Category = "NEP17 Commands")]
         private void OnBalanceOfCommand(UInt160 tokenHash, UInt160 address)
         {
-            var arg = new JObject();
-            arg["type"] = "Hash160";
-            arg["value"] = address.ToString();
+            var arg = new JObject
+            {
+                ["type"] = "Hash160",
+                ["value"] = address.ToString()
+            };
 
             var asset = new AssetDescriptor(NeoSystem.StoreView, NeoSystem.Settings, tokenHash);
 
@@ -113,7 +117,7 @@ namespace Neo.CLI
         [ConsoleCommand("decimals", Category = "NEP17 Commands")]
         private void OnDecimalsCommand(UInt160 tokenHash)
         {
-            if (!OnInvokeWithResult(tokenHash, "decimals", out StackItem result, null)) return;
+            if (!OnInvokeWithResult(tokenHash, "decimals", out StackItem result)) return;
 
             ConsoleHelper.Info("Result: ", $"{((PrimitiveType)result).GetInteger()}");
         }
@@ -125,7 +129,7 @@ namespace Neo.CLI
         [ConsoleCommand("totalSupply", Category = "NEP17 Commands")]
         private void OnTotalSupplyCommand(UInt160 tokenHash)
         {
-            if (!OnInvokeWithResult(tokenHash, "totalSupply", out StackItem result, null)) return;
+            if (!OnInvokeWithResult(tokenHash, "totalSupply", out StackItem result)) return;
 
             var asset = new AssetDescriptor(NeoSystem.StoreView, NeoSystem.Settings, tokenHash);
             var totalSupply = new BigDecimal(((PrimitiveType)result).GetInteger(), asset.Decimals);

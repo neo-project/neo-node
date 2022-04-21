@@ -35,11 +35,11 @@ namespace Neo.ConsoleService
         public bool ReadingPassword { get; set; } = false;
 
         private bool _running;
-        private readonly CancellationTokenSource _shutdownTokenSource = new CancellationTokenSource();
-        private readonly CountdownEvent _shutdownAcknowledged = new CountdownEvent(1);
-        private readonly Dictionary<string, List<ConsoleCommandMethod>> _verbs = new Dictionary<string, List<ConsoleCommandMethod>>();
-        private readonly Dictionary<string, object> _instances = new Dictionary<string, object>();
-        private readonly Dictionary<Type, Func<List<CommandToken>, bool, object>> _handlers = new Dictionary<Type, Func<List<CommandToken>, bool, object>>();
+        private readonly CancellationTokenSource _shutdownTokenSource = new();
+        private readonly CountdownEvent _shutdownAcknowledged = new(1);
+        private readonly Dictionary<string, List<ConsoleCommandMethod>> _verbs = new();
+        private readonly Dictionary<string, object> _instances = new();
+        private readonly Dictionary<Type, Func<List<CommandToken>, bool, object>> _handlers = new();
 
         private bool OnCommand(string commandLine)
         {
@@ -188,10 +188,10 @@ namespace Neo.ConsoleService
 
             withHelp.Sort((a, b) =>
             {
-                var cate = a.HelpCategory.CompareTo(b.HelpCategory);
+                var cate = string.Compare(a.HelpCategory, b.HelpCategory, StringComparison.Ordinal);
                 if (cate == 0)
                 {
-                    cate = a.Key.CompareTo(b.Key);
+                    cate = string.Compare(a.Key, b.Key, StringComparison.Ordinal);
                 }
                 return cate;
             });
@@ -234,7 +234,7 @@ namespace Neo.ConsoleService
 
                     if (lastKey != command.Key)
                     {
-                        Console.WriteLine($"You can call this command like this:");
+                        Console.WriteLine("You can call this command like this:");
                         lastKey = command.Key;
                     }
 
@@ -247,7 +247,7 @@ namespace Neo.ConsoleService
 
                 if (!found)
                 {
-                    throw new ArgumentException($"Command not found.");
+                    throw new ArgumentException("Command not found.");
                 }
             }
         }
@@ -297,8 +297,7 @@ namespace Neo.ConsoleService
         public string ReadUserInput(string prompt, bool password = false)
         {
             const string t = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
-            StringBuilder sb = new StringBuilder();
-            ConsoleKeyInfo key;
+            var sb = new StringBuilder();
 
             if (!string.IsNullOrEmpty(prompt))
             {
@@ -316,6 +315,7 @@ namespace Neo.ConsoleService
             }
             else
             {
+                ConsoleKeyInfo key;
                 do
                 {
                     key = Console.ReadKey(true);
@@ -323,14 +323,7 @@ namespace Neo.ConsoleService
                     if (t.IndexOf(key.KeyChar) != -1)
                     {
                         sb.Append(key.KeyChar);
-                        if (password)
-                        {
-                            Console.Write('*');
-                        }
-                        else
-                        {
-                            Console.Write(key.KeyChar);
-                        }
+                        Console.Write(password ? '*' : key.KeyChar);
                     }
                     else if (key.Key == ConsoleKey.Backspace && sb.Length > 0)
                     {
@@ -411,30 +404,25 @@ namespace Neo.ConsoleService
         {
             // Register self commands
 
-            RegisterCommandHander<string>((args, canConsumeAll) =>
-            {
-                return CommandToken.ReadString(args, canConsumeAll);
-            });
+            RegisterCommandHandler<string>(CommandToken.ReadString);
 
-            RegisterCommandHander<string[]>((args, canConsumeAll) =>
+            RegisterCommandHandler<string[]>((args, canConsumeAll) =>
             {
                 if (canConsumeAll)
                 {
                     var ret = CommandToken.ToString(args);
                     args.Clear();
-                    return ret.Split(new char[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                    return ret.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 }
-                else
-                {
-                    return CommandToken.ReadString(args, false).Split(',', ' ');
-                }
+
+                return CommandToken.ReadString(args, false).Split(',', ' ');
             });
 
-            RegisterCommandHander<string, byte>(false, (str) => byte.Parse(str));
-            RegisterCommandHander<string, bool>(false, (str) => str == "1" || str == "yes" || str == "y" || bool.Parse(str));
-            RegisterCommandHander<string, ushort>(false, (str) => ushort.Parse(str));
-            RegisterCommandHander<string, uint>(false, (str) => uint.Parse(str));
-            RegisterCommandHander<string, IPAddress>(false, (str) => IPAddress.Parse(str));
+            RegisterCommandHandler<string, byte>(false, str => byte.Parse(str));
+            RegisterCommandHandler<string, bool>(false, str => str == "1" || str == "yes" || str == "y" || bool.Parse(str));
+            RegisterCommandHandler<string, ushort>(false, str => ushort.Parse(str));
+            RegisterCommandHandler<string, uint>(false, str => uint.Parse(str));
+            RegisterCommandHandler<string, IPAddress>(false, IPAddress.Parse);
         }
 
         /// <summary>
@@ -442,7 +430,7 @@ namespace Neo.ConsoleService
         /// </summary>
         /// <typeparam name="TRet">Return type</typeparam>
         /// <param name="handler">Handler</param>
-        private void RegisterCommandHander<TRet>(Func<List<CommandToken>, bool, object> handler)
+        private void RegisterCommandHandler<TRet>(Func<List<CommandToken>, bool, object> handler)
         {
             _handlers[typeof(TRet)] = handler;
         }
@@ -454,9 +442,9 @@ namespace Neo.ConsoleService
         /// <typeparam name="TRet">Return type</typeparam>
         /// <param name="canConsumeAll">Can consume all</param>
         /// <param name="handler">Handler</param>
-        public void RegisterCommandHander<T, TRet>(bool canConsumeAll, Func<T, object> handler)
+        public void RegisterCommandHandler<T, TRet>(bool canConsumeAll, Func<T, object> handler)
         {
-            _handlers[typeof(TRet)] = (args, cosumeAll) =>
+            _handlers[typeof(TRet)] = (args, _) =>
             {
                 var value = (T)_handlers[typeof(T)](args, canConsumeAll);
                 return handler(value);
@@ -469,11 +457,11 @@ namespace Neo.ConsoleService
         /// <typeparam name="T">Base type</typeparam>
         /// <typeparam name="TRet">Return type</typeparam>
         /// <param name="handler">Handler</param>
-        public void RegisterCommandHander<T, TRet>(Func<T, object> handler)
+        public void RegisterCommandHandler<T, TRet>(Func<T, object> handler)
         {
-            _handlers[typeof(TRet)] = (args, cosumeAll) =>
+            _handlers[typeof(TRet)] = (args, consumeAll) =>
             {
-                var value = (T)_handlers[typeof(T)](args, cosumeAll);
+                var value = (T)_handlers[typeof(T)](args, consumeAll);
                 return handler(value);
             };
         }
@@ -498,7 +486,7 @@ namespace Neo.ConsoleService
 
                     if (!method.GetParameters().All(u => u.ParameterType.IsEnum || _handlers.ContainsKey(u.ParameterType)))
                     {
-                        throw new ArgumentException("Handler not found for the command: " + method.ToString());
+                        throw new ArgumentException("Handler not found for the command: " + method);
                     }
 
                     // Add command
@@ -576,7 +564,7 @@ namespace Neo.ConsoleService
 
         protected string ReadLine()
         {
-            Task<string> readLineTask = Task.Run(() => Console.ReadLine());
+            Task<string> readLineTask = Task.Run(Console.ReadLine);
 
             try
             {
@@ -623,7 +611,7 @@ namespace Neo.ConsoleService
                         ConsoleHelper.Error("Command not found");
                     }
                 }
-                catch (TargetInvocationException ex)
+                catch (TargetInvocationException ex) when (ex.InnerException is not null)
                 {
                     ConsoleHelper.Error(ex.InnerException.Message);
                 }
