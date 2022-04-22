@@ -174,8 +174,7 @@ namespace Neo.CLI
         /// <returns></returns>
         private static bool PluginExists(string pluginName)
         {
-            return Directory.Exists($"Plugins/{pluginName}")
-                   && File.Exists($"Plugins/{pluginName}/{pluginName}.dll");
+            return File.Exists($"Plugins/{pluginName}/{pluginName}.dll");
         }
 
         /// <summary>
