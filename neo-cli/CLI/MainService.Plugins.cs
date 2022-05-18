@@ -1,10 +1,10 @@
-// Copyright (C) 2016-2021 The Neo Project.
-// 
-// The neo-cli is free software distributed under the MIT software 
+// Copyright (C) 2016-2022 The Neo Project.
+//
+// The neo-cli is free software distributed under the MIT software
 // license, see the accompanying file LICENSE in the main directory of
-// the project or http://www.opensource.org/licenses/mit-license.php 
+// the project or http://www.opensource.org/licenses/mit-license.php
 // for more details.
-// 
+//
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
@@ -143,6 +143,16 @@ namespace Neo.CLI
                 await InstallDependenciesAsync(es, installed);
             }
             zip.ExtractToDirectory("./", true);
+            // Save the config.json to current mode
+            try
+            {
+                // what if the file already exists in the mode? OK, lets overwrite it then.
+                File.Copy($"Plugins/{pluginName}/config.json", $"Modes/{_currentMode}/{pluginName}/config.json", true);
+            }
+            catch
+            {
+                // ignored
+            }
         }
 
         /// <summary>
@@ -175,7 +185,7 @@ namespace Neo.CLI
         /// <returns></returns>
         private static bool PluginExists(string pluginName)
         {
-            return File.Exists($"Plugins/{pluginName}.dll");
+            return File.Exists($"Plugins/{pluginName}/{pluginName}.dll");
         }
 
         /// <summary>
@@ -229,31 +239,14 @@ namespace Neo.CLI
 
             try
             {
-                DeleteFiles(new[] { $"Plugins/{pluginName}.dll", $"Plugins/{pluginName}/config.json" });
-                Directory.Delete($"Plugins/{pluginName}", false);
+                // DeleteFiles(new[] { $"Plugins/{pluginName}/{pluginName}.dll", $"Plugins/{pluginName}/config.json" });
+                Directory.Delete($"Plugins/{pluginName}", true);
             }
             catch (IOException)
             {
             }
 
             ConsoleHelper.Info("Uninstall successful, please restart neo-cli.");
-        }
-
-        private static void DeleteFiles(IEnumerable<string> list)
-        {
-            foreach (var file in list)
-            {
-                try
-                {
-                    if (!File.Exists(file)) continue;
-                    ConsoleHelper.Info("Deleting ", file);
-                    File.Delete(file);
-                }
-                catch (Exception)
-                {
-                    // ignored
-                }
-            }
         }
 
         /// <summary>

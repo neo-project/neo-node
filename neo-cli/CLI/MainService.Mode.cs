@@ -13,6 +13,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Akka.Util.Internal;
 namespace Neo.CLI;
 
@@ -90,7 +91,7 @@ partial class MainService
     {
         try
         {
-            var dir = new DirectoryInfo($"Modes/{modeName}");
+            var dir = new DirectoryInfo($"Modes/{modeName.ToLower()}");
             if (!dir.Exists)
                 return;
             Directory.Delete(dir.FullName, true);
@@ -103,29 +104,50 @@ partial class MainService
         }
     }
 
-    private static void LoadMode(string mode)
+    /// <summary>
+    /// Load the target mode, plugin should be according to the mode,
+    /// if the mode contains the plugin, install the plugin, otherwise delete the plugin
+    /// </summary>
+    /// <param name="mode"> name of the mode</param>
+    /// <exception cref="DirectoryNotFoundException"> if the mode is not found</exception>
+    private async Task LoadMode(string mode)
     {
         try
         {
-            var dir = new DirectoryInfo($"./Modes/{mode}");
+            var dir = new DirectoryInfo($"./Modes/{mode.ToLower()}");
             if (!dir.Exists)
                 throw new DirectoryNotFoundException($"Mode not found: {dir.FullName}");
 
             // Get the config files of the node
             foreach (var file in dir.GetFiles())
             {
-                if (file.Name is "config.json" or "config.fs.json")
+                var targetFilePath = Path.Combine("./", file.Name);
+                file.CopyTo(targetFilePath, true);
+            }
+            // Process the plugin
+            var modePlugins = dir.GetDirectories();
+            foreach (var plugin in modePlugins)
+            {
+                // if the plugin does not exist, maybe consider install it
+                if (!Directory.Exists($"Plugins/{plugin}/"))
                 {
-                    var targetFilePath = Path.Combine("./", file.Name);
-                    file.CopyTo(targetFilePath, true);
+                    await InstallPluginAsync(plugin.Name);
                 }
-                else
+
+                // Get existing plugins and delete them if they are not in the mode
+                new DirectoryInfo("Plugins/").GetDirectories().ForEach(p =>
                 {
-                    var plugin = file.Name.Split('.')[0];
-                    // if the plugin no longer exists, just ignore it.
-                    if (!Directory.Exists($"Plugins/{plugin}/")) continue;
-                    file.CopyTo($"Plugins/{plugin}/config.json", true);
-                }
+                    if (modePlugins.Any(k => k.Name == p.Name)) return;
+                    try
+                    {
+                        ConsoleHelper.Info("Removing plugin ", p.Name);
+                        Directory.Delete($"Plugins/{p.Name}", true);
+                    }
+                    catch
+                    {
+                        // ignored
+                    }
+                });
             }
         }
         catch (Exception e)
