@@ -362,8 +362,7 @@ namespace Neo.CLI
                 throw new FileNotFoundException();
             }
 
-            Wallet wallet = Wallet.Open(path, password, NeoSystem.Settings);
-            CurrentWallet = wallet ?? throw new NotSupportedException();
+            CurrentWallet = Wallet.Open(path, password, NeoSystem.Settings) ?? throw new NotSupportedException();
         }
 
         public async void Start(string[] args)
