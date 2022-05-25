@@ -94,23 +94,23 @@ namespace Neo.CLI
                 {
                     var currentColor = new ConsoleColorSet();
                     var messages = message is not string msg ? new[] { $"{message}" } : Parse(msg);
-                    ConsoleColorSet logcolor;
-                    string loglevel;
+                    ConsoleColorSet logColor;
+                    string logLevel;
                     switch (level)
                     {
-                        case LogLevel.Debug: logcolor = DebugColor; loglevel = "DEBUG"; break;
-                        case LogLevel.Error: logcolor = ErrorColor; loglevel = "ERROR"; break;
-                        case LogLevel.Fatal: logcolor = FatalColor; loglevel = "FATAL"; break;
-                        case LogLevel.Info: logcolor = KeyColor; loglevel = "INFO"; break;
-                        case LogLevel.Warning: logcolor = WarningColor; loglevel = "WARN"; break;
-                        default: logcolor = InfoColor; loglevel = "INFO"; break;
+                        case LogLevel.Debug: logColor = DebugColor; logLevel = "DEBUG"; break;
+                        case LogLevel.Error: logColor = ErrorColor; logLevel = "ERROR"; break;
+                        case LogLevel.Fatal: logColor = FatalColor; logLevel = "FATAL"; break;
+                        case LogLevel.Info: logColor = KeyColor; logLevel = "INFO"; break;
+                        case LogLevel.Warning: logColor = WarningColor; logLevel = "WARN"; break;
+                        default: logColor = InfoColor; logLevel = "INFO"; break;
                     }
-                    logcolor.Apply();
-                    Console.Write(loglevel + " ");
+                    logColor.Apply();
+                    Console.Write(logLevel + " ");
                     InfoColor.Apply();
 
                     Console.Write($"{log} {messages[0]}");
-                    for (var i = 0; i < 35 - messages[0].Length - loglevel.Length; i++) Console.Write(' ');
+                    for (var i = 0; i < 35 - messages[0].Length - logLevel.Length; i++) Console.Write(' ');
                     for (var i = 1; i < messages.Length; i++)
                     {
                         if (messages[i].Length > 20)
@@ -124,7 +124,7 @@ namespace Neo.CLI
                         }
                         else
                         {
-                            logcolor.Apply();
+                            logColor.Apply();
                             Console.Write($" {messages[i]}");
                         }
                     }
