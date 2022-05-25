@@ -227,7 +227,6 @@ namespace Neo.CLI
             }
             try
             {
-                DeleteFiles(Directory.GetFiles($"Plugins/{pluginName}"));
                 Directory.Delete($"Plugins/{pluginName}", true);
             }
             catch (IOException) { }
