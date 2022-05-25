@@ -106,21 +106,21 @@ namespace Neo.CLI
                                 logcolor = DebugColor;
                                 loglevel = "DEBUG";
                                 if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
-                                    messages[0] = $"🔨{messages[0]}";
+                                    messages[0] = $"{messages[0]}";
                                 break;
                             }
 
                         case LogLevel.Error:
                             logcolor = ErrorColor; loglevel = "ERROR";
                             if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
-                                messages[0] = $"❌{messages[0]}";
+                                messages[0] = $"{messages[0]}";
                             break;
                         case LogLevel.Fatal: logcolor = FatalColor; loglevel = "FATAL"; break;
                         case LogLevel.Info: logcolor = KeyColor; loglevel = "INFO"; break;
                         case LogLevel.Warning:
                             logcolor = WarningColor; loglevel = "WARN";
                             if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
-                                messages[0] = $"⚠{messages[0]}";
+                                messages[0] = $"{messages[0]}";
                             break;
                         default: logcolor = InfoColor; loglevel = "INFO"; break;
                     }
@@ -141,6 +141,10 @@ namespace Neo.CLI
                     for (var i = 0; i < 35 - messages[0].Length - loglevel.Length; i++) Console.Write(' ');
                     for (var i = 1; i < messages.Length; i++)
                     {
+                        if (messages[i].Length > 20)
+                        {
+                            messages[i] = $"{messages[i][..10]}...{messages[i][(messages[i].Length-10)..]}";
+                        }
                         if (i % 2 == 0)
                         {
                             InfoColor.Apply();
