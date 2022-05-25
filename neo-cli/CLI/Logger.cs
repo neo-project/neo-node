@@ -105,17 +105,9 @@ namespace Neo.CLI
                         case LogLevel.Warning: logcolor = WarningColor; loglevel = "WARN"; break;
                         default: logcolor = InfoColor; loglevel = "INFO"; break;
                     }
-                    Console.OutputEncoding = Encoding.Unicode;
-
                     logcolor.Apply();
                     Console.Write(loglevel + " ");
                     InfoColor.Apply();
-                    if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
-                    {
-                        if (messages[0].Contains("Sending")) messages[0] = $"✈{messages[0]}";
-                        if (messages[0].Contains("Received")) messages[0] = $"✉{messages[0]}";
-                        if (messages[0].Contains("Persisted")) messages[0] = $"📦{messages[0]}";
-                    }
 
                     Console.Write($"{log} {messages[0]}");
                     for (var i = 0; i < 35 - messages[0].Length - loglevel.Length; i++) Console.Write(' ');
