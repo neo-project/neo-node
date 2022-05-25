@@ -1,9 +1,6 @@
 name: .NET Core Test
 
-on:
-  push:
-    branches: [master, develop]
-  pull_request:
+on: pull_request
 
 env:
   DOTNET_VERSION: 6.0.x
