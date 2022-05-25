@@ -93,7 +93,7 @@ namespace Neo.CLI
                 if (Settings.Default.Logger.ConsoleOutput && showLog)
                 {
                     var currentColor = new ConsoleColorSet();
-                    var messages = message is not string msg ? new[] { $"{ message}" } : Parse(msg);
+                    var messages = message is not string msg ? new[] { $"{message}" } : Parse(msg);
                     ConsoleColorSet logcolor;
                     string loglevel;
                     switch (level)
@@ -143,7 +143,7 @@ namespace Neo.CLI
                     {
                         if (messages[i].Length > 20)
                         {
-                            messages[i] = $"{messages[i][..10]}...{messages[i][(messages[i].Length-10)..]}";
+                            messages[i] = $"{messages[i][..10]}...{messages[i][(messages[i].Length - 10)..]}";
                         }
                         if (i % 2 == 0)
                         {
