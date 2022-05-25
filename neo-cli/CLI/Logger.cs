@@ -1,10 +1,10 @@
-// Copyright (C) 2016-2021 The Neo Project.
-// 
-// The neo-cli is free software distributed under the MIT software 
+// Copyright (C) 2016-2022 The Neo Project.
+//
+// The neo-cli is free software distributed under the MIT software
 // license, see the accompanying file LICENSE in the main directory of
-// the project or http://www.opensource.org/licenses/mit-license.php 
+// the project or http://www.opensource.org/licenses/mit-license.php
 // for more details.
-// 
+//
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
@@ -98,33 +98,13 @@ namespace Neo.CLI
                     string loglevel;
                     switch (level)
                     {
-                        case LogLevel.Debug:
-                            {
-#if RELEASE
-                            return;
-#endif
-                                logcolor = DebugColor;
-                                loglevel = "DEBUG";
-                                if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
-                                    messages[0] = $"{messages[0]}";
-                                break;
-                            }
-
-                        case LogLevel.Error:
-                            logcolor = ErrorColor; loglevel = "ERROR";
-                            if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
-                                messages[0] = $"{messages[0]}";
-                            break;
+                        case LogLevel.Debug: logcolor = DebugColor; loglevel = "DEBUG"; break;
+                        case LogLevel.Error: logcolor = ErrorColor; loglevel = "ERROR"; break;
                         case LogLevel.Fatal: logcolor = FatalColor; loglevel = "FATAL"; break;
                         case LogLevel.Info: logcolor = KeyColor; loglevel = "INFO"; break;
-                        case LogLevel.Warning:
-                            logcolor = WarningColor; loglevel = "WARN";
-                            if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
-                                messages[0] = $"{messages[0]}";
-                            break;
+                        case LogLevel.Warning: logcolor = WarningColor; loglevel = "WARN"; break;
                         default: logcolor = InfoColor; loglevel = "INFO"; break;
                     }
-
                     Console.OutputEncoding = Encoding.Unicode;
 
                     logcolor.Apply();
