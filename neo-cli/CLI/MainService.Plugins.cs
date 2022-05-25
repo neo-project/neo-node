@@ -174,7 +174,7 @@ namespace Neo.CLI
         /// <returns></returns>
         private static bool PluginExists(string pluginName)
         {
-            return Plugin.Plugins.Any(p=>p.Name == pluginName);
+            return Plugin.Plugins.Any(p => p.Name == pluginName);
         }
 
         /// <summary>
@@ -231,23 +231,6 @@ namespace Neo.CLI
             }
             catch (IOException) { }
             ConsoleHelper.Info("Uninstall successful, please restart neo-cli.");
-        }
-
-        private static void DeleteFiles(IEnumerable<string> list)
-        {
-            foreach (var file in list)
-            {
-                try
-                {
-                    if (!File.Exists(file)) continue;
-                    ConsoleHelper.Info("Deleting ", file);
-                    File.Delete(file);
-                }
-                catch (Exception)
-                {
-                    // ignored
-                }
-            }
         }
 
         /// <summary>
