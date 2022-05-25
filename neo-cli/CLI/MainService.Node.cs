@@ -1,4 +1,4 @@
-// Copyright (C) 2016-2021 The Neo Project.
+// Copyright (C) 2016-2022 The Neo Project.
 // 
 // The neo-cli is free software distributed under the MIT software 
 // license, see the accompanying file LICENSE in the main directory of
@@ -87,7 +87,7 @@ namespace Neo.CLI
                     foreach (RemoteNode node in LocalNode.GetRemoteNodes().OrderByDescending(u => u.LastBlockIndex).Take(Console.WindowHeight - 2).ToArray())
                     {
                         ConsoleHelper.Info("  ip: ",
-                            $"{ node.Remote.Address,-15}\t",
+                            $"{node.Remote.Address,-15}\t",
                             "port: ",
                             $"{node.Remote.Port,-5}\t",
                             "listen: ",
