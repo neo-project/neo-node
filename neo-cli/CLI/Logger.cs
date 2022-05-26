@@ -28,6 +28,7 @@ namespace Neo.CLI
         private static readonly ConsoleColorSet ErrorColor = new ConsoleColorSet(ConsoleColor.Red);
         private static readonly ConsoleColorSet FatalColor = new ConsoleColorSet(ConsoleColor.Red);
         private static readonly ConsoleColorSet KeyColor = new ConsoleColorSet(ConsoleColor.DarkGreen);
+
         public override string Name => "SystemLog";
         public override string Description => "Prints consensus log and is a built-in plugin which cannot be uninstalled";
         public override string ConfigFile => Combine(GetDirectoryName(Path), "config.json");
@@ -93,7 +94,7 @@ namespace Neo.CLI
                 if (Settings.Default.Logger.ConsoleOutput && _showLog)
                 {
                     var currentColor = new ConsoleColorSet();
-                    var messages = message is not string msg ? new[] { $"{message}" } : Parse(msg);
+                    var messages = message is string msg ? Parse(msg) : new[] { message.ToString() };
                     ConsoleColorSet logColor;
                     string logLevel;
                     switch (level)
