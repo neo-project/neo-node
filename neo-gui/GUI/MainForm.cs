@@ -1,4 +1,4 @@
-// Copyright (C) 2016-2021 The Neo Project.
+// Copyright (C) 2016-2022 The Neo Project.
 // 
 // The neo-gui is free software distributed under the MIT software 
 // license, see the accompanying file LICENSE in the main directory of
@@ -12,7 +12,6 @@ using Akka.Actor;
 using Neo.IO;
 using Neo.IO.Actors;
 using Neo.Ledger;
-using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.Properties;
 using Neo.SmartContract;
@@ -34,6 +33,7 @@ using System.Security.Cryptography;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using static Neo.Program;
+using static Neo.SmartContract.Helper;
 using VMArray = Neo.VM.Types.Array;
 
 namespace Neo.GUI
@@ -76,7 +76,7 @@ namespace Neo.GUI
             }
             if (item == null)
             {
-                string groupName = account.WatchOnly ? "watchOnlyGroup" : account.Contract.Script.IsSignatureContract() ? "standardContractGroup" : "nonstandardContractGroup";
+                string groupName = account.WatchOnly ? "watchOnlyGroup" : IsSignatureContract(account.Contract.Script) ? "standardContractGroup" : "nonstandardContractGroup";
                 item = listView1.Items.Add(new ListViewItem(new[]
                 {
                     new ListViewItem.ListViewSubItem
@@ -424,7 +424,7 @@ namespace Neo.GUI
             查看私钥VToolStripMenuItem.Enabled =
                 listView1.SelectedIndices.Count == 1 &&
                 !((WalletAccount)listView1.SelectedItems[0].Tag).WatchOnly &&
-                ((WalletAccount)listView1.SelectedItems[0].Tag).Contract.Script.IsSignatureContract();
+                IsSignatureContract(((WalletAccount)listView1.SelectedItems[0].Tag).Contract.Script);
             viewContractToolStripMenuItem.Enabled =
                 listView1.SelectedIndices.Count == 1 &&
                 !((WalletAccount)listView1.SelectedItems[0].Tag).WatchOnly;

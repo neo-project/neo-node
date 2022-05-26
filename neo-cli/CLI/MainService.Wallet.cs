@@ -1,4 +1,4 @@
-// Copyright (C) 2016-2021 The Neo Project.
+// Copyright (C) 2016-2022 The Neo Project.
 // 
 // The neo-cli is free software distributed under the MIT software 
 // license, see the accompanying file LICENSE in the main directory of
@@ -24,6 +24,7 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
+using static Neo.SmartContract.Helper;
 
 namespace Neo.CLI
 {
@@ -392,11 +393,11 @@ namespace Neo.CLI
                 {
                     type = "WatchOnly";
                 }
-                else if (contract.Script.IsMultiSigContract())
+                else if (IsMultiSigContract(contract.Script))
                 {
                     type = "MultiSignature";
                 }
-                else if (contract.Script.IsSignatureContract())
+                else if (IsSignatureContract(contract.Script))
                 {
                     type = "Standard";
                 }
