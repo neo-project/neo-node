@@ -1,4 +1,4 @@
-// Copyright (C) 2016-2021 The Neo Project.
+// Copyright (C) 2016-2022 The Neo Project.
 // 
 // The neo-gui is free software distributed under the MIT software 
 // license, see the accompanying file LICENSE in the main directory of
@@ -8,10 +8,9 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using Neo.IO;
 using Neo.Network.P2P.Payloads;
 using System.ComponentModel;
-using System.IO;
-using System.Text;
 
 namespace Neo.GUI.Wrappers
 {
@@ -23,9 +22,8 @@ namespace Neo.GUI.Wrappers
 
         public TransactionAttribute Unwrap()
         {
-            using var reader = new BinaryReader(new MemoryStream(Data), Encoding.UTF8, false);
-
-            return TransactionAttribute.DeserializeFrom(reader);
+            MemoryReader reader = new(Data);
+            return TransactionAttribute.DeserializeFrom(ref reader);
         }
     }
 }
