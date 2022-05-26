@@ -91,7 +91,7 @@ namespace Neo.CLI
             {
                 DateTime now = DateTime.Now;
                 var log = $"[{now.TimeOfDay:hh\\:mm\\:ss\\.fff}]";
-                if (Settings.Default.Logger.ConsoleOutput && _showLog)
+                if (_showLog)
                 {
                     var currentColor = new ConsoleColorSet();
                     var messages = message is string msg ? Parse(msg) : new[] { message.ToString() };
