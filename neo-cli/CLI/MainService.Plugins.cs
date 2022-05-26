@@ -1,10 +1,10 @@
-// Copyright (C) 2016-2021 The Neo Project.
-// 
-// The neo-cli is free software distributed under the MIT software 
+// Copyright (C) 2016-2022 The Neo Project.
+//
+// The neo-cli is free software distributed under the MIT software
 // license, see the accompanying file LICENSE in the main directory of
-// the project or http://www.opensource.org/licenses/mit-license.php 
+// the project or http://www.opensource.org/licenses/mit-license.php
 // for more details.
-// 
+//
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
@@ -174,7 +174,7 @@ namespace Neo.CLI
         /// <returns></returns>
         private static bool PluginExists(string pluginName)
         {
-            return File.Exists($"Plugins/{pluginName}/{pluginName}.dll");
+            return Plugin.Plugins.Any(p => p.Name == pluginName);
         }
 
         /// <summary>
@@ -227,28 +227,10 @@ namespace Neo.CLI
             }
             try
             {
-                DeleteFiles(Directory.GetFiles($"Plugins/{pluginName}"));
                 Directory.Delete($"Plugins/{pluginName}", true);
             }
             catch (IOException) { }
             ConsoleHelper.Info("Uninstall successful, please restart neo-cli.");
-        }
-
-        private static void DeleteFiles(IEnumerable<string> list)
-        {
-            foreach (var file in list)
-            {
-                try
-                {
-                    if (!File.Exists(file)) continue;
-                    ConsoleHelper.Info("Deleting ", file);
-                    File.Delete(file);
-                }
-                catch (Exception)
-                {
-                    // ignored
-                }
-            }
         }
 
         /// <summary>
