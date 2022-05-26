@@ -32,24 +32,24 @@ namespace Neo.CLI
         public override string Description => "Prints consensus log and is a built-in plugin which cannot be uninstalled";
         public override string ConfigFile => Combine(GetDirectoryName(Path), "config.json");
         public override string Path => GetType().Assembly.Location;
-        private bool showLog = Settings.Default.Logger.ConsoleOutput;
+        private bool _showLog = Settings.Default.Logger.ConsoleOutput;
 
         /// <summary>
-        /// Process "log off" command
+        /// Process "console log off" command to turn off console log
         /// </summary>
-        [ConsoleCommand("log off", Category = "Log Commands")]
+        [ConsoleCommand("console log off", Category = "Log Commands")]
         private void OnLogOffCommand()
         {
-            showLog = false;
+            _showLog = false;
         }
 
         /// <summary>
-        /// Process "log on" command
+        /// Process "console log on" command to turn on the console log
         /// </summary>
-        [ConsoleCommand("log on", Category = "Log Commands")]
+        [ConsoleCommand("console log on", Category = "Log Commands")]
         private void OnLogOnCommand()
         {
-            if (Settings.Default.Logger.ConsoleOutput) showLog = true;
+            if (Settings.Default.Logger.ConsoleOutput) _showLog = true;
             else ConsoleHelper.Warning("Please enable log first.");
         }
 
@@ -90,7 +90,7 @@ namespace Neo.CLI
             {
                 DateTime now = DateTime.Now;
                 var log = $"[{now.TimeOfDay:hh\\:mm\\:ss\\.fff}]";
-                if (Settings.Default.Logger.ConsoleOutput && showLog)
+                if (Settings.Default.Logger.ConsoleOutput && _showLog)
                 {
                     var currentColor = new ConsoleColorSet();
                     var messages = message is not string msg ? new[] { $"{message}" } : Parse(msg);
