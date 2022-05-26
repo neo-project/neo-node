@@ -174,7 +174,7 @@ namespace Neo.CLI
         /// <returns></returns>
         private static bool PluginExists(string pluginName)
         {
-            return Plugin.Plugins.Any(p => p.Name == pluginName);
+            return Plugin.Plugins.Any(p => p.Name.ToLower() == pluginName);
         }
 
         /// <summary>
