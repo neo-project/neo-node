@@ -9,7 +9,6 @@
 // modifications are permitted.
 
 using Neo.ConsoleService;
-using Neo.Plugins;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -19,8 +18,7 @@ using static System.IO.Path;
 
 namespace Neo.CLI
 {
-
-    internal class Logger : Plugin, ILogPlugin
+    partial class MainService
     {
         private static readonly ConsoleColorSet DebugColor = new ConsoleColorSet(ConsoleColor.Cyan);
         private static readonly ConsoleColorSet InfoColor = new ConsoleColorSet(ConsoleColor.White);
@@ -28,12 +26,18 @@ namespace Neo.CLI
         private static readonly ConsoleColorSet ErrorColor = new ConsoleColorSet(ConsoleColor.Red);
         private static readonly ConsoleColorSet FatalColor = new ConsoleColorSet(ConsoleColor.Red);
         private static readonly ConsoleColorSet KeyColor = new ConsoleColorSet(ConsoleColor.DarkGreen);
-
-        public override string Name => "SystemLog";
-        public override string Description => "Prints consensus log and is a built-in plugin which cannot be uninstalled";
-        public override string ConfigFile => Combine(GetDirectoryName(Path), "config.json");
-        public override string Path => GetType().Assembly.Location;
         private bool _showLog = Settings.Default.Logger.ConsoleOutput;
+        private readonly object syncRoot = new();
+
+        private void Initialize_Logger()
+        {
+            Utility.Logging += OnLog;
+        }
+
+        private void Dispose_Logger()
+        {
+            Utility.Logging -= OnLog;
+        }
 
         /// <summary>
         /// Process "console log off" command to turn off console log
@@ -53,7 +57,6 @@ namespace Neo.CLI
             if (Settings.Default.Logger.ConsoleOutput) _showLog = true;
             else ConsoleHelper.Warning("Please enable log first.");
         }
-
 
         private static void GetErrorLogs(StringBuilder sb, Exception ex)
         {
@@ -75,7 +78,7 @@ namespace Neo.CLI
             }
         }
 
-        void ILogPlugin.Log(string source, LogLevel level, object message)
+        private void OnLog(string source, LogLevel level, object message)
         {
             if (!Settings.Default.Logger.Active)
                 return;
@@ -87,7 +90,7 @@ namespace Neo.CLI
                 message = sb.ToString();
             }
 
-            lock (typeof(Logger))
+            lock (syncRoot)
             {
                 DateTime now = DateTime.Now;
                 var log = $"[{now.TimeOfDay:hh\\:mm\\:ss\\.fff}]";
