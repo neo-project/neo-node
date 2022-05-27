@@ -83,6 +83,8 @@ namespace Neo.CLI
             RegisterCommandHandler<JObject, JArray>(obj => (JArray)obj);
 
             RegisterCommand(this);
+
+            Initialize_Logger();
         }
 
         internal static UInt160 StringToAddress(string input, byte version)
@@ -378,8 +380,6 @@ namespace Neo.CLI
                         break;
                 }
 
-            _ = new Logger();
-
             ProtocolSettings protocol = ProtocolSettings.Load("config.json");
 
             NeoSystem = new NeoSystem(protocol, Settings.Default.Storage.Engine, string.Format(Settings.Default.Storage.Path, protocol.Network.ToString("X8")));
@@ -445,6 +445,7 @@ namespace Neo.CLI
 
         public void Stop()
         {
+            Dispose_Logger();
             Interlocked.Exchange(ref _neoSystem, null)?.Dispose();
         }
 
