@@ -26,8 +26,9 @@ namespace Neo.CLI
         private static readonly ConsoleColorSet ErrorColor = new ConsoleColorSet(ConsoleColor.Red);
         private static readonly ConsoleColorSet FatalColor = new ConsoleColorSet(ConsoleColor.Red);
         private static readonly ConsoleColorSet KeyColor = new ConsoleColorSet(ConsoleColor.DarkGreen);
-        private bool _showLog = Settings.Default.Logger.ConsoleOutput;
+
         private readonly object syncRoot = new();
+        private bool _showLog = Settings.Default.Logger.ConsoleOutput;
 
         private void Initialize_Logger()
         {
@@ -54,8 +55,7 @@ namespace Neo.CLI
         [ConsoleCommand("console log on", Category = "Log Commands")]
         private void OnLogOnCommand()
         {
-            if (Settings.Default.Logger.ConsoleOutput) _showLog = true;
-            else ConsoleHelper.Warning("Please enable log first.");
+            _showLog = true;
         }
 
         private static void GetErrorLogs(StringBuilder sb, Exception ex)
