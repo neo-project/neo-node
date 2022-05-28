@@ -1,4 +1,4 @@
-// Copyright (C) 2016-2021 The Neo Project.
+// Copyright (C) 2016-2022 The Neo Project.
 // 
 // The neo-cli is free software distributed under the MIT software 
 // license, see the accompanying file LICENSE in the main directory of
@@ -193,12 +193,6 @@ namespace Neo.CLI
             var plugin = Plugin.Plugins.FirstOrDefault(p => p.Name == pluginName);
             if (plugin is not null)
             {
-                if (plugin is Logger)
-                {
-                    ConsoleHelper.Warning("You cannot uninstall a built-in plugin.");
-                    return;
-                }
-
                 Plugin.Plugins.Remove(plugin);
             }
 
@@ -266,7 +260,6 @@ namespace Neo.CLI
                 Console.WriteLine("Loaded plugins:");
                 foreach (Plugin plugin in Plugin.Plugins)
                 {
-                    if (plugin is Logger) continue;
                     var name = $"{plugin.Name}@{plugin.Version}";
                     Console.WriteLine($"\t{name,-25}{plugin.Description}");
                 }
