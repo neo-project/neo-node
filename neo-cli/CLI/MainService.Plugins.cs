@@ -189,12 +189,6 @@ namespace Neo.CLI
                 return;
             }
 
-            var plugin = Plugin.Plugins.FirstOrDefault(p => p.Name == pluginName);
-            if (plugin is not null)
-            {
-                Plugin.Plugins.Remove(plugin);
-            }
-
             foreach (var p in Plugin.Plugins)
             {
                 try
