@@ -145,7 +145,7 @@ namespace Neo.CLI
                 path = Combine(path, $"{now:yyyy-MM-dd}.log");
                 try
                 {
-                    File.AppendAllLines(path, new[] { $"[{level}]{log}" });
+                    File.AppendAllLines(path, new[] { $"[{level}]{log} {message}"});
                 }
                 catch (IOException)
                 {
