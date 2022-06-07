@@ -200,7 +200,7 @@ namespace Neo.CLI
                         .GetSection("Dependency")
                         .GetChildren()
                         .Select(d => d.Get<string>())
-                        .Any(v => v == pluginName))
+                        .Any(v => v.Equals(pluginName, StringComparison.InvariantCultureIgnoreCase)))
                     {
                         ConsoleHelper.Error(
                             $"Can not uninstall. Other plugins depend on this plugin, try `reinstall {pluginName}` if the plugin is broken.");
