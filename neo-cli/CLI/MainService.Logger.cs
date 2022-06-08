@@ -1,4 +1,4 @@
-// Copyright (C) 2016-2021 The Neo Project.
+// Copyright (C) 2016-2022 The Neo Project.
 // 
 // The neo-cli is free software distributed under the MIT software 
 // license, see the accompanying file LICENSE in the main directory of
@@ -9,7 +9,6 @@
 // modifications are permitted.
 
 using Neo.ConsoleService;
-using Neo.Plugins;
 using System;
 using System.IO;
 using System.Text;
@@ -17,7 +16,7 @@ using static System.IO.Path;
 
 namespace Neo.CLI
 {
-    internal class Logger : Plugin, ILogPlugin
+    partial class MainService
     {
         private static readonly ConsoleColorSet DebugColor = new ConsoleColorSet(ConsoleColor.Cyan);
         private static readonly ConsoleColorSet InfoColor = new ConsoleColorSet(ConsoleColor.White);
@@ -25,10 +24,17 @@ namespace Neo.CLI
         private static readonly ConsoleColorSet ErrorColor = new ConsoleColorSet(ConsoleColor.Red);
         private static readonly ConsoleColorSet FatalColor = new ConsoleColorSet(ConsoleColor.Red);
 
-        public override string Name => "SystemLog";
-        public override string Description => "Prints consensus log and is a built-in plugin which cannot be uninstalled";
-        public override string ConfigFile => Combine(GetDirectoryName(Path), "config.json");
-        public override string Path => GetType().Assembly.Location;
+        private readonly object syncRoot = new();
+
+        private void Initialize_Logger()
+        {
+            Utility.Logging += OnLog;
+        }
+
+        private void Dispose_Logger()
+        {
+            Utility.Logging -= OnLog;
+        }
 
         private static void GetErrorLogs(StringBuilder sb, Exception ex)
         {
@@ -50,7 +56,7 @@ namespace Neo.CLI
             }
         }
 
-        void ILogPlugin.Log(string source, LogLevel level, object message)
+        private void OnLog(string source, LogLevel level, object message)
         {
             if (!Settings.Default.Logger.Active)
                 return;
@@ -62,7 +68,7 @@ namespace Neo.CLI
                 message = sb.ToString();
             }
 
-            lock (typeof(Logger))
+            lock (syncRoot)
             {
                 DateTime now = DateTime.Now;
                 var log = $"[{now.TimeOfDay:hh\\:mm\\:ss\\.fff}] {message}";

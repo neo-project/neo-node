@@ -1,4 +1,4 @@
-// Copyright (C) 2016-2021 The Neo Project.
+// Copyright (C) 2016-2022 The Neo Project.
 // 
 // The neo-cli is free software distributed under the MIT software 
 // license, see the accompanying file LICENSE in the main directory of
@@ -23,8 +23,6 @@ using Neo.SmartContract.Native;
 using Neo.VM;
 using Neo.VM.Types;
 using Neo.Wallets;
-using Neo.Wallets.NEP6;
-using Neo.Wallets.SQLite;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -85,6 +83,8 @@ namespace Neo.CLI
             RegisterCommandHandler<JObject, JArray>(obj => (JArray)obj);
 
             RegisterCommand(this);
+
+            Initialize_Logger();
         }
 
         internal static UInt160 StringToAddress(string input, byte version)
@@ -127,28 +127,21 @@ namespace Neo.CLI
 
         public void CreateWallet(string path, string password, bool createDefaultAccount = true)
         {
-            switch (Path.GetExtension(path))
+            Wallet wallet = Wallet.Create(null, path, password, NeoSystem.Settings);
+            if (wallet == null)
             {
-                case ".db3":
-                    CurrentWallet = UserWallet.Create(path, password, NeoSystem.Settings);
-                    break;
-                case ".json":
-                    CurrentWallet = new NEP6Wallet(path, NeoSystem.Settings);
-                    ((NEP6Wallet)CurrentWallet).Unlock(password);
-                    break;
-                default:
-                    ConsoleHelper.Warning("Wallet files in that format are not supported, please use a .json or .db3 file extension.");
-                    return;
+                ConsoleHelper.Warning("Wallet files in that format are not supported, please use a .json or .db3 file extension.");
+                return;
             }
             if (createDefaultAccount)
             {
-                WalletAccount account = CurrentWallet.CreateAccount();
+                WalletAccount account = wallet.CreateAccount();
                 ConsoleHelper.Info("   Address: ", account.Address);
                 ConsoleHelper.Info("    Pubkey: ", account.GetKey().PublicKey.EncodePoint(true).ToHexString());
                 ConsoleHelper.Info("ScriptHash: ", $"{account.ScriptHash}");
             }
-            if (CurrentWallet is NEP6Wallet wallet)
-                wallet.Save();
+            wallet.Save();
+            CurrentWallet = wallet;
         }
 
         private IEnumerable<Block> GetBlocks(Stream stream, bool read_start = false)
@@ -246,10 +239,7 @@ namespace Neo.CLI
                 throw new ArgumentException(nameof(nefFilePath));
             }
 
-            using (var stream = new BinaryReader(File.OpenRead(nefFilePath), Utility.StrictUTF8, false))
-            {
-                nef = stream.ReadSerializable<NefFile>();
-            }
+            nef = File.ReadAllBytes(nefFilePath).AsSerializable<NefFile>();
 
             ContractParameter dataParameter = null;
             if (data is not null)
@@ -315,10 +305,7 @@ namespace Neo.CLI
                 throw new ArgumentException(nameof(nefFilePath));
             }
 
-            using (var stream = new BinaryReader(File.OpenRead(nefFilePath), Utility.StrictUTF8, false))
-            {
-                nef = stream.ReadSerializable<NefFile>();
-            }
+            nef = File.ReadAllBytes(nefFilePath).AsSerializable<NefFile>();
 
             ContractParameter dataParameter = null;
             if (data is not null)
@@ -377,22 +364,7 @@ namespace Neo.CLI
                 throw new FileNotFoundException();
             }
 
-            switch (Path.GetExtension(path).ToLowerInvariant())
-            {
-                case ".db3":
-                    {
-                        CurrentWallet = UserWallet.Open(path, password, NeoSystem.Settings);
-                        break;
-                    }
-                case ".json":
-                    {
-                        NEP6Wallet nep6wallet = new NEP6Wallet(path, NeoSystem.Settings);
-                        nep6wallet.Unlock(password);
-                        CurrentWallet = nep6wallet;
-                        break;
-                    }
-                default: throw new NotSupportedException();
-            }
+            CurrentWallet = Wallet.Open(path, password, NeoSystem.Settings) ?? throw new NotSupportedException();
         }
 
         public async void Start(string[] args)
@@ -407,8 +379,6 @@ namespace Neo.CLI
                         verifyImport = false;
                         break;
                 }
-
-            _ = new Logger();
 
             ProtocolSettings protocol = ProtocolSettings.Load("config.json");
 
@@ -475,6 +445,7 @@ namespace Neo.CLI
 
         public void Stop()
         {
+            Dispose_Logger();
             Interlocked.Exchange(ref _neoSystem, null)?.Dispose();
         }
 
@@ -554,7 +525,7 @@ namespace Neo.CLI
             try
             {
                 Transaction tx = CurrentWallet.MakeTransaction(snapshot, script, account, signers, maxGas: gas);
-                ConsoleHelper.Info("Invoking script with: ", $"'{tx.Script.ToBase64String()}'");
+                ConsoleHelper.Info("Invoking script with: ", $"'{Convert.ToBase64String(tx.Script.Span)}'");
 
                 using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, snapshot, container: tx, settings: NeoSystem.Settings, gas: gas))
                 {

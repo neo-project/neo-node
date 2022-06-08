@@ -1,4 +1,4 @@
-// Copyright (C) 2016-2021 The Neo Project.
+// Copyright (C) 2016-2022 The Neo Project.
 // 
 // The neo-gui is free software distributed under the MIT software 
 // license, see the accompanying file LICENSE in the main directory of
@@ -38,7 +38,7 @@ namespace Neo.GUI
         {
             this.tx = tx;
             tabControl1.SelectedTab = tabPage2;
-            textBox6.Text = tx.Script.ToHexString();
+            textBox6.Text = tx.Script.Span.ToHexString();
             textBox6.ReadOnly = true;
         }
 
