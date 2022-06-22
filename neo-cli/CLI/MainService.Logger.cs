@@ -111,7 +111,6 @@ namespace Neo.CLI
                     }
                     logColor.Apply();
                     Console.Write(logLevel + " ");
-                    InfoColor.Apply();
 
                     Console.Write($"{log} {messages[0]}");
                     for (var i = 0; i < 35 - messages[0].Length - logLevel.Length; i++) Console.Write(' ');
@@ -121,16 +120,7 @@ namespace Neo.CLI
                         {
                             messages[i] = $"{messages[i][..10]}...{messages[i][(messages[i].Length - 10)..]}";
                         }
-                        if (i % 2 == 0)
-                        {
-                            InfoColor.Apply();
-                            Console.Write($"={messages[i]} ");
-                        }
-                        else
-                        {
-                            logColor.Apply();
-                            Console.Write($" {messages[i]}");
-                        }
+                        Console.Write(i % 2 == 0 ? $"={messages[i]} " : $" {messages[i]}");
                     }
                     currentColor.Apply();
                     Console.WriteLine();
@@ -176,6 +166,5 @@ namespace Neo.CLI
 
             return messages.ToArray();
         }
-
     }
 }
