@@ -1,10 +1,9 @@
 // Copyright (C) 2016-2022 The Neo Project.
-// 
 // The neo-cli is free software distributed under the MIT software 
 // license, see the accompanying file LICENSE in the main directory of
-// the project or http://www.opensource.org/licenses/mit-license.php 
+// the project or http://www.opensource.org/licenses/mit-license.php
 // for more details.
-// 
+//
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
@@ -174,7 +173,7 @@ namespace Neo.CLI
         /// <returns></returns>
         private static bool PluginExists(string pluginName)
         {
-            return File.Exists($"Plugins/{pluginName}.dll");
+            return Plugin.Plugins.Any(p => p.Name.Equals(pluginName, StringComparison.InvariantCultureIgnoreCase));
         }
 
         /// <summary>
@@ -190,12 +189,6 @@ namespace Neo.CLI
                 return;
             }
 
-            var plugin = Plugin.Plugins.FirstOrDefault(p => p.Name == pluginName);
-            if (plugin is not null)
-            {
-                Plugin.Plugins.Remove(plugin);
-            }
-
             foreach (var p in Plugin.Plugins)
             {
                 try
@@ -207,7 +200,7 @@ namespace Neo.CLI
                         .GetSection("Dependency")
                         .GetChildren()
                         .Select(d => d.Get<string>())
-                        .Any(v => v == pluginName))
+                        .Any(v => v.Equals(pluginName, StringComparison.InvariantCultureIgnoreCase)))
                     {
                         ConsoleHelper.Error(
                             $"Can not uninstall. Other plugins depend on this plugin, try `reinstall {pluginName}` if the plugin is broken.");
@@ -219,34 +212,12 @@ namespace Neo.CLI
                     // ignored
                 }
             }
-
             try
             {
-                DeleteFiles(new[] { $"Plugins/{pluginName}.dll", $"Plugins/{pluginName}/config.json" });
-                Directory.Delete($"Plugins/{pluginName}", false);
+                Directory.Delete($"Plugins/{pluginName}", true);
             }
-            catch (IOException)
-            {
-            }
-
+            catch (IOException) { }
             ConsoleHelper.Info("Uninstall successful, please restart neo-cli.");
-        }
-
-        private static void DeleteFiles(IEnumerable<string> list)
-        {
-            foreach (var file in list)
-            {
-                try
-                {
-                    if (!File.Exists(file)) continue;
-                    ConsoleHelper.Info("Deleting ", file);
-                    File.Delete(file);
-                }
-                catch (Exception)
-                {
-                    // ignored
-                }
-            }
         }
 
         /// <summary>
