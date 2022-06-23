@@ -154,6 +154,11 @@ namespace Neo.CLI
             }
         }
 
+        /// <summary>
+        /// Parse the log message
+        /// </summary>
+        /// <param name="message">expected format [key1 = msg1 key2 = msg2]</param>
+        /// <returns></returns>
         private static string[] Parse(string message)
         {
             var equals = message.Trim().Split('=');
