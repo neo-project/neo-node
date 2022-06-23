@@ -105,7 +105,7 @@ namespace Neo.CLI
                         case LogLevel.Debug: logColor = DebugColor; logLevel = "DEBUG"; break;
                         case LogLevel.Error: logColor = ErrorColor; logLevel = "ERROR"; break;
                         case LogLevel.Fatal: logColor = FatalColor; logLevel = "FATAL"; break;
-                        case LogLevel.Info: logColor = KeyColor; logLevel = "INFO"; break;
+                        case LogLevel.Info: logColor = InfoColor; logLevel = "INFO"; break;
                         case LogLevel.Warning: logColor = WarningColor; logLevel = "WARN"; break;
                         default: logColor = InfoColor; logLevel = "INFO"; break;
                     }
