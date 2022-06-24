@@ -20,12 +20,11 @@ namespace Neo.CLI
 {
     partial class MainService
     {
-        private static readonly ConsoleColorSet DebugColor = new ConsoleColorSet(ConsoleColor.Cyan);
-        private static readonly ConsoleColorSet InfoColor = new ConsoleColorSet(ConsoleColor.White);
-        private static readonly ConsoleColorSet WarningColor = new ConsoleColorSet(ConsoleColor.Yellow);
-        private static readonly ConsoleColorSet ErrorColor = new ConsoleColorSet(ConsoleColor.Red);
-        private static readonly ConsoleColorSet FatalColor = new ConsoleColorSet(ConsoleColor.Red);
-        private static readonly ConsoleColorSet KeyColor = new ConsoleColorSet(ConsoleColor.DarkGreen);
+        private static readonly ConsoleColorSet DebugColor = new(ConsoleColor.Cyan);
+        private static readonly ConsoleColorSet InfoColor = new(ConsoleColor.White);
+        private static readonly ConsoleColorSet WarningColor = new(ConsoleColor.Yellow);
+        private static readonly ConsoleColorSet ErrorColor = new(ConsoleColor.Red);
+        private static readonly ConsoleColorSet FatalColor = new(ConsoleColor.Red);
 
         private readonly object syncRoot = new();
         private bool _showLog = Settings.Default.Logger.ConsoleOutput;
