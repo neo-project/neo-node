@@ -1,10 +1,10 @@
 // Copyright (C) 2016-2022 The Neo Project.
-// 
-// The neo-cli is free software distributed under the MIT software 
+//
+// The neo-cli is free software distributed under the MIT software
 // license, see the accompanying file LICENSE in the main directory of
-// the project or http://www.opensource.org/licenses/mit-license.php 
+// the project or http://www.opensource.org/licenses/mit-license.php
 // for more details.
-// 
+//
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
@@ -85,6 +85,8 @@ namespace Neo.CLI
             RegisterCommandHandler<JObject, JArray>(obj => (JArray)obj);
 
             RegisterCommand(this);
+
+            Initialize_Logger();
         }
 
         internal static UInt160 StringToAddress(string input, byte version)
@@ -471,6 +473,7 @@ namespace Neo.CLI
 
         public void Stop()
         {
+            Dispose_Logger();
             Interlocked.Exchange(ref _neoSystem, null)?.Dispose();
         }
 
@@ -550,7 +553,7 @@ namespace Neo.CLI
             try
             {
                 Transaction tx = CurrentWallet.MakeTransaction(snapshot, script, account, signers, maxGas: gas);
-                ConsoleHelper.Info("Invoking script with: ", $"'{Convert.ToBase64String(tx.Script)}'");
+                ConsoleHelper.Info("Invoking script with: ", $"'{Convert.ToBase64String(tx.Script.Span)}'");
 
                 using (ApplicationEngine engine = ApplicationEngine.Run(tx.Script, snapshot, container: tx, settings: NeoSystem.Settings, gas: gas))
                 {

@@ -1,6 +1,16 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [3.3.1]
+
+### Changed
+- ([#860](https://github.com/neo-project/neo-node/pull/860/)) delete plugin folder when uninstall plugin
+
+## [3.3.0]
+
+### Changed
+- ([#861](https://github.com/neo-project/neo-node/pull/861/)) Use wallet factory
+
 ## [3.2.1]
 
 ### Changed
