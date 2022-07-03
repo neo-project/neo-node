@@ -34,7 +34,6 @@ using System.Numerics;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
-using Akka.Util.Internal;
 using Array = System.Array;
 
 namespace Neo.CLI
@@ -405,9 +404,7 @@ namespace Neo.CLI
                         break;
                 }
             // Load the mode (network)
-            LoadMode(mode);
-            _ = new Logger();
-
+            await LoadMode(mode);
             ProtocolSettings protocol = ProtocolSettings.Load("config.json");
 
             NeoSystem = new NeoSystem(protocol, Settings.Default.Storage.Engine, string.Format(Settings.Default.Storage.Path, protocol.Network.ToString("X8")));
@@ -418,7 +415,6 @@ namespace Neo.CLI
             foreach (var plugin in Plugin.Plugins)
             {
                 // Register plugins commands
-
                 RegisterCommand(plugin, plugin.Name);
             }
 
