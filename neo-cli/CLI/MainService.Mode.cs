@@ -167,10 +167,10 @@ partial class MainService
     /// <param name="mode"> name of the mode</param>
     /// <param name="toMode"></param>
     /// <exception cref="DirectoryNotFoundException"> if the mode is not found</exception>
-    private void MoveModeConfig(string mode, bool toMode=true)
+    private static void MoveModeConfig(string mode, bool toMode=true)
     {
         var modeDir = new DirectoryInfo($"./Modes/{mode.ToLower()}");
-        var configDir = new DirectoryInfo($"./");
+        var configDir = new DirectoryInfo("./");
         if (!modeDir.Exists)
             throw new DirectoryNotFoundException($"Mode not found: {modeDir.FullName}");
         try
