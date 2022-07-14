@@ -58,11 +58,12 @@ partial class MainService
             if (!targetMode.Exists) Directory.CreateDirectory(targetMode.FullName);
 
             // Get the config files of the node
-            foreach (var file in dir.GetFiles().Where(p => p.Extension == ".json"))
-            {
-                var targetFilePath = Path.Combine(targetMode.FullName, file.Name);
-                file.CopyTo(targetFilePath, true);
-            }
+            MoveModeConfig(modeName.ToLower());
+            // foreach (var file in dir.GetFiles().Where(p => p.Extension == ".json"))
+            // {
+            //     var targetFilePath = Path.Combine(targetMode.FullName, file.Name);
+            //     file.CopyTo(targetFilePath, true);
+            // }
             var plugins = new DirectoryInfo("./Plugins");
             // Cache directories before we start copying
             var dirs = plugins.GetDirectories();
@@ -110,7 +111,7 @@ partial class MainService
     /// </summary>
     /// <param name="mode"> name of the mode</param>
     /// <exception cref="DirectoryNotFoundException"> if the mode is not found</exception>
-    private async Task LoadMode(string mode)
+    private Task LoadMode(string mode)
     {
         try
         {
@@ -126,28 +127,67 @@ partial class MainService
             }
             // Process the plugin
             var modePlugins = dir.GetDirectories();
-            foreach (var plugin in modePlugins)
+
+            modePlugins.ForEach(async p =>
             {
                 // if the plugin does not exist, maybe consider install it
-                if (!Directory.Exists($"Plugins/{plugin.Name}/"))
+                if (!Directory.Exists($"Plugins/{p.Name}/"))
                 {
-                    await InstallPluginAsync(plugin.Name);
+                     await InstallPluginAsync(p.Name);
                 }
+                File.Copy($"Modes/{mode.ToLower()}/{p.Name}.json",
+                    $"Plugins/{p.Name}/config.json", true);
+            });
+            MoveModeConfig(mode.ToLower(), false);
 
-                // Get existing plugins and delete them if they are not in the mode
-                new DirectoryInfo("Plugins/").GetDirectories().ForEach(p =>
+            // Get existing plugins and delete them if they are not in the mode
+            new DirectoryInfo("Plugins/").GetDirectories().ForEach(p =>
+            {
+                if (modePlugins.Any(k => k.Name == p.Name)) return;
+                try
                 {
-                    if (modePlugins.Any(k => k.Name == p.Name)) return;
-                    try
-                    {
-                        ConsoleHelper.Info("Removing plugin ", p.Name);
-                        Directory.Delete($"Plugins/{p.Name}", true);
-                    }
-                    catch
-                    {
-                        // ignored
-                    }
-                });
+                    ConsoleHelper.Info("Removing plugin ", p.Name);
+                    Directory.Delete($"Plugins/{p.Name}", true);
+                }
+                catch
+                {
+                    // ignored
+                }
+            });
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+        return Task.CompletedTask;
+    }
+
+    /// save config.json and config.fs.json to the mode directory
+    /// <param name="mode"> name of the mode</param>
+    /// <param name="toMode"></param>
+    /// <exception cref="DirectoryNotFoundException"> if the mode is not found</exception>
+    private void MoveModeConfig(string mode, bool toMode=true)
+    {
+        var modeDir = new DirectoryInfo($"./Modes/{mode.ToLower()}");
+        var configDir = new DirectoryInfo($"./");
+        if (!modeDir.Exists)
+            throw new DirectoryNotFoundException($"Mode not found: {modeDir.FullName}");
+        try
+        {
+            if (toMode)
+            {
+                File.Copy(configDir.FullName + "/config.json",
+                    modeDir.FullName + "/config.json", true);
+                File.Copy(configDir.FullName + "/config.fs.json",
+                    modeDir.FullName + "/config.fs.json", true);
+            }
+            else
+            {
+                File.Copy(modeDir.FullName + "/config.json",
+                    configDir.FullName + "/config.json", true);
+                File.Copy(modeDir.FullName + "/config.fs.json",
+                    configDir.FullName + "/config.fs.json", true);
             }
         }
         catch (Exception e)
