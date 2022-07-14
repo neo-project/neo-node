@@ -129,7 +129,7 @@ partial class MainService
             foreach (var plugin in modePlugins)
             {
                 // if the plugin does not exist, maybe consider install it
-                if (!Directory.Exists($"Plugins/{plugin}/"))
+                if (!Directory.Exists($"Plugins/{plugin.Name}/"))
                 {
                     await InstallPluginAsync(plugin.Name);
                 }
