@@ -20,8 +20,7 @@ namespace Neo.CLI;
 partial class MainService
 {
     /// <summary>
-    /// Process "mode list" command
-    /// <param name="modeName">Mode name</param>
+    /// Process "mode list" command.
     /// </summary>
     [ConsoleCommand("mode list", Category = "Mode Commands")]
     private void OnListModes()
@@ -144,6 +143,7 @@ partial class MainService
             new DirectoryInfo("Plugins/").GetDirectories().ForEach(p =>
             {
                 if (modePlugins.Any(k => k.Name == p.Name)) return;
+                if(!File.Exists($"Plugins/{p.Name}/config.json")) return;
                 try
                 {
                     ConsoleHelper.Info("Removing plugin ", p.Name);
