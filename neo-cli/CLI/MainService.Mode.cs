@@ -118,12 +118,6 @@ partial class MainService
             if (!dir.Exists)
                 throw new DirectoryNotFoundException($"Mode not found: {dir.FullName}");
 
-            // Get the config files of the node
-            foreach (var file in dir.GetFiles())
-            {
-                var targetFilePath = Path.Combine("./", file.Name);
-                file.CopyTo(targetFilePath, true);
-            }
             // Process the plugin
             var modePlugins = dir.GetDirectories();
 
