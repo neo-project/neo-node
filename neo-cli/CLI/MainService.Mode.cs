@@ -126,7 +126,7 @@ partial class MainService
                 // if the plugin does not exist, maybe consider install it
                 if (!Directory.Exists($"Plugins/{p.Name}/"))
                 {
-                     await InstallPluginAsync(p.Name);
+                    await InstallPluginAsync(p.Name);
                 }
                 File.Copy($"Modes/{mode.ToLower()}/{p.Name}.json",
                     $"Plugins/{p.Name}/config.json", true);
@@ -137,7 +137,7 @@ partial class MainService
             new DirectoryInfo("Plugins/").GetDirectories().ForEach(p =>
             {
                 if (modePlugins.Any(k => k.Name == p.Name)) return;
-                if(!File.Exists($"Plugins/{p.Name}/config.json")) return;
+                if (!File.Exists($"Plugins/{p.Name}/config.json")) return;
                 try
                 {
                     ConsoleHelper.Info("Removing plugin ", p.Name);
@@ -161,7 +161,7 @@ partial class MainService
     /// <param name="mode"> name of the mode</param>
     /// <param name="toMode"></param>
     /// <exception cref="DirectoryNotFoundException"> if the mode is not found</exception>
-    private static void MoveModeConfig(string mode, bool toMode=true)
+    private static void MoveModeConfig(string mode, bool toMode = true)
     {
         var modeDir = new DirectoryInfo($"./Modes/{mode.ToLower()}");
         var configDir = new DirectoryInfo("./");
