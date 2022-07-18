@@ -119,7 +119,7 @@ partial class MainService
                 throw new DirectoryNotFoundException($"Mode not found: {dir.FullName}");
 
             // Process the plugin
-            var modePlugins = dir.GetDirectories();
+            var modePlugins = dir.GetFiles();
 
             modePlugins.ForEach(async p =>
             {
