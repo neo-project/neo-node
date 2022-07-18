@@ -50,19 +50,11 @@ partial class MainService
         modeName = modeName.ToLower();
         try
         {
-            var dir = new DirectoryInfo($"./");
-
             var targetMode = new DirectoryInfo($"Modes/{modeName}");
             // Create the mode if it does not exist
             if (!targetMode.Exists) Directory.CreateDirectory(targetMode.FullName);
-
             // Get the config files of the node
             MoveModeConfig(modeName.ToLower());
-            // foreach (var file in dir.GetFiles().Where(p => p.Extension == ".json"))
-            // {
-            //     var targetFilePath = Path.Combine(targetMode.FullName, file.Name);
-            //     file.CopyTo(targetFilePath, true);
-            // }
             var plugins = new DirectoryInfo("./Plugins");
             // Cache directories before we start copying
             var dirs = plugins.GetDirectories();
@@ -123,20 +115,22 @@ partial class MainService
 
             modePlugins.ForEach(async p =>
             {
+                var pluginName = Path.GetFileNameWithoutExtension(p.Name);
                 // if the plugin does not exist, maybe consider install it
-                if (!Directory.Exists($"Plugins/{p.Name}/"))
+                if (p.Name.Contains("config")) return;
+                if (!Directory.Exists($"Plugins/{pluginName}/"))
                 {
-                    await InstallPluginAsync(p.Name);
+                    await InstallPluginAsync(pluginName);
                 }
-                File.Copy($"Modes/{mode.ToLower()}/{p.Name}.json",
-                    $"Plugins/{p.Name}/config.json", true);
+                File.Copy($"Modes/{mode.ToLower()}/{p.Name}",
+                    $"Plugins/{pluginName}/config.json", true);
             });
             MoveModeConfig(mode.ToLower(), false);
 
             // Get existing plugins and delete them if they are not in the mode
             new DirectoryInfo("Plugins/").GetDirectories().ForEach(p =>
             {
-                if (modePlugins.Any(k => k.Name == p.Name)) return;
+                if (modePlugins.Any(k => string.Compare(Path.GetFileNameWithoutExtension(k.Name), p.Name, StringComparison.OrdinalIgnoreCase) == 0)) return;
                 if (!File.Exists($"Plugins/{p.Name}/config.json")) return;
                 try
                 {

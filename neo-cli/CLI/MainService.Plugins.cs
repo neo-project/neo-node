@@ -142,15 +142,17 @@ namespace Neo.CLI
                 await InstallDependenciesAsync(es, installed);
             }
             zip.ExtractToDirectory("./", true);
+            Console.WriteLine();
             // Save the config.json to current mode
             try
             {
                 // what if the file already exists in the mode? OK, lets overwrite it then.
-                File.Copy($"Plugins/{pluginName}/config.json", $"Modes/{_currentMode}/{pluginName}/config.json", true);
+                File.Copy($"Plugins/{pluginName}/config.json", $"Modes/{_currentMode}/{pluginName}.json", true);
             }
-            catch
+            catch (Exception e)
             {
                 // ignored
+                Console.WriteLine(e.Message);
             }
         }
 
@@ -184,7 +186,8 @@ namespace Neo.CLI
         /// <returns></returns>
         private static bool PluginExists(string pluginName)
         {
-            return Plugin.Plugins.Any(p => p.Name.Equals(pluginName, StringComparison.InvariantCultureIgnoreCase));
+            return Plugin.Plugins.Any(p => p.Name.Equals(pluginName, StringComparison.InvariantCultureIgnoreCase)) ||
+                   new DirectoryInfo("Plugins").GetDirectories().Any(p => p.Name.Equals(pluginName, StringComparison.InvariantCultureIgnoreCase));
         }
 
         /// <summary>
