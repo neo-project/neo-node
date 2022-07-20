@@ -120,7 +120,7 @@ partial class MainService
                 if (p.Name.Contains("config")) return;
                 if (!Directory.Exists($"Plugins/{pluginName}/"))
                 {
-                    await InstallPluginAsync(pluginName);
+                    await InstallPluginAsync(pluginName, overWrite:true, saveConfig:false);
                 }
                 File.Copy($"Modes/{mode.ToLower()}/{p.Name}",
                     $"Plugins/{pluginName}/config.json", true);
@@ -130,8 +130,8 @@ partial class MainService
             // Get existing plugins and delete them if they are not in the mode
             new DirectoryInfo("Plugins/").GetDirectories().ForEach(p =>
             {
-                if (modePlugins.Any(k => string.Compare(Path.GetFileNameWithoutExtension(k.Name), p.Name, StringComparison.OrdinalIgnoreCase) == 0)) return;
-                if (!File.Exists($"Plugins/{p.Name}/config.json")) return;
+                if (modePlugins.Any(k => string.Compare(Path.GetFileNameWithoutExtension(k.Name), p.Name, StringComparison.OrdinalIgnoreCase) == 0)
+                    || !File.Exists($"Plugins/{p.Name}/config.json")) return;
                 try
                 {
                     ConsoleHelper.Info("Removing plugin ", p.Name);

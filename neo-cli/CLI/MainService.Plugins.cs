@@ -121,8 +121,9 @@ namespace Neo.CLI
         /// </summary>
         /// <param name="pluginName">name of the plugin</param>
         /// <param name="overWrite">Install by force for `update`</param>
+        /// <param name="saveConfig">Need to save the config file to the mode</param>
         private async Task InstallPluginAsync(string pluginName, HashSet<string> installed = null,
-            bool overWrite = false)
+            bool overWrite = false, bool saveConfig = true)
         {
             installed ??= new HashSet<string>();
             if (!installed.Add(pluginName)) return;
@@ -143,6 +144,8 @@ namespace Neo.CLI
             }
             zip.ExtractToDirectory("./", true);
             Console.WriteLine();
+
+            if (!saveConfig) return;
             // Save the config.json to current mode
             try
             {
