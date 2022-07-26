@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Copyright>2015-2021 The Neo Project</Copyright>
+    <Copyright>2015-2022 The Neo Project</Copyright>
     <Version>1.2.0</Version>
     <Authors>The Neo Project</Authors>
     <TargetFramework>net6.0</TargetFramework>
