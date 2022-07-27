@@ -9,7 +9,7 @@
 // modifications are permitted.
 
 using Neo.ConsoleService;
-using Neo.IO.Json;
+using Neo.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
