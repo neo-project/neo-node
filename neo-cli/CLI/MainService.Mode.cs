@@ -150,6 +150,7 @@ partial class MainService
             if (needRestart)
             {
                 ConsoleHelper.Warning("Please restart the node to apply the changes.");
+                OnStop();
             }
         }
         catch (Exception e)
