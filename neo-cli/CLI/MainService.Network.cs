@@ -11,7 +11,7 @@
 using Akka.Actor;
 using Neo.ConsoleService;
 using Neo.IO;
-using Neo.IO.Json;
+using Neo.Json;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Capabilities;
 using Neo.Network.P2P.Payloads;

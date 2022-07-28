@@ -12,7 +12,7 @@ using Akka.Actor;
 using Neo.ConsoleService;
 using Neo.Cryptography.ECC;
 using Neo.IO;
-using Neo.IO.Json;
+using Neo.Json;
 using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
@@ -81,7 +81,7 @@ namespace Neo.CLI
             RegisterCommandHandler<string[], ECPoint[]>(str => str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray());
             RegisterCommandHandler<string, JObject>(str => JObject.Parse(str));
             RegisterCommandHandler<string, decimal>(str => decimal.Parse(str, CultureInfo.InvariantCulture));
-            RegisterCommandHandler<JObject, JArray>(obj => (JArray)obj);
+            RegisterCommandHandler<JToken, JArray>(obj => (JArray)obj);
 
             RegisterCommand(this);
 
@@ -589,7 +589,7 @@ namespace Neo.CLI
             {
                 foreach (var contractParameter in contractParameters)
                 {
-                    parameters.Add(ContractParameter.FromJson(contractParameter));
+                    parameters.Add(ContractParameter.FromJson((JObject)contractParameter));
                 }
             }
 

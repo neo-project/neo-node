@@ -8,7 +8,7 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-using Neo.IO.Json;
+using Neo.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.Properties;
 using Neo.SmartContract;
@@ -112,7 +112,7 @@ namespace Neo.GUI
         private void button7_Click(object sender, EventArgs e)
         {
             if (openFileDialog2.ShowDialog() != DialogResult.OK) return;
-            abi = JObject.Parse(File.ReadAllText(openFileDialog2.FileName));
+            abi = (JObject)JToken.Parse(File.ReadAllText(openFileDialog2.FileName));
             script_hash = UInt160.Parse(abi["hash"].AsString());
             textBox8.Text = script_hash.ToString();
             comboBox1.Items.Clear();
@@ -134,9 +134,9 @@ namespace Neo.GUI
         {
             if (!(comboBox1.SelectedItem is string method)) return;
             JArray functions = (JArray)abi["functions"];
-            JObject function = functions.First(p => p["name"].AsString() == method);
+            var function = functions.First(p => p["name"].AsString() == method);
             JArray _params = (JArray)function["parameters"];
-            parameters = _params.Select(p => new ContractParameter(p["type"].TryGetEnum<ContractParameterType>())).ToArray();
+            parameters = _params.Select(p => new ContractParameter(p["type"].AsEnum<ContractParameterType>())).ToArray();
             textBox9.Text = string.Join(", ", _params.Select(p => p["name"].AsString()));
             button8.Enabled = parameters.Length > 0;
             UpdateScript();
