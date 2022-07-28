@@ -8,18 +8,17 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-using Neo.ConsoleService;
 using System;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Akka.Util.Internal;
+using Neo.ConsoleService;
 namespace Neo.CLI;
 
 partial class MainService
 {
-    private bool needRestart = false;
+    private bool _needRestart = false;
 
     /// <summary>
     /// Process "mode list" command.
@@ -123,7 +122,7 @@ partial class MainService
                 if (!Directory.Exists($"Plugins/{pluginName}/"))
                 {
                     await InstallPluginAsync(pluginName, overWrite:true, saveConfig:false);
-                    needRestart = true;
+                    _needRestart = true;
                 }
                 File.Copy($"Modes/{mode.ToLower()}/{p.Name}",
                     $"Plugins/{pluginName}/config.json", true);
@@ -139,7 +138,7 @@ partial class MainService
                 {
                     ConsoleHelper.Info("Removing plugin ", p.Name);
                     Directory.Delete($"Plugins/{p.Name}", true);
-                    needRestart = true;
+                    _needRestart = true;
                 }
                 catch
                 {
@@ -147,7 +146,7 @@ partial class MainService
                 }
             });
 
-            if (needRestart)
+            if (_needRestart)
             {
                 ConsoleHelper.Warning("Please restart the node to apply the changes.");
                 OnStop();
