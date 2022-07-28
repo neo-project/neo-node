@@ -19,6 +19,8 @@ namespace Neo.CLI;
 
 partial class MainService
 {
+    private bool needRestart = false;
+
     /// <summary>
     /// Process "mode list" command.
     /// </summary>
@@ -121,6 +123,7 @@ partial class MainService
                 if (!Directory.Exists($"Plugins/{pluginName}/"))
                 {
                     await InstallPluginAsync(pluginName, overWrite:true, saveConfig:false);
+                    needRestart = true;
                 }
                 File.Copy($"Modes/{mode.ToLower()}/{p.Name}",
                     $"Plugins/{pluginName}/config.json", true);
@@ -136,12 +139,18 @@ partial class MainService
                 {
                     ConsoleHelper.Info("Removing plugin ", p.Name);
                     Directory.Delete($"Plugins/{p.Name}", true);
+                    needRestart = true;
                 }
                 catch
                 {
                     // ignored
                 }
             });
+
+            if (needRestart)
+            {
+                ConsoleHelper.Warning("Please restart the node to apply the changes.");
+            }
         }
         catch (Exception e)
         {
