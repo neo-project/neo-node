@@ -9,7 +9,7 @@
 
 using Microsoft.Extensions.Configuration;
 using Neo.ConsoleService;
-using Neo.IO.Json;
+using Neo.Json;
 using Neo.Plugins;
 using System;
 using System.Collections.Generic;
@@ -79,13 +79,13 @@ namespace Neo.CLI
                     $"{GetType().Assembly.GetName().Name}/{GetType().Assembly.GetVersion()}");
                 using HttpResponseMessage responseApi = await http.SendAsync(request);
                 byte[] buffer = await responseApi.Content.ReadAsByteArrayAsync();
-                JObject releases = JObject.Parse(buffer);
-                JObject asset = releases.GetArray()
+                var releases = JObject.Parse(buffer);
+                var asset = ((JArray)releases)
                     .Where(p => !p["tag_name"].GetString().Contains('-'))
                     .Select(p => new
                     {
                         Version = Version.Parse(p["tag_name"].GetString().TrimStart('v')),
-                        Assets = p["assets"].GetArray()
+                        Assets = (JArray)p["assets"]
                     })
                     .OrderByDescending(p => p.Version)
                     .First(p => p.Version <= versionCore).Assets
