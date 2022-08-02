@@ -18,7 +18,6 @@ namespace Neo.CLI;
 
 partial class MainService
 {
-    private bool _needRestart = false;
 
     /// <summary>
     /// Process "mode list" command.
@@ -121,7 +120,7 @@ partial class MainService
                 if (p.Name.Contains("config")) return;
                 if (!Directory.Exists($"Plugins/{pluginName}/"))
                 {
-                    await InstallPluginAsync(pluginName, overWrite:true, saveConfig:false);
+                    await InstallPluginAsync(pluginName, overWrite: true, saveConfig: false);
                     _needRestart = true;
                 }
                 File.Copy($"Modes/{mode.ToLower()}/{p.Name}",
@@ -145,12 +144,6 @@ partial class MainService
                     // ignored
                 }
             });
-
-            if (_needRestart)
-            {
-                ConsoleHelper.Warning("Please restart the node to apply the changes.");
-                OnStop();
-            }
         }
         catch (Exception e)
         {

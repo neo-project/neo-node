@@ -47,6 +47,7 @@ namespace Neo.CLI
         private Wallet _currentWallet;
         public LocalNode LocalNode;
         private string _currentMode = "mainnet";
+        private bool _needRestart = false;
 
         public Wallet CurrentWallet
         {
@@ -405,6 +406,13 @@ namespace Neo.CLI
                 }
             // Load the mode (network)
             await LoadMode(mode);
+            if (_needRestart)
+            {
+                ConsoleHelper.Warning("Please restart the node to apply the changes.");
+                OnStop();
+                return;
+            }
+
             ProtocolSettings protocol = ProtocolSettings.Load("config.json");
 
             NeoSystem = new NeoSystem(protocol, Settings.Default.Storage.Engine, string.Format(Settings.Default.Storage.Path, protocol.Network.ToString("X8")));
