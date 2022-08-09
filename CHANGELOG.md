@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [3.4.0]
+
+### Addedd
+- ([#875](https://github.com/neo-project/neo-node/pull/875/)) update copyright
+
 ## [3.3.1]
 
 ### Changed
