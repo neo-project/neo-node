@@ -102,7 +102,7 @@ partial class MainService
     /// </summary>
     /// <param name="mode"> name of the mode</param>
     /// <exception cref="DirectoryNotFoundException"> if the mode is not found</exception>
-    private Task LoadMode(string mode)
+    private async Task LoadMode(string mode)
     {
         try
         {
@@ -113,19 +113,21 @@ partial class MainService
             // Process the plugin
             var modePlugins = dir.GetFiles();
 
-            modePlugins.ForEach(async p =>
+            // loop modePlugins
+            foreach (var plugin in modePlugins)
             {
-                var pluginName = Path.GetFileNameWithoutExtension(p.Name);
+                var pluginName = Path.GetFileNameWithoutExtension(plugin.Name);
                 // if the plugin does not exist, maybe consider install it
-                if (p.Name.Contains("config")) return;
+                if (plugin.Name.Contains("config")) continue;
                 if (!Directory.Exists($"Plugins/{pluginName}/"))
                 {
                     await InstallPluginAsync(pluginName, overWrite: true, saveConfig: false);
                     _needRestart = true;
                 }
-                File.Copy($"Modes/{mode.ToLower()}/{p.Name}",
+                File.Copy($"Modes/{mode.ToLower()}/{plugin.Name}",
                     $"Plugins/{pluginName}/config.json", true);
-            });
+            }
+
             MoveModeConfig(mode.ToLower(), false);
 
             // Get existing plugins and delete them if they are not in the mode
@@ -150,7 +152,6 @@ partial class MainService
             Console.WriteLine(e);
             throw;
         }
-        return Task.CompletedTask;
     }
 
     /// save config.json and config.fs.json to the mode directory
