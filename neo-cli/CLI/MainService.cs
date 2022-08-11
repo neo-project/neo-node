@@ -78,7 +78,8 @@ namespace Neo.CLI
             RegisterCommandHandler<string[], UInt160[]>(arr => arr.Select(str => StringToAddress(str, NeoSystem.Settings.AddressVersion)).ToArray());
             RegisterCommandHandler<string, ECPoint>(str => ECPoint.Parse(str.Trim(), ECCurve.Secp256r1));
             RegisterCommandHandler<string[], ECPoint[]>(str => str.Select(u => ECPoint.Parse(u.Trim(), ECCurve.Secp256r1)).ToArray());
-            RegisterCommandHandler<string, JObject>(str => JObject.Parse(str));
+            RegisterCommandHandler<string, JToken>(str => JToken.Parse(str));
+            RegisterCommandHandler<string, JObject>(str => (JObject)JToken.Parse(str));
             RegisterCommandHandler<string, decimal>(str => decimal.Parse(str, CultureInfo.InvariantCulture));
             RegisterCommandHandler<JToken, JArray>(obj => (JArray)obj);
 
