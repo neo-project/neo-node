@@ -17,11 +17,13 @@
   </PropertyGroup>
 
 <ItemGroup>
-    <ContentWithTargetPath Include="Modes\**">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <TargetPath>Modes\%(RecursiveDir)\%(Filename)%(Extension)</TargetPath>
-    </ContentWithTargetPath>
+        <Content Include="Modes\**">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <TargetPath>Modes\%(RecursiveDir)\%(Filename)%(Extension)</TargetPath>
+    </Content>
 </ItemGroup>
+
+
 
   <ItemGroup>
     <PackageReference Include="Neo" Version="3.4.0" />
