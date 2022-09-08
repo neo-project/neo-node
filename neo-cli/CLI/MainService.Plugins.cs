@@ -149,8 +149,10 @@ namespace Neo.CLI
             // Save the config.json to current mode
             try
             {
-                // what if the file already exists in the mode? OK, lets overwrite it then.
-                File.Copy($"Plugins/{pluginName}/config.json", $"Modes/{_currentMode}/{pluginName}.json", true);
+                var config = Helper.GetActualPath($"Plugins/{pluginName}") + "/config.json";
+                if (File.Exists(config))
+                    // what if the file already exists in the mode? OK, lets overwrite it then.
+                    File.Copy(config, $"Modes/{_currentMode}/{pluginName}.json", true);
             }
             catch (Exception e)
             {
