@@ -9,16 +9,6 @@ spawn dotnet out/neo-cli.dll
 
 # Expect the main input prompt
 expect {
-    "neo> " { send "exit\n"}
-    "error" { exit 2 }
-    timeout { exit 1 }
-}
-
-# ReStart neo-cli
-spawn dotnet out/neo-cli.dll
-
-# Expect the main input prompt
-expect {
     "neo> " { }
     "error" { exit 2 }
     timeout { exit 1 }
