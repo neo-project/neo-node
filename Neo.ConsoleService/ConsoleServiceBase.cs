@@ -291,7 +291,14 @@ namespace Neo.ConsoleService
 
         public virtual void OnStop()
         {
-            _shutdownAcknowledged.Signal();
+            try
+            {
+                _shutdownAcknowledged.Signal();
+            }
+            catch
+            {
+             // ignore
+            }
         }
 
         public string ReadUserInput(string prompt, bool password = false)

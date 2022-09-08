@@ -153,6 +153,7 @@ namespace Neo.CLI
                 if (File.Exists(config))
                     // what if the file already exists in the mode? OK, lets overwrite it then.
                     File.Copy(config, $"Modes/{_currentMode}/{pluginName}.json", true);
+                AddPluginToMode(pluginName);
             }
             catch (Exception e)
             {
@@ -234,6 +235,10 @@ namespace Neo.CLI
             try
             {
                 Directory.Delete($"Plugins/{pluginName}", true);
+                var config = $"Modes/{_currentMode}/{pluginName}.json";
+                if (File.Exists(config))
+                    File.Delete(config);
+                RemovePluginFromMode(pluginName);
             }
             catch (IOException) { }
             ConsoleHelper.Info("Uninstall successful, please restart neo-cli.");

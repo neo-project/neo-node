@@ -111,20 +111,21 @@ partial class MainService
                 throw new DirectoryNotFoundException($"Mode not found: {dir.FullName}");
 
             // Process the plugin
-            var modePlugins = dir.GetFiles();
+            var modePlugins = File.ReadAllLines($"./Modes/{_currentMode}/.PLUGINS");
 
             // loop modePlugins
             foreach (var plugin in modePlugins)
             {
-                var pluginName = Path.GetFileNameWithoutExtension(plugin.Name);
+                var pluginName = Path.GetFileNameWithoutExtension(plugin);
                 // if the plugin does not exist, maybe consider install it
-                if (plugin.Name.Contains("config")) continue;
+                if (plugin.Contains("config")) continue;
                 if (!Directory.Exists($"Plugins/{pluginName}/"))
                 {
                     await InstallPluginAsync(pluginName, overWrite: true, saveConfig: false);
                     _needRestart = true;
                 }
-                File.Copy($"Modes/{mode.ToLower()}/{plugin.Name}",
+                if (File.Exists($"Modes/{mode.ToLower()}/{plugin.ToLower()}.json"))
+                    File.Copy($"Modes/{mode.ToLower()}/{plugin}.json",
                     $"Plugins/{pluginName}/config.json", true);
             }
 
@@ -133,7 +134,7 @@ partial class MainService
             // Get existing plugins and delete them if they are not in the mode
             new DirectoryInfo("Plugins/").GetDirectories().ForEach(p =>
             {
-                if (modePlugins.Any(k => string.Compare(Path.GetFileNameWithoutExtension(k.Name), p.Name, StringComparison.OrdinalIgnoreCase) == 0)
+                if (modePlugins.Any(k => string.Compare(Path.GetFileNameWithoutExtension(k), p.Name, StringComparison.OrdinalIgnoreCase) == 0)
                     || !File.Exists($"Plugins/{p.Name}/config.json")) return;
                 try
                 {
@@ -186,5 +187,23 @@ partial class MainService
             Console.WriteLine(e);
             throw;
         }
+    }
+
+    // Add plugin to .PLUGINS file
+    private void AddPluginToMode(string pluginName)
+    {
+        var plugins = File.ReadAllLines($"./Modes/{_currentMode}/.PLUGINS");
+        if (plugins.Contains(pluginName)) return;
+        var newPlugins = plugins.Append(pluginName).ToArray();
+        File.WriteAllLines($"./Modes/{_currentMode}/.PLUGINS", newPlugins);
+    }
+
+    // Remove plugin from .PLUGINS file
+    private void RemovePluginFromMode(string pluginName)
+    {
+        var plugins = File.ReadAllLines($"./Modes/{_currentMode}/.PLUGINS");
+        if (!plugins.Contains(pluginName)) return;
+        var newPlugins = plugins.Where(p => p != pluginName).ToArray();
+        File.WriteAllLines($"./Modes/{_currentMode}/.PLUGINS", newPlugins);
     }
 }
