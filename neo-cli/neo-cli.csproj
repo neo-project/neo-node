@@ -16,12 +16,6 @@
     <ApplicationIcon>neo.ico</ApplicationIcon>
   </PropertyGroup>
 
-  <!-- <ItemGroup>
-    <None Update="config*.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </None>
-  </ItemGroup> -->
 <ItemGroup>
     <ContentWithTargetPath Include="Modes\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

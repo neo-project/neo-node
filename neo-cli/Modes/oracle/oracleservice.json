@@ -1,0 +1,26 @@
+﻿{
+  "PluginConfiguration": {
+    "Network": 860833102,
+    "Nodes": [
+      "http://oracle1.ngd.network:10332",
+      "http://oracle2.ngd.network:10332",
+      "http://oracle3.ngd.network:10332",
+      "http://oracle.n3.nspcc.ru:10332"
+    ],
+    "MaxTaskTimeout": 432000000,
+    "MaxOracleTimeout": 10000,
+    "AllowPrivateHost": false,
+    "AllowedContentTypes": [ "application/json" ],
+    "Https": {
+      "Timeout": 10000
+    },
+    "NeoFS": {
+      "EndPoint": "http://st1.t5.fs.neo.org:8080",
+      "Timeout": 15000
+    },
+    "AutoStart": true
+  },
+  "Dependency": [
+    "RpcServer"
+  ]
+}
