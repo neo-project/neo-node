@@ -58,6 +58,8 @@ partial class MainService
             var plugins = new DirectoryInfo("./Plugins");
             // Cache directories before we start copying
             var dirs = plugins.GetDirectories();
+            // Create an empty .PLUGINS file
+            File.Create($"Modes/{modeName}/.PLUGINS").Close();
             // Save the Plugin files
             foreach (var plugin in dirs)
             {
@@ -65,6 +67,7 @@ partial class MainService
                 {
                     file.CopyTo($"Modes/{modeName}/{plugin.Name}.json", true);
                 }
+                AddPluginToMode(plugin.Name, modeName);
             }
         }
         catch (Exception e)
@@ -190,20 +193,20 @@ partial class MainService
     }
 
     // Add plugin to .PLUGINS file
-    private void AddPluginToMode(string pluginName)
+    private void AddPluginToMode(string pluginName, string modeName)
     {
-        var plugins = File.ReadAllLines($"./Modes/{_currentMode}/.PLUGINS");
+        var plugins = File.ReadAllLines($"./Modes/{modeName}/.PLUGINS");
         if (plugins.Contains(pluginName)) return;
         var newPlugins = plugins.Append(pluginName).ToArray();
-        File.WriteAllLines($"./Modes/{_currentMode}/.PLUGINS", newPlugins);
+        File.WriteAllLines($"./Modes/{modeName}/.PLUGINS", newPlugins);
     }
 
     // Remove plugin from .PLUGINS file
-    private void RemovePluginFromMode(string pluginName)
+    private void RemovePluginFromMode(string pluginName, string modeName)
     {
-        var plugins = File.ReadAllLines($"./Modes/{_currentMode}/.PLUGINS");
+        var plugins = File.ReadAllLines($"./Modes/{modeName}/.PLUGINS");
         if (!plugins.Contains(pluginName)) return;
         var newPlugins = plugins.Where(p => p != pluginName).ToArray();
-        File.WriteAllLines($"./Modes/{_currentMode}/.PLUGINS", newPlugins);
+        File.WriteAllLines($"./Modes/{modeName}/.PLUGINS", newPlugins);
     }
 }

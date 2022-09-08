@@ -46,7 +46,7 @@ namespace Neo.CLI
 
         private Wallet _currentWallet;
         public LocalNode LocalNode;
-        private string _currentMode = "mainnet";
+        private static string _currentMode = "mainnet";
         private bool _needRestart = false;
 
         public Wallet CurrentWallet

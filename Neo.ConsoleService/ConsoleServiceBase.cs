@@ -297,7 +297,7 @@ namespace Neo.ConsoleService
             }
             catch
             {
-             // ignore
+                // ignore
             }
         }
 
