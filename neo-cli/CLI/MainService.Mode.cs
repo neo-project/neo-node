@@ -109,7 +109,8 @@ partial class MainService
     {
         try
         {
-            var dir = new DirectoryInfo($"./Modes/{mode.ToLower()}");
+            mode = mode.ToLower();
+            var dir = new DirectoryInfo($"./Modes/{mode}");
             if (!dir.Exists)
                 throw new DirectoryNotFoundException($"Mode not found: {dir.FullName}");
 
@@ -117,22 +118,21 @@ partial class MainService
             var modePlugins = File.ReadAllLines($"./Modes/{_currentMode}/.PLUGINS");
 
             // loop modePlugins
-            foreach (var plugin in modePlugins)
+            foreach (var pluginName in modePlugins)
             {
-                var pluginName = Path.GetFileNameWithoutExtension(plugin);
-                // if the plugin does not exist, maybe consider install it
-                if (plugin.Contains("config")) continue;
+                // if the plugin is not installed, install it
                 if (!Directory.Exists($"Plugins/{pluginName}/"))
                 {
                     await InstallPluginAsync(pluginName, overWrite: true, saveConfig: false);
                     _needRestart = true;
                 }
-                if (File.Exists($"Modes/{mode.ToLower()}/{plugin.ToLower()}.json"))
-                    File.Copy($"Modes/{mode.ToLower()}/{plugin}.json",
+                // if the mode has the plugin config, load the config from the mode
+                if (File.Exists($"Modes/{mode}/{pluginName}.json"))
+                    File.Copy($"Modes/{mode}/{pluginName}.json",
                     $"Plugins/{pluginName}/config.json", true);
             }
-
-            MoveModeConfig(mode.ToLower(), false);
+            // get the system config file from the mode
+            MoveModeConfig(mode, false);
 
             // Get existing plugins and delete them if they are not in the mode
             new DirectoryInfo("Plugins/").GetDirectories().ForEach(p =>
