@@ -24,27 +24,5 @@ namespace Neo.CLI
         }
 
         public static string ToBase64String(this byte[] input) => System.Convert.ToBase64String(input);
-
-        // get the actual case of a path with case-insensitive file system
-        public static string GetActualPath(string path)
-        {
-            if (string.IsNullOrEmpty(path))
-                return path;
-
-            var parts = path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            var actualPath = Directory.GetCurrentDirectory();
-
-            foreach (var dir in parts)
-            {
-
-                var dirs = Directory.GetDirectories(actualPath, dir);
-                if (dirs.Length == 0)
-                    return path;
-
-                actualPath = Path.Combine(actualPath, dirs[0]);
-            }
-
-            return actualPath;
-        }
     }
 }

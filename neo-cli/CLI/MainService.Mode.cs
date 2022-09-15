@@ -113,10 +113,8 @@ partial class MainService
             var dir = new DirectoryInfo($"./Modes/{mode}");
             if (!dir.Exists)
                 throw new DirectoryNotFoundException($"Mode not found: {dir.FullName}");
-
             // Process the plugin
             var modePlugins = File.ReadAllLines($"./Modes/{_currentMode}/.PLUGINS");
-
             // loop modePlugins
             foreach (var pluginName in modePlugins)
             {
@@ -205,8 +203,8 @@ partial class MainService
     private void RemovePluginFromMode(string pluginName, string modeName)
     {
         var plugins = File.ReadAllLines($"./Modes/{modeName}/.PLUGINS");
-        if (!plugins.Contains(pluginName)) return;
-        var newPlugins = plugins.Where(p => p != pluginName).ToArray();
+        // if (plugins.All(p => !string.Equals(p, pluginName, StringComparison.CurrentCultureIgnoreCase))) return;
+        var newPlugins = plugins.Where(p => !string.Equals(p, pluginName, StringComparison.CurrentCultureIgnoreCase)).ToArray();
         File.WriteAllLines($"./Modes/{modeName}/.PLUGINS", newPlugins);
     }
 }
