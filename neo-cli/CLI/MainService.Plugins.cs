@@ -120,6 +120,7 @@ namespace Neo.CLI
         /// Install plugin from stream
         /// </summary>
         /// <param name="pluginName">name of the plugin</param>
+        /// <param name="installed">installed dependency</param>
         /// <param name="overWrite">Install by force for `update`</param>
         /// <param name="saveConfig">Need to save the config file to the mode</param>
         private async Task InstallPluginAsync(string pluginName, HashSet<string> installed = null,
@@ -149,14 +150,7 @@ namespace Neo.CLI
             // Save the config.json to current mode
             try
             {
-                var pluginActualName="";
-                foreach (var plugin in  new DirectoryInfo("./Plugins").GetDirectories())
-                {
-                    if (plugin.Name.ToLower() != pluginName.ToLower()) continue;
-                    pluginActualName = plugin.Name;
-                    break;
-                }
-
+                var pluginActualName = GetPluginActualName(pluginName);
                 if (File.Exists($"Plugins/{pluginActualName}/config.json"))
                     // what if the file already exists in the mode? OK, lets overwrite it then.
                     File.Copy($"Plugins/{pluginActualName}/config.json", $"Modes/{_currentMode}/{pluginActualName}.json", true);
@@ -215,7 +209,7 @@ namespace Neo.CLI
                 ConsoleHelper.Warning("Plugin not found");
                 return;
             }
-
+            pluginName = GetPluginActualName(pluginName);
             foreach (var p in Plugin.Plugins)
             {
                 try
@@ -270,6 +264,18 @@ namespace Neo.CLI
             {
                 ConsoleHelper.Warning("No loaded plugins");
             }
+        }
+
+        private static string GetPluginActualName(string pluginName)
+        {
+            var pluginActualName="";
+            foreach (var plugin in  new DirectoryInfo("./Plugins").GetDirectories())
+            {
+                if (!string.Equals(plugin.Name, pluginName, StringComparison.CurrentCultureIgnoreCase)) continue;
+                pluginActualName = plugin.Name;
+                break;
+            }
+            return pluginActualName;
         }
     }
 }
