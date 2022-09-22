@@ -20,7 +20,6 @@ using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
-using Akka.Util.Internal;
 
 namespace Neo.CLI
 {
@@ -35,7 +34,7 @@ namespace Neo.CLI
         {
             if (PluginExists(pluginName))
             {
-                ConsoleHelper.Warning($"Plugin already exist.");
+                ConsoleHelper.Warning("Plugin already exist.");
                 return;
             }
 
@@ -151,9 +150,10 @@ namespace Neo.CLI
             try
             {
                 var pluginActualName = GetPluginActualName(pluginName);
-                if (File.Exists($"Plugins/{pluginActualName}/config.json"))
-                    // what if the file already exists in the mode? OK, lets overwrite it then.
-                    File.Copy($"Plugins/{pluginActualName}/config.json", $"Modes/{_currentMode}/{pluginActualName}.json", true);
+                if(File.Exists($"Modes/{_currentMode}/{pluginActualName}.json"))
+                    File.Copy($"Modes/{_currentMode}/{pluginActualName}.json", $"Plugins/{pluginActualName}/config.json", true);
+                else if (File.Exists($"Plugins/{pluginActualName}/config.json"))
+                    File.Copy($"Plugins/{pluginActualName}/config.json", $"Modes/{_currentMode}/{pluginActualName}.json", false);
                 AddPluginToMode(pluginActualName, _currentMode);
             }
             catch (Exception e)

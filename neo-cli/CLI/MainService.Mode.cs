@@ -191,7 +191,7 @@ partial class MainService
     }
 
     // Add plugin to .PLUGINS file
-    private void AddPluginToMode(string pluginName, string modeName)
+    private static void AddPluginToMode(string pluginName, string modeName)
     {
         var plugins = File.ReadAllLines($"./Modes/{modeName}/.PLUGINS");
         if (plugins.Contains(pluginName)) return;
@@ -200,7 +200,7 @@ partial class MainService
     }
 
     // Remove plugin from .PLUGINS file
-    private void RemovePluginFromMode(string pluginName, string modeName)
+    private static void RemovePluginFromMode(string pluginName, string modeName)
     {
         var plugins = File.ReadAllLines($"./Modes/{modeName}/.PLUGINS");
         // if (plugins.All(p => !string.Equals(p, pluginName, StringComparison.CurrentCultureIgnoreCase))) return;
