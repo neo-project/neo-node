@@ -17,7 +17,7 @@
   </PropertyGroup>
 
 <ItemGroup>
-        <Content Include="Modes\**">
+    <Content Include="Modes\**">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         <TargetPath>Modes\%(RecursiveDir)\%(Filename)%(Extension)</TargetPath>
     </Content>
