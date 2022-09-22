@@ -150,9 +150,20 @@ namespace Neo.CLI
             try
             {
                 var pluginActualName = GetPluginActualName(pluginName);
-                if(File.Exists($"Modes/{_currentMode}/{pluginActualName}.json"))
-                    File.Copy($"Modes/{_currentMode}/{pluginActualName}.json", $"Plugins/{pluginActualName}/config.json", true);
+                if (File.Exists($"Modes/{_currentMode}/{pluginActualName}.json"))
+                {
+                    if(File.Exists($"Plugins/{pluginActualName}/config.json"))
+                        // plugin contains config.json && mode contains plugin.json
+                        // replace the config.json with plugin.json from mode
+                        File.Copy($"Modes/{_currentMode}/{pluginActualName}.json", $"Plugins/{pluginActualName}/config.json", true);
+                    else
+                        // plugin doesn't contain config.json && mode contains plugin.json
+                        // delete the plugin.json from mode
+                        File.Delete($"Modes/{_currentMode}/{pluginActualName}.json");
+                }
                 else if (File.Exists($"Plugins/{pluginActualName}/config.json"))
+                    // plugin contains config.json && mode doesn't contain plugin.json
+                    // copy the config.json to mode
                     File.Copy($"Plugins/{pluginActualName}/config.json", $"Modes/{_currentMode}/{pluginActualName}.json", false);
                 AddPluginToMode(pluginActualName, _currentMode);
             }
