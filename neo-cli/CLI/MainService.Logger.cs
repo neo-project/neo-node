@@ -109,9 +109,7 @@ namespace Neo.CLI
                         default: logColor = InfoColor; logLevel = "INFO"; break;
                     }
                     logColor.Apply();
-                    Console.Write(logLevel + " ");
-
-                    Console.Write($"{log} {messages[0]}");
+                    Console.Write($"{logLevel} {log} {messages[0]}");
                     for (var i = 0; i < 35 - messages[0].Length - logLevel.Length; i++) Console.Write(' ');
                     for (var i = 1; i < messages.Length; i++)
                     {
