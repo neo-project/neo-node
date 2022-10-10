@@ -152,7 +152,7 @@ namespace Neo.CLI
                 var pluginActualName = GetPluginActualName(pluginName);
                 if (File.Exists($"Modes/{_currentMode}/{pluginActualName}.json"))
                 {
-                    if(File.Exists($"Plugins/{pluginActualName}/config.json"))
+                    if (File.Exists($"Plugins/{pluginActualName}/config.json"))
                         // plugin contains config.json && mode contains plugin.json
                         // replace the config.json with plugin.json from mode
                         File.Copy($"Modes/{_currentMode}/{pluginActualName}.json", $"Plugins/{pluginActualName}/config.json", true);
@@ -279,8 +279,8 @@ namespace Neo.CLI
 
         private static string GetPluginActualName(string pluginName)
         {
-            var pluginActualName="";
-            foreach (var plugin in  new DirectoryInfo("./Plugins").GetDirectories())
+            var pluginActualName = "";
+            foreach (var plugin in new DirectoryInfo("./Plugins").GetDirectories())
             {
                 if (!string.Equals(plugin.Name, pluginName, StringComparison.CurrentCultureIgnoreCase)) continue;
                 pluginActualName = plugin.Name;
