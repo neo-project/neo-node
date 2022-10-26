@@ -16,21 +16,19 @@
     <ApplicationIcon>neo.ico</ApplicationIcon>
   </PropertyGroup>
 
-<ItemGroup>
-    <Content Include="Modes\**">
+  <ItemGroup>
+      <Content Include="Modes\**">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
         <TargetPath>Modes\%(RecursiveDir)\%(Filename)%(Extension)</TargetPath>
-    </Content>
-</ItemGroup>
-
-
+      </Content>
+  </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Neo" Version="3.4.0" />
+    <PackageReference Include="Neo" Version="3.4.0-CI01391" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Neo.ConsoleService\Neo.ConsoleService.csproj" />
   </ItemGroup>
-
 </Project>
