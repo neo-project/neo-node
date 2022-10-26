@@ -49,6 +49,11 @@ namespace Neo.CLI
         private static string _currentMode = "mainnet";
         private bool _needRestart = false;
 
+        static readonly string StrExeFilePath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+        static readonly string ModePath = Path.Combine(StrExeFilePath, "Modes");
+        static readonly string PluginPath = Path.Combine(StrExeFilePath, "Plugins");
+
+
         public Wallet CurrentWallet
         {
             get => _currentWallet;

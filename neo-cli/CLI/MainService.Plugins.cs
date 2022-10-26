@@ -142,7 +142,11 @@ namespace Neo.CLI
                 await using Stream es = entry.Open();
                 await InstallDependenciesAsync(es, installed);
             }
-            zip.ExtractToDirectory("./", true);
+            if (!Directory.Exists($"{StrExeFilePath}Plugins"))
+            {
+                Directory.CreateDirectory($"{StrExeFilePath}Plugins");
+            }
+            zip.ExtractToDirectory($"{StrExeFilePath}", true);
             Console.WriteLine();
 
             if (!saveConfig) return;
@@ -150,21 +154,21 @@ namespace Neo.CLI
             try
             {
                 var pluginActualName = GetPluginActualName(pluginName);
-                if (File.Exists($"Modes/{_currentMode}/{pluginActualName}.json"))
+                if (File.Exists($"{ModePath}/{_currentMode}/{pluginActualName}.json"))
                 {
-                    if (File.Exists($"Plugins/{pluginActualName}/config.json"))
+                    if (File.Exists($"{PluginPath}/{pluginActualName}/config.json"))
                         // plugin contains config.json && mode contains plugin.json
                         // replace the config.json with plugin.json from mode
-                        File.Copy($"Modes/{_currentMode}/{pluginActualName}.json", $"Plugins/{pluginActualName}/config.json", true);
+                        File.Copy($"{ModePath}/{_currentMode}/{pluginActualName}.json", $"{PluginPath}/{pluginActualName}/config.json", true);
                     else
                         // plugin doesn't contain config.json && mode contains plugin.json
                         // delete the plugin.json from mode
-                        File.Delete($"Modes/{_currentMode}/{pluginActualName}.json");
+                        File.Delete($"{ModePath}/{_currentMode}/{pluginActualName}.json");
                 }
-                else if (File.Exists($"Plugins/{pluginActualName}/config.json"))
+                else if (File.Exists($"{PluginPath}/{pluginActualName}/config.json"))
                     // plugin contains config.json && mode doesn't contain plugin.json
                     // copy the config.json to mode
-                    File.Copy($"Plugins/{pluginActualName}/config.json", $"Modes/{_currentMode}/{pluginActualName}.json", false);
+                    File.Copy($"{PluginPath}/{pluginActualName}/config.json", $"{ModePath}/{_currentMode}/{pluginActualName}.json", false);
                 AddPluginToMode(pluginActualName, _currentMode);
             }
             catch (Exception e)
@@ -225,7 +229,7 @@ namespace Neo.CLI
             {
                 try
                 {
-                    using var reader = File.OpenRead($"./Plugins/{p.Name}/config.json");
+                    using var reader = File.OpenRead($"{PluginPath}/{p.Name}/config.json");
                     if (new ConfigurationBuilder()
                         .AddJsonStream(reader)
                         .Build()
@@ -246,8 +250,8 @@ namespace Neo.CLI
             }
             try
             {
-                Directory.Delete($"Plugins/{pluginName}", true);
-                var config = $"Modes/{_currentMode}/{pluginName}.json";
+                Directory.Delete($"{PluginPath}/{pluginName}", true);
+                var config = $"{ModePath}/{_currentMode}/{pluginName}.json";
                 if (File.Exists(config))
                     File.Delete(config);
                 RemovePluginFromMode(pluginName, _currentMode);
@@ -280,7 +284,7 @@ namespace Neo.CLI
         private static string GetPluginActualName(string pluginName)
         {
             var pluginActualName = "";
-            foreach (var plugin in new DirectoryInfo("./Plugins").GetDirectories())
+            foreach (var plugin in new DirectoryInfo($"{PluginPath}").GetDirectories())
             {
                 if (!string.Equals(plugin.Name, pluginName, StringComparison.CurrentCultureIgnoreCase)) continue;
                 pluginActualName = plugin.Name;
