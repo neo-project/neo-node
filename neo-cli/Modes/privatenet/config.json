@@ -18,7 +18,7 @@
 
     },
     "UnlockWallet": {
-      "Path": "NbVj8GhwToNv4WF2gVaoco6hbkMQ8hrHWP.json",
+      "Path": "Modes/privatenet/NbVj8GhwToNv4WF2gVaoco6hbkMQ8hrHWP.json",
       "Password": "12345678",
       "IsActive": true
     }

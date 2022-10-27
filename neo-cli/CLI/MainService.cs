@@ -395,7 +395,7 @@ namespace Neo.CLI
                             {
                                 i++;
                                 // Get all the modes
-                                var modes = Directory.GetDirectories($"{ModePath}/Modes/");
+                                var modes = Directory.GetDirectories($"{ModePath}/");
                                 // Find the expected mode
                                 if (modes.Any(p => string.Equals(new DirectoryInfo(p).Name, args[i], StringComparison.CurrentCultureIgnoreCase)))
                                 {
