@@ -9,7 +9,6 @@
 // modifications are permitted.
 
 using Akka.Actor;
-using Neo.IO;
 using Neo.IO.Actors;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
@@ -19,7 +18,6 @@ using Neo.SmartContract.Native;
 using Neo.VM;
 using Neo.Wallets;
 using Neo.Wallets.NEP6;
-using Neo.Wallets.SQLite;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -135,7 +133,7 @@ namespace Neo.GUI
             }
 
             listView3.Items.Clear();
-            修改密码CToolStripMenuItem.Enabled = wallet is UserWallet;
+            修改密码CToolStripMenuItem.Enabled = wallet != null;
             交易TToolStripMenuItem.Enabled = wallet != null;
             signDataToolStripMenuItem.Enabled = wallet != null;
             deployContractToolStripMenuItem.Enabled = wallet != null;
