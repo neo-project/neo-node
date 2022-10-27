@@ -15,7 +15,6 @@
       "MinDesiredConnections": 10,
       "MaxConnections": 40,
       "MaxConnectionsPerAddress": 3
-
     },
     "UnlockWallet": {
       "Path": "Modes/privatenet/NbVj8GhwToNv4WF2gVaoco6hbkMQ8hrHWP.json",
