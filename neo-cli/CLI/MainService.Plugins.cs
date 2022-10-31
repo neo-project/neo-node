@@ -209,7 +209,7 @@ namespace Neo.CLI
         private static bool PluginExists(string pluginName)
         {
             return Plugin.Plugins.Any(p => p.Name.Equals(pluginName, StringComparison.InvariantCultureIgnoreCase)) ||
-                   new DirectoryInfo("Plugins").GetDirectories().Any(p => p.Name.Equals(pluginName, StringComparison.InvariantCultureIgnoreCase));
+                   new DirectoryInfo($"{StrExeFilePath}/Plugins").GetDirectories().Any(p => p.Name.Equals(pluginName, StringComparison.InvariantCultureIgnoreCase));
         }
 
         /// <summary>
