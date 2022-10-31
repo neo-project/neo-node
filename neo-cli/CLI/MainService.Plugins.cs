@@ -142,9 +142,9 @@ namespace Neo.CLI
                 await using Stream es = entry.Open();
                 await InstallDependenciesAsync(es, installed);
             }
-            if (!Directory.Exists($"{StrExeFilePath}Plugins"))
+            if (!Directory.Exists($"{StrExeFilePath}/Plugins"))
             {
-                Directory.CreateDirectory($"{StrExeFilePath}Plugins");
+                Directory.CreateDirectory($"{StrExeFilePath}/Plugins");
             }
             zip.ExtractToDirectory($"{StrExeFilePath}", true);
             Console.WriteLine();
