@@ -1,6 +1,14 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [3.5.0]
+
+### Fixed
+- ([#879](https://github.com/neo-project/neo-node/pull/879/)) fix json input
+
+### Removed
+- ([#883](https://github.com/neo-project/neo-node/pull/883/)) remove sqlite
+
 ## [3.4.0]
 
 ### Added
