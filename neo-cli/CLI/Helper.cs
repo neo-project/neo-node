@@ -8,8 +8,6 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-using System.IO;
-
 namespace Neo.CLI
 {
     internal static class Helper
