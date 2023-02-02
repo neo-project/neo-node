@@ -25,6 +25,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="neo.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Neo" Version="3.5.0" />
   </ItemGroup>
 
