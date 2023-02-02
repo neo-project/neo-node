@@ -17,11 +17,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-      <Content Include="Modes\**">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-        <TargetPath>Modes\%(RecursiveDir)\%(Filename)%(Extension)</TargetPath>
-      </Content>
+    <Content Include="Modes\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>Modes\%(RecursiveDir)\%(Filename)%(Extension)</TargetPath>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
