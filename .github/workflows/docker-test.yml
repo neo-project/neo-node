@@ -19,4 +19,4 @@ jobs:
           --no-cache \
           --tag ghcr.io/neo-project/neo-node:latest \
           --platform linux/amd64,linux/arm64 \
-          ./neo-node
+          ./
