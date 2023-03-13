@@ -252,9 +252,9 @@ namespace Neo.CLI
                 {
                     throw new FormatException("invalid data");
                 }
-            
+
             // Basic script checks
-            SmartContract.Helper.Check(nef.Script.ToArray(), manifest.Abi);
+            nef.Script.IsScriptValid(manifest.Abi);
 
             // Build script
 
@@ -307,7 +307,7 @@ namespace Neo.CLI
                 }
 
             // Basic script checks
-            SmartContract.Helper.Check(nef.Script.ToArray(), manifest.Abi);
+            nef.Script.IsScriptValid(manifest.Abi);
 
             // Build script
 
