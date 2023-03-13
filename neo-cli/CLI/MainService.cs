@@ -252,22 +252,9 @@ namespace Neo.CLI
                 {
                     throw new FormatException("invalid data");
                 }
-
-
+            
             // Basic script checks
-
-            Script script = new Script(nef.Script);
-            for (var i = 0; i < script.Length;)
-            {
-                // Check bad opcodes
-
-                Instruction inst = script.GetInstruction(i);
-                if (inst is null || !Enum.IsDefined(typeof(OpCode), inst.OpCode))
-                {
-                    throw new FormatException($"OpCode not found at {i}-{((byte)inst.OpCode).ToString("x2")}");
-                }
-                i += inst.Size;
-            }
+            SmartContract.Helper.Check(nef.Script.ToArray(), manifest.Abi);
 
             // Build script
 
@@ -320,19 +307,7 @@ namespace Neo.CLI
                 }
 
             // Basic script checks
-
-            Script script = new Script(nef.Script);
-            for (var i = 0; i < script.Length;)
-            {
-                // Check bad opcodes
-
-                Instruction inst = script.GetInstruction(i);
-                if (inst is null || !Enum.IsDefined(typeof(OpCode), inst.OpCode))
-                {
-                    throw new FormatException($"OpCode not found at {i}-{((byte)inst.OpCode).ToString("x2")}");
-                }
-                i += inst.Size;
-            }
+            SmartContract.Helper.Check(nef.Script.ToArray(), manifest.Abi);
 
             // Build script
 
