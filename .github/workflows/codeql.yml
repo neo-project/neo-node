@@ -50,6 +50,10 @@ jobs:
     - name: Restore NuGet packages
       run: dotnet restore
 
+    - name: Set EnableWindowsTargeting for neo-gui project
+      run: |
+        sed -i 's/<TargetFramework>net7.0-windows<\/TargetFramework>/<TargetFramework>net7.0-windows<\/TargetFramework>\n    <EnableWindowsTargeting>true<\/EnableWindowsTargeting>/g' neo-gui/neo-gui.csproj
+
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v2
