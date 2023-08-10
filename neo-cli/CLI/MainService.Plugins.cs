@@ -1,4 +1,5 @@
 // Copyright (C) 2016-2023 The Neo Project.
+
 // The neo-cli is free software distributed under the MIT software 
 // license, see the accompanying file LICENSE in the main directory of
 // the project or http://www.opensource.org/licenses/mit-license.php
@@ -34,7 +35,7 @@ namespace Neo.CLI
         {
             if (PluginExists(pluginName))
             {
-                ConsoleHelper.Warning($"Plugin already exist.");
+                ConsoleHelper.Warning("Plugin already exist.");
                 return;
             }
 
@@ -119,9 +120,11 @@ namespace Neo.CLI
         /// Install plugin from stream
         /// </summary>
         /// <param name="pluginName">name of the plugin</param>
+        /// <param name="installed">installed dependency</param>
         /// <param name="overWrite">Install by force for `update`</param>
+        /// <param name="saveConfig">Need to save the config file to the mode</param>
         private async Task InstallPluginAsync(string pluginName, HashSet<string> installed = null,
-            bool overWrite = false)
+            bool overWrite = false, bool saveConfig = true)
         {
             installed ??= new HashSet<string>();
             if (!installed.Add(pluginName)) return;
@@ -140,7 +143,40 @@ namespace Neo.CLI
                 await using Stream es = entry.Open();
                 await InstallDependenciesAsync(es, installed);
             }
-            zip.ExtractToDirectory("./", true);
+            if (!Directory.Exists($"{StrExeFilePath}/Plugins"))
+            {
+                Directory.CreateDirectory($"{StrExeFilePath}/Plugins");
+            }
+            zip.ExtractToDirectory($"{StrExeFilePath}", true);
+            Console.WriteLine();
+
+            if (!saveConfig) return;
+            // Save the config.json to current mode
+            try
+            {
+                var pluginActualName = GetPluginActualName(pluginName);
+                if (File.Exists($"{ModePath}/{_currentMode}/{pluginActualName}.json"))
+                {
+                    if (File.Exists($"{PluginPath}/{pluginActualName}/config.json"))
+                        // plugin contains config.json && mode contains plugin.json
+                        // replace the config.json with plugin.json from mode
+                        File.Copy($"{ModePath}/{_currentMode}/{pluginActualName}.json", $"{PluginPath}/{pluginActualName}/config.json", true);
+                    else
+                        // plugin doesn't contain config.json && mode contains plugin.json
+                        // delete the plugin.json from mode
+                        File.Delete($"{ModePath}/{_currentMode}/{pluginActualName}.json");
+                }
+                else if (File.Exists($"{PluginPath}/{pluginActualName}/config.json"))
+                    // plugin contains config.json && mode doesn't contain plugin.json
+                    // copy the config.json to mode
+                    File.Copy($"{PluginPath}/{pluginActualName}/config.json", $"{ModePath}/{_currentMode}/{pluginActualName}.json", false);
+                AddPluginToMode(pluginActualName, _currentMode);
+            }
+            catch (Exception e)
+            {
+                // ignored
+                Console.WriteLine(e.Message);
+            }
         }
 
         /// <summary>
@@ -173,7 +209,8 @@ namespace Neo.CLI
         /// <returns></returns>
         private static bool PluginExists(string pluginName)
         {
-            return Plugin.Plugins.Any(p => p.Name.Equals(pluginName, StringComparison.InvariantCultureIgnoreCase));
+            return Plugin.Plugins.Any(p => p.Name.Equals(pluginName, StringComparison.InvariantCultureIgnoreCase)) ||
+                   new DirectoryInfo($"{StrExeFilePath}/Plugins").GetDirectories().Any(p => p.Name.Equals(pluginName, StringComparison.InvariantCultureIgnoreCase));
         }
 
         /// <summary>
@@ -188,12 +225,12 @@ namespace Neo.CLI
                 ConsoleHelper.Warning("Plugin not found");
                 return;
             }
-
+            pluginName = GetPluginActualName(pluginName);
             foreach (var p in Plugin.Plugins)
             {
                 try
                 {
-                    using var reader = File.OpenRead($"./Plugins/{p.Name}/config.json");
+                    using var reader = File.OpenRead($"{PluginPath}/{p.Name}/config.json");
                     if (new ConfigurationBuilder()
                         .AddJsonStream(reader)
                         .Build()
@@ -214,7 +251,11 @@ namespace Neo.CLI
             }
             try
             {
-                Directory.Delete($"Plugins/{pluginName}", true);
+                Directory.Delete($"{PluginPath}/{pluginName}", true);
+                var config = $"{ModePath}/{_currentMode}/{pluginName}.json";
+                if (File.Exists(config))
+                    File.Delete(config);
+                RemovePluginFromMode(pluginName, _currentMode);
             }
             catch (IOException) { }
             ConsoleHelper.Info("Uninstall successful, please restart neo-cli.");
@@ -239,6 +280,18 @@ namespace Neo.CLI
             {
                 ConsoleHelper.Warning("No loaded plugins");
             }
+        }
+
+        private static string GetPluginActualName(string pluginName)
+        {
+            var pluginActualName = "";
+            foreach (var plugin in new DirectoryInfo($"{PluginPath}").GetDirectories())
+            {
+                if (!string.Equals(plugin.Name, pluginName, StringComparison.CurrentCultureIgnoreCase)) continue;
+                pluginActualName = plugin.Name;
+                break;
+            }
+            return pluginActualName;
         }
     }
 }

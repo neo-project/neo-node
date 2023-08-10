@@ -1,0 +1,39 @@
+{
+  "ApplicationConfiguration": {
+    "Logger": {
+      "Path": "Logs",
+      "ConsoleOutput": true,
+      "Active": true
+    },
+    "Storage": {
+      "Engine": "LevelDBStore",
+      "Path": "Data_LevelDB_{0}"
+    },
+    "P2P": {
+      "Port": 10333,
+      "WsPort": 10334,
+      "MinDesiredConnections": 10,
+      "MaxConnections": 40,
+      "MaxConnectionsPerAddress": 3
+    },
+    "UnlockWallet": {
+      "Path": "Modes/privatenet/NbVj8GhwToNv4WF2gVaoco6hbkMQ8hrHWP.json",
+      "Password": "12345678",
+      "IsActive": true
+    }
+  },
+  "ProtocolConfiguration": {
+    "Network": 582277343,
+    "AddressVersion": 53,
+    "MillisecondsPerBlock": 15000,
+    "MaxTransactionsPerBlock": 512,
+    "MemoryPoolMaxTransactions": 50000,
+    "MaxTraceableBlocks": 2102400,
+    "InitialGasDistribution": 5200000000000000,
+    "ValidatorsCount": 1,
+    "StandbyCommittee": [
+      "03eecd363220d6e4de793abfebae09779768468c59a3b6e0132a9ea3b22010f7d8"
+    ],
+    "SeedList": []
+  }
+}

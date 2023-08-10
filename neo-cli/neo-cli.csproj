@@ -17,14 +17,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="neo.ico" />
+    <Content Include="Modes\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>Modes\%(RecursiveDir)\%(Filename)%(Extension)</TargetPath>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="config*.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </None>
+    <Content Include="neo.ico" />
   </ItemGroup>
 
   <ItemGroup>
@@ -34,5 +35,4 @@
   <ItemGroup>
     <ProjectReference Include="..\Neo.ConsoleService\Neo.ConsoleService.csproj" />
   </ItemGroup>
-
 </Project>

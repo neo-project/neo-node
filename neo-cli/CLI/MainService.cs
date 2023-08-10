@@ -2,9 +2,9 @@
 // 
 // The neo-cli is free software distributed under the MIT software 
 // license, see the accompanying file LICENSE in the main directory of
-// the project or http://www.opensource.org/licenses/mit-license.php 
+// the project or http://www.opensource.org/licenses/mit-license.php
 // for more details.
-// 
+//
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
@@ -46,6 +46,13 @@ namespace Neo.CLI
 
         private Wallet _currentWallet;
         public LocalNode LocalNode;
+        private static string _currentMode = "mainnet";
+        private bool _needRestart = false;
+
+        static readonly string StrExeFilePath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+        static readonly string ModePath = Path.Combine(StrExeFilePath, "Modes");
+        static readonly string PluginPath = Path.Combine(StrExeFilePath, "Plugins");
+
 
         public Wallet CurrentWallet
         {
@@ -372,6 +379,8 @@ namespace Neo.CLI
         {
             if (NeoSystem != null) return;
             bool verifyImport = true;
+            // set mainnet as default mode
+            string mode = "mainnet";
             for (int i = 0; i < args.Length; i++)
                 switch (args[i])
                 {
@@ -379,7 +388,36 @@ namespace Neo.CLI
                     case "--noverify":
                         verifyImport = false;
                         break;
+                    case "--mode":
+                    case "/mode":
+                        {
+                            if (i < args.Length - 1)
+                            {
+                                i++;
+                                // Get all the modes
+                                var modes = Directory.GetDirectories($"{ModePath}/");
+                                // Find the expected mode
+                                if (modes.Any(p => string.Equals(new DirectoryInfo(p).Name, args[i], StringComparison.CurrentCultureIgnoreCase)))
+                                {
+                                    mode = args[i].ToLower();
+                                    _currentMode = mode;
+                                }
+                                else
+                                {
+                                    throw new Exception($"Invalid Mode {args[i]}.");
+                                }
+                            }
+                        }
+                        break;
                 }
+            // Load the mode (network)
+            await LoadMode(mode);
+            if (_needRestart)
+            {
+                ConsoleHelper.Warning("Please restart the node to apply the changes.");
+                OnStop();
+                return;
+            }
 
             ProtocolSettings protocol = ProtocolSettings.Load("config.json");
 
@@ -391,7 +429,6 @@ namespace Neo.CLI
             foreach (var plugin in Plugin.Plugins)
             {
                 // Register plugins commands
-
                 RegisterCommand(plugin, plugin.Name);
             }
 

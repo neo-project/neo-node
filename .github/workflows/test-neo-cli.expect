@@ -14,6 +14,10 @@ expect {
     timeout { exit 1 }
 }
 
+sleep 5
+
+spawn dotnet out/neo-cli.dll
+
 #
 # Test 'create wallet'
 #
