@@ -30,7 +30,8 @@
     "MemoryPoolMaxTransactions": 50000,
     "MaxTraceableBlocks": 2102400,
     "Hardforks": {
-      "HF_Aspidochelone": 1730000
+      "HF_Aspidochelone": 1730000,
+      "HF_Basilisk": 4120000
     },
     "InitialGasDistribution": 5200000000000000,
     "ValidatorsCount": 7,
