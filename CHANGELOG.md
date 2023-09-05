@@ -1,5 +1,14 @@
 # Changelog
 All notable changes to this project will be documented in this file.
+## [3.6.0]
+
+### Changed
+- ([#848](https://github.com/neo-project/neo-node/pull/848/)) Featured log
+- ([#888](https://github.com/neo-project/neo-node/pull/888/)) Update to net7.0
+- ([#891](https://github.com/neo-project/neo-node/pull/891/)) Update Dockerfile to use dotnet 7.0
+
+### Added
+- ([#895](https://github.com/neo-project/neo-node/pull/895/)) add codeql
 
 ## [3.5.0]
 
