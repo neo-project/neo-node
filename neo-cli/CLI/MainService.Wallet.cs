@@ -603,7 +603,6 @@ namespace Neo.CLI
                 Witnesses = Array.Empty<Witness>(),
             };
 
-            if (NoWallet()) return;
             try
             {
                 using (ScriptBuilder scriptBuilder= new())
