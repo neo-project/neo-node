@@ -562,16 +562,13 @@ namespace Neo.CLI
         }
 
         /// <summary>
-        /// Process "invoke" command
+        /// Process "cancel" command
         /// </summary>
-        /// <param name="scriptHash">Script hash</param>
-        /// <param name="operation">Operation</param>
-        /// <param name="contractParameters">Contract parameters</param>
+        /// <param name="txid">conflict txid</param>
         /// <param name="sender">Transaction's sender</param>
         /// <param name="signerAccounts">Signer's accounts</param>
-        /// <param name="maxGas">Max fee for running the script</param>
         [ConsoleCommand("cancel", Category = "Wallet Commands")]
-        private void OnCancelCommand(UInt256 txid, UInt160 sender = null, UInt160[] signerAccounts = null, decimal maxGas = 20)
+        private void OnCancelCommand(UInt256 txid, UInt160 sender = null, UInt160[] signerAccounts = null)
         {
             TransactionState state = NativeContract.Ledger.GetTransactionState(NeoSystem.StoreView, txid);
             if (state != null)
@@ -581,7 +578,6 @@ namespace Neo.CLI
             }
 
             var conflict = new TransactionAttribute[] { new Conflicts() { Hash = txid } };
-            var gas = new BigDecimal(maxGas, NativeContract.GAS.Decimals);
             Signer[] signers = Array.Empty<Signer>();
             if (!NoWallet() && sender != null)
             {
@@ -613,7 +609,7 @@ namespace Neo.CLI
                 using (ScriptBuilder scriptBuilder= new())
                 {
                     scriptBuilder.Emit(OpCode.NOP);
-                    tx = CurrentWallet.MakeTransaction(NeoSystem.StoreView, scriptBuilder.ToArray(), sender, signers, conflict, maxGas: (long)gas.Value);
+                    tx = CurrentWallet.MakeTransaction(NeoSystem.StoreView, scriptBuilder.ToArray(), sender, signers, conflict);
                 }
                     
             }
