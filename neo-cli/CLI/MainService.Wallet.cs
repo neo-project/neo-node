@@ -16,6 +16,7 @@ using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
+using Neo.VM;
 using Neo.Wallets;
 using Neo.Wallets.NEP6;
 using System;
@@ -23,6 +24,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Security.Policy;
 using System.Threading.Tasks;
 using static Neo.SmartContract.Helper;
 
@@ -547,6 +549,95 @@ namespace Neo.CLI
                 ConsoleHelper.Warning("Insufficient funds");
                 return;
             }
+
+            ConsoleHelper.Info("Network fee: ",
+                $"{new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)}\t",
+                "Total fee: ",
+                $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
+            if (!ReadUserInput("Relay tx? (no|yes)").IsYes())
+            {
+                return;
+            }
+            SignAndSendTx(NeoSystem.StoreView, tx);
+        }
+
+        /// <summary>
+        /// Process "invoke" command
+        /// </summary>
+        /// <param name="scriptHash">Script hash</param>
+        /// <param name="operation">Operation</param>
+        /// <param name="contractParameters">Contract parameters</param>
+        /// <param name="sender">Transaction's sender</param>
+        /// <param name="signerAccounts">Signer's accounts</param>
+        /// <param name="maxGas">Max fee for running the script</param>
+        [ConsoleCommand("cancel", Category = "Wallet Commands")]
+        private void OnCancelCommand(UInt256 txid, UInt160 sender = null, UInt160[] signerAccounts = null, decimal maxGas = 20)
+        {
+            TransactionState state = NativeContract.Ledger.GetTransactionState(NeoSystem.StoreView, txid);
+            if (state != null)
+            {
+                ConsoleHelper.Error("This tx is already confirmed, can't be cancelled.");
+                return;
+            }
+
+            var conflict = new TransactionAttribute[] { new Conflicts() { Hash = txid } };
+            var gas = new BigDecimal(maxGas, NativeContract.GAS.Decimals);
+            Signer[] signers = Array.Empty<Signer>();
+            if (!NoWallet() && sender != null)
+            {
+                if (signerAccounts == null)
+                    signerAccounts = new UInt160[1] { sender };
+                else if (signerAccounts.Contains(sender) && signerAccounts[0] != sender)
+                {
+                    var signersList = signerAccounts.ToList();
+                    signersList.Remove(sender);
+                    signerAccounts = signersList.Prepend(sender).ToArray();
+                }
+                else if (!signerAccounts.Contains(sender))
+                {
+                    signerAccounts = signerAccounts.Prepend(sender).ToArray();
+                }
+                signers = signerAccounts.Select(p => new Signer() { Account = p, Scopes = WitnessScope.CalledByEntry }).ToArray();
+            }
+
+            Transaction tx = new Transaction
+            {
+                Signers = signers,
+                Attributes = conflict,
+                Witnesses = Array.Empty<Witness>(),
+            };
+
+            if (NoWallet()) return;
+            try
+            {
+                using (ScriptBuilder scriptBuilder= new())
+                {
+                    scriptBuilder.Emit(OpCode.NOP);
+                    tx = CurrentWallet.MakeTransaction(NeoSystem.StoreView, scriptBuilder.ToArray(), sender, signers, conflict, maxGas: (long)gas.Value);
+                }
+                    
+            }
+            catch (InvalidOperationException e)
+            {
+                ConsoleHelper.Error(GetExceptionMessage(e));
+                return;
+            }
+
+            if (NeoSystem.MemPool.TryGetValue(txid, out Transaction conflictTx)){
+                tx.NetworkFee = Math.Max(tx.NetworkFee, conflictTx.NetworkFee)+1;
+            } else
+            {
+                var snapshot = NeoSystem.StoreView;
+                AssetDescriptor descriptor = new(snapshot, NeoSystem.Settings, NativeContract.GAS.Hash);
+                string extracFee = ReadUserInput("This tx is not in mempool, please input extra fee manually");
+                if (!BigDecimal.TryParse(extracFee, descriptor.Decimals, out BigDecimal decimalExtraFee) || decimalExtraFee.Sign <= 0)
+                {
+                    ConsoleHelper.Error("Incorrect Amount Format");
+                    return;
+                }
+                tx.NetworkFee += (long)decimalExtraFee.Value;
+
+            };
 
             ConsoleHelper.Info("Network fee: ",
                 $"{new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)}\t",
