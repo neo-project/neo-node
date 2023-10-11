@@ -24,7 +24,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Numerics;
-using System.Security.Policy;
 using System.Threading.Tasks;
 using static Neo.SmartContract.Helper;
 
@@ -605,12 +604,10 @@ namespace Neo.CLI
 
             try
             {
-                using (ScriptBuilder scriptBuilder= new())
-                {
-                    scriptBuilder.Emit(OpCode.NOP);
-                    tx = CurrentWallet.MakeTransaction(NeoSystem.StoreView, scriptBuilder.ToArray(), sender, signers, conflict);
-                }
-                    
+                using ScriptBuilder scriptBuilder = new();
+                scriptBuilder.Emit(OpCode.NOP);
+                tx = CurrentWallet.MakeTransaction(NeoSystem.StoreView, scriptBuilder.ToArray(), sender, signers, conflict);
+
             }
             catch (InvalidOperationException e)
             {
@@ -618,9 +615,11 @@ namespace Neo.CLI
                 return;
             }
 
-            if (NeoSystem.MemPool.TryGetValue(txid, out Transaction conflictTx)){
-                tx.NetworkFee = Math.Max(tx.NetworkFee, conflictTx.NetworkFee)+1;
-            } else
+            if (NeoSystem.MemPool.TryGetValue(txid, out Transaction conflictTx))
+            {
+                tx.NetworkFee = Math.Max(tx.NetworkFee, conflictTx.NetworkFee) + 1;
+            }
+            else
             {
                 var snapshot = NeoSystem.StoreView;
                 AssetDescriptor descriptor = new(snapshot, NeoSystem.Settings, NativeContract.GAS.Hash);
