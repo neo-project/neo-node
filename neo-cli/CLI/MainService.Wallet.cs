@@ -16,6 +16,7 @@ using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
+using Neo.VM;
 using Neo.Wallets;
 using Neo.Wallets.NEP6;
 using System;
@@ -547,6 +548,88 @@ namespace Neo.CLI
                 ConsoleHelper.Warning("Insufficient funds");
                 return;
             }
+
+            ConsoleHelper.Info("Network fee: ",
+                $"{new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)}\t",
+                "Total fee: ",
+                $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
+            if (!ReadUserInput("Relay tx? (no|yes)").IsYes())
+            {
+                return;
+            }
+            SignAndSendTx(NeoSystem.StoreView, tx);
+        }
+
+        /// <summary>
+        /// Process "cancel" command
+        /// </summary>
+        /// <param name="txid">conflict txid</param>
+        /// <param name="sender">Transaction's sender</param>
+        /// <param name="signerAccounts">Signer's accounts</param>
+        [ConsoleCommand("cancel", Category = "Wallet Commands")]
+        private void OnCancelCommand(UInt256 txid, UInt160 sender = null, UInt160[] signerAccounts = null)
+        {
+            TransactionState state = NativeContract.Ledger.GetTransactionState(NeoSystem.StoreView, txid);
+            if (state != null)
+            {
+                ConsoleHelper.Error("This tx is already confirmed, can't be cancelled.");
+                return;
+            }
+
+            var conflict = new TransactionAttribute[] { new Conflicts() { Hash = txid } };
+            Signer[] signers = Array.Empty<Signer>();
+            if (!NoWallet() && sender != null)
+            {
+                if (signerAccounts == null)
+                    signerAccounts = new UInt160[1] { sender };
+                else if (signerAccounts.Contains(sender) && signerAccounts[0] != sender)
+                {
+                    var signersList = signerAccounts.ToList();
+                    signersList.Remove(sender);
+                    signerAccounts = signersList.Prepend(sender).ToArray();
+                }
+                else if (!signerAccounts.Contains(sender))
+                {
+                    signerAccounts = signerAccounts.Prepend(sender).ToArray();
+                }
+                signers = signerAccounts.Select(p => new Signer() { Account = p, Scopes = WitnessScope.CalledByEntry }).ToArray();
+            }
+
+            Transaction tx = new Transaction
+            {
+                Signers = signers,
+                Attributes = conflict,
+                Witnesses = Array.Empty<Witness>(),
+            };
+
+            try
+            {
+                using ScriptBuilder scriptBuilder = new();
+                scriptBuilder.Emit(OpCode.RET);
+                tx = CurrentWallet.MakeTransaction(NeoSystem.StoreView, scriptBuilder.ToArray(), sender, signers, conflict);
+            }
+            catch (InvalidOperationException e)
+            {
+                ConsoleHelper.Error(GetExceptionMessage(e));
+                return;
+            }
+
+            if (NeoSystem.MemPool.TryGetValue(txid, out Transaction conflictTx))
+            {
+                tx.NetworkFee = Math.Max(tx.NetworkFee, conflictTx.NetworkFee) + 1;
+            }
+            else
+            {
+                var snapshot = NeoSystem.StoreView;
+                AssetDescriptor descriptor = new(snapshot, NeoSystem.Settings, NativeContract.GAS.Hash);
+                string extracFee = ReadUserInput("This tx is not in mempool, please input extra fee manually");
+                if (!BigDecimal.TryParse(extracFee, descriptor.Decimals, out BigDecimal decimalExtraFee) || decimalExtraFee.Sign <= 0)
+                {
+                    ConsoleHelper.Error("Incorrect Amount Format");
+                    return;
+                }
+                tx.NetworkFee += (long)decimalExtraFee.Value;
+            };
 
             ConsoleHelper.Info("Network fee: ",
                 $"{new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)}\t",
