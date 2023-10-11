@@ -605,9 +605,8 @@ namespace Neo.CLI
             try
             {
                 using ScriptBuilder scriptBuilder = new();
-                scriptBuilder.Emit(OpCode.NOP);
+                scriptBuilder.Emit(OpCode.RET);
                 tx = CurrentWallet.MakeTransaction(NeoSystem.StoreView, scriptBuilder.ToArray(), sender, signers, conflict);
-
             }
             catch (InvalidOperationException e)
             {
@@ -630,7 +629,6 @@ namespace Neo.CLI
                     return;
                 }
                 tx.NetworkFee += (long)decimalExtraFee.Value;
-
             };
 
             ConsoleHelper.Info("Network fee: ",
