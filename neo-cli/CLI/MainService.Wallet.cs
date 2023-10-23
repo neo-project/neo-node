@@ -592,7 +592,7 @@ namespace Neo.CLI
                 {
                     signerAccounts = signerAccounts.Prepend(sender).ToArray();
                 }
-                signers = signerAccounts.Select(p => new Signer() { Account = p, Scopes = WitnessScope.CalledByEntry }).ToArray();
+                signers = signerAccounts.Select(p => new Signer() { Account = p, Scopes = WitnessScope.None }).ToArray();
             }
 
             Transaction tx = new Transaction
