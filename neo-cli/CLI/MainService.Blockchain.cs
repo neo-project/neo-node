@@ -140,17 +140,17 @@ namespace Neo.CLI
                 if (signer.Rules.Length == 0)
                     ConsoleHelper.Info("", "             Rules: ", "[]");
                 else
-                    ConsoleHelper.Info("", "             Rules: ", $"[{string.Join(',', signer.Rules.Select(s => $"\"{s.ToJson()}\""))}]");
+                    ConsoleHelper.Info("", "             Rules: ", $"[{string.Join(", ", signer.Rules.Select(s => $"\"{s.ToJson()}\""))}]");
                 ConsoleHelper.Info("", "           Account: ", $"{signer.Account}");
                 ConsoleHelper.Info("", "            Scopes: ", $"{signer.Scopes}");
                 if (signer.AllowedContracts.Length == 0)
                     ConsoleHelper.Info("", "  AllowedContracts: ", "[]");
                 else
-                    ConsoleHelper.Info("", "  AllowedContracts: ", $"[{string.Join(',', signer.AllowedContracts.Select(s => s.ToString()))}]");
+                    ConsoleHelper.Info("", "  AllowedContracts: ", $"[{string.Join(", ", signer.AllowedContracts.Select(s => s.ToString()))}]");
                 if (signer.AllowedGroups.Length == 0)
                     ConsoleHelper.Info("", "     AllowedGroups: ", "[]");
                 else
-                    ConsoleHelper.Info("", "     AllowedGroups: ", $"[{string.Join(',', signer.AllowedGroups.Select(s => s.ToString()))}]");
+                    ConsoleHelper.Info("", "     AllowedGroups: ", $"[{string.Join(", ", signer.AllowedGroups.Select(s => s.ToString()))}]");
                 ConsoleHelper.Info("", "              Size: ", $"{signer.Size} Byte(s)");
                 if (tx.Transaction.Signers.Length > 0)
                     ConsoleHelper.Info();
