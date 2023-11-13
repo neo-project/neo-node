@@ -9,8 +9,11 @@
 // modifications are permitted.
 
 using Neo.ConsoleService;
+using Neo.Network.P2P.Payloads;
 using Neo.SmartContract.Native;
+using Org.BouncyCastle.Asn1.Cms;
 using System;
+using System.Linq;
 
 namespace Neo.CLI
 {
@@ -43,13 +46,23 @@ namespace Neo.CLI
         }
 
         [ConsoleCommand("print block", Category = "Blockchain Commands")]
-        private void OnPrintBlockCommand(uint index)
+        private void OnPrintBlockCommand(string indexOrHash)
         {
-            var block = NativeContract.Ledger.GetBlock(_neoSystem.StoreView, index);
+            Block block = null;
+
+            if (uint.TryParse(indexOrHash, out var index))
+                block = NativeContract.Ledger.GetBlock(_neoSystem.StoreView, index);
+            else if (UInt256.TryParse(indexOrHash, out var hash))
+                block = NativeContract.Ledger.GetBlock(_neoSystem.StoreView, hash);
+            else
+            {
+                ConsoleHelper.Error("Enter a valid block index or hash.");
+                return;
+            }
 
             if (block == null)
             {
-                ConsoleHelper.Error($"Block {index} doesn't exist.");
+                ConsoleHelper.Error($"Block {indexOrHash} doesn't exist.");
                 return;
             }
 
@@ -80,13 +93,96 @@ namespace Neo.CLI
             ConsoleHelper.Info();
 
             if (block.Transactions.Length == 0)
-                ConsoleHelper.Info("  No Transaction(s)");
+                ConsoleHelper.Info("", "  No Transaction(s)");
 
             foreach (var tx in block.Transactions)
                 ConsoleHelper.Info($"  {tx.Hash}");
             ConsoleHelper.Info();
             ConsoleHelper.Info("", "--------------------------------------");
 
+        }
+
+        [ConsoleCommand("print tx", Category = "Blockchain Commands")]
+        public void OnPrintTransactionCommand(UInt256 hash)
+        {
+            var tx = NativeContract.Ledger.GetTransactionState(_neoSystem.StoreView, hash);
+
+            if (tx == null)
+            {
+                ConsoleHelper.Error($"Transaction {hash} doesn't exist.");
+                return;
+            }
+
+            var block = NativeContract.Ledger.GetHeader(_neoSystem.StoreView, tx.BlockIndex);
+
+            DateTime transactionDatetime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+            transactionDatetime = transactionDatetime.AddMilliseconds(block.Timestamp).ToLocalTime();
+
+            ConsoleHelper.Info("", "-------------", "Transaction", "-------------");
+            ConsoleHelper.Info();
+            ConsoleHelper.Info("", "        Timestamp: ", $"{transactionDatetime}");
+            ConsoleHelper.Info("", "             Hash: ", $"{tx.Transaction.Hash}");
+            ConsoleHelper.Info("", "            Nonce: ", $"{tx.Transaction.Nonce}");
+            ConsoleHelper.Info("", "           Sender: ", $"{tx.Transaction.Sender}");
+            ConsoleHelper.Info("", "  ValidUntilBlock: ", $"{tx.Transaction.ValidUntilBlock}");
+            ConsoleHelper.Info("", "       FeePerByte: ", $"{tx.Transaction.FeePerByte}");
+            ConsoleHelper.Info("", "       NetworkFee: ", $"{tx.Transaction.NetworkFee}");
+            ConsoleHelper.Info("", "        SystemFee: ", $"{tx.Transaction.SystemFee}");
+            ConsoleHelper.Info("", "           Script: ", $"{Convert.ToBase64String(tx.Transaction.Script.Span)}");
+            ConsoleHelper.Info("", "          Version: ", $"{tx.Transaction.Version}");
+            ConsoleHelper.Info("", "       BlockIndex: ", $"{block.Index}");
+            ConsoleHelper.Info("", "        BlockHash: ", $"{block.Hash}");
+            ConsoleHelper.Info("", "             Size: ", $"{tx.Transaction.Size} Byte(s)");
+            ConsoleHelper.Info();
+            ConsoleHelper.Info("", "-------------", "Signers", "-------------");
+            ConsoleHelper.Info();
+            foreach (var signer in tx.Transaction.Signers)
+            {
+                if (signer.Rules.Length == 0)
+                    ConsoleHelper.Info("", "             Rules: ", "[]");
+                else
+                    ConsoleHelper.Info("", "             Rules: ", $"[{string.Join(',', signer.Rules.Select(s => $"\"{s.ToJson()}\""))}]");
+                ConsoleHelper.Info("", "           Account: ", $"{signer.Account}");
+                ConsoleHelper.Info("", "            Scopes: ", $"{signer.Scopes}");
+                if (signer.AllowedContracts.Length == 0)
+                    ConsoleHelper.Info("", "  AllowedContracts: ", "[]");
+                else
+                    ConsoleHelper.Info("", "  AllowedContracts: ", $"[{string.Join(',', signer.AllowedContracts.Select(s => s.ToString()))}]");
+                if (signer.AllowedGroups.Length == 0)
+                    ConsoleHelper.Info("", "     AllowedGroups: ", "[]");
+                else
+                    ConsoleHelper.Info("", "     AllowedGroups: ", $"[{string.Join(',', signer.AllowedGroups.Select(s => s.ToString()))}]");
+                ConsoleHelper.Info("", "              Size: ", $"{signer.Size} Byte(s)");
+                if (tx.Transaction.Signers.Length > 0)
+                    ConsoleHelper.Info();
+            }
+            ConsoleHelper.Info("", "-------------", "Witnesses", "-------------");
+            ConsoleHelper.Info();
+            foreach (var witness in tx.Transaction.Witnesses)
+            {
+                ConsoleHelper.Info("", "    InvocationScript: ", $"{Convert.ToBase64String(witness.InvocationScript.Span)}");
+                ConsoleHelper.Info("", "  VerificationScript: ", $"{Convert.ToBase64String(witness.VerificationScript.Span)}");
+                ConsoleHelper.Info("", "          ScriptHash: ", $"{witness.ScriptHash}");
+                ConsoleHelper.Info("", "                Size: ", $"{witness.Size} Byte(s)");
+                if (tx.Transaction.Witnesses.Length > 0)
+                    ConsoleHelper.Info();
+            }
+            ConsoleHelper.Info("", "-------------", "Attributes", "-------------");
+            ConsoleHelper.Info();
+            if (tx.Transaction.Attributes.Length == 0)
+            {
+                ConsoleHelper.Info("", "  No Attribute(s).");
+                ConsoleHelper.Info();
+            }
+            foreach (var attribute in tx.Transaction.Attributes)
+            {
+                ConsoleHelper.Info("", "           Type: ", $"{attribute.Type}");
+                ConsoleHelper.Info("", "  AllowMultiple: ", $"{attribute.AllowMultiple}");
+                ConsoleHelper.Info("", "           Size: ", $"{attribute.Size} Byte(s)");
+                if (tx.Transaction.Attributes.Length > 0)
+                    ConsoleHelper.Info();
+            }
+            ConsoleHelper.Info("", "--------------------------------------");
         }
     }
 }
