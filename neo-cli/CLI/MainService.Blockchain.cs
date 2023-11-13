@@ -78,6 +78,10 @@ namespace Neo.CLI
             ConsoleHelper.Info();
             ConsoleHelper.Info("", "-------------", "Transactions", "-------------");
             ConsoleHelper.Info();
+
+            if (block.Transactions.Length == 0)
+                ConsoleHelper.Info("  No Transaction(s)");
+
             foreach (var tx in block.Transactions)
                 ConsoleHelper.Info($"  {tx.Hash}");
             ConsoleHelper.Info();
