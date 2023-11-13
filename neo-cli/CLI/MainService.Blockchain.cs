@@ -67,14 +67,14 @@ namespace Neo.CLI
             ConsoleHelper.Info("", "  NextConsensus: ", $"{block.NextConsensus}");
             ConsoleHelper.Info("", "   PrimaryIndex: ", $"{block.PrimaryIndex}");
             ConsoleHelper.Info("", "        Version: ", $"{block.Version}");
-            ConsoleHelper.Info("", "           Size: ", $"{block.Size}");
+            ConsoleHelper.Info("", "           Size: ", $"{block.Size} Byte(s)");
             ConsoleHelper.Info();
             ConsoleHelper.Info("", "-------------", "Witness", "-------------");
             ConsoleHelper.Info();
             ConsoleHelper.Info("", "    Invocation Script: ", $"{Convert.ToBase64String(block.Witness.InvocationScript.Span)}");
             ConsoleHelper.Info("", "  Verification Script: ", $"{Convert.ToBase64String(block.Witness.VerificationScript.Span)}");
             ConsoleHelper.Info("", "           ScriptHash: ", $"{block.Witness.ScriptHash}");
-            ConsoleHelper.Info("", "                 Size: ", $"{block.Witness.Size}");
+            ConsoleHelper.Info("", "                 Size: ", $"{block.Witness.Size} Byte(s)");
             ConsoleHelper.Info();
             ConsoleHelper.Info("", "-------------", "Transactions", "-------------");
             ConsoleHelper.Info();
