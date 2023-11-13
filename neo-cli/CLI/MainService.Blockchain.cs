@@ -41,5 +41,48 @@ namespace Neo.CLI
 
             WriteBlocks(start, count, path, true);
         }
+
+        [ConsoleCommand("print block", Category = "Blockchain Commands")]
+        private void OnPrintBlockCommand(uint index)
+        {
+            var block = NativeContract.Ledger.GetBlock(_neoSystem.StoreView, index);
+
+            if (block == null)
+            {
+                ConsoleHelper.Error($"Block {index} doesn't exist.");
+                return;
+            }
+
+            DateTime blockDatetime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+            blockDatetime = blockDatetime.AddMilliseconds(block.Timestamp).ToLocalTime();
+
+            ConsoleHelper.Info("", "-------------", "Block", "-------------");
+            ConsoleHelper.Info();
+            ConsoleHelper.Info("", "      Timestamp: ", $"{blockDatetime}");
+            ConsoleHelper.Info("", "          Index: ", $"{block.Index}");
+            ConsoleHelper.Info("", "           Hash: ", $"{block.Hash}");
+            ConsoleHelper.Info("", "          Nonce: ", $"{block.Nonce}");
+            ConsoleHelper.Info("", "     MerkleRoot: ", $"{block.MerkleRoot}");
+            ConsoleHelper.Info("", "       PrevHash: ", $"{block.PrevHash}");
+            ConsoleHelper.Info("", "  NextConsensus: ", $"{block.NextConsensus}");
+            ConsoleHelper.Info("", "   PrimaryIndex: ", $"{block.PrimaryIndex}");
+            ConsoleHelper.Info("", "        Version: ", $"{block.Version}");
+            ConsoleHelper.Info("", "           Size: ", $"{block.Size}");
+            ConsoleHelper.Info();
+            ConsoleHelper.Info("", "-------------", "Witness", "-------------");
+            ConsoleHelper.Info();
+            ConsoleHelper.Info("", "    Invocation Script: ", $"{Convert.ToBase64String(block.Witness.InvocationScript.Span)}");
+            ConsoleHelper.Info("", "  Verification Script: ", $"{Convert.ToBase64String(block.Witness.VerificationScript.Span)}");
+            ConsoleHelper.Info("", "           ScriptHash: ", $"{block.Witness.ScriptHash}");
+            ConsoleHelper.Info("", "                 Size: ", $"{block.Witness.Size}");
+            ConsoleHelper.Info();
+            ConsoleHelper.Info("", "-------------", "Transactions", "-------------");
+            ConsoleHelper.Info();
+            foreach (var tx in block.Transactions)
+                ConsoleHelper.Info($"  {tx.Hash}");
+            ConsoleHelper.Info();
+            ConsoleHelper.Info("", "--------------------------------------");
+
+        }
     }
 }
