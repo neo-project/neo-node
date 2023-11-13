@@ -11,7 +11,6 @@
 using Neo.ConsoleService;
 using Neo.Network.P2P.Payloads;
 using Neo.SmartContract.Native;
-using Org.BouncyCastle.Asn1.Cms;
 using System;
 using System.Linq;
 
