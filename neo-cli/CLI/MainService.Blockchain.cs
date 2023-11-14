@@ -9,10 +9,14 @@
 // modifications are permitted.
 
 using Neo.ConsoleService;
+using Neo.Json;
 using Neo.Network.P2P.Payloads;
+using Neo.SmartContract;
 using Neo.SmartContract.Native;
+using Org.BouncyCastle.Asn1.Cms;
 using System;
 using System.Linq;
+using System.Security.Policy;
 
 namespace Neo.CLI
 {
@@ -152,8 +156,7 @@ namespace Neo.CLI
                 else
                     ConsoleHelper.Info("", "     AllowedGroups: ", $"[{string.Join(", ", signer.AllowedGroups.Select(s => s.ToString()))}]");
                 ConsoleHelper.Info("", "              Size: ", $"{signer.Size} Byte(s)");
-                if (tx.Transaction.Signers.Length > 0)
-                    ConsoleHelper.Info();
+                ConsoleHelper.Info();
             }
             ConsoleHelper.Info("", "-------------", "Witnesses", "-------------");
             ConsoleHelper.Info();
@@ -163,8 +166,7 @@ namespace Neo.CLI
                 ConsoleHelper.Info("", "  VerificationScript: ", $"{Convert.ToBase64String(witness.VerificationScript.Span)}");
                 ConsoleHelper.Info("", "          ScriptHash: ", $"{witness.ScriptHash}");
                 ConsoleHelper.Info("", "                Size: ", $"{witness.Size} Byte(s)");
-                if (tx.Transaction.Witnesses.Length > 0)
-                    ConsoleHelper.Info();
+                ConsoleHelper.Info();
             }
             ConsoleHelper.Info("", "-------------", "Attributes", "-------------");
             ConsoleHelper.Info();
@@ -178,10 +180,87 @@ namespace Neo.CLI
                 ConsoleHelper.Info("", "           Type: ", $"{attribute.Type}");
                 ConsoleHelper.Info("", "  AllowMultiple: ", $"{attribute.AllowMultiple}");
                 ConsoleHelper.Info("", "           Size: ", $"{attribute.Size} Byte(s)");
-                if (tx.Transaction.Attributes.Length > 0)
-                    ConsoleHelper.Info();
+                ConsoleHelper.Info();
             }
             ConsoleHelper.Info("", "--------------------------------------");
+        }
+
+        [ConsoleCommand("print contract", Category = "Blockchain Commands")]
+        public void OnPrintContractCommand(string nameOrHash)
+        {
+            ContractState contract = null;
+
+            if (UInt160.TryParse(nameOrHash, out var scriptHash))
+                contract = NativeContract.ContractManagement.GetContract(_neoSystem.StoreView, scriptHash);
+            else
+            {
+                var nativeContract = NativeContract.Contracts.SingleOrDefault(s => s.Name.Equals(nameOrHash, StringComparison.InvariantCultureIgnoreCase));
+
+                if (nativeContract != null)
+                    contract = NativeContract.ContractManagement.GetContract(_neoSystem.StoreView, nativeContract.Hash);
+            }
+
+            if (contract == null)
+            {
+                ConsoleHelper.Error($"Contract {nameOrHash} doesn't exist.");
+                return;
+            }
+
+            ConsoleHelper.Info("", "-------------", "Contract", "-------------");
+            ConsoleHelper.Info();
+            ConsoleHelper.Info("", "                Name: ", $"{contract.Manifest.Name}");
+            ConsoleHelper.Info("", "                Hash: ", $"{contract.Hash}");
+            ConsoleHelper.Info("", "                  Id: ", $"{contract.Id}");
+            ConsoleHelper.Info("", "       UpdateCounter: ", $"{contract.UpdateCounter}");
+            ConsoleHelper.Info("", "  SupportedStandards: ", $"{string.Join(" ", contract.Manifest.SupportedStandards)}");
+            ConsoleHelper.Info("", "            Checksum: ", $"{contract.Nef.CheckSum}");
+            ConsoleHelper.Info("", "            Compiler: ", $"{contract.Nef.Compiler}");
+            ConsoleHelper.Info("", "          SourceCode: ", $"{contract.Nef.Source}");
+            ConsoleHelper.Info("", "              Trusts: ", $"[{string.Join(", ", contract.Manifest.Trusts.Select(s => s.ToJson()?.GetString()))}]");
+            foreach (var extra in contract.Manifest.Extra?.Properties)
+            {
+                ConsoleHelper.Info("", $"  {extra.Key,18}: ", $"{extra.Value?.GetString()}");
+            }
+            ConsoleHelper.Info();
+            ConsoleHelper.Info("", "-------------", "Groups", "-------------");
+            ConsoleHelper.Info();
+            if (contract.Manifest.Groups.Length == 0)
+            {
+                ConsoleHelper.Info("", "  No Group(s).");
+                ConsoleHelper.Info();
+            }
+            foreach (var group in contract.Manifest.Groups)
+            {
+                ConsoleHelper.Info("", "     PubKey: ", $"{group.PubKey}");
+                ConsoleHelper.Info("", "  Signature: ", $"{Convert.ToBase64String(group.Signature)}");
+                ConsoleHelper.Info();
+            }
+            ConsoleHelper.Info("", "-------------", "Permissions", "-------------");
+            ConsoleHelper.Info();
+            foreach (var permission in contract.Manifest.Permissions)
+            {
+                ConsoleHelper.Info("", "  Contract: ", $"{permission.Contract.ToJson()?.GetString()}");
+                if (permission.Methods.IsWildcard)
+                    ConsoleHelper.Info("", "   Methods: ", "*");
+                else
+                    ConsoleHelper.Info("", "   Methods: ", $"{string.Join(", ", permission.Methods)}");
+                ConsoleHelper.Info();
+            }
+            ConsoleHelper.Info("", "-------------", "Methods", "-------------");
+            ConsoleHelper.Info();
+            foreach (var method in contract.Manifest.Abi.Methods)
+            {
+                ConsoleHelper.Info("", "        Name: ", $"{method.Name}");
+                ConsoleHelper.Info("", "        Safe: ", $"{method.Safe}");
+                ConsoleHelper.Info("", "      Offset: ", $"{method.Offset}");
+                ConsoleHelper.Info("", "  Parameters: ", $"[{string.Join(", ", method.Parameters.Select(s => s.Type.ToString()))}]");
+                ConsoleHelper.Info("", "  ReturnType: ", $"{method.ReturnType}");
+                ConsoleHelper.Info();
+            }
+            ConsoleHelper.Info("", "-------------", "Script", "-------------");
+            ConsoleHelper.Info();
+            ConsoleHelper.Info($"  {Convert.ToBase64String(contract.Nef.Script.Span)}");
+            ConsoleHelper.Info();
         }
     }
 }
