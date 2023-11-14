@@ -264,7 +264,7 @@ namespace Neo.CLI
             ConsoleHelper.Info();
             ConsoleHelper.Info($"  {Convert.ToBase64String(contract.Nef.Script.Span)}");
             ConsoleHelper.Info();
-            ConsoleHelper.Info("", "--------------------------------------");
+            ConsoleHelper.Info("", "--------------------------------");
         }
     }
 }
