@@ -9,14 +9,11 @@
 // modifications are permitted.
 
 using Neo.ConsoleService;
-using Neo.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
-using Org.BouncyCastle.Asn1.Cms;
 using System;
 using System.Linq;
-using System.Security.Policy;
 
 namespace Neo.CLI
 {
