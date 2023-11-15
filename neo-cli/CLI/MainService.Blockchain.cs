@@ -233,7 +233,7 @@ namespace Neo.CLI
                 ConsoleHelper.Info("", "            Compiler: ", $"{contract.Nef.Compiler}");
                 ConsoleHelper.Info("", "          SourceCode: ", $"{contract.Nef.Source}");
                 ConsoleHelper.Info("", "              Trusts: ", $"[{string.Join(", ", contract.Manifest.Trusts.Select(s => s.ToJson()?.GetString()))}]");
-                if (contract.Manifest.Extra != null)
+                if (contract.Manifest.Extra is null)
                 {
                     foreach (var extra in contract.Manifest.Extra.Properties)
                     {
