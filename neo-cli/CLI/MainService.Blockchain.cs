@@ -48,7 +48,7 @@ namespace Neo.CLI
             WriteBlocks(start, count, path, true);
         }
 
-        [ConsoleCommand("print block", Category = "Blockchain Commands")]
+        [ConsoleCommand("show block", Category = "Blockchain Commands")]
         private void OnPrintBlockCommand(string indexOrHash)
         {
             Block block = null;
@@ -105,7 +105,7 @@ namespace Neo.CLI
 
         }
 
-        [ConsoleCommand("print tx", Category = "Blockchain Commands")]
+        [ConsoleCommand("show tx", Category = "Blockchain Commands")]
         public void OnPrintTransactionCommand(UInt256 hash)
         {
             var tx = NativeContract.Ledger.GetTransactionState(_neoSystem.StoreView, hash);
@@ -185,7 +185,7 @@ namespace Neo.CLI
             ConsoleHelper.Info("", "--------------------------------------");
         }
 
-        [ConsoleCommand("print contract", Category = "Blockchain Commands")]
+        [ConsoleCommand("show contract", Category = "Blockchain Commands")]
         public void OnPrintContractCommand(string nameOrHash)
         {
             ContractState contract = null;
