@@ -49,7 +49,7 @@ namespace Neo.CLI
         }
 
         [ConsoleCommand("show block", Category = "Blockchain Commands")]
-        private void OnPrintBlockCommand(string indexOrHash)
+        private void OnShowBlockCommand(string indexOrHash)
         {
             Block block = null;
 
@@ -63,7 +63,7 @@ namespace Neo.CLI
                 return;
             }
 
-            if (block == null)
+            if (block is null)
             {
                 ConsoleHelper.Error($"Block {indexOrHash} doesn't exist.");
                 return;
@@ -85,6 +85,7 @@ namespace Neo.CLI
             ConsoleHelper.Info("", "        Version: ", $"{block.Version}");
             ConsoleHelper.Info("", "           Size: ", $"{block.Size} Byte(s)");
             ConsoleHelper.Info();
+            
             ConsoleHelper.Info("", "-------------", "Witness", "-------------");
             ConsoleHelper.Info();
             ConsoleHelper.Info("", "    Invocation Script: ", $"{Convert.ToBase64String(block.Witness.InvocationScript.Span)}");
@@ -92,25 +93,29 @@ namespace Neo.CLI
             ConsoleHelper.Info("", "           ScriptHash: ", $"{block.Witness.ScriptHash}");
             ConsoleHelper.Info("", "                 Size: ", $"{block.Witness.Size} Byte(s)");
             ConsoleHelper.Info();
+            
             ConsoleHelper.Info("", "-------------", "Transactions", "-------------");
             ConsoleHelper.Info();
 
             if (block.Transactions.Length == 0)
+            {
                 ConsoleHelper.Info("", "  No Transaction(s)");
-
-            foreach (var tx in block.Transactions)
-                ConsoleHelper.Info($"  {tx.Hash}");
+            }
+            else
+            {
+                foreach (var tx in block.Transactions)
+                    ConsoleHelper.Info($"  {tx.Hash}");
+            }
             ConsoleHelper.Info();
             ConsoleHelper.Info("", "--------------------------------------");
-
         }
 
         [ConsoleCommand("show tx", Category = "Blockchain Commands")]
-        public void OnPrintTransactionCommand(UInt256 hash)
+        public void OnShowTransactionCommand(UInt256 hash)
         {
             var tx = NativeContract.Ledger.GetTransactionState(_neoSystem.StoreView, hash);
 
-            if (tx == null)
+            if (tx is null)
             {
                 ConsoleHelper.Error($"Transaction {hash} doesn't exist.");
                 return;
@@ -137,8 +142,10 @@ namespace Neo.CLI
             ConsoleHelper.Info("", "        BlockHash: ", $"{block.Hash}");
             ConsoleHelper.Info("", "             Size: ", $"{tx.Transaction.Size} Byte(s)");
             ConsoleHelper.Info();
+            
             ConsoleHelper.Info("", "-------------", "Signers", "-------------");
             ConsoleHelper.Info();
+            
             foreach (var signer in tx.Transaction.Signers)
             {
                 if (signer.Rules.Length == 0)
@@ -158,6 +165,7 @@ namespace Neo.CLI
                 ConsoleHelper.Info("", "              Size: ", $"{signer.Size} Byte(s)");
                 ConsoleHelper.Info();
             }
+            
             ConsoleHelper.Info("", "-------------", "Witnesses", "-------------");
             ConsoleHelper.Info();
             foreach (var witness in tx.Transaction.Witnesses)
@@ -168,25 +176,28 @@ namespace Neo.CLI
                 ConsoleHelper.Info("", "                Size: ", $"{witness.Size} Byte(s)");
                 ConsoleHelper.Info();
             }
+            
             ConsoleHelper.Info("", "-------------", "Attributes", "-------------");
             ConsoleHelper.Info();
             if (tx.Transaction.Attributes.Length == 0)
             {
                 ConsoleHelper.Info("", "  No Attribute(s).");
-                ConsoleHelper.Info();
             }
-            foreach (var attribute in tx.Transaction.Attributes)
+            else
             {
-                ConsoleHelper.Info("", "           Type: ", $"{attribute.Type}");
-                ConsoleHelper.Info("", "  AllowMultiple: ", $"{attribute.AllowMultiple}");
-                ConsoleHelper.Info("", "           Size: ", $"{attribute.Size} Byte(s)");
-                ConsoleHelper.Info();
+                foreach (var attribute in tx.Transaction.Attributes)
+                {
+                    ConsoleHelper.Info("", "           Type: ", $"{attribute.Type}");
+                    ConsoleHelper.Info("", "  AllowMultiple: ", $"{attribute.AllowMultiple}");
+                    ConsoleHelper.Info("", "           Size: ", $"{attribute.Size} Byte(s)");
+                }
             }
+            ConsoleHelper.Info();
             ConsoleHelper.Info("", "--------------------------------------");
         }
 
         [ConsoleCommand("show contract", Category = "Blockchain Commands")]
-        public void OnPrintContractCommand(string nameOrHash)
+        public void OnShowContractCommand(string nameOrHash)
         {
             ContractState contract = null;
 
@@ -200,7 +211,7 @@ namespace Neo.CLI
                     contract = NativeContract.ContractManagement.GetContract(_neoSystem.StoreView, nativeContract.Hash);
             }
 
-            if (contract == null)
+            if (contract is null)
             {
                 ConsoleHelper.Error($"Contract {nameOrHash} doesn't exist.");
                 return;
@@ -225,19 +236,23 @@ namespace Neo.CLI
                 }
             }
             ConsoleHelper.Info();
+            
             ConsoleHelper.Info("", "-------------", "Groups", "-------------");
             ConsoleHelper.Info();
             if (contract.Manifest.Groups.Length == 0)
             {
                 ConsoleHelper.Info("", "  No Group(s).");
-                ConsoleHelper.Info();
             }
-            foreach (var group in contract.Manifest.Groups)
+            else
             {
-                ConsoleHelper.Info("", "     PubKey: ", $"{group.PubKey}");
-                ConsoleHelper.Info("", "  Signature: ", $"{Convert.ToBase64String(group.Signature)}");
-                ConsoleHelper.Info();
+                foreach (var group in contract.Manifest.Groups)
+                {
+                    ConsoleHelper.Info("", "     PubKey: ", $"{group.PubKey}");
+                    ConsoleHelper.Info("", "  Signature: ", $"{Convert.ToBase64String(group.Signature)}");
+                }
             }
+            ConsoleHelper.Info();
+            
             ConsoleHelper.Info("", "-------------", "Permissions", "-------------");
             ConsoleHelper.Info();
             foreach (var permission in contract.Manifest.Permissions)
@@ -249,6 +264,7 @@ namespace Neo.CLI
                     ConsoleHelper.Info("", "   Methods: ", $"{string.Join(", ", permission.Methods)}");
                 ConsoleHelper.Info();
             }
+            
             ConsoleHelper.Info("", "-------------", "Methods", "-------------");
             ConsoleHelper.Info();
             foreach (var method in contract.Manifest.Abi.Methods)
@@ -260,6 +276,7 @@ namespace Neo.CLI
                 ConsoleHelper.Info("", "  ReturnType: ", $"{method.ReturnType}");
                 ConsoleHelper.Info();
             }
+            
             ConsoleHelper.Info("", "-------------", "Script", "-------------");
             ConsoleHelper.Info();
             ConsoleHelper.Info($"  {Convert.ToBase64String(contract.Nef.Script.Span)}");
