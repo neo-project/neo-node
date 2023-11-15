@@ -82,7 +82,7 @@ namespace Neo.CLI
             ConsoleHelper.Info("", "        Version: ", $"{block.Version}");
             ConsoleHelper.Info("", "           Size: ", $"{block.Size} Byte(s)");
             ConsoleHelper.Info();
-            
+
             ConsoleHelper.Info("", "-------------", "Witness", "-------------");
             ConsoleHelper.Info();
             ConsoleHelper.Info("", "    Invocation Script: ", $"{Convert.ToBase64String(block.Witness.InvocationScript.Span)}");
@@ -90,7 +90,7 @@ namespace Neo.CLI
             ConsoleHelper.Info("", "           ScriptHash: ", $"{block.Witness.ScriptHash}");
             ConsoleHelper.Info("", "                 Size: ", $"{block.Witness.Size} Byte(s)");
             ConsoleHelper.Info();
-            
+
             ConsoleHelper.Info("", "-------------", "Transactions", "-------------");
             ConsoleHelper.Info();
 
@@ -139,10 +139,10 @@ namespace Neo.CLI
             ConsoleHelper.Info("", "        BlockHash: ", $"{block.Hash}");
             ConsoleHelper.Info("", "             Size: ", $"{tx.Transaction.Size} Byte(s)");
             ConsoleHelper.Info();
-            
+
             ConsoleHelper.Info("", "-------------", "Signers", "-------------");
             ConsoleHelper.Info();
-            
+
             foreach (var signer in tx.Transaction.Signers)
             {
                 if (signer.Rules.Length == 0)
@@ -162,7 +162,7 @@ namespace Neo.CLI
                 ConsoleHelper.Info("", "              Size: ", $"{signer.Size} Byte(s)");
                 ConsoleHelper.Info();
             }
-            
+
             ConsoleHelper.Info("", "-------------", "Witnesses", "-------------");
             ConsoleHelper.Info();
             foreach (var witness in tx.Transaction.Witnesses)
@@ -173,7 +173,7 @@ namespace Neo.CLI
                 ConsoleHelper.Info("", "                Size: ", $"{witness.Size} Byte(s)");
                 ConsoleHelper.Info();
             }
-            
+
             ConsoleHelper.Info("", "-------------", "Attributes", "-------------");
             ConsoleHelper.Info();
             if (tx.Transaction.Attributes.Length == 0)
@@ -233,7 +233,7 @@ namespace Neo.CLI
                 }
             }
             ConsoleHelper.Info();
-            
+
             ConsoleHelper.Info("", "-------------", "Groups", "-------------");
             ConsoleHelper.Info();
             if (contract.Manifest.Groups.Length == 0)
@@ -249,7 +249,7 @@ namespace Neo.CLI
                 }
             }
             ConsoleHelper.Info();
-            
+
             ConsoleHelper.Info("", "-------------", "Permissions", "-------------");
             ConsoleHelper.Info();
             foreach (var permission in contract.Manifest.Permissions)
@@ -261,7 +261,7 @@ namespace Neo.CLI
                     ConsoleHelper.Info("", "   Methods: ", $"{string.Join(", ", permission.Methods)}");
                 ConsoleHelper.Info();
             }
-            
+
             ConsoleHelper.Info("", "-------------", "Methods", "-------------");
             ConsoleHelper.Info();
             foreach (var method in contract.Manifest.Abi.Methods)
@@ -273,7 +273,7 @@ namespace Neo.CLI
                 ConsoleHelper.Info("", "  ReturnType: ", $"{method.ReturnType}");
                 ConsoleHelper.Info();
             }
-            
+
             ConsoleHelper.Info("", "-------------", "Script", "-------------");
             ConsoleHelper.Info();
             ConsoleHelper.Info($"  {Convert.ToBase64String(contract.Nef.Script.Span)}");
