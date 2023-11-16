@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Copyright>2016-2023 The Neo Project</Copyright>
     <AssemblyTitle>Neo.GUI</AssemblyTitle>
-    <Version>3.6.0</Version>
+    <Version>3.6.2</Version>
     <Authors>The Neo Project</Authors>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net7.0-windows</TargetFramework>

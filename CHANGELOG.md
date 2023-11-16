@@ -1,5 +1,16 @@
 # Changelog
 All notable changes to this project will be documented in this file.
+
+## [3.6.2]
+
+### Changed
+- ([#893](https://github.com/neo-project/neo-node/pull/893/)) Validate before deploy update
+- ([#904](https://github.com/neo-project/neo-node/pull/904/)) Change Cancel Scope
+- ([#902](https://github.com/neo-project/neo-node/pull/902/)) Update Dockerfile to properly enable multi platform
+
+### Added
+- ([#903](https://github.com/neo-project/neo-node/pull/903/)) add cancel command for conflict attribute
+
 ## [3.6.0]
 
 ### Changed
