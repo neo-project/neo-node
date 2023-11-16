@@ -189,9 +189,25 @@ namespace Neo.CLI
                 {
                     foreach (var attribute in tx.Transaction.Attributes)
                     {
-                        ConsoleHelper.Info("", "           Type: ", $"{attribute.Type}");
-                        ConsoleHelper.Info("", "  AllowMultiple: ", $"{attribute.AllowMultiple}");
-                        ConsoleHelper.Info("", "           Size: ", $"{attribute.Size} Byte(s)");
+                        if (attribute is Conflicts c)
+                        {
+                            ConsoleHelper.Info("", "  Type: ", $"{c.Type}");
+                            ConsoleHelper.Info("", "  Hash: ", $"{c.Hash}");
+                            ConsoleHelper.Info("", "  Size: ", $"{c.Size} Byte(s)");
+                        }
+                        else if (attribute is OracleResponse o)
+                        {
+                            ConsoleHelper.Info("", "    Type: ", $"{o.Type}");
+                            ConsoleHelper.Info("", "      Id: ", $"{o.Id}");
+                            ConsoleHelper.Info("", "    Code: ", $"{o.Code}");
+                            ConsoleHelper.Info("", "  Result: ", $"{Convert.ToBase64String(o.Result.Span)}");
+                            ConsoleHelper.Info("", "    Size: ", $"{o.Size} Byte(s)");
+                        }
+                        else
+                        {
+                            ConsoleHelper.Info("", "  Type: ", $"{attribute.Type}");
+                            ConsoleHelper.Info("", "  Size: ", $"{attribute.Size} Byte(s)");
+                        }
                     }
                 }
                 ConsoleHelper.Info();
