@@ -81,6 +81,7 @@ namespace Neo.CLI
                 ConsoleHelper.Info("", "       PrevHash: ", $"{block.PrevHash}");
                 ConsoleHelper.Info("", "  NextConsensus: ", $"{block.NextConsensus}");
                 ConsoleHelper.Info("", "   PrimaryIndex: ", $"{block.PrimaryIndex}");
+                ConsoleHelper.Info("", "  PrimaryPubKey: ", $"{NativeContract.NEO.GetCommittee(_neoSystem.GetSnapshot())[block.PrimaryIndex]}");
                 ConsoleHelper.Info("", "        Version: ", $"{block.Version}");
                 ConsoleHelper.Info("", "           Size: ", $"{block.Size} Byte(s)");
                 ConsoleHelper.Info();
