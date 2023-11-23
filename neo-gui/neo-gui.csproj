@@ -13,7 +13,12 @@
     <Company>The Neo Project</Company>
     <Product>Neo.GUI</Product>
     <Description>Neo.GUI</Description>
+    <ApplicationIcon>neo.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="neo.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\neo-cli\neo-cli.csproj" />
