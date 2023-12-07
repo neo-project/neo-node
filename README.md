@@ -15,6 +15,12 @@
   </a>    
 </p>
 
+# ARCHIVED
+
+This repository was merged into https://github.com/neo-project/neo, newer (post-3.6) node versions can be obtained from it.
+
+---
+
 Currently, neo-cli and neo-gui are integrated into one repository. You can enter the corresponding folder and follow the instructions to run each node.
 
 ## Prerequisites
