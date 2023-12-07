@@ -17,7 +17,7 @@
 
 # ARCHIVED
 
-This repository was merged into https://github.com/neo-project/neo, newer (post-3.7) node versions can be obtained from it.
+This repository was merged into https://github.com/neo-project/neo, newer (post-3.6) node versions can be obtained from it.
 
 ---
 
