@@ -16,34 +16,33 @@ using Neo.VM;
 using static Neo.Program;
 using static Neo.SmartContract.Helper;
 
-namespace Neo.GUI
+namespace Neo.GUI;
+
+public partial class ElectionDialog : Form
 {
-    public partial class ElectionDialog : Form
+    public ElectionDialog()
     {
-        public ElectionDialog()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
+    }
 
-        public byte[] GetScript()
-        {
-            ECPoint pubkey = (ECPoint)comboBox1.SelectedItem;
-            using ScriptBuilder sb = new ScriptBuilder();
-            sb.EmitDynamicCall(NativeContract.NEO.Hash, "registerValidator", pubkey);
-            return sb.ToArray();
-        }
+    public byte[] GetScript()
+    {
+        ECPoint pubkey = (ECPoint)comboBox1.SelectedItem;
+        using ScriptBuilder sb = new ScriptBuilder();
+        sb.EmitDynamicCall(NativeContract.NEO.Hash, "registerValidator", pubkey);
+        return sb.ToArray();
+    }
 
-        private void ElectionDialog_Load(object sender, EventArgs e)
-        {
-            comboBox1.Items.AddRange(Service.CurrentWallet.GetAccounts().Where(p => !p.WatchOnly && IsSignatureContract(p.Contract.Script)).Select(p => p.GetKey().PublicKey).ToArray());
-        }
+    private void ElectionDialog_Load(object sender, EventArgs e)
+    {
+        comboBox1.Items.AddRange(Service.CurrentWallet.GetAccounts().Where(p => !p.WatchOnly && IsSignatureContract(p.Contract.Script)).Select(p => p.GetKey().PublicKey).ToArray());
+    }
 
-        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+    private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        if (comboBox1.SelectedIndex >= 0)
         {
-            if (comboBox1.SelectedIndex >= 0)
-            {
-                button1.Enabled = true;
-            }
+            button1.Enabled = true;
         }
     }
 }

@@ -11,25 +11,24 @@
 
 using System.ServiceProcess;
 
-namespace Neo.ConsoleService
+namespace Neo.ConsoleService;
+
+internal class ServiceProxy : ServiceBase
 {
-    internal class ServiceProxy : ServiceBase
+    private readonly ConsoleServiceBase _service;
+
+    public ServiceProxy(ConsoleServiceBase service)
     {
-        private readonly ConsoleServiceBase _service;
+        _service = service;
+    }
 
-        public ServiceProxy(ConsoleServiceBase service)
-        {
-            _service = service;
-        }
+    protected override void OnStart(string[] args)
+    {
+        _service.OnStart(args);
+    }
 
-        protected override void OnStart(string[] args)
-        {
-            _service.OnStart(args);
-        }
-
-        protected override void OnStop()
-        {
-            _service.OnStop();
-        }
+    protected override void OnStop()
+    {
+        _service.OnStop();
     }
 }

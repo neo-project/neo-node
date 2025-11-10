@@ -11,14 +11,13 @@
 
 using Neo.CLI;
 
-namespace Neo
+namespace Neo;
+
+static class Program
 {
-    static class Program
+    static void Main(string[] args)
     {
-        static void Main(string[] args)
-        {
-            var mainService = new MainService();
-            mainService.Run(args);
-        }
+        var mainService = new MainService();
+        mainService.Run(args);
     }
 }

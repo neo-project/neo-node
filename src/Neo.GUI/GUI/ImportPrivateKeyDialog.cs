@@ -11,31 +11,30 @@
 
 using System.ComponentModel;
 
-namespace Neo.GUI
+namespace Neo.GUI;
+
+internal partial class ImportPrivateKeyDialog : Form
 {
-    internal partial class ImportPrivateKeyDialog : Form
+    public ImportPrivateKeyDialog()
     {
-        public ImportPrivateKeyDialog()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
+    }
 
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        public string[] WifStrings
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public string[] WifStrings
+    {
+        get
         {
-            get
-            {
-                return textBox1.Lines;
-            }
-            set
-            {
-                textBox1.Lines = value;
-            }
+            return textBox1.Lines;
         }
+        set
+        {
+            textBox1.Lines = value;
+        }
+    }
 
-        private void textBox1_TextChanged(object sender, EventArgs e)
-        {
-            button1.Enabled = textBox1.TextLength > 0;
-        }
+    private void textBox1_TextChanged(object sender, EventArgs e)
+    {
+        button1.Enabled = textBox1.TextLength > 0;
     }
 }

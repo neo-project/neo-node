@@ -11,63 +11,62 @@
 
 using System.ComponentModel;
 
-namespace Neo.GUI
+namespace Neo.GUI;
+
+internal partial class CreateWalletDialog : Form
 {
-    internal partial class CreateWalletDialog : Form
+    public CreateWalletDialog()
     {
-        public CreateWalletDialog()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
+    }
 
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        public string Password
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public string Password
+    {
+        get
         {
-            get
-            {
-                return textBox2.Text;
-            }
-            set
-            {
-                textBox2.Text = value;
-                textBox3.Text = value;
-            }
+            return textBox2.Text;
         }
-
-        [DefaultValue("")]
-        public string WalletPath
+        set
         {
-            get
-            {
-                return textBox1.Text;
-            }
-            set
-            {
-                textBox1.Text = value;
-            }
+            textBox2.Text = value;
+            textBox3.Text = value;
         }
+    }
 
-        private void textBox_TextChanged(object sender, EventArgs e)
+    [DefaultValue("")]
+    public string WalletPath
+    {
+        get
         {
-            if (textBox1.TextLength == 0 || textBox2.TextLength == 0 || textBox3.TextLength == 0)
-            {
-                button2.Enabled = false;
-                return;
-            }
-            if (textBox2.Text != textBox3.Text)
-            {
-                button2.Enabled = false;
-                return;
-            }
-            button2.Enabled = true;
+            return textBox1.Text;
         }
-
-        private void button1_Click(object sender, EventArgs e)
+        set
         {
-            if (saveFileDialog1.ShowDialog() == DialogResult.OK)
-            {
-                textBox1.Text = saveFileDialog1.FileName;
-            }
+            textBox1.Text = value;
+        }
+    }
+
+    private void textBox_TextChanged(object sender, EventArgs e)
+    {
+        if (textBox1.TextLength == 0 || textBox2.TextLength == 0 || textBox3.TextLength == 0)
+        {
+            button2.Enabled = false;
+            return;
+        }
+        if (textBox2.Text != textBox3.Text)
+        {
+            button2.Enabled = false;
+            return;
+        }
+        button2.Enabled = true;
+    }
+
+    private void button1_Click(object sender, EventArgs e)
+    {
+        if (saveFileDialog1.ShowDialog() == DialogResult.OK)
+        {
+            textBox1.Text = saveFileDialog1.FileName;
         }
     }
 }

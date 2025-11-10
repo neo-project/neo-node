@@ -9,17 +9,14 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-using System;
+namespace Neo.CLI;
 
-namespace Neo.CLI
+internal class ParseFunctionAttribute : Attribute
 {
-    internal class ParseFunctionAttribute : Attribute
-    {
-        public string Description { get; }
+    public string Description { get; }
 
-        public ParseFunctionAttribute(string description)
-        {
-            Description = description;
-        }
+    public ParseFunctionAttribute(string description)
+    {
+        Description = description;
     }
 }

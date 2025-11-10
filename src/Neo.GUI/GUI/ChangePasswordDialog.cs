@@ -11,45 +11,44 @@
 
 using System.ComponentModel;
 
-namespace Neo.GUI
+namespace Neo.GUI;
+
+internal partial class ChangePasswordDialog : Form
 {
-    internal partial class ChangePasswordDialog : Form
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public string OldPassword
     {
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        public string OldPassword
+        get
         {
-            get
-            {
-                return textBox1.Text;
-            }
-            set
-            {
-                textBox1.Text = value;
-            }
+            return textBox1.Text;
         }
+        set
+        {
+            textBox1.Text = value;
+        }
+    }
 
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        public string NewPassword
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public string NewPassword
+    {
+        get
         {
-            get
-            {
-                return textBox2.Text;
-            }
-            set
-            {
-                textBox2.Text = value;
-                textBox3.Text = value;
-            }
+            return textBox2.Text;
         }
+        set
+        {
+            textBox2.Text = value;
+            textBox3.Text = value;
+        }
+    }
 
-        public ChangePasswordDialog()
-        {
-            InitializeComponent();
-        }
+    public ChangePasswordDialog()
+    {
+        InitializeComponent();
+    }
 
-        private void textBox_TextChanged(object sender, EventArgs e)
-        {
-            button1.Enabled = textBox1.TextLength > 0 && textBox2.TextLength > 0 && textBox3.Text == textBox2.Text;
-        }
+    private void textBox_TextChanged(object sender, EventArgs e)
+    {
+        button1.Enabled = textBox1.TextLength > 0 && textBox2.TextLength > 0 && textBox3.Text == textBox2.Text;
     }
 }

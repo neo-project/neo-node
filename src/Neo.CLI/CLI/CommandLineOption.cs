@@ -9,30 +9,29 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-namespace Neo.CLI
-{
-    public class CommandLineOptions
-    {
-        public string? Config { get; init; }
-        public string? Wallet { get; init; }
-        public string? Password { get; init; }
-        public string[]? Plugins { get; set; }
-        public string? DBEngine { get; init; }
-        public string? DBPath { get; init; }
-        public LogLevel Verbose { get; init; } = LogLevel.Info;
-        public bool? NoVerify { get; init; }
-        public bool Background { get; init; }
+namespace Neo.CLI;
 
-        /// <summary>
-        /// Check if CommandLineOptions was configured
-        /// </summary>
-        public bool IsValid =>
-                !string.IsNullOrEmpty(Config) ||
-                !string.IsNullOrEmpty(Wallet) ||
-                !string.IsNullOrEmpty(Password) ||
-                !string.IsNullOrEmpty(DBEngine) ||
-                !string.IsNullOrEmpty(DBPath) ||
-                (Plugins?.Length > 0) ||
-                NoVerify is not null;
-    }
+public class CommandLineOptions
+{
+    public string? Config { get; init; }
+    public string? Wallet { get; init; }
+    public string? Password { get; init; }
+    public string[]? Plugins { get; set; }
+    public string? DBEngine { get; init; }
+    public string? DBPath { get; init; }
+    public LogLevel Verbose { get; init; } = LogLevel.Info;
+    public bool? NoVerify { get; init; }
+    public bool Background { get; init; }
+
+    /// <summary>
+    /// Check if CommandLineOptions was configured
+    /// </summary>
+    public bool IsValid =>
+            !string.IsNullOrEmpty(Config) ||
+            !string.IsNullOrEmpty(Wallet) ||
+            !string.IsNullOrEmpty(Password) ||
+            !string.IsNullOrEmpty(DBEngine) ||
+            !string.IsNullOrEmpty(DBPath) ||
+            (Plugins?.Length > 0) ||
+            NoVerify is not null;
 }

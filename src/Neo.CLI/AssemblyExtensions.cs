@@ -9,21 +9,19 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-using System.Linq;
 using System.Reflection;
 
-namespace Neo
+namespace Neo;
+
+/// <summary>
+/// Extension methods
+/// </summary>
+internal static class AssemblyExtensions
 {
-    /// <summary>
-    /// Extension methods
-    /// </summary>
-    internal static class AssemblyExtensions
+    public static string GetVersion(this Assembly assembly)
     {
-        public static string GetVersion(this Assembly assembly)
-        {
-            CustomAttributeData? attribute = assembly.CustomAttributes.FirstOrDefault(p => p.AttributeType == typeof(AssemblyInformationalVersionAttribute));
-            if (attribute == null) return assembly.GetName().Version?.ToString(3) ?? string.Empty;
-            return (string)attribute.ConstructorArguments[0].Value!;
-        }
+        CustomAttributeData? attribute = assembly.CustomAttributes.FirstOrDefault(p => p.AttributeType == typeof(AssemblyInformationalVersionAttribute));
+        if (attribute == null) return assembly.GetName().Version?.ToString(3) ?? string.Empty;
+        return (string)attribute.ConstructorArguments[0].Value!;
     }
 }

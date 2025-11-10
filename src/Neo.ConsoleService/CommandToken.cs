@@ -9,41 +9,40 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-namespace Neo.ConsoleService
+namespace Neo.ConsoleService;
+
+public readonly struct CommandToken(int offset, string value, char quoteChar)
 {
-    public readonly struct CommandToken(int offset, string value, char quoteChar)
-    {
-        public const char NoQuoteChar = '\0';
-        public const char NoEscapedChar = '`';
+    public const char NoQuoteChar = '\0';
+    public const char NoEscapedChar = '`';
 
-        /// <summary>
-        /// The start offset of the token in the command line
-        /// </summary>
-        public readonly int Offset { get; } = offset;
+    /// <summary>
+    /// The start offset of the token in the command line
+    /// </summary>
+    public readonly int Offset { get; } = offset;
 
-        /// <summary>
-        /// The value of the token
-        /// </summary>
-        public readonly string Value { get; } = value;
+    /// <summary>
+    /// The value of the token
+    /// </summary>
+    public readonly string Value { get; } = value;
 
-        /// <summary>
-        /// Whether the token is an indicator. Like --key key.
-        /// </summary>
-        public readonly bool IsIndicator => _quoteChar == NoQuoteChar && Value.StartsWith("--");
+    /// <summary>
+    /// Whether the token is an indicator. Like --key key.
+    /// </summary>
+    public readonly bool IsIndicator => _quoteChar == NoQuoteChar && Value.StartsWith("--");
 
-        /// <summary>
-        /// The quote character of the token. It can be ', " or `.
-        /// </summary>
-        private readonly char _quoteChar = quoteChar;
+    /// <summary>
+    /// The quote character of the token. It can be ', " or `.
+    /// </summary>
+    private readonly char _quoteChar = quoteChar;
 
-        /// <summary>
-        /// The raw value of the token(includes quote character if raw value is quoted)
-        /// </summary>
-        public readonly string RawValue => _quoteChar == NoQuoteChar ? Value : $"{_quoteChar}{Value}{_quoteChar}";
+    /// <summary>
+    /// The raw value of the token(includes quote character if raw value is quoted)
+    /// </summary>
+    public readonly string RawValue => _quoteChar == NoQuoteChar ? Value : $"{_quoteChar}{Value}{_quoteChar}";
 
-        /// <summary>
-        /// Whether the token is  white spaces(includes empty) or not
-        /// </summary>
-        public readonly bool IsWhiteSpace => _quoteChar == NoQuoteChar && string.IsNullOrWhiteSpace(Value);
-    }
+    /// <summary>
+    /// Whether the token is  white spaces(includes empty) or not
+    /// </summary>
+    public readonly bool IsWhiteSpace => _quoteChar == NoQuoteChar && string.IsNullOrWhiteSpace(Value);
 }

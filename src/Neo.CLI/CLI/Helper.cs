@@ -10,33 +10,31 @@
 // modifications are permitted.
 
 using Neo.SmartContract.Manifest;
-using System;
 
-namespace Neo.CLI
+namespace Neo.CLI;
+
+internal static class Helper
 {
-    internal static class Helper
+    public static bool IsYes(this string input)
     {
-        public static bool IsYes(this string input)
+        if (input == null) return false;
+
+        input = input.ToLowerInvariant();
+
+        return input == "yes" || input == "y";
+    }
+
+    public static string ToBase64String(this byte[] input) => Convert.ToBase64String(input);
+
+    public static void IsScriptValid(this ReadOnlyMemory<byte> script, ContractAbi abi)
+    {
+        try
         {
-            if (input == null) return false;
-
-            input = input.ToLowerInvariant();
-
-            return input == "yes" || input == "y";
+            SmartContract.Helper.Check(script.ToArray(), abi);
         }
-
-        public static string ToBase64String(this byte[] input) => Convert.ToBase64String(input);
-
-        public static void IsScriptValid(this ReadOnlyMemory<byte> script, ContractAbi abi)
+        catch (Exception e)
         {
-            try
-            {
-                SmartContract.Helper.Check(script.ToArray(), abi);
-            }
-            catch (Exception e)
-            {
-                throw new FormatException($"Contract script validation failed. The provided script or manifest format is invalid and cannot be processed. Please verify the script bytecode and manifest are correctly formatted and compatible. Original error: {e.Message}", e);
-            }
+            throw new FormatException($"Contract script validation failed. The provided script or manifest format is invalid and cannot be processed. Please verify the script bytecode and manifest are correctly formatted and compatible. Original error: {e.Message}", e);
         }
     }
 }

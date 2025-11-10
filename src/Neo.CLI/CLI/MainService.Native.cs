@@ -11,24 +11,22 @@
 
 using Neo.ConsoleService;
 using Neo.SmartContract.Native;
-using System.Linq;
 
-namespace Neo.CLI
+namespace Neo.CLI;
+
+partial class MainService
 {
-    partial class MainService
+    /// <summary>
+    /// Process "list nativecontract" command
+    /// </summary>
+    [ConsoleCommand("list nativecontract", Category = "Native Contract")]
+    private void OnListNativeContract()
     {
-        /// <summary>
-        /// Process "list nativecontract" command
-        /// </summary>
-        [ConsoleCommand("list nativecontract", Category = "Native Contract")]
-        private void OnListNativeContract()
+        var currentIndex = NativeContract.Ledger.CurrentIndex(NeoSystem.StoreView);
+        NativeContract.Contracts.ToList().ForEach(contract =>
         {
-            var currentIndex = NativeContract.Ledger.CurrentIndex(NeoSystem.StoreView);
-            NativeContract.Contracts.ToList().ForEach(contract =>
-            {
-                var active = contract.IsActive(NeoSystem.Settings, currentIndex) ? "" : " not active yet";
-                ConsoleHelper.Info($"\t{contract.Name,-20}", $"{contract.Hash}{active}");
-            });
-        }
+            var active = contract.IsActive(NeoSystem.Settings, currentIndex) ? "" : " not active yet";
+            ConsoleHelper.Info($"\t{contract.Name,-20}", $"{contract.Hash}{active}");
+        });
     }
 }

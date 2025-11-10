@@ -15,85 +15,84 @@ using System.CommandLine.Invocation;
 using System.CommandLine.NamingConventionBinder;
 using System.Reflection;
 
-namespace Neo.CLI
+namespace Neo.CLI;
+
+public partial class MainService
 {
-    public partial class MainService
+    public int OnStartWithCommandLine(string[] args)
     {
-        public int OnStartWithCommandLine(string[] args)
+        var rootCommand = new RootCommand(Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()!.Title)
         {
-            var rootCommand = new RootCommand(Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()!.Title)
-            {
-                new Option<string>(["-c", "--config","/config"], "Specifies the config file."),
-                new Option<string>(["-w", "--wallet","/wallet"], "The path of the neo3 wallet [*.json]."),
-                new Option<string>(["-p", "--password" ,"/password"], "Password to decrypt the wallet, either from the command line or config file."),
-                new Option<bool>(["--background","/background"], "Run the service in background."),
-                new Option<string>(["--db-engine","/db-engine"], "Specify the db engine."),
-                new Option<string>(["--db-path","/db-path"], "Specify the db path."),
-                new Option<string>(["--noverify","/noverify"], "Indicates whether the blocks need to be verified when importing."),
-                new Option<string[]>(["--plugins","/plugins"], "The list of plugins, if not present, will be installed [plugin1 plugin2]."),
-                new Option<LogLevel>(["--verbose","/verbose"], "The verbose log level, if not present, will be info."),
-            };
+            new Option<string>(["-c", "--config","/config"], "Specifies the config file."),
+            new Option<string>(["-w", "--wallet","/wallet"], "The path of the neo3 wallet [*.json]."),
+            new Option<string>(["-p", "--password" ,"/password"], "Password to decrypt the wallet, either from the command line or config file."),
+            new Option<bool>(["--background","/background"], "Run the service in background."),
+            new Option<string>(["--db-engine","/db-engine"], "Specify the db engine."),
+            new Option<string>(["--db-path","/db-path"], "Specify the db path."),
+            new Option<string>(["--noverify","/noverify"], "Indicates whether the blocks need to be verified when importing."),
+            new Option<string[]>(["--plugins","/plugins"], "The list of plugins, if not present, will be installed [plugin1 plugin2]."),
+            new Option<LogLevel>(["--verbose","/verbose"], "The verbose log level, if not present, will be info."),
+        };
 
-            rootCommand.Handler = CommandHandler.Create<RootCommand, CommandLineOptions, InvocationContext>(Handle);
-            return rootCommand.Invoke(args);
+        rootCommand.Handler = CommandHandler.Create<RootCommand, CommandLineOptions, InvocationContext>(Handle);
+        return rootCommand.Invoke(args);
+    }
+
+    private void Handle(RootCommand command, CommandLineOptions options, InvocationContext context)
+    {
+        IsBackground = options.Background;
+        Start(options);
+    }
+
+    private static void CustomProtocolSettings(CommandLineOptions options, ProtocolSettings settings)
+    {
+        var tempSetting = settings;
+        // if specified config, then load the config and check the network
+        if (!string.IsNullOrEmpty(options.Config))
+        {
+            tempSetting = ProtocolSettings.Load(options.Config);
         }
 
-        private void Handle(RootCommand command, CommandLineOptions options, InvocationContext context)
+        var customSetting = new ProtocolSettings
         {
-            IsBackground = options.Background;
-            Start(options);
-        }
+            Network = tempSetting.Network,
+            AddressVersion = tempSetting.AddressVersion,
+            StandbyCommittee = tempSetting.StandbyCommittee,
+            ValidatorsCount = tempSetting.ValidatorsCount,
+            SeedList = tempSetting.SeedList,
+            MillisecondsPerBlock = tempSetting.MillisecondsPerBlock,
+            MaxTransactionsPerBlock = tempSetting.MaxTransactionsPerBlock,
+            MemoryPoolMaxTransactions = tempSetting.MemoryPoolMaxTransactions,
+            MaxTraceableBlocks = tempSetting.MaxTraceableBlocks,
+            MaxValidUntilBlockIncrement = tempSetting.MaxValidUntilBlockIncrement,
+            InitialGasDistribution = tempSetting.InitialGasDistribution,
+            Hardforks = tempSetting.Hardforks
+        };
 
-        private static void CustomProtocolSettings(CommandLineOptions options, ProtocolSettings settings)
+        if (!string.IsNullOrEmpty(options.Config)) ProtocolSettings.Custom = customSetting;
+    }
+
+    private static void CustomApplicationSettings(CommandLineOptions options, Settings settings)
+    {
+        var tempSetting = string.IsNullOrEmpty(options.Config)
+            ? settings
+            : new Settings(new ConfigurationBuilder().AddJsonFile(options.Config, optional: true).Build().GetSection("ApplicationConfiguration"));
+        var customSetting = new Settings
         {
-            var tempSetting = settings;
-            // if specified config, then load the config and check the network
-            if (!string.IsNullOrEmpty(options.Config))
+            Logger = tempSetting.Logger,
+            Storage = new StorageSettings
             {
-                tempSetting = ProtocolSettings.Load(options.Config);
-            }
-
-            var customSetting = new ProtocolSettings
+                Engine = options.DBEngine ?? tempSetting.Storage.Engine,
+                Path = options.DBPath ?? tempSetting.Storage.Path
+            },
+            P2P = tempSetting.P2P,
+            UnlockWallet = new UnlockWalletSettings
             {
-                Network = tempSetting.Network,
-                AddressVersion = tempSetting.AddressVersion,
-                StandbyCommittee = tempSetting.StandbyCommittee,
-                ValidatorsCount = tempSetting.ValidatorsCount,
-                SeedList = tempSetting.SeedList,
-                MillisecondsPerBlock = tempSetting.MillisecondsPerBlock,
-                MaxTransactionsPerBlock = tempSetting.MaxTransactionsPerBlock,
-                MemoryPoolMaxTransactions = tempSetting.MemoryPoolMaxTransactions,
-                MaxTraceableBlocks = tempSetting.MaxTraceableBlocks,
-                MaxValidUntilBlockIncrement = tempSetting.MaxValidUntilBlockIncrement,
-                InitialGasDistribution = tempSetting.InitialGasDistribution,
-                Hardforks = tempSetting.Hardforks
-            };
-
-            if (!string.IsNullOrEmpty(options.Config)) ProtocolSettings.Custom = customSetting;
-        }
-
-        private static void CustomApplicationSettings(CommandLineOptions options, Settings settings)
-        {
-            var tempSetting = string.IsNullOrEmpty(options.Config)
-                ? settings
-                : new Settings(new ConfigurationBuilder().AddJsonFile(options.Config, optional: true).Build().GetSection("ApplicationConfiguration"));
-            var customSetting = new Settings
-            {
-                Logger = tempSetting.Logger,
-                Storage = new StorageSettings
-                {
-                    Engine = options.DBEngine ?? tempSetting.Storage.Engine,
-                    Path = options.DBPath ?? tempSetting.Storage.Path
-                },
-                P2P = tempSetting.P2P,
-                UnlockWallet = new UnlockWalletSettings
-                {
-                    Path = options.Wallet ?? tempSetting.UnlockWallet.Path,
-                    Password = options.Password ?? tempSetting.UnlockWallet.Password
-                },
-                Contracts = tempSetting.Contracts
-            };
-            if (options.IsValid) Settings.Custom = customSetting;
-        }
+                Path = options.Wallet ?? tempSetting.UnlockWallet.Path,
+                Password = options.Password ?? tempSetting.UnlockWallet.Password
+            },
+            Contracts = tempSetting.Contracts
+        };
+        if (options.IsValid) Settings.Custom = customSetting;
     }
 }

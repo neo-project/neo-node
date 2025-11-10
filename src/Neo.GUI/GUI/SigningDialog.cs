@@ -16,90 +16,89 @@ using Neo.Wallets;
 using System.Text;
 using static Neo.Program;
 
-namespace Neo.GUI
+namespace Neo.GUI;
+
+internal partial class SigningDialog : Form
 {
-    internal partial class SigningDialog : Form
+    private class WalletEntry
     {
-        private class WalletEntry
-        {
-            public WalletAccount Account;
+        public WalletAccount Account;
 
-            public override string ToString()
+        public override string ToString()
+        {
+            if (!string.IsNullOrEmpty(Account.Label))
             {
-                if (!string.IsNullOrEmpty(Account.Label))
-                {
-                    return $"[{Account.Label}] " + Account.Address;
-                }
-                return Account.Address;
+                return $"[{Account.Label}] " + Account.Address;
             }
+            return Account.Address;
+        }
+    }
+
+
+    public SigningDialog()
+    {
+        InitializeComponent();
+
+        cmbFormat.SelectedIndex = 0;
+        cmbAddress.Items.AddRange(Service.CurrentWallet.GetAccounts()
+            .Where(u => u.HasKey)
+            .Select(u => new WalletEntry() { Account = u })
+            .ToArray());
+
+        if (cmbAddress.Items.Count > 0)
+        {
+            cmbAddress.SelectedIndex = 0;
+        }
+        else
+        {
+            textBox2.Enabled = false;
+            button1.Enabled = false;
+        }
+    }
+
+    private void button1_Click(object sender, EventArgs e)
+    {
+        if (textBox1.Text == "")
+        {
+            MessageBox.Show(Strings.SigningFailedNoDataMessage);
+            return;
         }
 
-
-        public SigningDialog()
+        byte[] raw, signedData;
+        try
         {
-            InitializeComponent();
-
-            cmbFormat.SelectedIndex = 0;
-            cmbAddress.Items.AddRange(Service.CurrentWallet.GetAccounts()
-                .Where(u => u.HasKey)
-                .Select(u => new WalletEntry() { Account = u })
-                .ToArray());
-
-            if (cmbAddress.Items.Count > 0)
+            switch (cmbFormat.SelectedIndex)
             {
-                cmbAddress.SelectedIndex = 0;
-            }
-            else
-            {
-                textBox2.Enabled = false;
-                button1.Enabled = false;
+                case 0: raw = Encoding.UTF8.GetBytes(textBox1.Text); break;
+                case 1: raw = textBox1.Text.HexToBytes(); break;
+                default: return;
             }
         }
-
-        private void button1_Click(object sender, EventArgs e)
+        catch (Exception err)
         {
-            if (textBox1.Text == "")
-            {
-                MessageBox.Show(Strings.SigningFailedNoDataMessage);
-                return;
-            }
-
-            byte[] raw, signedData;
-            try
-            {
-                switch (cmbFormat.SelectedIndex)
-                {
-                    case 0: raw = Encoding.UTF8.GetBytes(textBox1.Text); break;
-                    case 1: raw = textBox1.Text.HexToBytes(); break;
-                    default: return;
-                }
-            }
-            catch (Exception err)
-            {
-                MessageBox.Show(err.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            var account = (WalletEntry)cmbAddress.SelectedItem;
-            var keys = account.Account.GetKey();
-
-            try
-            {
-                signedData = Crypto.Sign(raw, keys.PrivateKey);
-            }
-            catch (Exception err)
-            {
-                MessageBox.Show(err.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            textBox2.Text = signedData?.ToHexString();
+            MessageBox.Show(err.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
         }
 
-        private void button2_Click(object sender, EventArgs e)
+        var account = (WalletEntry)cmbAddress.SelectedItem;
+        var keys = account.Account.GetKey();
+
+        try
         {
-            textBox2.SelectAll();
-            textBox2.Copy();
+            signedData = Crypto.Sign(raw, keys.PrivateKey);
         }
+        catch (Exception err)
+        {
+            MessageBox.Show(err.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        textBox2.Text = signedData?.ToHexString();
+    }
+
+    private void button2_Click(object sender, EventArgs e)
+    {
+        textBox2.SelectAll();
+        textBox2.Copy();
     }
 }
