@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<ItemGroup>
+		<PackageReference Include="Neo.ConsoleService" Version="1.2.0" ExcludeAssets="runtime" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\MPTTrie\MPTTrie.csproj" />
+		<ProjectReference Include="..\RpcServer\RpcServer.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="StateService.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="$(PackageId).Tests" />
+	</ItemGroup>
+
+</Project>

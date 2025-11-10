@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup>
+    <Copyright>2015-2025 The Neo Project</Copyright>
+    <Authors>The Neo Project</Authors>
+    <PackageId>Neo.Plugins.$(MSBuildProjectName)</PackageId>
+    <PackageProjectUrl>https://github.com/neo-project/neo-modules</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/neo-project/neo-modules.git</RepositoryUrl>
+    <PackageTags>NEO;Blockchain</PackageTags>
+    <VersionPrefix>3.9.0</VersionPrefix>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>$(PackageId)</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Neo" Version="3.8.1-CI01971" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="config.json" Condition="Exists('config.json')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

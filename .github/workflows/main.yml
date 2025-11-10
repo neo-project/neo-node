@@ -3,10 +3,9 @@ name: .NET Core Test
 on: pull_request
 
 env:
-  DOTNET_VERSION: 7.0.x
+  DOTNET_VERSION: 10.0.x
 
 jobs:
-
   Test:
     strategy:
       matrix:
@@ -14,9 +13,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v5
     - name: Setup .NET Core
-      uses: actions/setup-dotnet@v1
+      uses: actions/setup-dotnet@v5
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
     - name: Check format
@@ -25,7 +24,7 @@ jobs:
     - name: Build CLI
       if: runner.os == 'Linux'
       run: |
-        dotnet publish -o ./out -c Release neo-cli
+        dotnet publish -o ./out -c Release src/Neo.CLI
         find ./out -name 'config.json' | xargs perl -pi -e 's|LevelDBStore|MemoryStore|g'
     - name: Install dependencies
       if: runner.os == 'Linux'
@@ -37,10 +36,11 @@ jobs:
       if: runner.os == 'Windows'
       run: |
         forfiles /p tests /m *.csproj /s /c "cmd /c dotnet add @PATH package coverlet.msbuild"
-        dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:CoverletOutput=${GITHUB_WORKSPACE}/coverage/lcov
+        dotnet test /p:CollectCoverage=true /p:CoverletOutput='${{ github.workspace }}/TestResults/coverage/' /p:MergeWith='${{ github.workspace }}/TestResults/coverage/coverage.json' /p:CoverletOutputFormat=lcov%2cjson -m:1
     - name: Coveralls
       if: runner.os == 'Windows'
-      uses: coverallsapp/github-action@master
+      uses: coverallsapp/github-action@v2
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
-        path-to-lcov: \coverage\lcov.info
+        format: lcov
+        file: ${{ github.workspace }}/TestResults/coverage/coverage.info

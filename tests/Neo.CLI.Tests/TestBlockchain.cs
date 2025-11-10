@@ -1,0 +1,70 @@
+// Copyright (C) 2015-2025 The Neo Project.
+//
+// TestBlockchain.cs file belongs to the neo project and is free
+// software distributed under the MIT software license, see the
+// accompanying file LICENSE in the main directory of the
+// repository or http://www.opensource.org/licenses/mit-license.php
+// for more details.
+//
+// Redistribution and use in source and binary forms with or without
+// modifications are permitted.
+
+#nullable enable
+
+using Akka.Actor;
+using Neo.Ledger;
+using Neo.Persistence;
+using Neo.Persistence.Providers;
+using System.Reflection;
+
+namespace Neo.CLI.Tests;
+
+public static class TestBlockchain
+{
+    private class TestStoreProvider : IStoreProvider
+    {
+        public readonly Dictionary<string, MemoryStore> Stores = [];
+
+        public string Name => "TestProvider";
+
+        public IStore GetStore(string? path)
+        {
+            path ??= "";
+
+            lock (Stores)
+            {
+                if (Stores.TryGetValue(path, out var store))
+                    return store;
+
+                return Stores[path] = new MemoryStore();
+            }
+        }
+    }
+
+    public class TestNeoSystem(ProtocolSettings settings) : NeoSystem(settings, new TestStoreProvider())
+    {
+        public void ResetStore()
+        {
+            if (StorageProvider is TestStoreProvider testStore)
+            {
+                var reset = typeof(MemoryStore).GetMethod("Reset", BindingFlags.NonPublic | BindingFlags.Instance)!;
+                foreach (var store in testStore.Stores)
+                    reset.Invoke(store.Value, null);
+            }
+            object initialize = Activator.CreateInstance(typeof(Blockchain).GetNestedType("Initialize", BindingFlags.NonPublic)!)!;
+            Blockchain.Ask(initialize).ConfigureAwait(false).GetAwaiter().GetResult();
+        }
+
+        public StoreCache GetTestSnapshotCache(bool reset = true)
+        {
+            if (reset)
+                ResetStore();
+            return GetSnapshotCache();
+        }
+    }
+
+    public static readonly UInt160[]? DefaultExtensibleWitnessWhiteList;
+
+    public static TestNeoSystem GetSystem() => new(TestProtocolSettings.Default);
+    public static StoreCache GetTestSnapshotCache() => GetSystem().GetSnapshotCache();
+}
