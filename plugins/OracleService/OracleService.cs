@@ -404,8 +404,8 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
             Nonce = unchecked((uint)response.Id),
             ValidUntilBlock = validUntilBlock,
             Signers = [
-                new(){ Account = NativeContract.Oracle.Hash, Scopes = WitnessScope.None },
-                new(){ Account = oracleSignContract.ScriptHash, Scopes = WitnessScope.None },
+                new() { Account = NativeContract.Oracle.Hash, Scopes = WitnessScope.None },
+                new() { Account = oracleSignContract.ScriptHash, Scopes = WitnessScope.None }
             ],
             Attributes = [response],
             Script = OracleResponse.FixedScript,
