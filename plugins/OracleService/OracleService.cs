@@ -435,7 +435,8 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
         if (engine.Execute() != VMState.HALT) return null;
         tx.NetworkFee += engine.FeeConsumed;
 
-        var executionFactor = NativeContract.Policy.GetExecFeeFactor(snapshot);
+        var feePerByte = NativeContract.Policy.GetFeePerByte(engine.SnapshotCache);
+        var executionFactor = NativeContract.Policy.GetExecFeeFactor(engine);
         var networkFee = executionFactor * SmartContract.Helper.MultiSignatureContractCost(m, n);
         tx.NetworkFee += networkFee;
 
@@ -446,7 +447,6 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
             + hashes.Length.GetVarSize() + witnessDict[NativeContract.Oracle.Hash].Size
             + sizeInv.GetVarSize() + sizeInv + oracleSignContract.Script.GetVarSize();
 
-        var feePerByte = NativeContract.Policy.GetFeePerByte(snapshot);
         if (response.Result.Length > OracleResponse.MaxResultSize)
         {
             response.Code = OracleResponseCode.ResponseTooLarge;
