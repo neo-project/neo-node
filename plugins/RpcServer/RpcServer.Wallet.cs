@@ -371,13 +371,7 @@ partial class RpcServer
         if (!transContext.Completed) return transContext.ToJson();
 
         tx.Witnesses = transContext.GetWitnesses();
-        if (tx.Size > 1024)
-        {
-            long calFee = tx.Size * NativeContract.Policy.GetFeePerByte(snapshot) + 100000;
-            if (tx.NetworkFee < calFee)
-                tx.NetworkFee = calFee;
-        }
-        (tx.NetworkFee <= settings.MaxFee).True_Or(RpcError.WalletFeeLimit);
+        EnsureNetworkFee(snapshot, tx);
         return SignAndRelay(snapshot, tx);
     }
 
@@ -488,13 +482,7 @@ partial class RpcServer
         if (!transContext.Completed) return transContext.ToJson();
 
         tx.Witnesses = transContext.GetWitnesses();
-        if (tx.Size > 1024)
-        {
-            long calFee = tx.Size * NativeContract.Policy.GetFeePerByte(snapshot) + 100000;
-            if (tx.NetworkFee < calFee)
-                tx.NetworkFee = calFee;
-        }
-        (tx.NetworkFee <= settings.MaxFee).True_Or(RpcError.WalletFeeLimit);
+        EnsureNetworkFee(snapshot, tx);
         return SignAndRelay(snapshot, tx);
     }
 
@@ -551,14 +539,21 @@ partial class RpcServer
             return transContext.ToJson();
 
         tx.Witnesses = transContext.GetWitnesses();
+        EnsureNetworkFee(snapshot, tx);
+        return SignAndRelay(snapshot, tx);
+    }
+
+    private void EnsureNetworkFee(StoreCache snapshot, Transaction tx)
+    {
         if (tx.Size > 1024)
         {
-            long calFee = tx.Size * NativeContract.Policy.GetFeePerByte(snapshot) + 100000;
+            var calFee = tx.Size *
+                NativeContract.Policy.GetFeePerByte(snapshot) + 100000;
+
             if (tx.NetworkFee < calFee)
                 tx.NetworkFee = calFee;
         }
         (tx.NetworkFee <= settings.MaxFee).True_Or(RpcError.WalletFeeLimit);
-        return SignAndRelay(snapshot, tx);
     }
 
     /// <summary>
