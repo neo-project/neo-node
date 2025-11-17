@@ -141,6 +141,7 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
 
         this.wallet = wallet;
         protocols["https"] = new OracleHttpsProtocol();
+        protocols["dns"] = new OracleDnsProtocol();
         protocols["neofs"] = new OracleNeoFSProtocol(wallet, oracles);
         status = OracleStatus.Running;
         timer = new Timer(OnTimer, null, RefreshIntervalMilliSeconds, Timeout.Infinite);
