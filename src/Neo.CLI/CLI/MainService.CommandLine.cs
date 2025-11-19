@@ -11,8 +11,6 @@
 
 using Microsoft.Extensions.Configuration;
 using System.CommandLine;
-using System.CommandLine.Invocation;
-using System.CommandLine.NamingConventionBinder;
 using System.Reflection;
 
 namespace Neo.CLI;
@@ -21,24 +19,37 @@ public partial class MainService
 {
     public int OnStartWithCommandLine(string[] args)
     {
-        var rootCommand = new RootCommand(Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()!.Title)
+        var optionsMap = typeof(CommandLineOptions).GetProperties(BindingFlags.Instance | BindingFlags.Public)
+            .Select(p => new
+            {
+                Property = p,
+                Attribute = p.GetCustomAttribute<OptionAttribute>()
+            })
+            .Where(p => p.Attribute != null)
+            .Select(p =>
+            {
+                var type = typeof(Option<>).MakeGenericType(p.Property.PropertyType);
+                var option = (Option)Activator.CreateInstance(type, [p.Attribute!.Name, p.Attribute.Aliases])!;
+                option.Description = p.Attribute.Description;
+                return (p.Property, Option: option);
+            })
+            .ToList();
+        var rootCommand = new RootCommand(Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()!.Title);
+        foreach (var (_, option) in optionsMap)
+            rootCommand.Add(option);
+        var result = rootCommand.Parse(args);
+        var options = new CommandLineOptions();
+        foreach (var (property, option) in optionsMap)
         {
-            new Option<string>(["-c", "--config","/config"], "Specifies the config file."),
-            new Option<string>(["-w", "--wallet","/wallet"], "The path of the neo3 wallet [*.json]."),
-            new Option<string>(["-p", "--password" ,"/password"], "Password to decrypt the wallet, either from the command line or config file."),
-            new Option<bool>(["--background","/background"], "Run the service in background."),
-            new Option<string>(["--db-engine","/db-engine"], "Specify the db engine."),
-            new Option<string>(["--db-path","/db-path"], "Specify the db path."),
-            new Option<string>(["--noverify","/noverify"], "Indicates whether the blocks need to be verified when importing."),
-            new Option<string[]>(["--plugins","/plugins"], "The list of plugins, if not present, will be installed [plugin1 plugin2]."),
-            new Option<LogLevel>(["--verbose","/verbose"], "The verbose log level, if not present, will be info."),
-        };
-
-        rootCommand.Handler = CommandHandler.Create<RootCommand, CommandLineOptions, InvocationContext>(Handle);
-        return rootCommand.Invoke(args);
+            var getValueMethod = typeof(ParseResult).GetMethod(nameof(ParseResult.GetValue), 1, [typeof(Option<>).MakeGenericType(Type.MakeGenericMethodParameter(0))])!;
+            object? value = getValueMethod.Invoke(result, [option]);
+            property.SetValue(options, value);
+        }
+        Handle(options);
+        return 0;
     }
 
-    private void Handle(RootCommand command, CommandLineOptions options, InvocationContext context)
+    private void Handle(CommandLineOptions options)
     {
         IsBackground = options.Background;
         Start(options);
@@ -46,30 +57,11 @@ public partial class MainService
 
     private static void CustomProtocolSettings(CommandLineOptions options, ProtocolSettings settings)
     {
-        var tempSetting = settings;
         // if specified config, then load the config and check the network
         if (!string.IsNullOrEmpty(options.Config))
         {
-            tempSetting = ProtocolSettings.Load(options.Config);
+            ProtocolSettings.Custom = ProtocolSettings.Load(options.Config);
         }
-
-        var customSetting = new ProtocolSettings
-        {
-            Network = tempSetting.Network,
-            AddressVersion = tempSetting.AddressVersion,
-            StandbyCommittee = tempSetting.StandbyCommittee,
-            ValidatorsCount = tempSetting.ValidatorsCount,
-            SeedList = tempSetting.SeedList,
-            MillisecondsPerBlock = tempSetting.MillisecondsPerBlock,
-            MaxTransactionsPerBlock = tempSetting.MaxTransactionsPerBlock,
-            MemoryPoolMaxTransactions = tempSetting.MemoryPoolMaxTransactions,
-            MaxTraceableBlocks = tempSetting.MaxTraceableBlocks,
-            MaxValidUntilBlockIncrement = tempSetting.MaxValidUntilBlockIncrement,
-            InitialGasDistribution = tempSetting.InitialGasDistribution,
-            Hardforks = tempSetting.Hardforks
-        };
-
-        if (!string.IsNullOrEmpty(options.Config)) ProtocolSettings.Custom = customSetting;
     }
 
     private static void CustomApplicationSettings(CommandLineOptions options, Settings settings)

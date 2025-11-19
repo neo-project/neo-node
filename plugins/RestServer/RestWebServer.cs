@@ -28,7 +28,7 @@ using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Neo.Cryptography.ECC;
 using Neo.Network.P2P.Payloads.Conditions;
 using Neo.Plugins.RestServer.Binder;
@@ -297,19 +297,9 @@ internal class RestWebServer
                                 Scheme = "basic",
                                 Description = "Input your username and password to access this API.",
                             });
-                            options.AddSecurityRequirement(new OpenApiSecurityRequirement()
+                            options.AddSecurityRequirement(document => new OpenApiSecurityRequirement()
                             {
-                                {
-                                    new OpenApiSecurityScheme()
-                                    {
-                                        Reference = new OpenApiReference()
-                                        {
-                                            Type = ReferenceType.SecurityScheme,
-                                            Id = "basicAuth",
-                                        },
-                                    },
-                                    new List<string>()
-                                }
+                                [new OpenApiSecuritySchemeReference("basicAuth", document)] = []
                             });
                         }
 
@@ -348,32 +338,32 @@ internal class RestWebServer
                         });
                         options.MapType<UInt256>(() => new OpenApiSchema()
                         {
-                            Type = "string",
+                            Type = JsonSchemaType.String,
                             Format = "hash256",
                         });
                         options.MapType<UInt160>(() => new OpenApiSchema()
                         {
-                            Type = "string",
+                            Type = JsonSchemaType.String,
                             Format = "hash160",
                         });
                         options.MapType<ECPoint>(() => new OpenApiSchema()
                         {
-                            Type = "string",
+                            Type = JsonSchemaType.String,
                             Format = "hexstring",
                         });
                         options.MapType<BigInteger>(() => new OpenApiSchema()
                         {
-                            Type = "integer",
+                            Type = JsonSchemaType.Integer,
                             Format = "bigint",
                         });
                         options.MapType<byte[]>(() => new OpenApiSchema()
                         {
-                            Type = "string",
+                            Type = JsonSchemaType.String,
                             Format = "base64",
                         });
                         options.MapType<ReadOnlyMemory<byte>>(() => new OpenApiSchema()
                         {
-                            Type = "string",
+                            Type = JsonSchemaType.String,
                             Format = "base64",
                         });
                         foreach (var plugin in Plugin.Plugins)

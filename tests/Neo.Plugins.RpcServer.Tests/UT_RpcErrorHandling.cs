@@ -10,7 +10,7 @@
 // modifications are permitted.
 
 using Microsoft.AspNetCore.Http;
-using Neo.Extensions;
+using Neo.Extensions.IO;
 using Neo.Json;
 using Neo.Persistence.Providers;
 using Neo.SmartContract;

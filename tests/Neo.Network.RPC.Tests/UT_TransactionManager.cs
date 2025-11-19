@@ -13,6 +13,7 @@ using Moq;
 using Neo.Cryptography;
 using Neo.Cryptography.ECC;
 using Neo.Extensions;
+using Neo.Extensions.SmartContract;
 using Neo.Json;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;

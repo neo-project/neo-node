@@ -13,6 +13,7 @@ using Akka.Actor;
 using Neo.ConsoleService;
 using Neo.Cryptography.MPTTrie;
 using Neo.Extensions;
+using Neo.Extensions.IO;
 using Neo.IEventHandlers;
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
@@ -85,13 +86,16 @@ public class StatePlugin : Plugin, ICommittingHandler, ICommittedHandler, IWalle
         Start(wallet);
     }
 
-    public override void Dispose()
+    protected override void Dispose(bool disposing)
     {
-        base.Dispose();
-        Committing -= ((ICommittingHandler)this).Blockchain_Committing_Handler;
-        Committed -= ((ICommittedHandler)this).Blockchain_Committed_Handler;
-        if (Store is not null) _system.EnsureStopped(Store);
-        if (Verifier is not null) _system.EnsureStopped(Verifier);
+        if (disposing)
+        {
+            Committing -= ((ICommittingHandler)this).Blockchain_Committing_Handler;
+            Committed -= ((ICommittedHandler)this).Blockchain_Committed_Handler;
+            if (Store is not null) _system.EnsureStopped(Store);
+            if (Verifier is not null) _system.EnsureStopped(Verifier);
+        }
+        base.Dispose(disposing);
     }
 
     void ICommittingHandler.Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
