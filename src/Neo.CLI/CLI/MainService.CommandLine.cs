@@ -17,6 +17,8 @@ namespace Neo.CLI;
 
 public partial class MainService
 {
+    private readonly static MethodInfo ParseResultGetValue = typeof(ParseResult).GetMethod(nameof(ParseResult.GetValue), 1, [typeof(Option<>).MakeGenericType(Type.MakeGenericMethodParameter(0))])!;
+
     public int OnStartWithCommandLine(string[] args)
     {
         var optionsMap = typeof(CommandLineOptions).GetProperties(BindingFlags.Instance | BindingFlags.Public)
@@ -41,7 +43,7 @@ public partial class MainService
         var options = new CommandLineOptions();
         foreach (var (property, option) in optionsMap)
         {
-            var getValueMethod = typeof(ParseResult).GetMethod(nameof(ParseResult.GetValue), 1, [typeof(Option<>).MakeGenericType(Type.MakeGenericMethodParameter(0))])!;
+            var getValueMethod = ParseResultGetValue.MakeGenericMethod(property.PropertyType);
             object? value = getValueMethod.Invoke(result, [option]);
             property.SetValue(options, value);
         }
