@@ -201,8 +201,11 @@ class OracleDnsProtocol : IOracleProtocol
             .ToArray();
 
         CertificateResult certificate = null;
-        if (wantsCertificate && TryBuildCertificate(dohResponse.Answer, out certificate))
+        bool certificateOversized = false;
+        if (wantsCertificate && TryBuildCertificate(dohResponse.Answer, out certificate, out certificateOversized))
             Utility.Log(nameof(OracleDnsProtocol), LogLevel.Debug, $"Certificate extracted for {queryName}");
+        if (certificateOversized)
+            return (OracleResponseCode.ResponseTooLarge, null);
 
         ResultEnvelope envelope = new()
         {
@@ -349,16 +352,20 @@ class OracleDnsProtocol : IOracleProtocol
             || format.Equals("cert", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool TryBuildCertificate(IEnumerable<DohAnswer> answers, out CertificateResult certificate)
+    private static bool TryBuildCertificate(IEnumerable<DohAnswer> answers, out CertificateResult certificate, out bool oversized)
     {
         certificate = null;
+        oversized = false;
         foreach (var answer in answers)
         {
             if (!CanContainCertificate(answer))
                 continue;
 
-            if (!TryExtractCertificateBytes(answer.Data, out byte[] raw))
+            if (!TryExtractCertificateBytes(answer.Data, out byte[] raw, out bool candidateOversized))
+            {
+                oversized |= candidateOversized;
                 continue;
+            }
 
             try
             {
@@ -377,6 +384,7 @@ class OracleDnsProtocol : IOracleProtocol
             }
             catch
             {
+                oversized |= candidateOversized;
                 // Skip invalid certificate payloads
             }
         }
@@ -433,9 +441,10 @@ class OracleDnsProtocol : IOracleProtocol
         return answer.Type == RecordTypeLookup["CERT"] || answer.Type == RecordTypeLookup["TXT"];
     }
 
-    private static bool TryExtractCertificateBytes(string payload, out byte[] raw)
+    private static bool TryExtractCertificateBytes(string payload, out byte[] raw, out bool oversized)
     {
         raw = null;
+        oversized = false;
         if (string.IsNullOrWhiteSpace(payload))
             return false;
 
@@ -444,28 +453,51 @@ class OracleDnsProtocol : IOracleProtocol
         if (lastSpace > 0)
         {
             string tail = cleaned[(lastSpace + 1)..];
-            if (TryDecodeBase64(tail, out raw))
+            if (TryDecodeBase64Safe(tail, out raw, out oversized))
                 return true;
+            if (oversized)
+                return false;
         }
 
         string normalized = cleaned.Replace("\"", string.Empty, StringComparison.Ordinal)
                                    .Replace(" ", string.Empty, StringComparison.Ordinal);
-        return TryDecodeBase64(normalized, out raw);
+        return TryDecodeBase64Safe(normalized, out raw, out oversized);
     }
 
-    private static bool TryDecodeBase64(string input, out byte[] data)
+    private static bool TryDecodeBase64Safe(string input, out byte[] data, out bool oversized)
     {
         data = null;
+        oversized = false;
         if (string.IsNullOrWhiteSpace(input))
             return false;
+        if (ExceedsMaxCertificateSize(input))
+        {
+            oversized = true;
+            return false;
+        }
         try
         {
             data = Convert.FromBase64String(input);
+            if (data.Length > OracleResponse.MaxResultSize)
+            {
+                oversized = true;
+                data = null;
+                return false;
+            }
             return data.Length > 0;
         }
         catch
         {
             return false;
         }
+    }
+
+    private static bool ExceedsMaxCertificateSize(string base64)
+    {
+        if (string.IsNullOrWhiteSpace(base64))
+            return false;
+        long length = base64.Length;
+        long estimatedDecoded = 3L * ((length + 3) / 4); // ceil(length/4) * 3
+        return estimatedDecoded > OracleResponse.MaxResultSize;
     }
 }

@@ -126,6 +126,29 @@ public class UT_OracleDnsProtocol
     }
 
     [TestMethod]
+    public async Task ProcessAsync_ReturnsTooLargeForOversizedCertificate()
+    {
+        string base64Cert = Convert.ToBase64String(new byte[OracleResponse.MaxResultSize + 1]);
+        var dohResponse = new
+        {
+            Status = 0,
+            Answer = new[]
+            {
+                new { name = "big.example.com.", type = 16, ttl = 60, data = $"\"{base64Cert}\"" }
+            }
+        };
+        string json = JsonSerializer.Serialize(dohResponse);
+        var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/dns-json")
+        });
+        using var protocol = new OracleDnsProtocol(handler);
+        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:big.example.com?FORMAT=x509"), CancellationToken.None);
+        Assert.AreEqual(OracleResponseCode.ResponseTooLarge, code);
+        Assert.IsNull(payload);
+    }
+
+    [TestMethod]
     public async Task ProcessAsync_ReturnsCertificateFromTxtRecord()
     {
         string base64Cert = GenerateCertificateBase64("CN=example.com");
