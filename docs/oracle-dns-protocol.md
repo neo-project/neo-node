@@ -1,9 +1,9 @@
 # Oracle DNS Protocol
 
-The Oracle plugin can serve DNS data securely by resolving `dns://` URLs through a DNS-over-HTTPS (DoH) gateway. This ensures oracle nodes read authoritative data directly from public resolvers (such as Cloudflare) without passing plaintext DNS queries over untrusted networks.
+The Oracle plugin resolves RFC 4501 `dns:` URIs through a DNS-over-HTTPS (DoH) gateway. This lets oracle nodes read authoritative DNS data (TXT for DKIM/SPF/DIDs, CERT/TLSA, etc.) without sending plaintext DNS queries.
 
 > **When should I use it?**  
-> Any time you need on-chain access to TXT records (DKIM, SPF, DID documents, etc.), TLSA records, or X.509 material published via DNS.
+> Whenever you need DNS data on-chain and want the request to stay encrypted end-to-end.
 
 ## Enable and configure
 
@@ -27,28 +27,28 @@ The Oracle plugin can serve DNS data securely by resolving `dns://` URLs through
 
 > You can run your own DoH gateway and point the oracle to it if you need custom trust anchors or strict egress controls.
 
-## Constructing dns:// URLs
+## RFC 4501 URI format
 
 ```
-dns://<base-domain>/<path-selector>?selector=<label>&name=<override>&type=<rr-type>&format=<output>
+dns:[//authority/]domain[?CLASS=class;TYPE=type][;FORMAT=x509]
 ```
 
-| Parameter  | Description |
-|------------|-------------|
-| `base-domain` | Required host portion (e.g., `example.com`). |
-| `path-selector` | Optional path segments (`/_acme-challenge.dkim`) used when no `selector=` query is supplied. |
-| `selector` | Optional label joined with the base domain (`selector.example.com`). Useful for DKIM selectors. |
-| `name` | Optional absolute DNS name. When set it overrides host, selector, and path components entirely. |
-| `type` | Optional RR type (default `TXT`). Accepts standard mnemonics (`TXT`, `TLSA`, `CERT`, `A`, `AAAA`, …) or numeric values. |
-| `format` | Optional output hint. Use `format=x509` to force TXT/CERT payloads to be parsed as DER certificates (the plugin fills the `Certificate` section). |
+- `domain` is the DNS owner name (relative or absolute). Percent-encoding and escaped dots (`%5c.`) follow RFC 4501 rules.
+- `domain` must not include additional path segments; only the owner name belongs here.
+- `authority` is the optional DNS server hint from RFC 4501. The oracle still uses the DoH resolver configured in `OracleService.json`.
+- `CLASS` is optional and case-insensitive. Only `IN` (`1`) is supported; other classes are rejected.
+- `TYPE` is optional and case-insensitive. Use mnemonics (`TXT`, `TLSA`, `CERT`, `A`, `AAAA`, …) or numeric values. Defaults to `A` per RFC 4501.
+- `FORMAT` is an oracle extension; use `format=x509` (or `cert`) to parse TXT/CERT payloads into the `Certificate` field.
+- `name` is an oracle extension; if present, it overrides `domain` entirely (useful for percent-encoding complex owner names).
 
-Only `base-domain` is required. The following are equivalent and resolve DKIM entry `_domainkey` selector `1alhai` under `icloud.com`:
+Query parameters can be separated by `;` (RFC style) or `&`.
 
-```
-dns://icloud.com?selector=1alhai._domainkey&type=TXT
-dns://1alhai._domainkey.icloud.com?type=TXT
-dns://icloud.com/1alhai._domainkey?type=TXT
-```
+Examples:
+
+- `dns:1alhai._domainkey.icloud.com?TYPE=TXT` — DKIM TXT record.
+- `dns:simon.example.org?TYPE=CERT;FORMAT=x509` — extract the X.509 payload into `Certificate`.
+- `dns://192.168.1.1/ftp.example.org?TYPE=A` — RFC-compliant authority form (authority is ignored; the configured DoH endpoint is used).
+- `dns:ignored?name=weird%5c.label.example&type=TXT` — uses the `name` override (decoded to `weird\.label.example`).
 
 ## Response schema
 
@@ -84,7 +84,7 @@ Successful queries return UTF-8 JSON. Attributes correspond to the `ResultEnvelo
 ```
 
 - `Answers` mirrors the DoH response but normalizes record types and names.
-- `Certificate` is present only when `type=CERT` or `format=x509`. `Der` is the base64-encoded certificate, while `PublicKey` provides both the encoded SubjectPublicKeyInfo (`Encoded`) and algorithm-specific fields (`Modulus`/`Exponent` for RSA, `Curve`/`X`/`Y` for EC) so contracts can consume the key without doing ASN.1 parsing.
+- `Certificate` is present only when `TYPE=CERT` or `FORMAT=x509`. `Der` is the base64-encoded certificate, while `PublicKey` provides both the encoded SubjectPublicKeyInfo (`Encoded`) and algorithm-specific fields (`Modulus`/`Exponent` for RSA, `Curve`/`X`/`Y` for EC).
 - For RSA keys the modulus/exponent strings are big-endian hex. For EC keys the X/Y coordinates are hex-encoded affine coordinates on the reported `Curve`.
 - If the DoH server responds with NXDOMAIN, the oracle returns `OracleResponseCode.NotFound`.
 - Responses exceeding `OracleResponse.MaxResultSize` yield `OracleResponseCode.ResponseTooLarge`.
@@ -94,7 +94,7 @@ Successful queries return UTF-8 JSON. Attributes correspond to the `ResultEnvelo
 ```csharp
 public static void RequestAppleDkim()
 {
-    const string url = "dns://1alhai._domainkey.icloud.com?type=TXT";
+    const string url = "dns:1alhai._domainkey.icloud.com?TYPE=TXT";
     Oracle.Request(url, "", nameof(OnOracleCallback), Runtime.CallingScriptHash, 5_00000000);
 }
 
@@ -111,9 +111,10 @@ public static void OnOracleCallback(string url, byte[] userData, int code, byte[
 
 Tips:
 
-1. Budget enough `gasForResponse` to cover JSON payload size (TXT records are often kilobytes).
-2. Validate TTL or fingerprint data before trusting it.
-3. Combine oracle DNS data with existing filters (e.g., `Helper.JsonPath`/`OracleService.Filter`) if you only need a slice of the result.
+1. Always set `TYPE` when you need anything other than an A record.
+2. Budget enough `gasForResponse` to cover JSON payload size (TXT records are often kilobytes).
+3. Validate TTL or fingerprint data before trusting it.
+4. Combine oracle DNS data with existing filters (e.g., `Helper.JsonPath`/`OracleService.Filter`) if you only need a slice of the result.
 
 ## Manual testing
 

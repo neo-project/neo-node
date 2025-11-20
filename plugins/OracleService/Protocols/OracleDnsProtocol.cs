@@ -140,8 +140,9 @@ class OracleDnsProtocol : IOracleProtocol
         NameValueCollection query;
         try
         {
-            query = HttpUtility.ParseQueryString(uri.Query);
+            query = ParseQueryString(uri.Query);
             queryName = BuildQueryName(uri, query);
+            ValidateClass(query);
         }
         catch (Exception ex)
         {
@@ -257,26 +258,59 @@ class OracleDnsProtocol : IOracleProtocol
 
     internal static string BuildQueryName(Uri uri, NameValueCollection queryParameters = null)
     {
-        queryParameters ??= HttpUtility.ParseQueryString(uri.Query);
-        string overriddenName = NormalizeLabel(queryParameters["name"]);
+        queryParameters ??= ParseQueryString(uri.Query);
+        string overriddenName = NormalizeLabel(GetQueryValue(queryParameters, "name"));
         if (!string.IsNullOrEmpty(overriddenName))
             return overriddenName.TrimEnd('.');
 
-        string host = NormalizeLabel(uri.Host);
-        if (string.IsNullOrEmpty(host))
-            throw new FormatException("dns:// url must include a domain host");
+        string dnsName = NormalizeDnsName(uri.GetComponents(UriComponents.Path, UriFormat.Unescaped));
+        if (string.IsNullOrEmpty(dnsName))
+            throw new FormatException("dns: URI must include a dnsname.");
 
-        string selector = NormalizeLabel(queryParameters["selector"]);
-        if (string.IsNullOrEmpty(selector))
+        return dnsName;
+    }
+
+    private static NameValueCollection ParseQueryString(string query)
+    {
+        string normalized = string.IsNullOrEmpty(query)
+            ? string.Empty
+            : query.TrimStart('?').Replace(';', '&');
+        return HttpUtility.ParseQueryString(normalized);
+    }
+
+    private static string GetQueryValue(NameValueCollection query, string key)
+    {
+        if (query is null)
+            return null;
+        foreach (string existing in query)
         {
-            string pathSelector = NormalizePathSelector(uri.AbsolutePath);
-            selector = NormalizeLabel(pathSelector);
+            if (existing is null)
+                continue;
+            if (existing.Equals(key, StringComparison.OrdinalIgnoreCase))
+                return query[existing];
         }
+        return null;
+    }
 
-        if (string.IsNullOrEmpty(selector))
-            return host;
+    private static void ValidateClass(NameValueCollection query)
+    {
+        string classRaw = GetQueryValue(query, "class");
+        if (string.IsNullOrWhiteSpace(classRaw))
+            return;
+        classRaw = classRaw.Trim();
+        if (classRaw.Equals("IN", StringComparison.OrdinalIgnoreCase) || classRaw == "1")
+            return;
+        throw new FormatException($"Unsupported DNS class '{classRaw}', only IN is supported.");
+    }
 
-        return $"{selector}.{host}".Trim('.');
+    private static string NormalizeDnsName(string value)
+    {
+        string normalized = NormalizeLabel(value?.Trim('/'));
+        if (string.IsNullOrEmpty(normalized))
+            throw new FormatException("dns: URI must include a dnsname.");
+        if (normalized.Contains('/'))
+            throw new FormatException("dnsname must not contain path segments.");
+        return normalized;
     }
 
     private static string NormalizeLabel(string value)
@@ -286,22 +320,11 @@ class OracleDnsProtocol : IOracleProtocol
         return Uri.UnescapeDataString(value).Trim().Trim('.');
     }
 
-    private static string NormalizePathSelector(string path)
-    {
-        if (string.IsNullOrEmpty(path))
-            return null;
-        string trimmed = path.Trim('/');
-        if (string.IsNullOrEmpty(trimmed))
-            return null;
-        string decoded = Uri.UnescapeDataString(trimmed);
-        return decoded.Replace('/', '.');
-    }
-
     private static int ParseRecordType(NameValueCollection query)
     {
-        string typeRaw = query["type"];
+        string typeRaw = GetQueryValue(query, "type");
         if (string.IsNullOrWhiteSpace(typeRaw))
-            return RecordTypeLookup["TXT"];
+            return RecordTypeLookup["A"];
         typeRaw = typeRaw.Trim();
         if (int.TryParse(typeRaw, NumberStyles.Integer, CultureInfo.InvariantCulture, out int numeric))
             return numeric;
@@ -319,7 +342,7 @@ class OracleDnsProtocol : IOracleProtocol
 
     private static bool ShouldExtractCertificate(NameValueCollection query)
     {
-        string format = query["format"];
+        string format = GetQueryValue(query, "format");
         if (string.IsNullOrWhiteSpace(format))
             return false;
         return format.Equals("x509", StringComparison.OrdinalIgnoreCase)

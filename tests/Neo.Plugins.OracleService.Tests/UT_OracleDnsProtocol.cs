@@ -37,19 +37,92 @@ public class UT_OracleDnsProtocol
     }
 
     [TestMethod]
-    public void BuildQueryName_UsesSelectorFromQuery()
+    public void BuildQueryName_ParsesDnsUri()
     {
-        var uri = new Uri("dns://example.com?selector=oracle");
+        var uri = new Uri("dns:simon.example.org?TYPE=TXT");
         string name = OracleDnsProtocol.BuildQueryName(uri);
-        Assert.AreEqual("oracle.example.com", name);
+        Assert.AreEqual("simon.example.org", name);
     }
 
     [TestMethod]
-    public void BuildQueryName_UsesPathFallback()
+    public void BuildQueryName_RespectsAuthoritySyntax()
     {
-        var uri = new Uri("dns://example.com/_acme-challenge.dkim");
+        var uri = new Uri("dns://resolver.example/ftp.example.org?TYPE=TXT");
         string name = OracleDnsProtocol.BuildQueryName(uri);
-        Assert.AreEqual("_acme-challenge.dkim.example.com", name);
+        Assert.AreEqual("ftp.example.org", name);
+    }
+
+    [TestMethod]
+    public void BuildQueryName_ThrowsWithoutDnsName()
+    {
+        var uri = new Uri("dns://resolver.example/");
+        try
+        {
+            OracleDnsProtocol.BuildQueryName(uri);
+            Assert.Fail("Expected FormatException for missing dnsname.");
+        }
+        catch (FormatException)
+        {
+        }
+    }
+
+    [TestMethod]
+    public void BuildQueryName_UsesNameOverride()
+    {
+        var uri = new Uri("dns://resolver.example/ignored?name=override.example.com");
+        string name = OracleDnsProtocol.BuildQueryName(uri);
+        Assert.AreEqual("override.example.com", name);
+    }
+
+    [TestMethod]
+    public void BuildQueryName_RejectsPathSegments()
+    {
+        var uri = new Uri("dns:example.com/extra");
+        try
+        {
+            OracleDnsProtocol.BuildQueryName(uri);
+            Assert.Fail("Expected FormatException for path segments.");
+        }
+        catch (FormatException)
+        {
+        }
+    }
+
+    [TestMethod]
+    public async Task ProcessAsync_RejectsUnsupportedClass()
+    {
+        using var protocol = new OracleDnsProtocol(new StubHandler(_ => throw new InvalidOperationException("Should not send when class is invalid")));
+        (OracleResponseCode code, string message) = await protocol.ProcessAsync(new Uri("dns:example.com?CLASS=CH"), CancellationToken.None);
+        Assert.AreEqual(OracleResponseCode.Error, code);
+        StringAssert.Contains(message, "class");
+    }
+
+    [TestMethod]
+    public async Task ProcessAsync_AllowsClassIn()
+    {
+        var dohResponse = new
+        {
+            Status = 0,
+            Answer = new[]
+            {
+                new { name = "example.com.", type = 16, ttl = 120, data = "\"hello\"" }
+            }
+        };
+        string json = JsonSerializer.Serialize(dohResponse);
+        var handler = new StubHandler(request =>
+        {
+            Assert.IsTrue(request.RequestUri.Query.Contains("name=example.com", StringComparison.Ordinal));
+            Assert.IsTrue(request.RequestUri.Query.Contains("type=16", StringComparison.Ordinal));
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/dns-json")
+            };
+        });
+        using var protocol = new OracleDnsProtocol(handler);
+        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:example.com?CLASS=IN;TYPE=TXT"), CancellationToken.None);
+        Assert.AreEqual(OracleResponseCode.Success, code);
+        using JsonDocument doc = JsonDocument.Parse(payload);
+        Assert.AreEqual("TXT", doc.RootElement.GetProperty("Answers")[0].GetProperty("Type").GetString());
     }
 
     [TestMethod]
@@ -68,6 +141,7 @@ public class UT_OracleDnsProtocol
         var handler = new StubHandler(request =>
         {
             Assert.IsTrue(request.RequestUri.Query.Contains("name=oracle.example.com", StringComparison.Ordinal));
+            Assert.IsTrue(request.RequestUri.Query.Contains("type=16", StringComparison.Ordinal));
             var response = new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/dns-json")
@@ -75,7 +149,7 @@ public class UT_OracleDnsProtocol
             return response;
         });
         using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns://example.com?selector=oracle&format=x509"), CancellationToken.None);
+        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:oracle.example.com?TYPE=TXT;FORMAT=x509"), CancellationToken.None);
         Assert.AreEqual(OracleResponseCode.Success, code);
         Assert.IsNotNull(payload);
         using JsonDocument doc = JsonDocument.Parse(payload);
@@ -113,7 +187,7 @@ public class UT_OracleDnsProtocol
             Content = new StringContent(json, Encoding.UTF8, "application/dns-json")
         });
         using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns://ec.example.com?format=x509"), CancellationToken.None);
+        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:ec.example.com?TYPE=TXT;FORMAT=x509"), CancellationToken.None);
         Assert.AreEqual(OracleResponseCode.Success, code);
         using JsonDocument doc = JsonDocument.Parse(payload);
         var pkElement = doc.RootElement.GetProperty("Certificate").GetProperty("PublicKey");
@@ -131,12 +205,16 @@ public class UT_OracleDnsProtocol
     public async Task ProcessAsync_ReturnsNotFoundForNxDomain()
     {
         const string response = "{\"Status\":3}";
-        var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        var handler = new StubHandler(request =>
         {
-            Content = new StringContent(response, Encoding.UTF8, "application/dns-json")
+            Assert.IsTrue(request.RequestUri.Query.Contains("type=1", StringComparison.Ordinal));
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(response, Encoding.UTF8, "application/dns-json")
+            };
         });
         using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns://example.com"), CancellationToken.None);
+        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:example.com"), CancellationToken.None);
         Assert.AreEqual(OracleResponseCode.NotFound, code);
         Assert.IsNull(payload);
     }
@@ -158,7 +236,7 @@ public class UT_OracleDnsProtocol
             Content = new StringContent(json, Encoding.UTF8, "application/dns-json")
         });
         using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns://plain.example.com"), CancellationToken.None);
+        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:plain.example.com?TYPE=TXT"), CancellationToken.None);
         Assert.AreEqual(OracleResponseCode.Success, code);
         using JsonDocument doc = JsonDocument.Parse(payload);
         Assert.IsFalse(doc.RootElement.TryGetProperty("Certificate", out _));
@@ -199,7 +277,7 @@ public class UT_OracleDnsProtocol
             };
         });
         using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns://1alhai._domainkey.icloud.com?type=TXT"), CancellationToken.None);
+        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:1alhai._domainkey.icloud.com?TYPE=TXT"), CancellationToken.None);
         Assert.AreEqual(OracleResponseCode.Success, code);
         using JsonDocument doc = JsonDocument.Parse(payload);
         Assert.AreEqual("1alhai._domainkey.icloud.com", doc.RootElement.GetProperty("Name").GetString());
