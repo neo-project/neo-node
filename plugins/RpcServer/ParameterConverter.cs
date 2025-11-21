@@ -11,6 +11,7 @@
 
 using Neo.Cryptography.ECC;
 using Neo.Extensions;
+using Neo.Extensions.Collections;
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.Plugins.RpcServer.Model;

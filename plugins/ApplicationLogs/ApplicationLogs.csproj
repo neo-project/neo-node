@@ -5,14 +5,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\..\src\Neo.ConsoleService\Neo.ConsoleService.csproj" />
 		<ProjectReference Include="..\RpcServer\RpcServer.csproj" AdditionalProperties="IncludeSettingsFileOutput=False">
 			<Private>false</Private>
 			<ExcludeAssets>runtime</ExcludeAssets>
 		</ProjectReference>
-	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Include="Neo.ConsoleService" Version="1.2.0" />
 	</ItemGroup>
 
 	<ItemGroup>

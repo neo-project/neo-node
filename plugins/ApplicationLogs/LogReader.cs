@@ -10,7 +10,7 @@
 // modifications are permitted.
 
 using Neo.ConsoleService;
-using Neo.Extensions;
+using Neo.Extensions.VM;
 using Neo.IEventHandlers;
 using Neo.Json;
 using Neo.Ledger;
@@ -57,13 +57,16 @@ public class LogReader : Plugin, ICommittingHandler, ICommittedHandler, ILogHand
 
     public override string ConfigFile => Combine(RootPath, "ApplicationLogs.json");
 
-    public override void Dispose()
+    protected override void Dispose(bool disposing)
     {
-        Blockchain.Committing -= ((ICommittingHandler)this).Blockchain_Committing_Handler;
-        Blockchain.Committed -= ((ICommittedHandler)this).Blockchain_Committed_Handler;
-        if (ApplicationLogsSettings.Default.Debug)
-            ApplicationEngine.InstanceHandler -= ConfigureAppEngine;
-        GC.SuppressFinalize(this);
+        if (disposing)
+        {
+            Blockchain.Committing -= ((ICommittingHandler)this).Blockchain_Committing_Handler;
+            Blockchain.Committed -= ((ICommittedHandler)this).Blockchain_Committed_Handler;
+            if (ApplicationLogsSettings.Default.Debug)
+                ApplicationEngine.InstanceCreated -= ConfigureAppEngine;
+        }
+        base.Dispose(disposing);
     }
 
     private void ConfigureAppEngine(ApplicationEngine engine)
@@ -87,7 +90,7 @@ public class LogReader : Plugin, ICommittingHandler, ICommittedHandler, ILogHand
         RpcServerPlugin.RegisterMethods(this, ApplicationLogsSettings.Default.Network);
 
         if (ApplicationLogsSettings.Default.Debug)
-            ApplicationEngine.InstanceHandler += ConfigureAppEngine;
+            ApplicationEngine.InstanceCreated += ConfigureAppEngine;
     }
 
     #endregion
