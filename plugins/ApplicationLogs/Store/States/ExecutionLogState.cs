@@ -10,6 +10,8 @@
 // modifications are permitted.
 
 using Neo.Extensions;
+using Neo.Extensions.Collections;
+using Neo.Extensions.IO;
 using Neo.IO;
 using Neo.Ledger;
 using Neo.VM;

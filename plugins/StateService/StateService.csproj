@@ -1,10 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<ItemGroup>
-		<PackageReference Include="Neo.ConsoleService" Version="1.2.0" ExcludeAssets="runtime" />
-	</ItemGroup>
-
-	<ItemGroup>
+		<ProjectReference Include="..\..\src\Neo.ConsoleService\Neo.ConsoleService.csproj" />
 		<ProjectReference Include="..\MPTTrie\MPTTrie.csproj" />
 		<ProjectReference Include="..\RpcServer\RpcServer.csproj" />
 	</ItemGroup>

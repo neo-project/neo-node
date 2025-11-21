@@ -15,7 +15,6 @@ using Grpc.Net.Client;
 using Grpc.Net.Client.Configuration;
 using Neo.ConsoleService;
 using Neo.Cryptography.ECC;
-using Neo.Extensions;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.Sign;
@@ -336,10 +335,13 @@ public class SignClient : Plugin, ISigner
     }
 
     /// <inheritdoc/>
-    public override void Dispose()
+    protected override void Dispose(bool disposing)
     {
-        Reset(string.Empty, null);
-        _channel?.Dispose();
-        base.Dispose();
+        if (disposing)
+        {
+            Reset(string.Empty, null);
+            _channel?.Dispose();
+        }
+        base.Dispose(disposing);
     }
 }

@@ -10,7 +10,7 @@
 // modifications are permitted.
 
 using Akka.Actor;
-using Neo.Extensions;
+using Neo.Extensions.VM;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;

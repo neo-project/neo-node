@@ -11,7 +11,7 @@
 
 using Akka.Actor;
 using Akka.TestKit;
-using Neo.Extensions;
+using Neo.Extensions.IO;
 using Neo.Network.P2P.Payloads;
 using Neo.Plugins.DBFTPlugin.Messages;
 using Neo.Plugins.DBFTPlugin.Types;
