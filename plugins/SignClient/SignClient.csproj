@@ -5,12 +5,15 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Google.Protobuf" Version="3.33.0" />
+		<PackageReference Include="Google.Protobuf" Version="3.33.1" />
 		<PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
 		<!-- NOTE: Need install rosetta2 on macOS ARM64 -->
 		<PackageReference Include="Grpc.Tools" Version="2.76.0" PrivateAssets="all" />
-		<PackageReference Include="Neo.ConsoleService" Version="1.2.0" />
 		<PackageReference Include="Ookii.VmSockets" Version="1.0.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\..\src\Neo.ConsoleService\Neo.ConsoleService.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

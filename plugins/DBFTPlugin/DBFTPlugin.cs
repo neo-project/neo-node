@@ -44,9 +44,11 @@ public sealed class DBFTPlugin : Plugin, IServiceAddedHandler, IMessageReceivedH
         this.settings = settings;
     }
 
-    public override void Dispose()
+    protected override void Dispose(bool disposing)
     {
-        RemoteNode.MessageReceived -= ((IMessageReceivedHandler)this).RemoteNode_MessageReceived_Handler;
+        if (disposing)
+            RemoteNode.MessageReceived -= ((IMessageReceivedHandler)this).RemoteNode_MessageReceived_Handler;
+        base.Dispose(disposing);
     }
 
     protected override void Configure()

@@ -10,6 +10,7 @@
 // modifications are permitted.
 
 using Neo.Extensions;
+using Neo.Extensions.IO;
 using System.Text;
 
 namespace Neo.Cryptography.MPTTrie.Tests;

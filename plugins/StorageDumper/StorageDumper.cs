@@ -10,7 +10,7 @@
 // modifications are permitted.
 
 using Neo.ConsoleService;
-using Neo.Extensions;
+using Neo.Extensions.IO;
 using Neo.IEventHandlers;
 using Neo.Json;
 using Neo.Ledger;
@@ -42,10 +42,14 @@ public class StorageDumper : Plugin, ICommittingHandler, ICommittedHandler
         Blockchain.Committed += ((ICommittedHandler)this).Blockchain_Committed_Handler;
     }
 
-    public override void Dispose()
+    protected override void Dispose(bool disposing)
     {
-        Blockchain.Committing -= ((ICommittingHandler)this).Blockchain_Committing_Handler;
-        Blockchain.Committed -= ((ICommittedHandler)this).Blockchain_Committed_Handler;
+        if (disposing)
+        {
+            Blockchain.Committing -= ((ICommittingHandler)this).Blockchain_Committing_Handler;
+            Blockchain.Committed -= ((ICommittedHandler)this).Blockchain_Committed_Handler;
+        }
+        base.Dispose(disposing);
     }
 
     protected override void Configure()

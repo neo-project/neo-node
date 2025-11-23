@@ -12,9 +12,12 @@
 using Akka.Actor;
 using Neo.ConsoleService;
 using Neo.Extensions;
+using Neo.Extensions.IO;
+using Neo.Extensions.VM;
 using Neo.Json;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
+using Neo.Persistence.Providers;
 using Neo.Plugins;
 using Neo.Sign;
 using Neo.SmartContract;
@@ -339,10 +342,34 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         var protocol = ProtocolSettings.Load("config.json");
         CustomProtocolSettings(options, protocol);
         CustomApplicationSettings(options, Settings.Default);
+        var engineConfig = Settings.Default.Storage.Engine;
+        var engine = engineConfig;
+
+        if (string.IsNullOrWhiteSpace(engineConfig))
+        {
+            ConsoleHelper.Warning("No persistence engine specified, using MemoryStore now");
+            engine = nameof(MemoryStore);
+        }
+
+        var storagePath = string.Format(Settings.Default.Storage.Path, protocol.Network.ToString("X8"));
+
+        if (!engine.Equals(nameof(MemoryStore), StringComparison.OrdinalIgnoreCase))
+        {
+            var pluginDir = Plugin.PluginsDirectory;
+            var hasProviderDLL = Directory.Exists(pluginDir) && Directory.EnumerateFiles(pluginDir, $"*{engine}*.dll", SearchOption.AllDirectories).Any();
+            if (!hasProviderDLL)
+            {
+                ConsoleHelper.Info($"Storage provider {engine} not found in {pluginDir}. Auto-install {engine}.", nameof(Settings.Default.Storage.Engine));
+                if (!await InstallPluginAsync(engine))
+                {
+                    throw new ArgumentException($"Not possible to install provider {engine}", nameof(Settings.Default.Storage.Engine));
+                }
+            }
+        }
+
         try
         {
-            NeoSystem = new NeoSystem(protocol, Settings.Default.Storage.Engine,
-                string.Format(Settings.Default.Storage.Path, protocol.Network.ToString("X8")));
+            NeoSystem = new NeoSystem(protocol, engine, storagePath);
         }
         catch (DllNotFoundException ex)
         {

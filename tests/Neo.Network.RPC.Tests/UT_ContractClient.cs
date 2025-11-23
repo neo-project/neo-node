@@ -11,6 +11,7 @@
 
 using Moq;
 using Neo.Extensions;
+using Neo.Extensions.VM;
 using Neo.SmartContract;
 using Neo.SmartContract.Manifest;
 using Neo.SmartContract.Native;

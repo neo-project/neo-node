@@ -34,11 +34,12 @@ public class RpcServerPlugin : Plugin
         }
     }
 
-    public override void Dispose()
+    protected override void Dispose(bool disposing)
     {
-        foreach (var (_, server) in servers)
-            server.Dispose();
-        base.Dispose();
+        if (disposing)
+            foreach (var (_, server) in servers)
+                server.Dispose();
+        base.Dispose(disposing);
     }
 
     protected override void OnSystemLoaded(NeoSystem system)
