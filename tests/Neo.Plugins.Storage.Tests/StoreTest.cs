@@ -111,6 +111,7 @@ public class StoreTest
 
         snapshot.Put(testKey, testValue);
         // Data saved to the leveldb snapshot shall not be visible to the store
+        Assert.IsNull(snapshot.TryGet(testKey));
         Assert.IsFalse(snapshot.TryGet(testKey, out var got));
         Assert.IsNull(got);
 
@@ -121,11 +122,11 @@ public class StoreTest
         snapshot.Commit();
 
         // After commit, the data shall be visible to the store but not to the snapshot
+        Assert.IsNull(snapshot.TryGet(testKey));
         Assert.IsFalse(snapshot.TryGet(testKey, out got));
         Assert.IsNull(got);
 
-        Assert.IsTrue(store.TryGet(testKey, out var entry));
-        CollectionAssert.AreEqual(testValue, entry);
+        CollectionAssert.AreEqual(testValue, store.TryGet(testKey));
         Assert.IsTrue(store.TryGet(testKey, out got));
         CollectionAssert.AreEqual(testValue, got);
 
@@ -144,8 +145,7 @@ public class StoreTest
 
         snapshot.Put(testKey, testValue);
         snapshot.Commit();
-        Assert.IsTrue(store.TryGet(testKey, out var entry));
-        CollectionAssert.AreEqual(testValue, entry);
+        CollectionAssert.AreEqual(testValue, store.TryGet(testKey));
 
         using var snapshot2 = store.GetSnapshot();
 
@@ -164,21 +164,21 @@ public class StoreTest
         var value1 = new byte[] { 0x03, 0x04 };
 
         store.Delete(key1);
-        Assert.IsFalse(store.TryGet(key1, out var ret));
+        var ret = store.TryGet(key1);
         Assert.IsNull(ret);
 
         store.Put(key1, value1);
-        Assert.IsTrue(store.TryGet(key1, out ret));
+        ret = store.TryGet(key1);
         CollectionAssert.AreEqual(value1, ret);
         Assert.IsTrue(store.Contains(key1));
 
-        Assert.IsFalse(store.TryGet(value1, out ret));
+        ret = store.TryGet(value1);
         Assert.IsNull(ret);
         Assert.IsTrue(store.Contains(key1));
 
         store.Delete(key1);
 
-        Assert.IsFalse(store.TryGet(key1, out ret));
+        ret = store.TryGet(key1);
         Assert.IsNull(ret);
         Assert.IsFalse(store.Contains(key1));
 
