@@ -144,7 +144,8 @@ public class StoreTest
 
         snapshot.Put(testKey, testValue);
         snapshot.Commit();
-        CollectionAssert.AreEqual(testValue, store.TryGet(testKey));
+        Assert.IsTrue(store.TryGet(testKey, out var entry));
+        CollectionAssert.AreEqual(testValue, entry);
 
         using var snapshot2 = store.GetSnapshot();
 
