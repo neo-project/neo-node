@@ -134,10 +134,19 @@ public abstract class ConsoleServiceBase
 
                 var args = tokens.Skip(consumed).ToList().Trim();
 
-                if (args.Any(u => u.IsIndicator))
-                    availableCommands.Add((command, () => ParseIndicatorArguments(command.Method, args)));
-                else
-                    availableCommands.Add((command, () => ParseSequentialArguments(command.Method, args)));
+                try
+                {
+                    if (args.Any(u => u.IsIndicator))
+                        availableCommands.Add((command, () => ParseIndicatorArguments(command.Method, args)));
+                    else
+                        availableCommands.Add((command, () => ParseSequentialArguments(command.Method, args)));
+                }
+                catch (Exception ex)
+                {
+                    // Skip parse errors
+                    possibleHelp = command.Key;
+                    ConsoleHelper.Error($"{ex.InnerException?.Message ?? ex.Message}");
+                }
             }
         }
 
