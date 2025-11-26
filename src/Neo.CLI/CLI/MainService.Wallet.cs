@@ -9,6 +9,9 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using System.Numerics;
+using System.Security.Cryptography;
+using System.Text;
 using Akka.Actor;
 using Neo.ConsoleService;
 using Neo.Cryptography;
@@ -22,9 +25,6 @@ using Neo.SmartContract.Native;
 using Neo.VM;
 using Neo.Wallets;
 using Neo.Wallets.NEP6;
-using System.Numerics;
-using System.Security.Cryptography;
-using System.Text;
 using static Neo.SmartContract.Helper;
 using ECPoint = Neo.Cryptography.ECC.ECPoint;
 using ECCurve = Neo.Cryptography.ECC.ECCurve;
