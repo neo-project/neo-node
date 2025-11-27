@@ -10,7 +10,6 @@
 // modifications are permitted.
 
 using Neo.Extensions;
-using Neo.Extensions.IO;
 using Neo.SmartContract;
 using Neo.Wallets;
 using System.Security.Cryptography;

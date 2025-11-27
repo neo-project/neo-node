@@ -10,7 +10,7 @@
 // modifications are permitted.
 
 using Microsoft.AspNetCore.Http;
-using Neo.Extensions.IO;
+using Neo.Extensions;
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.Network.P2P.Payloads.Conditions;

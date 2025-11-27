@@ -12,6 +12,7 @@
 using Neo.Cryptography.ECC;
 using Neo.Extensions;
 using Neo.Network.P2P.Payloads;
+using Neo.SmartContract;
 using Neo.SmartContract.Native;
 
 namespace Neo.Plugins.OracleService.Tests;
@@ -49,7 +50,8 @@ public class UT_OracleService
     public void TestCreateOracleResponseTx()
     {
         var snapshotCache = TestBlockchain.GetTestSnapshotCache();
-        var executionFactor = NativeContract.Policy.GetExecFeeFactor(snapshotCache);
+        using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshotCache);
+        var executionFactor = NativeContract.Policy.GetExecFeeFactor(engine);
         Assert.AreEqual((uint)30, executionFactor);
 
         var feePerByte = NativeContract.Policy.GetFeePerByte(snapshotCache);

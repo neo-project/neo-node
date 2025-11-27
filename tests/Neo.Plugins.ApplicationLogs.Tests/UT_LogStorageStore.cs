@@ -9,8 +9,8 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-using Neo.Extensions.IO;
-using Neo.Factories;
+using Neo.Extensions;
+using Neo.Extensions.Factories;
 using Neo.IO;
 using Neo.Persistence.Providers;
 using Neo.Plugins.ApplicationLogs;

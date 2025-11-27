@@ -15,8 +15,6 @@ using Neo.ConsoleService;
 using Neo.Cryptography;
 using Neo.Cryptography.ECC;
 using Neo.Extensions;
-using Neo.Extensions.Collections;
-using Neo.Extensions.IO;
 using Neo.IEventHandlers;
 using Neo.Json;
 using Neo.Ledger;
@@ -104,18 +102,15 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
         Start(wallet);
     }
 
-    protected override void Dispose(bool disposing)
+    public override void Dispose()
     {
-        if (disposing)
-        {
-            Blockchain.Committing -= ((ICommittingHandler)this).Blockchain_Committing_Handler;
-            OnStop();
-            while (status != OracleStatus.Stopped)
-                Thread.Sleep(100);
-            foreach (var p in protocols)
-                p.Value.Dispose();
-        }
-        base.Dispose(disposing);
+        Blockchain.Committing -= ((ICommittingHandler)this).Blockchain_Committing_Handler;
+        OnStop();
+        while (status != OracleStatus.Stopped)
+            Thread.Sleep(100);
+        foreach (var p in protocols)
+            p.Value.Dispose();
+        base.Dispose();
     }
 
     [ConsoleCommand("start oracle", Category = "Oracle", Description = "Start oracle service")]
@@ -441,7 +436,7 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
         if (engine.Execute() != VMState.HALT) return null;
         tx.NetworkFee += engine.FeeConsumed;
 
-        var executionFactor = NativeContract.Policy.GetExecFeeFactor(snapshot);
+        var executionFactor = NativeContract.Policy.GetExecFeeFactor(engine);
         var networkFee = executionFactor * SmartContract.Helper.MultiSignatureContractCost(m, n);
         tx.NetworkFee += networkFee;
 
