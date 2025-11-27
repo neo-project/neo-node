@@ -10,8 +10,6 @@
 // modifications are permitted.
 
 using Neo.Extensions;
-using Neo.Extensions.Collections;
-using Neo.Extensions.IO;
 using Neo.IO;
 
 namespace Neo.Plugins.ApplicationLogs.Store.States;

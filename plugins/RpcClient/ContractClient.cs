@@ -10,7 +10,6 @@
 // modifications are permitted.
 
 using Neo.Extensions;
-using Neo.Extensions.VM;
 using Neo.Network.P2P.Payloads;
 using Neo.Network.RPC.Models;
 using Neo.SmartContract;

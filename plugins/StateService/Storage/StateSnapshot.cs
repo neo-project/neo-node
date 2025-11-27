@@ -11,7 +11,6 @@
 
 using Neo.Cryptography.MPTTrie;
 using Neo.Extensions;
-using Neo.Extensions.IO;
 using Neo.Persistence;
 using Neo.Plugins.StateService.Network;
 

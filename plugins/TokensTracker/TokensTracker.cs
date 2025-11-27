@@ -45,14 +45,11 @@ public class TokensTracker : Plugin, ICommittingHandler, ICommittedHandler
         Blockchain.Committed += ((ICommittedHandler)this).Blockchain_Committed_Handler;
     }
 
-    protected override void Dispose(bool disposing)
+    public override void Dispose()
     {
-        if (disposing)
-        {
-            Blockchain.Committing -= ((ICommittingHandler)this).Blockchain_Committing_Handler;
-            Blockchain.Committed -= ((ICommittedHandler)this).Blockchain_Committed_Handler;
-        }
-        base.Dispose(disposing);
+        Blockchain.Committing -= ((ICommittingHandler)this).Blockchain_Committing_Handler;
+        Blockchain.Committed -= ((ICommittedHandler)this).Blockchain_Committed_Handler;
+        base.Dispose();
     }
 
     protected override void Configure()
