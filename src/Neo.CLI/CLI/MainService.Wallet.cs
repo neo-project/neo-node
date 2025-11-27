@@ -512,11 +512,11 @@ partial class MainService
     /// </summary>
     /// <param name="message">Message to sign</param>
     [ConsoleCommand("sign message", Category = "Wallet Commands")]
-    internal void OnSignMessageCommand(string message)
+    private void OnSignMessageCommand(string message)
     {
         if (NoWallet()) return;
 
-        string password = ConsoleHelper.ReadUserInput("password", true);
+        string password = ReadUserInput("password", true); // ConsoleHelper.ReadUserInput("password", true);
         if (password.Length == 0)
         {
             ConsoleHelper.Info("Cancelled");
@@ -555,18 +555,19 @@ partial class MainService
         Console.WriteLine();
         ConsoleHelper.Info("    Curve: ", "secp256r1");
         ConsoleHelper.Info("Algorithm: ", "payload = 010001f0 + VarBytes(Salt + Message) + 0000");
-        ConsoleHelper.Info("Algorithm: ", "Sign(SHA256(network || Hash256(payload))");
+        ConsoleHelper.Info("Algorithm: ", "Sign(SHA256(network || Hash256(payload)))");
         ConsoleHelper.Info("           ", "See the online documentation for details on how to verify this signature.");
         ConsoleHelper.Info("           ", "https://developers.neo.org/docs/n3/node/cli/cli#sign_message");
         Console.WriteLine();
         ConsoleHelper.Info("Generated signatures:");
         Console.WriteLine();
 
+        var hash = new UInt256(Crypto.Hash256(payload));
+        var signData = hash.GetSignData(NeoSystem.Settings.Network);
+
         foreach (WalletAccount account in CurrentWallet.GetAccounts().Where(p => p.HasKey))
         {
             var key = account.GetKey();
-            var hash = new UInt256(Crypto.Hash256(payload));
-            var signData = hash.GetSignData(NeoSystem.Settings.Network);
             var signature = Crypto.Sign(signData, key!.PrivateKey, ECCurve.Secp256r1);
 
             ConsoleHelper.Info("    Address: ", account.Address);
@@ -835,4 +836,5 @@ partial class MainService
             ConsoleHelper.Info("Incomplete signature:\n", $"{context}");
         }
     }
+    internal Func<string, bool, string> ReadUserInput { get; set; } = ConsoleHelper.ReadUserInput;
 }

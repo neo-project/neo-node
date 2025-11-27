@@ -124,7 +124,8 @@ public abstract class ConsoleServiceBase
 
         var possibleHelp = "";
         var tokens = commandLine.Tokenize();
-        var availableCommands = new List<(ConsoleCommandMethod Command, Func<object?[]> Arguments)>();
+        var availableCommands = new List<(ConsoleCommandMethod Command, object?[] Arguments)>();
+
         foreach (var entries in _verbs.Values)
         {
             foreach (var command in entries)
@@ -137,9 +138,9 @@ public abstract class ConsoleServiceBase
                 try
                 {
                     if (args.Any(u => u.IsIndicator))
-                        availableCommands.Add((command, () => ParseIndicatorArguments(command.Method, args)));
+                        availableCommands.Add((command, ParseIndicatorArguments(command.Method, args)));
                     else
-                        availableCommands.Add((command, () => ParseSequentialArguments(command.Method, args)));
+                        availableCommands.Add((command, ParseSequentialArguments(command.Method, args)));
                 }
                 catch (Exception ex)
                 {
@@ -162,8 +163,7 @@ public abstract class ConsoleServiceBase
 
         if (availableCommands.Count == 1)
         {
-            var (command, getArguments) = availableCommands[0];
-            var arguments = getArguments();
+            var (command, arguments) = availableCommands[0];
             object? result = command.Method.Invoke(command.Instance, arguments);
 
             if (result is Task task) task.Wait();
