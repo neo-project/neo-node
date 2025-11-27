@@ -13,6 +13,7 @@ using Neo.Json;
 using Neo.Wallets.NEP6;
 
 namespace Neo.CLI.Tests;
+
 public static partial class TestUtils
 {
     public static NEP6Wallet GenerateTestWallet(string password)

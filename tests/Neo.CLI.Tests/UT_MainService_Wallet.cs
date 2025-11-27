@@ -12,6 +12,7 @@
 using System.Reflection;
 
 namespace Neo.CLI.Tests;
+
 [TestClass]
 public class UT_MainService_Wallet
 {
