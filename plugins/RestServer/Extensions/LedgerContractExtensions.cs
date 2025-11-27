@@ -9,7 +9,7 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-using Neo.Extensions.SmartContract;
+using Neo.Extensions;
 using Neo.Persistence;
 using Neo.Plugins.RestServer.Models.Blockchain;
 using Neo.SmartContract.Native;

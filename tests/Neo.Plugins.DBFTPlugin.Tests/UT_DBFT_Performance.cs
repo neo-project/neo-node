@@ -12,7 +12,7 @@
 using Akka.Actor;
 using Akka.TestKit;
 using Akka.TestKit.MsTest;
-using Neo.Extensions.IO;
+using Neo.Extensions;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence.Providers;
 using Neo.Plugins.DBFTPlugin.Consensus;

@@ -12,6 +12,7 @@
 using Neo.Cryptography.ECC;
 using Neo.Extensions;
 using Neo.Network.P2P.Payloads;
+using Neo.SmartContract;
 using Neo.SmartContract.Native;
 
 namespace Neo.Plugins.OracleService.Tests;
@@ -49,13 +50,14 @@ public class UT_OracleService
     public void TestCreateOracleResponseTx()
     {
         var snapshotCache = TestBlockchain.GetTestSnapshotCache();
-        var executionFactor = NativeContract.Policy.GetExecFeeFactor(snapshotCache);
-        Assert.AreEqual((uint)30, executionFactor);
+        var index = NativeContract.Ledger.CurrentIndex(snapshotCache);
+        var executionFactor = NativeContract.Policy.GetExecFeeFactor(TestUtils.settings, snapshotCache, index);
+        Assert.AreEqual(30, executionFactor);
 
         var feePerByte = NativeContract.Policy.GetFeePerByte(snapshotCache);
         Assert.AreEqual(1000, feePerByte);
 
-        OracleRequest request = new OracleRequest
+        OracleRequest request = new()
         {
             OriginalTxid = UInt256.Zero,
             GasForResponse = 100000000 * 1,
@@ -81,7 +83,7 @@ public class UT_OracleService
 
         OracleResponse response = new() { Id = 1, Code = OracleResponseCode.Success, Result = new byte[] { 0x00 } };
         ECPoint[] oracleNodes = [ECCurve.Secp256r1.G];
-        var tx = OracleService.CreateResponseTx(snapshotCache, request, response, oracleNodes, ProtocolSettings.Default);
+        var tx = OracleService.CreateResponseTx(snapshotCache, request, response, oracleNodes, TestUtils.settings);
 
         Assert.AreEqual(166, tx.Size);
         Assert.AreEqual(2198650, tx.NetworkFee);
@@ -91,7 +93,7 @@ public class UT_OracleService
 
         request.GasForResponse = 0_10000000;
         response.Result = new byte[10250];
-        tx = OracleService.CreateResponseTx(snapshotCache, request, response, oracleNodes, ProtocolSettings.Default);
+        tx = OracleService.CreateResponseTx(snapshotCache, request, response, oracleNodes, TestUtils.settings);
         Assert.AreEqual(165, tx.Size);
         Assert.AreEqual(OracleResponseCode.InsufficientFunds, response.Code);
         Assert.AreEqual(2197650, tx.NetworkFee);
