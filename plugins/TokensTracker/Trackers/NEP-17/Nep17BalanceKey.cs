@@ -45,7 +45,7 @@ public class Nep17BalanceKey : IComparable<Nep17BalanceKey>, IEquatable<Nep17Bal
     {
         if (other is null) return false;
         if (ReferenceEquals(this, other)) return true;
-        return UserScriptHash.Equals(other.UserScriptHash) && AssetScriptHash.Equals(AssetScriptHash);
+        return UserScriptHash.Equals(other.UserScriptHash) && AssetScriptHash.Equals(other.AssetScriptHash);
     }
 
     public override bool Equals(object? other)
