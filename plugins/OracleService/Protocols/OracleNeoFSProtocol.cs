@@ -9,7 +9,6 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-using Neo.Extensions;
 using Neo.FileStorage.API.Client;
 using Neo.FileStorage.API.Cryptography;
 using Neo.FileStorage.API.Refs;
@@ -29,13 +28,15 @@ class OracleNeoFSProtocol : IOracleProtocol
 
     public OracleNeoFSProtocol(Wallet wallet, ECPoint[] oracles)
     {
-        byte[] key = oracles.Select(p => wallet.GetAccount(p)).Where(p => p is not null && p.HasKey && !p.Lock).FirstOrDefault().GetKey().PrivateKey;
+        byte[] key = oracles.Select(wallet.GetAccount)
+            .Where(p => p is not null && p.HasKey && !p.Lock)
+            .FirstOrDefault()?
+            .GetKey()?
+            .PrivateKey ?? throw new InvalidOperationException("No available account found for oracle");
         privateKey = key.LoadPrivateKey();
     }
 
-    public void Configure()
-    {
-    }
+    public void Configure() { }
 
     public void Dispose()
     {
