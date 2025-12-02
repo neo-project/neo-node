@@ -516,7 +516,7 @@ partial class MainService
     {
         if (NoWallet()) return;
 
-        string password = ReadUserInput("password", true); // ConsoleHelper.ReadUserInput("password", true);
+        string password = ReadUserInput("password", true);
         if (password.Length == 0)
         {
             ConsoleHelper.Info("Cancelled");
