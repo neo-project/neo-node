@@ -28,11 +28,70 @@ public class UT_MainService_Wallet
     public void TestOnSignMessageCommand()
     {
         var walletPassword = "test_pwd";
+        var output = CreateWalletAngSignMessage(walletPassword);
+
+        // Basic headers
+        Assert.IsFalse(string.IsNullOrWhiteSpace(output), "Output from sign message command should not be empty");
+        Assert.Contains("Signed Payload", output, "Output should containt the signed payload");
+        Assert.Contains("Algorithm", output, "Output should describe the algorithm used");
+        Assert.Contains("Generated signatures", output, "Output should contain signatures header");
+
+        // Sign block
+        Assert.Contains("Address", output, "Output should contain at least one address");
+        Assert.Contains("PublicKey", output, "Output should contain the public key");
+        Assert.Contains("Signature", output, "Output should contain the signature");
+        Assert.Contains("Salt", output, "Output should contain the salt used");
+
+        // Check Salt
+        var salt = ExtractHexValue(output, "Salt:");
+        Assert.IsNotNull(salt, "Salt hex should be present in the output");
+        Assert.AreEqual(32, salt!.Length, "Salt should be 16 bytes (32 hex chars)");
+        Assert.IsTrue(IsHexString(salt!), "Salt should be valid hex");
+    }
+    [TestMethod]
+    public void TestOnSignMessageCommandWithoutPassword()
+    {
+        var output = CreateWalletAngSignMessage(string.Empty);
+
+        Assert.IsFalse(string.IsNullOrWhiteSpace(output), "Output should not be empty");
+        Assert.Contains("Cancelled", output, "Output should contain cancellation message");
+    }
+    [TestMethod]
+    public void TestOnSignMessageCommandWrongPassword()
+    {
+        var walletPassword = "invalid_pwd";
+        var output = CreateWalletAngSignMessage(walletPassword);
+
+        Assert.IsFalse(string.IsNullOrWhiteSpace(output), "Output should not be empty");
+        Assert.Contains("Incorrect password", output, "Output should contain incorrect password");
+        Assert.DoesNotContain("Signed Payload", output, "Output should not containt signed payload");
+        Assert.DoesNotContain("Generated signatures", output, "Output should not containt signatures");
+    }
+    [TestMethod]
+    public void TestOnSignMessageCommandWithoutAccount()
+    {
+        var walletPassword = "test_pwd";
+        var output = CreateWalletAngSignMessage(walletPassword, false);
+
+        Assert.IsFalse(string.IsNullOrWhiteSpace(output), "Output should not be empty");
+        Assert.Contains("Signed Payload", output, "Output should containt signed payload");
+        Assert.Contains("Generated signatures", output, "Output should containt signatures");
+        Assert.DoesNotContain("Address:", output, "Output should not containt Address");
+        Assert.DoesNotContain("PublicKey:", output, "Output should not containt PublicKey");
+        Assert.DoesNotContain("Signature:", output, "Output should not containt Signature");
+        Assert.DoesNotContain("Salt:", output, "Output should not containt Salt");
+    }
+    private string CreateWalletAngSignMessage(string userPassword, bool withAccount = true)
+    {
+        var walletPassword = "test_pwd";
         var message = "this is a test to sign";
 
         var wallet = TestUtils.GenerateTestWallet(walletPassword);
-        var account = wallet.CreateAccount();
-        Assert.IsNotNull(account, "Wallet.CreateAccount() should create an account");
+        if (withAccount)
+        {
+            var account = wallet.CreateAccount();
+            Assert.IsNotNull(account, "Wallet.CreateAccount() should create an account");
+        }
 
         var service = new MainService();
 
@@ -51,7 +110,7 @@ public class UT_MainService_Wallet
         {
             Assert.AreEqual("password", label);
             Assert.IsTrue(isPassword);
-            return walletPassword;
+            return userPassword;
         };
 
         readInputProp!.SetValue(service, fakeReadInput);
@@ -69,22 +128,7 @@ public class UT_MainService_Wallet
             Console.SetOut(originalOut);
         }
 
-        var output = outputWriter.ToString();
-        // Basic headers
-        Assert.IsFalse(string.IsNullOrWhiteSpace(output), "Output from sign message command should not be empty");
-        Assert.Contains("Signed Payload", output, "Output should containt the signed payload");
-        Assert.Contains("Algorithm", output, "Output should describe the algorithm used");
-        Assert.Contains("Generated signatures", output, "Output should contain signatures header");
-        // Sign block
-        Assert.Contains("Address", output, "Output should contain at least one address");
-        Assert.Contains("PublicKey", output, "Output should contain the public key");
-        Assert.Contains("Signature", output, "Output should contain the signature");
-        Assert.Contains("Salt", output, "Output should contain the salt used");
-        // Check Salt
-        var salt = ExtractHexValue(output, "Salt:");
-        Assert.IsNotNull(salt, "Salt hex should be present in the output");
-        Assert.AreEqual(32, salt!.Length, "Salt should be 16 bytes (32 hex chars)");
-        Assert.IsTrue(IsHexString(salt!), "Salt should be valid hex");
+        return outputWriter.ToString();
     }
     private static string ExtractHexValue(string output, string label)
     {
