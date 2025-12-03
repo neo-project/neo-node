@@ -42,7 +42,7 @@ Any RFC 8484-compliant DoH server should work with this oracle protocol.
 ## RFC 4501 URI format
 
 ```
-dns:[//authority/]domain[?CLASS=class;TYPE=type][;FORMAT=x509]
+dns:[//authority/]domain[?CLASS=class;TYPE=type]
 ```
 
 - `domain` is the DNS owner name (relative or absolute). Percent-encoding and escaped dots (`%5c.`) follow RFC 4501 rules.
@@ -50,7 +50,6 @@ dns:[//authority/]domain[?CLASS=class;TYPE=type][;FORMAT=x509]
 - `authority` is the optional DoH server to use for this query (RFC 4501). When specified, the oracle connects to `https://{authority}/dns-query`. If omitted, the configured `EndPoint` is used.
 - `CLASS` is optional and case-insensitive. Only `IN` (`1`) is supported; other classes are rejected.
 - `TYPE` is optional and case-insensitive. Use mnemonics (`TXT`, `TLSA`, `CERT`, `A`, `AAAA`, …) or numeric values. Defaults to `A` per RFC 4501.
-- `FORMAT` is an oracle extension; use `format=x509` (or `cert`) to parse TXT/CERT payloads into the `Certificate` field.
 - `name` is an oracle extension; if present, it overrides `domain` entirely (useful for percent-encoding complex owner names).
 
 Query parameters can be separated by `;` (RFC style) or `&`.
@@ -58,7 +57,7 @@ Query parameters can be separated by `;` (RFC style) or `&`.
 Examples:
 
 - `dns:1alhai._domainkey.icloud.com?TYPE=TXT` — DKIM TXT record.
-- `dns:simon.example.org?TYPE=CERT;FORMAT=x509` — extract the X.509 payload into `Certificate`.
+- `dns:simon.example.org?TYPE=CERT` — CERT RDATA is returned as-is (type, key tag, algorithm, base64).
 - `dns://dns.google/ftp.example.org?TYPE=A` — uses Google's DoH server (`https://dns.google/dns-query`) instead of the configured endpoint.
 - `dns://cloudflare-dns.com/example.org?TYPE=TXT` — uses Cloudflare's DoH server for this specific query.
 - `dns:ignored?name=weird%5c.label.example&type=TXT` — uses the `name` override (decoded to `weird.label.example`).
@@ -78,27 +77,12 @@ Successful queries return UTF-8 JSON. Attributes correspond to the `ResultEnvelo
       "Ttl": 299,
       "Data": "\"k=rsa; p=...IDAQAB\""
     }
-  ],
-  "Certificate": {
-    "Subject": "CN=example.com",
-    "Issuer": "CN=Example Root",
-    "Thumbprint": "ABCD1234...",
-    "NotBefore": "2024-01-16T00:00:00Z",
-    "NotAfter": "2025-01-16T00:00:00Z",
-    "Der": "MIIC...",
-    "PublicKey": {
-      "Algorithm": "RSA",
-      "Encoded": "MIIBIjANBg...",
-      "Modulus": "B968DE...",
-      "Exponent": "010001"
-    }
-  }
+  ]
 }
 ```
 
 - `Answers` mirrors the DoH response but normalizes record types and names.
-- `Certificate` is present only when `TYPE=CERT` or `FORMAT=x509`. `Der` is the base64-encoded certificate, while `PublicKey` provides both the encoded SubjectPublicKeyInfo (`Encoded`) and algorithm-specific fields (`Modulus`/`Exponent` for RSA, `Curve`/`X`/`Y` for EC).
-- For RSA keys the modulus/exponent strings are big-endian hex. For EC keys the X/Y coordinates are hex-encoded affine coordinates on the reported `Curve`.
+- CERT records are returned verbatim in `Answers[].Data` (type, key tag, algorithm, base64 payload). Contracts can parse the certificate themselves if needed.
 - If the DoH server responds with NXDOMAIN, the oracle returns `OracleResponseCode.NotFound`.
 - Responses exceeding `OracleResponse.MaxResultSize` yield `OracleResponseCode.ResponseTooLarge`.
 

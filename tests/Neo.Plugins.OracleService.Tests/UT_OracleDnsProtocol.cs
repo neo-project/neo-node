@@ -19,8 +19,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -168,74 +166,6 @@ public class UT_OracleDnsProtocol
         (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:big.example.com?TYPE=TXT"), CancellationToken.None);
         Assert.AreEqual(OracleResponseCode.ResponseTooLarge, code);
         Assert.IsNull(payload);
-    }
-
-    [TestMethod]
-    public async Task ProcessAsync_ReturnsCertificateFromTxtRecord()
-    {
-        string base64Cert = GenerateCertificateBase64("CN=example.com");
-        byte[] txtRdata = BuildTxtRdata(base64Cert);
-        byte[] dnsResponse = BuildDnsResponse("oracle.example.com", 16, 60, txtRdata);
-
-        var handler = new StubHandler(request =>
-        {
-            Assert.AreEqual(HttpMethod.Post, request.Method);
-            return new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new ByteArrayContent(dnsResponse)
-                {
-                    Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/dns-message") }
-                }
-            };
-        });
-        using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:oracle.example.com?TYPE=TXT;FORMAT=x509"), CancellationToken.None);
-        Assert.AreEqual(OracleResponseCode.Success, code);
-        Assert.IsNotNull(payload);
-        using JsonDocument doc = JsonDocument.Parse(payload);
-        Assert.AreEqual("oracle.example.com", doc.RootElement.GetProperty("Name").GetString());
-        var certElement = doc.RootElement.GetProperty("Certificate");
-        Assert.AreEqual(base64Cert, certElement.GetProperty("Der").GetString());
-        using var parsedCert = X509CertificateLoader.LoadCertificate(Convert.FromBase64String(base64Cert));
-        var pkElement = certElement.GetProperty("PublicKey");
-        string expectedPublicKey = Convert.ToBase64String(parsedCert.GetPublicKey());
-        string expectedAlgorithm = parsedCert.PublicKey.Oid?.FriendlyName ?? parsedCert.PublicKey.Oid?.Value;
-        Assert.AreEqual(expectedPublicKey, pkElement.GetProperty("Encoded").GetString());
-        Assert.AreEqual(expectedAlgorithm, pkElement.GetProperty("Algorithm").GetString());
-        using RSA rsa = parsedCert.GetRSAPublicKey();
-        Assert.IsNotNull(rsa);
-        RSAParameters parameters = rsa.ExportParameters(false);
-        Assert.AreEqual(Convert.ToHexString(parameters.Modulus), pkElement.GetProperty("Modulus").GetString());
-        Assert.AreEqual(Convert.ToHexString(parameters.Exponent), pkElement.GetProperty("Exponent").GetString());
-    }
-
-    [TestMethod]
-    public async Task ProcessAsync_ReturnsEcPublicKeyFields()
-    {
-        string base64Cert = GenerateEcCertificateBase64("CN=example-ec.com");
-        byte[] txtRdata = BuildTxtRdata(base64Cert);
-        byte[] dnsResponse = BuildDnsResponse("ec.example.com", 16, 60, txtRdata);
-
-        var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = new ByteArrayContent(dnsResponse)
-            {
-                Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/dns-message") }
-            }
-        });
-        using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:ec.example.com?TYPE=TXT;FORMAT=x509"), CancellationToken.None);
-        Assert.AreEqual(OracleResponseCode.Success, code);
-        using JsonDocument doc = JsonDocument.Parse(payload);
-        var pkElement = doc.RootElement.GetProperty("Certificate").GetProperty("PublicKey");
-        using var parsedCert = X509CertificateLoader.LoadCertificate(Convert.FromBase64String(base64Cert));
-        using ECDsa ecdsa = parsedCert.GetECDsaPublicKey();
-        Assert.IsNotNull(ecdsa);
-        ECParameters parameters = ecdsa.ExportParameters(false);
-        string expectedCurve = parameters.Curve.Oid?.FriendlyName ?? parameters.Curve.Oid?.Value;
-        Assert.AreEqual(expectedCurve, pkElement.GetProperty("Curve").GetString());
-        Assert.AreEqual(Convert.ToHexString(parameters.Q.X), pkElement.GetProperty("X").GetString());
-        Assert.AreEqual(Convert.ToHexString(parameters.Q.Y), pkElement.GetProperty("Y").GetString());
     }
 
     [TestMethod]
@@ -458,6 +388,41 @@ public class UT_OracleDnsProtocol
 
     #endregion
 
+    #region CERT Record Tests
+
+    [TestMethod]
+    public async Task ProcessAsync_PreservesCertRdata()
+    {
+        // CERT RDATA: type(2) + keyTag(2) + algorithm(1) + certificate bytes
+        byte[] certBytes = Encoding.ASCII.GetBytes("cert-payload");
+        List<byte> certRdata = new();
+        certRdata.AddRange(new byte[] { 0x00, 0x01 }); // PKIX type
+        certRdata.AddRange(new byte[] { 0x00, 0x00 }); // key tag
+        certRdata.Add(0x00); // algorithm
+        certRdata.AddRange(certBytes);
+
+        byte[] dnsResponse = BuildDnsResponse("cert.example.com", 37, 60, [.. certRdata]);
+
+        var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(dnsResponse)
+            {
+                Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/dns-message") }
+            }
+        });
+        using var protocol = new OracleDnsProtocol(handler);
+        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:cert.example.com?TYPE=CERT"), CancellationToken.None);
+
+        Assert.AreEqual(OracleResponseCode.Success, code);
+        using JsonDocument doc = JsonDocument.Parse(payload);
+        Assert.AreEqual("CERT", doc.RootElement.GetProperty("Answers")[0].GetProperty("Type").GetString());
+        string data = doc.RootElement.GetProperty("Answers")[0].GetProperty("Data").GetString();
+        StringAssert.Contains(data, Convert.ToBase64String(certBytes));
+        Assert.IsFalse(doc.RootElement.TryGetProperty("Certificate", out _));
+    }
+
+    #endregion
+
     #region DNS Name Compression Tests
 
     [TestMethod]
@@ -622,6 +587,16 @@ public class UT_OracleDnsProtocol
         Assert.AreEqual(OracleResponseCode.Success, code);
     }
 
+    [TestMethod]
+    public async Task ProcessAsync_RejectsOutOfRangeNumericRecordType()
+    {
+        using var protocol = new OracleDnsProtocol(new StubHandler(_ => throw new InvalidOperationException("Should not send")));
+        (OracleResponseCode code, string message) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=70000"), CancellationToken.None);
+
+        Assert.AreEqual(OracleResponseCode.Error, code);
+        StringAssert.Contains(message, "70000");
+    }
+
     #endregion
 
     #region Query Parameter Tests
@@ -682,66 +657,6 @@ public class UT_OracleDnsProtocol
         (OracleResponseCode code, _) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=TXT&CLASS=IN"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Success, code);
-    }
-
-    #endregion
-
-    #region Certificate Format Tests
-
-    [TestMethod]
-    public async Task ProcessAsync_ExtractsCertificateWithCertFormat()
-    {
-        string base64Cert = GenerateCertificateBase64("CN=test.com");
-        byte[] txtRdata = BuildTxtRdata(base64Cert);
-        byte[] dnsResponse = BuildDnsResponse("test.com", 16, 60, txtRdata);
-
-        var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = new ByteArrayContent(dnsResponse)
-            {
-                Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/dns-message") }
-            }
-        });
-        using var protocol = new OracleDnsProtocol(handler);
-        // Use FORMAT=cert instead of FORMAT=x509
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:test.com?TYPE=TXT;FORMAT=cert"), CancellationToken.None);
-
-        Assert.AreEqual(OracleResponseCode.Success, code);
-        using JsonDocument doc = JsonDocument.Parse(payload);
-        Assert.IsTrue(doc.RootElement.TryGetProperty("Certificate", out _));
-    }
-
-    [TestMethod]
-    public async Task ProcessAsync_ExtractsCertificateFromCertRecord()
-    {
-        // Build CERT record (type 37) with certificate data
-        string base64Cert = GenerateCertificateBase64("CN=cert.example.com");
-        byte[] certBytes = Convert.FromBase64String(base64Cert);
-
-        // CERT RDATA format: type(2) + keyTag(2) + algorithm(1) + certificate
-        List<byte> certRdata = new();
-        certRdata.AddRange(new byte[] { 0x00, 0x01 }); // PKIX type
-        certRdata.AddRange(new byte[] { 0x00, 0x00 }); // Key tag
-        certRdata.Add(0x00); // Algorithm
-        certRdata.AddRange(certBytes);
-
-        byte[] dnsResponse = BuildDnsResponse("cert.example.com", 37, 60, [.. certRdata]);
-
-        var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = new ByteArrayContent(dnsResponse)
-            {
-                Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/dns-message") }
-            }
-        });
-        using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:cert.example.com?TYPE=CERT"), CancellationToken.None);
-
-        Assert.AreEqual(OracleResponseCode.Success, code);
-        using JsonDocument doc = JsonDocument.Parse(payload);
-        Assert.AreEqual("CERT", doc.RootElement.GetProperty("Type").GetString());
-        Assert.IsTrue(doc.RootElement.TryGetProperty("Certificate", out var certElement));
-        Assert.AreEqual("CN=cert.example.com", certElement.GetProperty("Subject").GetString());
     }
 
     #endregion
@@ -1088,22 +1003,6 @@ public class UT_OracleDnsProtocol
             .Build()
             .GetSection("PluginConfiguration");
         OracleSettings.Load(section);
-    }
-
-    private static string GenerateCertificateBase64(string subject)
-    {
-        using RSA rsa = RSA.Create(2048);
-        var request = new CertificateRequest(subject, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        using X509Certificate2 certificate = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1));
-        return Convert.ToBase64String(certificate.Export(X509ContentType.Cert));
-    }
-
-    private static string GenerateEcCertificateBase64(string subject)
-    {
-        using ECDsa ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-        var request = new CertificateRequest(subject, ecdsa, HashAlgorithmName.SHA256);
-        using X509Certificate2 certificate = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1));
-        return Convert.ToBase64String(certificate.Export(X509ContentType.Cert));
     }
 
     /// <summary>

@@ -20,8 +20,6 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -39,6 +37,7 @@ class OracleDnsProtocol : IOracleProtocol
     private const ushort DnsClassIN = 1;
     private const int DnsHeaderSize = 12;
     private static readonly MediaTypeHeaderValue DnsMessageMediaType = new("application/dns-message");
+    private sealed class ResponseTooLargeException : Exception { }
 
     /// <summary>
     /// Represents a parsed DNS resource record from wire format (RFC 1035).
@@ -71,34 +70,11 @@ class OracleDnsProtocol : IOracleProtocol
         public string Data { get; set; }
     }
 
-    private sealed class CertificateResult
-    {
-        public string Subject { get; set; }
-        public string Issuer { get; set; }
-        public string Thumbprint { get; set; }
-        public DateTime NotBefore { get; set; }
-        public DateTime NotAfter { get; set; }
-        public string Der { get; set; }
-        public CertificatePublicKey PublicKey { get; set; }
-    }
-
-    private sealed class CertificatePublicKey
-    {
-        public string Algorithm { get; set; }
-        public string Encoded { get; set; }
-        public string Modulus { get; set; }
-        public string Exponent { get; set; }
-        public string Curve { get; set; }
-        public string X { get; set; }
-        public string Y { get; set; }
-    }
-
     private sealed class ResultEnvelope
     {
         public string Name { get; set; }
         public string Type { get; set; }
         public ResultAnswer[] Answers { get; set; }
-        public CertificateResult Certificate { get; set; }
     }
 
     private static readonly IReadOnlyDictionary<string, int> RecordTypeLookup = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
@@ -178,7 +154,6 @@ class OracleDnsProtocol : IOracleProtocol
             return (OracleResponseCode.Error, ex.Message);
         }
 
-        bool wantsCertificate = recordType == RecordTypeLookup["CERT"] || ShouldExtractCertificate(query);
         Utility.Log(nameof(OracleDnsProtocol), LogLevel.Debug, $"Request: {queryName} ({recordTypeLabel}) via {resolverEndpoint.Host}");
 
         DnsMessage dnsResponse;
@@ -189,6 +164,10 @@ class OracleDnsProtocol : IOracleProtocol
         catch (TaskCanceledException)
         {
             return (OracleResponseCode.Timeout, null);
+        }
+        catch (ResponseTooLargeException)
+        {
+            return (OracleResponseCode.ResponseTooLarge, null);
         }
         catch (Exception ex)
         {
@@ -218,19 +197,11 @@ class OracleDnsProtocol : IOracleProtocol
             })
             .ToArray();
 
-        CertificateResult certificate = null;
-        bool certificateOversized = false;
-        if (wantsCertificate && TryBuildCertificate(dnsResponse.Answers, out certificate, out certificateOversized))
-            Utility.Log(nameof(OracleDnsProtocol), LogLevel.Debug, $"Certificate extracted for {queryName}");
-        if (certificateOversized)
-            return (OracleResponseCode.ResponseTooLarge, null);
-
         ResultEnvelope envelope = new()
         {
             Name = queryName,
             Type = recordTypeLabel,
-            Answers = answers,
-            Certificate = certificate
+            Answers = answers
         };
 
         string payload = JsonSerializer.Serialize(envelope, resultSerializerOptions);
@@ -250,12 +221,43 @@ class OracleDnsProtocol : IOracleProtocol
         using ByteArrayContent content = new(queryMessage);
         content.Headers.ContentType = DnsMessageMediaType;
 
+        if (!OracleSettings.Default.AllowPrivateHost && IsPrivateEndpoint(resolverEndpoint.Host))
+            throw new InvalidOperationException("Private resolver endpoints are not allowed.");
+
         using HttpResponseMessage response = await client.PostAsync(resolverEndpoint, content, cancellation);
         if (!response.IsSuccessStatusCode)
             throw new InvalidOperationException($"DoH endpoint returned {(int)response.StatusCode} ({response.StatusCode})");
 
-        byte[] responseData = await response.Content.ReadAsByteArrayAsync(cancellation);
+        if (response.Content.Headers.ContentLength.HasValue && response.Content.Headers.ContentLength > OracleResponse.MaxResultSize)
+            throw new ResponseTooLargeException();
+
+        using Stream stream = await response.Content.ReadAsStreamAsync(cancellation);
+        using MemoryStream buffer = new();
+        byte[] chunk = new byte[8 * 1024];
+        int read;
+        while ((read = await stream.ReadAsync(chunk.AsMemory(0, chunk.Length), cancellation)) > 0)
+        {
+            if (buffer.Length + read > OracleResponse.MaxResultSize)
+                throw new ResponseTooLargeException();
+            buffer.Write(chunk, 0, read);
+        }
+
+        byte[] responseData = buffer.ToArray();
         return ParseDnsResponse(responseData);
+    }
+
+    private static bool IsPrivateEndpoint(string host)
+    {
+        if (string.IsNullOrWhiteSpace(host))
+            return false;
+
+        if (host.Equals("localhost", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (IPAddress.TryParse(host, out IPAddress address))
+            return address.IsInternal();
+
+        return false;
     }
 
     /// <summary>
@@ -632,7 +634,11 @@ class OracleDnsProtocol : IOracleProtocol
             return RecordTypeLookup["A"];
         typeRaw = typeRaw.Trim();
         if (int.TryParse(typeRaw, NumberStyles.Integer, CultureInfo.InvariantCulture, out int numeric))
+        {
+            if (numeric < 0 || numeric > ushort.MaxValue)
+                throw new FormatException($"Unsupported DNS record type '{typeRaw}'");
             return numeric;
+        }
         if (RecordTypeLookup.TryGetValue(typeRaw, out int mapped))
             return mapped;
         throw new FormatException($"Unsupported DNS record type '{typeRaw}'");
@@ -643,208 +649,5 @@ class OracleDnsProtocol : IOracleProtocol
         if (ReverseRecordTypeLookup.TryGetValue(type, out string label))
             return label;
         return type.ToString(CultureInfo.InvariantCulture);
-    }
-
-    private static bool ShouldExtractCertificate(NameValueCollection query)
-    {
-        string format = GetQueryValue(query, "format");
-        if (string.IsNullOrWhiteSpace(format))
-            return false;
-        return format.Equals("x509", StringComparison.OrdinalIgnoreCase)
-            || format.Equals("cert", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool TryBuildCertificate(IEnumerable<DnsResourceRecord> answers, out CertificateResult certificate, out bool oversized)
-    {
-        certificate = null;
-        oversized = false;
-        foreach (var answer in answers)
-        {
-            if (!CanContainCertificate(answer))
-                continue;
-
-            if (!TryExtractCertificateBytes(answer, out byte[] raw, out bool candidateOversized))
-            {
-                oversized |= candidateOversized;
-                continue;
-            }
-
-            try
-            {
-                using X509Certificate2 cert = X509CertificateLoader.LoadCertificate(raw);
-                certificate = new CertificateResult
-                {
-                    Subject = cert.Subject,
-                    Issuer = cert.Issuer,
-                    Thumbprint = cert.Thumbprint,
-                    NotBefore = cert.NotBefore,
-                    NotAfter = cert.NotAfter,
-                    Der = Convert.ToBase64String(cert.Export(X509ContentType.Cert)),
-                    PublicKey = BuildPublicKey(cert)
-                };
-                return true;
-            }
-            catch
-            {
-                oversized |= candidateOversized;
-                // Skip invalid certificate payloads
-            }
-        }
-        return false;
-    }
-
-    private static CertificatePublicKey BuildPublicKey(X509Certificate2 cert)
-    {
-        CertificatePublicKey key = new()
-        {
-            Algorithm = cert.PublicKey.Oid?.FriendlyName ?? cert.PublicKey.Oid?.Value
-        };
-
-        try
-        {
-            key.Encoded = Convert.ToBase64String(cert.GetPublicKey());
-        }
-        catch (CryptographicException)
-        {
-            // GetPublicKey() can throw for certain certificate types; leave Encoded as null
-        }
-
-        try
-        {
-            using RSA rsa = cert.GetRSAPublicKey();
-            if (rsa is not null)
-            {
-                RSAParameters parameters = rsa.ExportParameters(false);
-                key.Modulus = Convert.ToHexString(parameters.Modulus);
-                key.Exponent = Convert.ToHexString(parameters.Exponent);
-                return key;
-            }
-        }
-        catch
-        {
-            // ignore and fall through
-        }
-
-        try
-        {
-            using ECDsa ecdsa = cert.GetECDsaPublicKey();
-            if (ecdsa is not null)
-            {
-                ECParameters parameters = ecdsa.ExportParameters(false);
-                key.Curve = parameters.Curve.Oid?.FriendlyName ?? parameters.Curve.Oid?.Value;
-                key.X = Convert.ToHexString(parameters.Q.X);
-                key.Y = Convert.ToHexString(parameters.Q.Y);
-                return key;
-            }
-        }
-        catch
-        {
-        }
-
-        return key;
-    }
-
-    private static bool CanContainCertificate(DnsResourceRecord answer)
-    {
-        if (answer is null || answer.RData is null || answer.RData.Length == 0)
-            return false;
-        return answer.Type == RecordTypeLookup["CERT"] || answer.Type == RecordTypeLookup["TXT"];
-    }
-
-    /// <summary>
-    /// Extracts certificate bytes from a DNS resource record.
-    /// </summary>
-    private static bool TryExtractCertificateBytes(DnsResourceRecord record, out byte[] raw, out bool oversized)
-    {
-        raw = null;
-        oversized = false;
-
-        if (record.RData is null || record.RData.Length == 0)
-            return false;
-
-        // For CERT records (RFC 4398), certificate data starts at offset 5
-        if (record.Type == RecordTypeLookup["CERT"])
-        {
-            if (record.RData.Length <= 5)
-                return false;
-
-            raw = record.RData[5..];
-            if (raw.Length > OracleResponse.MaxResultSize)
-            {
-                oversized = true;
-                raw = null;
-                return false;
-            }
-            return true;
-        }
-
-        // For TXT records, try to decode base64 from the text
-        if (record.Type == RecordTypeLookup["TXT"])
-        {
-            string txtData = FormatTxtRecord(record.RData);
-            return TryExtractCertificateFromText(txtData, out raw, out oversized);
-        }
-
-        return false;
-    }
-
-    private static bool TryExtractCertificateFromText(string payload, out byte[] raw, out bool oversized)
-    {
-        raw = null;
-        oversized = false;
-        if (string.IsNullOrWhiteSpace(payload))
-            return false;
-
-        string cleaned = payload.Trim();
-        int lastSpace = cleaned.LastIndexOf(' ');
-        if (lastSpace > 0)
-        {
-            string tail = cleaned[(lastSpace + 1)..];
-            if (TryDecodeBase64Safe(tail, out raw, out oversized))
-                return true;
-            if (oversized)
-                return false;
-        }
-
-        string normalized = cleaned.Replace("\"", string.Empty, StringComparison.Ordinal)
-                                   .Replace(" ", string.Empty, StringComparison.Ordinal);
-        return TryDecodeBase64Safe(normalized, out raw, out oversized);
-    }
-
-    private static bool TryDecodeBase64Safe(string input, out byte[] data, out bool oversized)
-    {
-        data = null;
-        oversized = false;
-        if (string.IsNullOrWhiteSpace(input))
-            return false;
-        if (ExceedsMaxCertificateSize(input))
-        {
-            oversized = true;
-            return false;
-        }
-        try
-        {
-            data = Convert.FromBase64String(input);
-            if (data.Length > OracleResponse.MaxResultSize)
-            {
-                oversized = true;
-                data = null;
-                return false;
-            }
-            return data.Length > 0;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static bool ExceedsMaxCertificateSize(string base64)
-    {
-        if (string.IsNullOrWhiteSpace(base64))
-            return false;
-        long length = base64.Length;
-        long estimatedDecoded = 3L * ((length + 3) / 4); // ceil(length/4) * 3
-        return estimatedDecoded > OracleResponse.MaxResultSize;
     }
 }
