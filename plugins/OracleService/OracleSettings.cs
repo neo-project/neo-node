@@ -45,7 +45,7 @@ class DnsSettings
     {
         string endpoint = section.GetValue("EndPoint", "https://cloudflare-dns.com/dns-query");
         EndPoint = new Uri(endpoint, UriKind.Absolute);
-        Timeout = TimeSpan.FromMilliseconds(section.GetValue("Timeout", 5000));
+        Timeout = TimeSpan.FromMilliseconds(section.GetValue("TimeoutMilliseconds", 5000));
     }
 }
 
