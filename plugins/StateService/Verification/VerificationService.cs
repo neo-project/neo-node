@@ -104,7 +104,7 @@ public class VerificationService : UntypedActor
             CheckVotes(context);
             context.Timer.CancelIfNotNull();
             context.Timer = Context.System.Scheduler.ScheduleTellOnceCancelable(
-                TimeSpan.FromMilliseconds((uint)StatePlugin.NeoSystem.GetTimePerBlock().TotalMilliseconds << context.Retries),
+                TimeSpan.FromMilliseconds((uint)StatePlugin.NeoSystem.Settings.TimePerBlock.TotalMilliseconds << context.Retries),
                 Self,
                 new Timer { Index = index, },
                 ActorRefs.NoSender);

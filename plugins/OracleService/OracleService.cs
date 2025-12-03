@@ -398,7 +398,7 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
         var m = n - (n - 1) / 3;
         var oracleSignContract = Contract.CreateMultiSigContract(m, oracleNodes);
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
-        var maxVUB = snapshot.GetMaxValidUntilBlockIncrement(settings);
+        var maxVUB = settings.MaxValidUntilBlockIncrement;
         var validUntilBlock = requestTx.BlockIndex + maxVUB;
         while (useCurrentHeight && validUntilBlock <= height)
         {
