@@ -16,7 +16,7 @@ The Oracle plugin resolves RFC 4501 `dns:` URIs through a DNS-over-HTTPS (DoH) g
     // ...
     "Dns": {
       "EndPoint": "https://cloudflare-dns.com/dns-query",
-      "Timeout": 5000
+      "TimeoutMilliseconds": 5000
     }
   }
 }
