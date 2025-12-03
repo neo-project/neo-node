@@ -22,10 +22,22 @@ The Oracle plugin resolves RFC 4501 `dns:` URIs through a DNS-over-HTTPS (DoH) g
 }
 ```
 
-- `EndPoint` must point to a DoH resolver that understands the [application/dns-json](https://developers.cloudflare.com/api/operations/dns-over-https) format.
+- `EndPoint` must point to a DoH resolver that supports [RFC 8484](https://www.rfc-editor.org/rfc/rfc8484.html) with `application/dns-message` format.
 - `Timeout` is the maximum milliseconds the oracle will wait for a DoH response before returning `OracleResponseCode.Timeout`.
 
 > You can run your own DoH gateway and point the oracle to it if you need custom trust anchors or strict egress controls.
+
+### RFC 8484 Compliance
+
+This implementation uses the standard `application/dns-message` content type as defined in RFC 8484. DNS queries are sent as POST requests with binary DNS wire format (RFC 1035). Compatible DoH endpoints include:
+
+| Provider | Endpoint |
+|----------|----------|
+| Cloudflare | `https://cloudflare-dns.com/dns-query` |
+| Google | `https://dns.google/dns-query` |
+| Quad9 | `https://dns.quad9.net/dns-query` |
+
+Any RFC 8484-compliant DoH server should work with this oracle protocol.
 
 ## RFC 4501 URI format
 
@@ -35,7 +47,7 @@ dns:[//authority/]domain[?CLASS=class;TYPE=type][;FORMAT=x509]
 
 - `domain` is the DNS owner name (relative or absolute). Percent-encoding and escaped dots (`%5c.`) follow RFC 4501 rules.
 - `domain` must not include additional path segments; only the owner name belongs here.
-- `authority` is the optional DNS server hint from RFC 4501. The oracle still uses the DoH resolver configured in `OracleService.json`.
+- `authority` is the optional DoH server to use for this query (RFC 4501). When specified, the oracle connects to `https://{authority}/dns-query`. If omitted, the configured `EndPoint` is used.
 - `CLASS` is optional and case-insensitive. Only `IN` (`1`) is supported; other classes are rejected.
 - `TYPE` is optional and case-insensitive. Use mnemonics (`TXT`, `TLSA`, `CERT`, `A`, `AAAA`, …) or numeric values. Defaults to `A` per RFC 4501.
 - `FORMAT` is an oracle extension; use `format=x509` (or `cert`) to parse TXT/CERT payloads into the `Certificate` field.
@@ -47,8 +59,9 @@ Examples:
 
 - `dns:1alhai._domainkey.icloud.com?TYPE=TXT` — DKIM TXT record.
 - `dns:simon.example.org?TYPE=CERT;FORMAT=x509` — extract the X.509 payload into `Certificate`.
-- `dns://192.168.1.1/ftp.example.org?TYPE=A` — RFC-compliant authority form (authority is ignored; the configured DoH endpoint is used).
-- `dns:ignored?name=weird%5c.label.example&type=TXT` — uses the `name` override (decoded to `weird\.label.example`).
+- `dns://dns.google/ftp.example.org?TYPE=A` — uses Google's DoH server (`https://dns.google/dns-query`) instead of the configured endpoint.
+- `dns://cloudflare-dns.com/example.org?TYPE=TXT` — uses Cloudflare's DoH server for this specific query.
+- `dns:ignored?name=weird%5c.label.example&type=TXT` — uses the `name` override (decoded to `weird.label.example`).
 
 ## Response schema
 
