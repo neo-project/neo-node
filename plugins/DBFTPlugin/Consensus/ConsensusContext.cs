@@ -211,7 +211,7 @@ public sealed partial class ConsensusContext : IDisposable, ISerializable
                 },
                 Transactions = null!
             };
-            TimePerBlock = TimeSpan.FromMilliseconds(neoSystem.Settings.MillisecondsPerBlock);
+            TimePerBlock = neoSystem.Settings.TimePerBlock;
             var pv = Validators;
             Validators = NativeContract.NEO.GetNextBlockValidators(Snapshot, neoSystem.Settings.ValidatorsCount);
             if (_witnessSize == 0 || (pv != null && pv.Length != Validators.Length))
