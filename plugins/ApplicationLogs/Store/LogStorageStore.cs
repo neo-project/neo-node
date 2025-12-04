@@ -110,8 +110,8 @@ public sealed class LogStorageStore : IDisposable
     {
         var key = new KeyBuilder(Prefix_Id, Prefix_Contract)
             .Add(scriptHash)
-            .AddBigEndian(timestamp)
-            .AddBigEndian(iterIndex)
+            .Add(timestamp)
+            .Add(iterIndex)
             .ToArray();
         _snapshot.Put(key, state.ToArray());
     }
@@ -199,7 +199,7 @@ public sealed class LogStorageStore : IDisposable
             .ToArray();
         var prefixKey = new KeyBuilder(Prefix_Id, Prefix_Contract)
             .Add(scriptHash)
-            .AddBigEndian(ulong.MaxValue) // Get newest to oldest (timestamp)
+            .Add(ulong.MaxValue) // Get newest to oldest (timestamp)
             .ToArray();
         uint index = 1;
         foreach (var (key, value) in _snapshot.Find(prefixKey, SeekDirection.Backward)) // Get newest to oldest
@@ -222,7 +222,7 @@ public sealed class LogStorageStore : IDisposable
             .ToArray();
         var prefixKey = new KeyBuilder(Prefix_Id, Prefix_Contract)
             .Add(scriptHash)
-            .AddBigEndian(ulong.MaxValue) // Get newest to oldest (timestamp)
+            .Add(ulong.MaxValue) // Get newest to oldest (timestamp)
             .ToArray();
         uint index = 1;
         foreach (var (key, value) in _snapshot.Find(prefixKey, SeekDirection.Backward)) // Get newest to oldest
@@ -249,7 +249,7 @@ public sealed class LogStorageStore : IDisposable
             .ToArray();
         var prefixKey = new KeyBuilder(Prefix_Id, Prefix_Contract)
             .Add(scriptHash)
-            .AddBigEndian(ulong.MaxValue) // Get newest to oldest (timestamp)
+            .Add(ulong.MaxValue) // Get newest to oldest (timestamp)
             .ToArray();
         uint index = 1;
         foreach (var (key, value) in _snapshot.Find(prefixKey, SeekDirection.Backward)) // Get newest to oldest
@@ -328,8 +328,8 @@ public sealed class LogStorageStore : IDisposable
     {
         var key = new KeyBuilder(Prefix_Id, Prefix_Contract)
             .Add(scriptHash)
-            .AddBigEndian(timestamp)
-            .AddBigEndian(iterIndex)
+            .Add(timestamp)
+            .Add(iterIndex)
             .ToArray();
         state = _snapshot.TryGet(key, out var data) ? data.AsSerializable<ContractLogState>()! : null;
         return data != null && data.Length > 0;

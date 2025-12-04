@@ -124,7 +124,7 @@ partial class ConsensusService
 
         Dictionary<UInt256, Transaction> mempoolVerified = neoSystem.MemPool.GetVerifiedTransactions().ToDictionary(p => p.Hash);
         var unverified = new List<Transaction>();
-        var mtb = neoSystem.GetMaxTraceableBlocks();
+        var mtb = neoSystem.Settings.MaxTraceableBlocks;
         foreach (UInt256 hash in context.TransactionHashes)
         {
             if (mempoolVerified.TryGetValue(hash, out Transaction tx))
