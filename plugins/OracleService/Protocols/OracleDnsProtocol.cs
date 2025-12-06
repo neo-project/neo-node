@@ -19,6 +19,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
@@ -106,7 +107,8 @@ class OracleDnsProtocol : IOracleProtocol
 
     public OracleDnsProtocol(HttpMessageHandler handler = null)
     {
-        client = handler is null ? new HttpClient() : new HttpClient(handler);
+        // Do not allow automatic redirects; resolver endpoints must be explicitly allowed.
+        client = handler is null ? new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) : new HttpClient(handler);
         CustomAttributeData attribute = Assembly.GetExecutingAssembly().CustomAttributes.First(p => p.AttributeType == typeof(AssemblyInformationalVersionAttribute));
         string version = (string)attribute.ConstructorArguments[0].Value;
         client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("NeoOracleService", version));
@@ -221,8 +223,7 @@ class OracleDnsProtocol : IOracleProtocol
         using ByteArrayContent content = new(queryMessage);
         content.Headers.ContentType = DnsMessageMediaType;
 
-        if (!OracleSettings.Default.AllowPrivateHost && IsPrivateEndpoint(resolverEndpoint.Host))
-            throw new InvalidOperationException("Private resolver endpoints are not allowed.");
+        await EnsureEndpointAllowed(resolverEndpoint, cancellation);
 
         using HttpResponseMessage response = await client.PostAsync(resolverEndpoint, content, cancellation);
         if (!response.IsSuccessStatusCode)
@@ -244,6 +245,26 @@ class OracleDnsProtocol : IOracleProtocol
 
         byte[] responseData = buffer.ToArray();
         return ParseDnsResponse(responseData);
+    }
+
+    private async Task EnsureEndpointAllowed(Uri resolverEndpoint, CancellationToken cancellation)
+    {
+        if (OracleSettings.Default.AllowPrivateHost)
+            return;
+
+        if (IsPrivateEndpoint(resolverEndpoint.Host))
+            throw new InvalidOperationException("Private resolver endpoints are not allowed.");
+
+        try
+        {
+            IPHostEntry entry = await Dns.GetHostEntryAsync(resolverEndpoint.Host, cancellation);
+            if (entry.IsInternal())
+                throw new InvalidOperationException("Private resolver endpoints are not allowed.");
+        }
+        catch (SocketException ex)
+        {
+            throw new InvalidOperationException($"Failed to resolve resolver endpoint: {ex.Message}", ex);
+        }
     }
 
     private static bool IsPrivateEndpoint(string host)
@@ -566,10 +587,6 @@ class OracleDnsProtocol : IOracleProtocol
     internal static string BuildQueryName(Uri uri, NameValueCollection queryParameters = null)
     {
         queryParameters ??= ParseQueryString(uri.Query);
-        string overriddenName = NormalizeLabel(GetQueryValue(queryParameters, "name"));
-        if (!string.IsNullOrEmpty(overriddenName))
-            return overriddenName.TrimEnd('.');
-
         string dnsName = NormalizeDnsName(uri.GetComponents(UriComponents.Path, UriFormat.Unescaped));
         if (string.IsNullOrEmpty(dnsName))
             throw new FormatException("dns: URI must include a dnsname.");

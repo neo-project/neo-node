@@ -16,7 +16,7 @@
     },
     "Dns": {
       "EndPoint": "https://cloudflare-dns.com/dns-query",
-      "Timeout": 5000
+      "TimeoutMilliseconds": 5000
     },
     "AutoStart": false
   },

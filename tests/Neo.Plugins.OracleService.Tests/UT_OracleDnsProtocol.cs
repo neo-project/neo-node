@@ -66,14 +66,6 @@ public class UT_OracleDnsProtocol
     }
 
     [TestMethod]
-    public void BuildQueryName_UsesNameOverride()
-    {
-        var uri = new Uri("dns://resolver.example/ignored?name=override.example.com");
-        string name = OracleDnsProtocol.BuildQueryName(uri);
-        Assert.AreEqual("override.example.com", name);
-    }
-
-    [TestMethod]
     public void BuildQueryName_RejectsPathSegments()
     {
         var uri = new Uri("dns:example.com/extra");
@@ -533,6 +525,18 @@ public class UT_OracleDnsProtocol
     }
 
     [TestMethod]
+    public async Task ProcessAsync_RejectsPrivateResolverHost()
+    {
+        // Should reject before sending any request
+        var handler = new StubHandler(_ => throw new InvalidOperationException("Should not send"));
+        using var protocol = new OracleDnsProtocol(handler);
+        (OracleResponseCode code, string message) = await protocol.ProcessAsync(new Uri("dns://127.0.0.1/example.com?TYPE=A"), CancellationToken.None);
+
+        Assert.AreEqual(OracleResponseCode.Error, code);
+        StringAssert.Contains(message, "Private resolver");
+    }
+
+    [TestMethod]
     public async Task ProcessAsync_RejectsUnsupportedRecordType()
     {
         using var protocol = new OracleDnsProtocol(new StubHandler(_ => throw new InvalidOperationException("Should not send")));
@@ -760,14 +764,6 @@ public class UT_OracleDnsProtocol
         Assert.AreEqual("example.com", name);
     }
 
-    [TestMethod]
-    public void BuildQueryName_HandlesCaseInsensitiveNameParam()
-    {
-        var uri = new Uri("dns:ignored?NAME=override.com");
-        string name = OracleDnsProtocol.BuildQueryName(uri);
-        Assert.AreEqual("override.com", name);
-    }
-
     #endregion
 
     #region User-Specified Authority Tests
@@ -792,14 +788,14 @@ public class UT_OracleDnsProtocol
         });
         using var protocol = new OracleDnsProtocol(handler);
 
-        // Use authority syntax: dns://custom-resolver.example/domain
+        // Use authority syntax: dns://example.com/domain
         (OracleResponseCode code, _) = await protocol.ProcessAsync(
-            new Uri("dns://custom-resolver.example/example.com?TYPE=A"),
+            new Uri("dns://example.com/example.com?TYPE=A"),
             CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Success, code);
         Assert.IsNotNull(capturedUri);
-        Assert.AreEqual("custom-resolver.example", capturedUri.Host);
+        Assert.AreEqual("example.com", capturedUri.Host);
         Assert.AreEqual("/dns-query", capturedUri.AbsolutePath);
         Assert.AreEqual("https", capturedUri.Scheme);
     }
@@ -832,7 +828,7 @@ public class UT_OracleDnsProtocol
         Assert.AreEqual(OracleResponseCode.Success, code);
         Assert.IsNotNull(capturedUri);
         // Should use the configured endpoint from LoadSettings()
-        Assert.AreEqual("unit.test", capturedUri.Host);
+        Assert.AreEqual("example.com", capturedUri.Host);
     }
 
     [TestMethod]
@@ -974,7 +970,7 @@ public class UT_OracleDnsProtocol
             ["PluginConfiguration:NeoFS:EndPoint"] = "http://127.0.0.1:8080",
             ["PluginConfiguration:NeoFS:Timeout"] = "15000",
             ["PluginConfiguration:Dns:EndPoint"] = dnsEndpoint,
-            ["PluginConfiguration:Dns:Timeout"] = "10000"
+            ["PluginConfiguration:Dns:TimeoutMilliseconds"] = "10000"
         };
         IConfigurationSection section = new ConfigurationBuilder()
             .AddInMemoryCollection(values)
@@ -995,8 +991,8 @@ public class UT_OracleDnsProtocol
             ["PluginConfiguration:Https:Timeout"] = "5000",
             ["PluginConfiguration:NeoFS:EndPoint"] = "http://127.0.0.1:8080",
             ["PluginConfiguration:NeoFS:Timeout"] = "15000",
-            ["PluginConfiguration:Dns:EndPoint"] = "https://unit.test/dns-query",
-            ["PluginConfiguration:Dns:Timeout"] = "3000"
+            ["PluginConfiguration:Dns:EndPoint"] = "https://example.com/dns-query",
+            ["PluginConfiguration:Dns:TimeoutMilliseconds"] = "3000"
         };
         IConfigurationSection section = new ConfigurationBuilder()
             .AddInMemoryCollection(values)

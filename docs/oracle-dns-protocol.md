@@ -23,7 +23,7 @@ The Oracle plugin resolves RFC 4501 `dns:` URIs through a DNS-over-HTTPS (DoH) g
 ```
 
 - `EndPoint` must point to a DoH resolver that supports [RFC 8484](https://www.rfc-editor.org/rfc/rfc8484.html) with `application/dns-message` format.
-- `Timeout` is the maximum milliseconds the oracle will wait for a DoH response before returning `OracleResponseCode.Timeout`.
+- `TimeoutMilliseconds` is the maximum milliseconds the oracle will wait for a DoH response before returning `OracleResponseCode.Timeout` (falls back to `Timeout` for backward compatibility).
 
 > You can run your own DoH gateway and point the oracle to it if you need custom trust anchors or strict egress controls.
 
@@ -50,7 +50,6 @@ dns:[//authority/]domain[?CLASS=class;TYPE=type]
 - `authority` is the optional DoH server to use for this query (RFC 4501). When specified, the oracle connects to `https://{authority}/dns-query`. If omitted, the configured `EndPoint` is used.
 - `CLASS` is optional and case-insensitive. Only `IN` (`1`) is supported; other classes are rejected.
 - `TYPE` is optional and case-insensitive. Use mnemonics (`TXT`, `TLSA`, `CERT`, `A`, `AAAA`, …) or numeric values. Defaults to `A` per RFC 4501.
-- `name` is an oracle extension; if present, it overrides `domain` entirely (useful for percent-encoding complex owner names).
 
 Query parameters can be separated by `;` (RFC style) or `&`.
 
@@ -60,7 +59,6 @@ Examples:
 - `dns:simon.example.org?TYPE=CERT` — CERT RDATA is returned as-is (type, key tag, algorithm, base64).
 - `dns://dns.google/ftp.example.org?TYPE=A` — uses Google's DoH server (`https://dns.google/dns-query`) instead of the configured endpoint.
 - `dns://cloudflare-dns.com/example.org?TYPE=TXT` — uses Cloudflare's DoH server for this specific query.
-- `dns:ignored?name=weird%5c.label.example&type=TXT` — uses the `name` override (decoded to `weird.label.example`).
 
 ## Response schema
 
