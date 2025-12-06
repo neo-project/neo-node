@@ -61,7 +61,7 @@ partial class MainService
                 {
                     var payload = PingPayload.Create(NativeContract.Ledger.CurrentIndex(NeoSystem.StoreView));
                     NeoSystem.LocalNode.Tell(Message.Create(MessageCommand.Ping, payload));
-                    await Task.Delay(NeoSystem.GetTimePerBlock() / 4, cancellationToken);
+                    await Task.Delay((int)NeoSystem.Settings.MillisecondsPerBlock / 4, cancellationToken);
                 }
                 catch (TaskCanceledException) { break; }
                 catch { await Task.Delay(500, cancellationToken); }

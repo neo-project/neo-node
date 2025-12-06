@@ -33,7 +33,7 @@ class Session : IDisposable
         {
             Version = 0,
             Nonce = (uint)random.Next(),
-            ValidUntilBlock = NativeContract.Ledger.CurrentIndex(Snapshot) + system.GetMaxValidUntilBlockIncrement(),
+            ValidUntilBlock = NativeContract.Ledger.CurrentIndex(Snapshot) + system.Settings.MaxValidUntilBlockIncrement,
             Signers = signers,
             Attributes = [],
             Script = script,
