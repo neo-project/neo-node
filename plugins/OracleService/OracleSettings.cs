@@ -36,6 +36,20 @@ class NeoFSSettings
     }
 }
 
+class DnsSettings
+{
+    public Uri EndPoint { get; }
+    public TimeSpan Timeout { get; }
+
+    public DnsSettings(IConfigurationSection section)
+    {
+        string endpoint = section.GetValue("EndPoint", "https://cloudflare-dns.com/dns-query");
+        EndPoint = new Uri(endpoint, UriKind.Absolute);
+        int timeoutMs = section.GetValue("TimeoutMilliseconds", section.GetValue("Timeout", 5000));
+        Timeout = TimeSpan.FromMilliseconds(timeoutMs);
+    }
+}
+
 class OracleSettings : IPluginSettings
 {
     public uint Network { get; }
@@ -46,6 +60,7 @@ class OracleSettings : IPluginSettings
     public string[] AllowedContentTypes { get; }
     public HttpsSettings Https { get; }
     public NeoFSSettings NeoFS { get; }
+    public DnsSettings Dns { get; }
     public bool AutoStart { get; }
 
     public static OracleSettings Default { get; private set; }
@@ -65,6 +80,7 @@ class OracleSettings : IPluginSettings
             AllowedContentTypes = AllowedContentTypes.Concat("application/json").ToArray();
         Https = new HttpsSettings(section.GetSection("Https"));
         NeoFS = new NeoFSSettings(section.GetSection("NeoFS"));
+        Dns = new DnsSettings(section.GetSection("Dns"));
         AutoStart = section.GetValue("AutoStart", false);
     }
 
