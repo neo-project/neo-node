@@ -572,48 +572,46 @@ partial class RpcServer
         {
             script = sb.EmitDynamicCall(NativeContract.NEO.Hash, "getCandidates").ToArray();
         }
-        StackItem[] resultstack;
+
+        StackItem[] resultStack;
         try
         {
             using var engine = ApplicationEngine.Run(script, snapshot, settings: system.Settings, gas: settings.MaxGasInvoke);
-            resultstack = engine.ResultStack.ToArray();
+            resultStack = engine.ResultStack.ToArray();
         }
         catch
         {
             throw new RpcException(RpcError.InternalServerError.WithData("Can't get candidates."));
         }
 
-        JObject json = new();
+        // GetCandidates should return a 1-element array.
+        // If the behavior is unexpected, throw an exception(rather than returning an empty result), and the UT will find it.
+        if (resultStack.Length != 1) // A empty array even if no candidate
+            throw new RpcException(RpcError.InternalServerError.WithData("Unexpected GetCandidates result."));
+
         try
         {
-            if (resultstack.Length > 0)
-            {
-                JArray jArray = new();
-                var validators = NativeContract.NEO.GetNextBlockValidators(snapshot, system.Settings.ValidatorsCount)
-                    ?? throw new RpcException(RpcError.InternalServerError.WithData("Can't get next block validators."));
+            var validators = NativeContract.NEO.GetNextBlockValidators(snapshot, system.Settings.ValidatorsCount)
+                ?? throw new RpcException(RpcError.InternalServerError.WithData("Can't get next block validators."));
 
-                foreach (var item in resultstack)
+            var candidates = (Array)resultStack[0];
+            var result = new JArray();
+            foreach (Struct ele in candidates)
+            {
+                var publickey = ele[0].GetSpan().ToHexString();
+                result.Add(new JObject()
                 {
-                    var value = (Array)item;
-                    foreach (Struct ele in value)
-                    {
-                        var publickey = ele[0].GetSpan().ToHexString();
-                        json["publickey"] = publickey;
-                        json["votes"] = ele[1].GetInteger().ToString();
-                        json["active"] = validators.ToByteArray().ToHexString().Contains(publickey);
-                        jArray.Add(json);
-                        json = new();
-                    }
-                    return jArray;
-                }
+                    ["publickey"] = publickey,
+                    ["votes"] = ele[1].GetInteger().ToString(),
+                    ["active"] = validators.ToByteArray().ToHexString().Contains(publickey),
+                });
             }
+            return result;
         }
         catch
         {
-            throw new RpcException(RpcError.InternalServerError.WithData("Can't get next block validators"));
+            throw new RpcException(RpcError.InternalServerError.WithData("Can't get candidates."));
         }
-
-        return json;
     }
 
     /// <summary>

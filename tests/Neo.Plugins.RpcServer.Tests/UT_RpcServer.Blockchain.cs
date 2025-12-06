@@ -594,13 +594,19 @@ public partial class UT_RpcServer
         var json = new JArray();
         var validators = NativeContract.NEO.GetNextBlockValidators(snapshot, _neoSystem.Settings.ValidatorsCount);
 
-        var key = new KeyBuilder(NativeContract.NEO.Id, 33)
+        var key1 = new KeyBuilder(NativeContract.NEO.Id, 33)
             .Add(ECPoint.Parse("02237309a0633ff930d51856db01d17c829a5b2e5cc2638e9c03b4cfa8e9c9f971", ECCurve.Secp256r1));
-        snapshot.Add(key, new StorageItem(new CandidateState() { Registered = true, Votes = 10000 }));
+        snapshot.Add(key1, new StorageItem(new CandidateState() { Registered = true, Votes = 10000 }));
+        var key2 = new KeyBuilder(NativeContract.NEO.Id, 33)
+           .Add(ECPoint.Parse("0285265dc8859d05e1e42a90d6c29a9de15531eac182489743e6a947817d2a9f66", ECCurve.Secp256r1));
+        snapshot.Add(key2, new StorageItem(new CandidateState() { Registered = true, Votes = 10001 }));
         snapshot.Commit();
 
         var candidates = NativeContract.NEO.GetCandidates(_neoSystem.GetSnapshotCache());
+        Assert.AreEqual(2, candidates.Count());
+
         var result = _rpcServer.GetCandidates();
+        Assert.AreEqual(2, candidates.Count());
         foreach (var candidate in candidates)
         {
             var item = new JObject()
