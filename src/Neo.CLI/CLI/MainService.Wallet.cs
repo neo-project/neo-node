@@ -528,6 +528,14 @@ partial class MainService
             return;
         }
 
+        if (message.Length >= 2)
+        {
+            if ((message[0] == '"' && message[^1] == '"') || (message[0] == '\'' && message[^1] == '\''))
+            {
+                message = message[1..^1];
+            }
+        }
+
         var saltBytes = new byte[16];
         RandomNumberGenerator.Fill(saltBytes);
         var saltHex = saltBytes.ToHexString().ToLowerInvariant();
