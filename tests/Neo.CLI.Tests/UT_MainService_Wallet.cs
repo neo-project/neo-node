@@ -10,6 +10,7 @@
 // modifications are permitted.
 
 using System.Reflection;
+using System.Text;
 
 namespace Neo.CLI.Tests;
 
@@ -81,10 +82,46 @@ public class UT_MainService_Wallet
         Assert.DoesNotContain("Signature:", output, "Output should not containt Signature");
         Assert.DoesNotContain("Salt:", output, "Output should not containt Salt");
     }
-    private string CreateWalletAngSignMessage(string userPassword, bool withAccount = true)
+    [TestMethod]
+    public void TestOnSignMessageCommandWithNullMessage()
     {
         var walletPassword = "test_pwd";
-        var message = "this is a test to sign";
+        var output = CreateWalletAngSignMessage(walletPassword, true, null);
+        Assert.IsFalse(string.IsNullOrWhiteSpace(output), "Output should not be empty");
+        Assert.Contains("Null message", output, "Output should contain null message");
+    }
+    [TestMethod]
+    public void TestOnSignMessageCommandWithQuotes()
+    {
+        var walletPassword = "test_pwd";
+        string message = "this is a test to sign";
+        var outputWithoutQuotes = CreateWalletAngSignMessage(walletPassword, true, message);
+        var outputWithDoubleQuotes = CreateWalletAngSignMessage(walletPassword, true, $"\"{message}\"");
+        var outputWithSingleQuotes = CreateWalletAngSignMessage(walletPassword, true, $"'{message}'");
+
+        Assert.IsFalse(string.IsNullOrWhiteSpace(outputWithoutQuotes), "Output without quotes should not be empty");
+        Assert.IsFalse(string.IsNullOrWhiteSpace(outputWithDoubleQuotes), "Output with double quotes should not be empty");
+        Assert.IsFalse(string.IsNullOrWhiteSpace(outputWithSingleQuotes), "Output with single quotes should not be empty");
+
+        var payloadWithoutQuotes = ExtractHexValue(outputWithoutQuotes, "Signed Payload:");
+        var payloadWithDoubleQuotes = ExtractHexValue(outputWithDoubleQuotes, "Signed Payload:");
+        var payloadWithSingleQuotes = ExtractHexValue(outputWithSingleQuotes, "Signed Payload:");
+
+        Assert.IsNotNull(payloadWithoutQuotes, "Signed payload should be present when signing without quotes");
+        Assert.IsNotNull(payloadWithDoubleQuotes, "Signed payload should be present when signing with double quotes");
+        Assert.IsNotNull(payloadWithSingleQuotes, "Signed payload should be present when signing with single quotes");
+
+        var msgPayloadWithoutQuotes = ExtractMessageFromSignedPayload(payloadWithoutQuotes);
+        var msgPayloadWithDoubleQuotes = ExtractMessageFromSignedPayload(payloadWithDoubleQuotes);
+        var msgPayloadWithSingleQuotes = ExtractMessageFromSignedPayload(payloadWithSingleQuotes);
+
+        Assert.AreEqual(msgPayloadWithoutQuotes, msgPayloadWithDoubleQuotes, "Signing a message with surrounding double quotes should produce the same normalized message as a signing without quotes");
+        Assert.AreEqual(msgPayloadWithoutQuotes, msgPayloadWithSingleQuotes, "Signing a message with surrounding single quotes should produce the same normalized message as a signing without quotes");
+    }
+    private string CreateWalletAngSignMessage(string userPassword, bool withAccount = true, string messageToSign = "this is a test to sign")
+    {
+        var walletPassword = "test_pwd";
+        var message = messageToSign;
 
         var wallet = TestUtils.GenerateTestWallet(walletPassword);
         if (withAccount)
@@ -185,5 +222,47 @@ public class UT_MainService_Wallet
 
         Assert.IsNotNull(method, $"Method '{methodName}' not found on type '{target.GetType().FullName}'.");
         method.Invoke(target, args);
+    }
+    private static string ExtractMessageFromSignedPayload(string payloadHex)
+    {
+        var payloadBytes = HexToBytes(payloadHex);
+        Assert.IsNotNull(payloadBytes);
+        Assert.IsGreaterThan(4 + 1 + 32 + 2, payloadBytes.Length, "Payload is too short");
+
+        Assert.AreEqual(0x01, payloadBytes[0], "Invalid payload prefix byte 0");
+        Assert.AreEqual(0x00, payloadBytes[1], "Invalid payload prefix byte 1");
+        Assert.AreEqual(0x01, payloadBytes[2], "Invalid payload prefix byte 2");
+        Assert.AreEqual(0xF0, payloadBytes[3], "Invalid payload prefix byte 3");
+
+        byte paramLength = payloadBytes[4];
+        int paramStart = 5;
+
+        Assert.IsGreaterThanOrEqualTo(paramStart + paramLength + 2, payloadBytes.Length, "Payload does not contain full param bytes");
+
+        var paramBytes = new byte[paramLength];
+        Buffer.BlockCopy(payloadBytes, paramStart, paramBytes, 0, paramLength);
+
+        int suffixIndex = paramStart + paramLength;
+        Assert.AreEqual(0x00, payloadBytes[suffixIndex], "Invalid payload suffix byte 0");
+        Assert.AreEqual(0x00, payloadBytes[suffixIndex + 1], "Invalid payload suffix byte 1");
+
+        var saltAndMessage = Encoding.UTF8.GetString(paramBytes);
+
+        Assert.IsGreaterThanOrEqualTo(32, saltAndMessage.Length, "Salt+message data is too short");
+        var message = saltAndMessage[32..];
+
+        return message;
+    }
+    private static byte[] HexToBytes(string hex)
+    {
+        if (hex.Length % 2 != 0)
+            throw new ArgumentException("Hex string must have an even length", nameof(hex));
+
+        var bytes = new byte[hex.Length / 2];
+        for (int i = 0; i < bytes.Length; i++)
+        {
+            bytes[i] = Convert.ToByte(hex.Substring(i * 2, 2), 16);
+        }
+        return bytes;
     }
 }

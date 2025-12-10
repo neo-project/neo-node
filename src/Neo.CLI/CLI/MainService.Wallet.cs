@@ -516,24 +516,25 @@ partial class MainService
     {
         if (NoWallet()) return;
 
+        message = NormalizeMessage(message);
+
         string password = ReadUserInput("password", true);
         if (password.Length == 0)
         {
             ConsoleHelper.Info("Cancelled");
             return;
         }
+
         if (!CurrentWallet!.VerifyPassword(password))
         {
             ConsoleHelper.Error("Incorrect password");
             return;
         }
 
-        if (message.Length >= 2)
+        if (message == null)
         {
-            if ((message[0] == '"' && message[^1] == '"') || (message[0] == '\'' && message[^1] == '\''))
-            {
-                message = message[1..^1];
-            }
+            ConsoleHelper.Error("Null message");
+            return;
         }
 
         var saltBytes = new byte[16];
@@ -559,7 +560,7 @@ partial class MainService
             payload = ms.ToArray();
         }
 
-        ConsoleHelper.Info("Signed Payload: ", $"{Environment.NewLine}{payload.ToHexString()}");
+        ConsoleHelper.Info("Signed Payload: ", $"{payload.ToHexString()}");
         Console.WriteLine();
         ConsoleHelper.Info("    Curve: ", "secp256r1");
         ConsoleHelper.Info("Algorithm: ", "payload = 010001f0 + VarBytes(Salt + Message) + 0000");
@@ -817,7 +818,18 @@ partial class MainService
             ConsoleHelper.Error("Failed to change password");
         }
     }
+    private string NormalizeMessage(string message)
+    {
+        if (string.IsNullOrEmpty(message) || message.Length < 2) return message;
 
+        var first = message[0];
+        var last = message[^1];
+
+        if (first == last && (first == '"' || first == '\''))
+            return message[1..^1];
+
+        return message;
+    }
     private void SignAndSendTx(DataCache snapshot, Transaction tx)
     {
         if (NoWallet()) return;
