@@ -14,6 +14,7 @@ using Neo.Extensions;
 using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
+using Neo.Persistence;
 using Neo.Plugins.DBFTPlugin.Messages;
 using Neo.Plugins.DBFTPlugin.Types;
 using Neo.Sign;
@@ -67,6 +68,12 @@ internal partial class ConsensusService : UntypedActor
         this.context = context;
         Context.System.EventStream.Subscribe(Self, typeof(PersistCompleted));
         Context.System.EventStream.Subscribe(Self, typeof(RelayResult));
+        neoSystem.MemPool.PolicyValidator = MemPoolPolicyValidator;
+    }
+
+    private bool MemPoolPolicyValidator(Transaction tx, IReadOnlyStore store)
+    {
+        return tx.SystemFee <= dbftSettings.MaxBlockSystemFee;
     }
 
     private void OnPersistCompleted(Block block)
@@ -249,13 +256,23 @@ internal partial class ConsensusService : UntypedActor
             return;
         if (context.Transactions.ContainsKey(transaction.Hash)) return;
         if (!context.TransactionHashes.Contains(transaction.Hash)) return;
-        AddTransaction(transaction, true);
+        if (!AddTransaction(transaction, true))
+        {
+            // TODO: Drop the transaction if it cannot be added to the context
+        }
     }
 
     private bool AddTransaction(Transaction tx, bool verify)
     {
         if (verify)
         {
+            // Must not be more than MaxBlockSystemFee
+            if (tx.SystemFee > dbftSettings.MaxBlockSystemFee)
+            {
+                Log($"Rejected tx: {tx.Hash}, SystemFee {tx.SystemFee} exceeds MaxBlockSystemFee {dbftSettings.MaxBlockSystemFee}", LogLevel.Warning);
+                return false;
+            }
+
             // At this step we're sure that there's no on-chain transaction that conflicts with
             // the provided tx because of the previous Blockchain's OnReceive check. Thus, we only
             // need to check that current context doesn't contain conflicting transactions.
