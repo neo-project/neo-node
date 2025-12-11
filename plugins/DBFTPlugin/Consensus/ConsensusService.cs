@@ -256,10 +256,7 @@ internal partial class ConsensusService : UntypedActor
             return;
         if (context.Transactions.ContainsKey(transaction.Hash)) return;
         if (!context.TransactionHashes.Contains(transaction.Hash)) return;
-        if (!AddTransaction(transaction, true))
-        {
-            // TODO: Drop the transaction if it cannot be added to the context
-        }
+        AddTransaction(transaction, true);
     }
 
     private bool AddTransaction(Transaction tx, bool verify)
