@@ -29,14 +29,13 @@ namespace Neo.Network.RPC.Tests;
 [TestClass]
 public class UT_TransactionManager
 {
-    TransactionManager txManager;
-    Mock<RpcClient> rpcClientMock;
-    Mock<RpcClient> multiSigMock;
-    KeyPair keyPair1;
-    KeyPair keyPair2;
-    UInt160 sender;
-    UInt160 multiHash;
-    RpcClient client;
+    Mock<RpcClient> rpcClientMock = null!;
+    Mock<RpcClient> multiSigMock = null!;
+    KeyPair keyPair1 = null!;
+    KeyPair keyPair2 = null!;
+    UInt160 sender = null!;
+    UInt160 multiHash = null!;
+    RpcClient client = null!;
 
     [TestInitialize]
     public void TestSetup()
@@ -52,7 +51,7 @@ public class UT_TransactionManager
 
     public static Mock<RpcClient> MockRpcClient(UInt160 sender, byte[] script)
     {
-        var mockRpc = new Mock<RpcClient>(MockBehavior.Strict, new Uri("http://seed1.neo.org:10331"), null, null, null);
+        var mockRpc = new Mock<RpcClient>(MockBehavior.Strict, new Uri("http://seed1.neo.org:10331"), null!, null!, null!);
 
         // MockHeight
         mockRpc.Setup(p => p.RpcSendAsync("getblockcount")).ReturnsAsync(100).Verifiable();
@@ -84,7 +83,7 @@ public class UT_TransactionManager
 
     public static Mock<RpcClient> MockMultiSig(UInt160 multiHash, byte[] script)
     {
-        var mockRpc = new Mock<RpcClient>(MockBehavior.Strict, new Uri("http://seed1.neo.org:10331"), null, null, null);
+        var mockRpc = new Mock<RpcClient>(MockBehavior.Strict, new Uri("http://seed1.neo.org:10331"), null!, null!, null!);
 
         // MockHeight
         mockRpc.Setup(p => p.RpcSendAsync("getblockcount")).ReturnsAsync(100).Verifiable();
@@ -143,7 +142,7 @@ public class UT_TransactionManager
         };
 
         byte[] script = new byte[1];
-        txManager = await TransactionManager.MakeTransactionAsync(rpcClientMock.Object, script, signers);
+        TransactionManager txManager = await TransactionManager.MakeTransactionAsync(rpcClientMock.Object, script, signers);
 
         var tx = txManager.Tx;
         Assert.AreEqual(WitnessScope.Global, tx.Signers[0].Scopes);
@@ -162,7 +161,7 @@ public class UT_TransactionManager
         };
 
         byte[] script = new byte[1];
-        txManager = await TransactionManager.MakeTransactionAsync(client, script, signers);
+        TransactionManager txManager = await TransactionManager.MakeTransactionAsync(client, script, signers);
         await txManager
             .AddSignature(keyPair1)
             .SignAsync();
@@ -221,7 +220,7 @@ public class UT_TransactionManager
         };
 
         byte[] script = new byte[1];
-        txManager = await TransactionManager.MakeTransactionAsync(multiSigMock.Object, script, signers);
+        TransactionManager txManager = await TransactionManager.MakeTransactionAsync(multiSigMock.Object, script, signers);
         await txManager
             .AddMultiSig(keyPair1, 2, keyPair1.PublicKey, keyPair2.PublicKey)
             .AddMultiSig(keyPair2, 2, keyPair1.PublicKey, keyPair2.PublicKey)
@@ -247,7 +246,7 @@ public class UT_TransactionManager
         };
 
         byte[] script = new byte[1];
-        txManager = await TransactionManager.MakeTransactionAsync(rpcClientMock.Object, script, signers);
+        TransactionManager txManager = await TransactionManager.MakeTransactionAsync(rpcClientMock.Object, script, signers);
         txManager.AddWitness(UInt160.Zero);
         txManager.AddSignature(keyPair1);
         await txManager.SignAsync();

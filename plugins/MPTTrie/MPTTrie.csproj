@@ -3,7 +3,6 @@
   <PropertyGroup>
     <PackageId>Neo.Cryptography.MPT</PackageId>
     <RootNamespace>Neo.Cryptography.MPTTrie</RootNamespace>
-    <Nullable>enable</Nullable>
   </PropertyGroup>
 
 </Project>

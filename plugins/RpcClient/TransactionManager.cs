@@ -22,7 +22,7 @@ namespace Neo.Network.RPC;
 /// </summary>
 public class TransactionManager
 {
-    private class SignItem { public Contract Contract; public HashSet<KeyPair> KeyPairs; }
+    private class SignItem { public required Contract Contract; public required HashSet<KeyPair> KeyPairs; }
 
     private readonly RpcClient rpcClient;
 
@@ -51,14 +51,14 @@ public class TransactionManager
     public TransactionManager(Transaction tx, RpcClient rpcClient)
     {
         this.tx = tx;
-        context = new ContractParametersContext(null, tx, rpcClient.protocolSettings.Network);
+        context = new ContractParametersContext(null!, tx, rpcClient.protocolSettings.Network);
         this.rpcClient = rpcClient;
     }
 
     /// <summary>
     /// Helper function for one-off TransactionManager creation
     /// </summary>
-    public static Task<TransactionManager> MakeTransactionAsync(RpcClient rpcClient, ReadOnlyMemory<byte> script, Signer[] signers = null, TransactionAttribute[] attributes = null)
+    public static Task<TransactionManager> MakeTransactionAsync(RpcClient rpcClient, ReadOnlyMemory<byte> script, Signer[]? signers = null, TransactionAttribute[]? attributes = null)
     {
         var factory = new TransactionManagerFactory(rpcClient);
         return factory.MakeTransactionAsync(script, signers, attributes);
@@ -67,7 +67,7 @@ public class TransactionManager
     /// <summary>
     /// Helper function for one-off TransactionManager creation
     /// </summary>
-    public static Task<TransactionManager> MakeTransactionAsync(RpcClient rpcClient, ReadOnlyMemory<byte> script, long systemFee, Signer[] signers = null, TransactionAttribute[] attributes = null)
+    public static Task<TransactionManager> MakeTransactionAsync(RpcClient rpcClient, ReadOnlyMemory<byte> script, long systemFee, Signer[]? signers = null, TransactionAttribute[]? attributes = null)
     {
         var factory = new TransactionManagerFactory(rpcClient);
         return factory.MakeTransactionAsync(script, systemFee, signers, attributes);
@@ -116,12 +116,12 @@ public class TransactionManager
 
     private void AddSignItem(Contract contract, KeyPair key)
     {
-        if (!Tx.GetScriptHashesForVerifying(null).Contains(contract.ScriptHash))
+        if (!Tx.GetScriptHashesForVerifying(null!).Contains(contract.ScriptHash))
         {
             throw new Exception($"Add SignItem error: Mismatch ScriptHash ({contract.ScriptHash})");
         }
 
-        SignItem item = signStore.FirstOrDefault(p => p.Contract.ScriptHash == contract.ScriptHash);
+        SignItem? item = signStore.FirstOrDefault(p => p.Contract.ScriptHash == contract.ScriptHash);
         if (item is null)
         {
             signStore.Add(new SignItem { Contract = contract, KeyPairs = new HashSet<KeyPair> { key } });
@@ -163,13 +163,13 @@ public class TransactionManager
     public async Task<Transaction> SignAsync()
     {
         // Calculate NetworkFee
-        Tx.Witnesses = Tx.GetScriptHashesForVerifying(null).Select(u => new Witness()
+        Tx.Witnesses = Tx.GetScriptHashesForVerifying(null!).Select(u => new Witness()
         {
             InvocationScript = ReadOnlyMemory<byte>.Empty,
             VerificationScript = GetVerificationScript(u)
         }).ToArray();
         Tx.NetworkFee = await rpcClient.CalculateNetworkFeeAsync(Tx).ConfigureAwait(false);
-        Tx.Witnesses = null;
+        Tx.Witnesses = null!;
 
         var gasBalance = await new Nep17API(rpcClient).BalanceOfAsync(NativeContract.GAS.Hash, Tx.Sender).ConfigureAwait(false);
         if (gasBalance < Tx.SystemFee + Tx.NetworkFee)

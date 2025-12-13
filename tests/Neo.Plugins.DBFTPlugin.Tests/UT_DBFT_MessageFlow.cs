@@ -35,14 +35,14 @@ namespace Neo.Plugins.DBFTPlugin.Tests;
 public class UT_DBFT_MessageFlow : TestKit
 {
     private const int ValidatorCount = 4; // Use 4 validators for faster testing
-    private NeoSystem neoSystem;
-    private MemoryStore memoryStore;
-    private DbftSettings settings;
-    private MockWallet[] testWallets;
-    private IActorRef[] consensusServices;
-    private ConsensusTestUtilities testHelper;
-    private TestProbe networkProbe; // Simulates the network layer
-    private List<ExtensiblePayload> capturedMessages;
+    private NeoSystem neoSystem = null!;
+    private MemoryStore memoryStore = null!;
+    private DbftSettings settings = null!;
+    private MockWallet[] testWallets = null!;
+    private IActorRef[] consensusServices = null!;
+    private ConsensusTestUtilities testHelper = null!;
+    private TestProbe networkProbe = null!; // Simulates the network layer
+    private List<ExtensiblePayload> capturedMessages = null!;
 
     [TestInitialize]
     public void Setup()

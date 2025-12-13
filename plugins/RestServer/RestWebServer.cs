@@ -489,7 +489,7 @@ internal class RestWebServer
                         options.RouteTemplate = "docs/{documentName}/swagger.json";
                         options.PreSerializeFilters.Add((document, request) =>
                         {
-                            document.Servers.Clear();
+                            document.Servers!.Clear();
                             string basePath = $"{request.Scheme}://{request.Host.Value}";
                             document.Servers.Add(new OpenApiServer { Url = basePath });
                         });

@@ -21,10 +21,10 @@ namespace Neo.Network.RPC.Tests;
 [TestClass]
 public class UT_PolicyAPI
 {
-    Mock<RpcClient> rpcClientMock;
-    KeyPair keyPair1;
-    UInt160 sender;
-    PolicyAPI policyAPI;
+    Mock<RpcClient> rpcClientMock = null!;
+    KeyPair keyPair1 = null!;
+    UInt160 sender = null!;
+    PolicyAPI policyAPI = null!;
 
     [TestInitialize]
     public void TestSetup()

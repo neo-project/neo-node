@@ -1,9 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>Neo.Wallets.SQLite</RootNamespace>
     <PackageId>Neo.Wallets.SQLite</PackageId>
-    <Nullable>enable</Nullable>
+    <RootNamespace>Neo.Wallets.SQLite</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

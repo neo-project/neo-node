@@ -10,7 +10,6 @@
 // modifications are permitted.
 
 using Akka.Actor;
-using Akka.TestKit;
 using Akka.TestKit.MsTest;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
@@ -24,25 +23,15 @@ namespace Neo.Plugins.DBFTPlugin.Tests;
 [TestClass]
 public class UT_DBFT_Core : TestKit
 {
-    private NeoSystem neoSystem;
-    private TestProbe localNode;
-    private TestProbe taskManager;
-    private TestProbe blockchain;
-    private TestProbe txRouter;
-    private MockWallet[] testWallets;
-    private IActorRef[] consensusServices;
-    private MemoryStore memoryStore;
+    private NeoSystem neoSystem = null!;
+    private MockWallet[] testWallets = null!;
+    private IActorRef[] consensusServices = null!;
+    private MemoryStore memoryStore = null!;
     private const int ValidatorCount = 7;
 
     [TestInitialize]
     public void Setup()
     {
-        // Create test probes for actor dependencies
-        localNode = CreateTestProbe("localNode");
-        taskManager = CreateTestProbe("taskManager");
-        blockchain = CreateTestProbe("blockchain");
-        txRouter = CreateTestProbe("txRouter");
-
         // Create memory store
         memoryStore = new MemoryStore();
         var storeProvider = new MockMemoryStoreProvider(memoryStore);

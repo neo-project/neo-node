@@ -26,27 +26,16 @@ class StateRoot : IVerifiable
 
     public byte Version;
     public uint Index;
-    public UInt256 RootHash;
-    public Witness Witness;
+    public required UInt256 RootHash;
+    public Witness? Witness;
 
-    private UInt256 _hash = null;
-    public UInt256 Hash
-    {
-        get
-        {
-            if (_hash is null)
-            {
-                _hash = this.CalculateHash();
-            }
-            return _hash;
-        }
-    }
+    public UInt256 Hash => field ??= this.CalculateHash();
 
     Witness[] IVerifiable.Witnesses
     {
         get
         {
-            return [Witness];
+            return [Witness!];
         }
         set
         {

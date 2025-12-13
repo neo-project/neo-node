@@ -13,6 +13,7 @@
     <VersionPrefix>4.0.0</VersionPrefix>
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>$(PackageId)</RootNamespace>
+    <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <EnableDynamicLoading>true</EnableDynamicLoading>
   </PropertyGroup>

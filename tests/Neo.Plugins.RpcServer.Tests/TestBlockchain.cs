@@ -19,14 +19,13 @@ namespace Neo.Plugins.RpcServer.Tests;
 public static class TestBlockchain
 {
     public static readonly NeoSystem TheNeoSystem;
-    public static readonly UInt160[] DefaultExtensibleWitnessWhiteList;
     private static readonly MemoryStore Store = new();
 
     internal class StoreProvider : IStoreProvider
     {
         public string Name => "TestProvider";
 
-        public IStore GetStore(string path) => Store;
+        public IStore GetStore(string? path) => Store;
     }
 
     static TestBlockchain()

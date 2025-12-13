@@ -22,14 +22,11 @@ namespace Neo.Plugins.DBFTPlugin.Tests;
 [TestClass]
 public class UT_DBFT_Integration : TestKit
 {
-    private NeoSystem neoSystem;
-    private TestProbe localNode;
-    private TestProbe taskManager;
-    private TestProbe blockchain;
-    private TestProbe txRouter;
-    private MockWallet[] testWallets;
-    private IActorRef[] consensusServices;
-    private MemoryStore memoryStore;
+    private NeoSystem neoSystem = null!;
+    private TestProbe localNode = null!;
+    private MockWallet[] testWallets = null!;
+    private IActorRef[] consensusServices = null!;
+    private MemoryStore memoryStore = null!;
     private const int ValidatorCount = 4; // Smaller for integration tests
 
     [TestInitialize]
@@ -37,9 +34,6 @@ public class UT_DBFT_Integration : TestKit
     {
         // Create test probes for actor dependencies
         localNode = CreateTestProbe("localNode");
-        taskManager = CreateTestProbe("taskManager");
-        blockchain = CreateTestProbe("blockchain");
-        txRouter = CreateTestProbe("txRouter");
 
         // Setup autopilot for localNode to handle consensus messages
         localNode.SetAutoPilot(new MockAutoPilot((sender, message) =>
