@@ -20,11 +20,11 @@ class RpcMethodToken
     {
         return new MethodToken
         {
-            Hash = UInt160.Parse(json["hash"].AsString()),
-            Method = json["method"].AsString(),
-            ParametersCount = (ushort)json["paramcount"].AsNumber(),
-            HasReturnValue = json["hasreturnvalue"].AsBoolean(),
-            CallFlags = (CallFlags)Enum.Parse(typeof(CallFlags), json["callflags"].AsString())
+            Hash = UInt160.Parse(json["hash"]!.AsString()),
+            Method = json["method"]!.AsString(),
+            ParametersCount = (ushort)json["paramcount"]!.AsNumber(),
+            HasReturnValue = json["hasreturnvalue"]!.AsBoolean(),
+            CallFlags = Enum.Parse<CallFlags>(json["callflags"]!.AsString())
         };
     }
 }

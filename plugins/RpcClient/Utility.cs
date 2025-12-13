@@ -10,7 +10,6 @@
 // modifications are permitted.
 
 using Neo.Cryptography.ECC;
-using Neo.Extensions;
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.Network.P2P.Payloads.Conditions;
@@ -123,7 +122,7 @@ public static class Utility
         return new Block()
         {
             Header = HeaderFromJson(json, protocolSettings),
-            Transactions = ((JArray)json["tx"]).Select(p => TransactionFromJson((JObject)p, protocolSettings)).ToArray()
+            Transactions = ((JArray)json["tx"]!).Select(p => TransactionFromJson((JObject)p!, protocolSettings)).ToArray()
         };
     }
 
@@ -138,15 +137,15 @@ public static class Utility
     {
         return new Header
         {
-            Version = (uint)json["version"].AsNumber(),
-            PrevHash = UInt256.Parse(json["previousblockhash"].AsString()),
-            MerkleRoot = UInt256.Parse(json["merkleroot"].AsString()),
-            Timestamp = (ulong)json["time"].AsNumber(),
-            Nonce = Convert.ToUInt64(json["nonce"].AsString(), 16),
-            Index = (uint)json["index"].AsNumber(),
-            PrimaryIndex = (byte)json["primary"].AsNumber(),
-            NextConsensus = json["nextconsensus"].ToScriptHash(protocolSettings),
-            Witness = ((JArray)json["witnesses"]).Select(p => WitnessFromJson((JObject)p)).FirstOrDefault()
+            Version = (uint)json["version"]!.AsNumber(),
+            PrevHash = UInt256.Parse(json["previousblockhash"]!.AsString()),
+            MerkleRoot = UInt256.Parse(json["merkleroot"]!.AsString()),
+            Timestamp = (ulong)json["time"]!.AsNumber(),
+            Nonce = Convert.ToUInt64(json["nonce"]!.AsString(), 16),
+            Index = (uint)json["index"]!.AsNumber(),
+            PrimaryIndex = (byte)json["primary"]!.AsNumber(),
+            NextConsensus = json["nextconsensus"]!.ToScriptHash(protocolSettings),
+            Witness = ((JArray)json["witnesses"]!).Select(p => WitnessFromJson((JObject)p!)).First()
         };
     }
 
@@ -154,15 +153,15 @@ public static class Utility
     {
         return new Transaction
         {
-            Version = byte.Parse(json["version"].AsString()),
-            Nonce = uint.Parse(json["nonce"].AsString()),
-            Signers = ((JArray)json["signers"]).Select(p => SignerFromJson((JObject)p, protocolSettings)).ToArray(),
-            SystemFee = long.Parse(json["sysfee"].AsString()),
-            NetworkFee = long.Parse(json["netfee"].AsString()),
-            ValidUntilBlock = uint.Parse(json["validuntilblock"].AsString()),
-            Attributes = ((JArray)json["attributes"]).Select(p => TransactionAttributeFromJson((JObject)p)).ToArray(),
-            Script = Convert.FromBase64String(json["script"].AsString()),
-            Witnesses = ((JArray)json["witnesses"]).Select(p => WitnessFromJson((JObject)p)).ToArray()
+            Version = byte.Parse(json["version"]!.AsString()),
+            Nonce = uint.Parse(json["nonce"]!.AsString()),
+            Signers = ((JArray)json["signers"]!).Select(p => SignerFromJson((JObject)p!, protocolSettings)).ToArray(),
+            SystemFee = long.Parse(json["sysfee"]!.AsString()),
+            NetworkFee = long.Parse(json["netfee"]!.AsString()),
+            ValidUntilBlock = uint.Parse(json["validuntilblock"]!.AsString()),
+            Attributes = ((JArray)json["attributes"]!).Select(p => TransactionAttributeFromJson((JObject)p!)).ToArray(),
+            Script = Convert.FromBase64String(json["script"]!.AsString()),
+            Witnesses = ((JArray)json["witnesses"]!).Select(p => WitnessFromJson((JObject)p!)).ToArray()
         };
     }
 
@@ -178,37 +177,37 @@ public static class Utility
     {
         return new Signer
         {
-            Account = json["account"].ToScriptHash(protocolSettings),
-            Rules = ((JArray)json["rules"])?.Select(p => RuleFromJson((JObject)p, protocolSettings)).ToArray(),
-            Scopes = (WitnessScope)Enum.Parse(typeof(WitnessScope), json["scopes"].AsString()),
-            AllowedContracts = ((JArray)json["allowedcontracts"])?.Select(p => p.ToScriptHash(protocolSettings)).ToArray(),
-            AllowedGroups = ((JArray)json["allowedgroups"])?.Select(p => ECPoint.Parse(p.AsString(), ECCurve.Secp256r1)).ToArray()
+            Account = json["account"]!.ToScriptHash(protocolSettings),
+            Rules = ((JArray?)json["rules"])?.Select(p => RuleFromJson((JObject)p!, protocolSettings)).ToArray(),
+            Scopes = Enum.Parse<WitnessScope>(json["scopes"]!.AsString()),
+            AllowedContracts = ((JArray?)json["allowedcontracts"])?.Select(p => p!.ToScriptHash(protocolSettings)).ToArray(),
+            AllowedGroups = ((JArray?)json["allowedgroups"])?.Select(p => ECPoint.Parse(p!.AsString(), ECCurve.Secp256r1)).ToArray()
         };
     }
 
     public static TransactionAttribute TransactionAttributeFromJson(JObject json)
     {
-        TransactionAttributeType usage = Enum.Parse<TransactionAttributeType>(json["type"].AsString());
+        TransactionAttributeType usage = Enum.Parse<TransactionAttributeType>(json["type"]!.AsString());
         return usage switch
         {
             TransactionAttributeType.HighPriority => new HighPriorityAttribute(),
             TransactionAttributeType.OracleResponse => new OracleResponse()
             {
-                Id = (ulong)json["id"].AsNumber(),
-                Code = Enum.Parse<OracleResponseCode>(json["code"].AsString()),
-                Result = Convert.FromBase64String(json["result"].AsString()),
+                Id = (ulong)json["id"]!.AsNumber(),
+                Code = Enum.Parse<OracleResponseCode>(json["code"]!.AsString()),
+                Result = Convert.FromBase64String(json["result"]!.AsString()),
             },
             TransactionAttributeType.NotValidBefore => new NotValidBefore()
             {
-                Height = (uint)json["height"].AsNumber(),
+                Height = (uint)json["height"]!.AsNumber(),
             },
             TransactionAttributeType.Conflicts => new Conflicts()
             {
-                Hash = UInt256.Parse(json["hash"].AsString())
+                Hash = UInt256.Parse(json["hash"]!.AsString())
             },
             TransactionAttributeType.NotaryAssisted => new NotaryAssisted()
             {
-                NKeys = (byte)json["nkeys"].AsNumber()
+                NKeys = (byte)json["nkeys"]!.AsNumber()
             },
             _ => throw new FormatException(),
         };
@@ -218,8 +217,8 @@ public static class Utility
     {
         return new Witness
         {
-            InvocationScript = Convert.FromBase64String(json["invocation"].AsString()),
-            VerificationScript = Convert.FromBase64String(json["verification"].AsString())
+            InvocationScript = Convert.FromBase64String(json["invocation"]!.AsString()),
+            VerificationScript = Convert.FromBase64String(json["verification"]!.AsString())
         };
     }
 
@@ -227,61 +226,61 @@ public static class Utility
     {
         return new WitnessRule()
         {
-            Action = Enum.Parse<WitnessRuleAction>(json["action"].AsString()),
-            Condition = RuleExpressionFromJson((JObject)json["condition"], protocolSettings)
+            Action = Enum.Parse<WitnessRuleAction>(json["action"]!.AsString()),
+            Condition = RuleExpressionFromJson((JObject)json["condition"]!, protocolSettings)
         };
     }
 
     public static WitnessCondition RuleExpressionFromJson(JObject json, ProtocolSettings protocolSettings)
     {
-        return json["type"].AsString() switch
+        return json["type"]!.AsString() switch
         {
-            "Or" => new OrCondition { Expressions = ((JArray)json["expressions"])?.Select(p => RuleExpressionFromJson((JObject)p, protocolSettings)).ToArray() },
-            "And" => new AndCondition { Expressions = ((JArray)json["expressions"])?.Select(p => RuleExpressionFromJson((JObject)p, protocolSettings)).ToArray() },
-            "Boolean" => new BooleanCondition { Expression = json["expression"].AsBoolean() },
-            "Not" => new NotCondition { Expression = RuleExpressionFromJson((JObject)json["expression"], protocolSettings) },
-            "Group" => new GroupCondition { Group = ECPoint.Parse(json["group"].AsString(), ECCurve.Secp256r1) },
-            "CalledByContract" => new CalledByContractCondition { Hash = json["hash"].ToScriptHash(protocolSettings) },
-            "ScriptHash" => new ScriptHashCondition { Hash = json["hash"].ToScriptHash(protocolSettings) },
+            "Or" => new OrCondition { Expressions = ((JArray)json["expressions"]!).Select(p => RuleExpressionFromJson((JObject)p!, protocolSettings)).ToArray() },
+            "And" => new AndCondition { Expressions = ((JArray)json["expressions"]!).Select(p => RuleExpressionFromJson((JObject)p!, protocolSettings)).ToArray() },
+            "Boolean" => new BooleanCondition { Expression = json["expression"]!.AsBoolean() },
+            "Not" => new NotCondition { Expression = RuleExpressionFromJson((JObject)json["expression"]!, protocolSettings) },
+            "Group" => new GroupCondition { Group = ECPoint.Parse(json["group"]!.AsString(), ECCurve.Secp256r1) },
+            "CalledByContract" => new CalledByContractCondition { Hash = json["hash"]!.ToScriptHash(protocolSettings) },
+            "ScriptHash" => new ScriptHashCondition { Hash = json["hash"]!.ToScriptHash(protocolSettings) },
             "CalledByEntry" => new CalledByEntryCondition(),
-            "CalledByGroup" => new CalledByGroupCondition { Group = ECPoint.Parse(json["group"].AsString(), ECCurve.Secp256r1) },
+            "CalledByGroup" => new CalledByGroupCondition { Group = ECPoint.Parse(json["group"]!.AsString(), ECCurve.Secp256r1) },
             _ => throw new FormatException("Wrong rule's condition type"),
         };
     }
 
     public static StackItem StackItemFromJson(JObject json)
     {
-        StackItemType type = json["type"].GetEnum<StackItemType>();
+        StackItemType type = json["type"]!.GetEnum<StackItemType>();
         switch (type)
         {
             case StackItemType.Boolean:
-                return json["value"].GetBoolean() ? StackItem.True : StackItem.False;
+                return json["value"]!.GetBoolean() ? StackItem.True : StackItem.False;
             case StackItemType.Buffer:
-                return new Buffer(Convert.FromBase64String(json["value"].AsString()));
+                return new Buffer(Convert.FromBase64String(json["value"]!.AsString()));
             case StackItemType.ByteString:
-                return new ByteString(Convert.FromBase64String(json["value"].AsString()));
+                return new ByteString(Convert.FromBase64String(json["value"]!.AsString()));
             case StackItemType.Integer:
-                return BigInteger.Parse(json["value"].AsString());
+                return BigInteger.Parse(json["value"]!.AsString());
             case StackItemType.Array:
                 Array array = new();
-                foreach (JObject item in (JArray)json["value"])
-                    array.Add(StackItemFromJson(item));
+                foreach (var item in (JArray)json["value"]!)
+                    array.Add(StackItemFromJson((JObject)item!));
                 return array;
             case StackItemType.Struct:
                 Struct @struct = new();
-                foreach (JObject item in (JArray)json["value"])
-                    @struct.Add(StackItemFromJson(item));
+                foreach (var item in (JArray)json["value"]!)
+                    @struct.Add(StackItemFromJson((JObject)item!));
                 return @struct;
             case StackItemType.Map:
                 Map map = new();
-                foreach (var item in (JArray)json["value"])
+                foreach (var item in (JArray)json["value"]!)
                 {
-                    PrimitiveType key = (PrimitiveType)StackItemFromJson((JObject)item["key"]);
-                    map[key] = StackItemFromJson((JObject)item["value"]);
+                    PrimitiveType key = (PrimitiveType)StackItemFromJson((JObject)item!["key"]!);
+                    map[key] = StackItemFromJson((JObject)item["value"]!);
                 }
                 return map;
             case StackItemType.Pointer:
-                return new Pointer(Script.Empty, (int)json["value"].AsNumber());
+                return new Pointer(Script.Empty, (int)json["value"]!.AsNumber());
             case StackItemType.InteropInterface:
                 return new InteropInterface(json);
             default:
@@ -289,7 +288,7 @@ public static class Utility
         }
     }
 
-    public static string GetIteratorId(this StackItem item)
+    public static string? GetIteratorId(this StackItem item)
     {
         if (item is InteropInterface iop)
         {

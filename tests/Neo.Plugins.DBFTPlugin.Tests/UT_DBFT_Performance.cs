@@ -10,7 +10,6 @@
 // modifications are permitted.
 
 using Akka.Actor;
-using Akka.TestKit;
 using Akka.TestKit.MsTest;
 using Neo.Extensions.IO;
 using Neo.Network.P2P.Payloads;
@@ -26,23 +25,13 @@ namespace Neo.Plugins.DBFTPlugin.Tests;
 [TestClass]
 public class UT_DBFT_Performance : TestKit
 {
-    private NeoSystem neoSystem;
-    private TestProbe localNode;
-    private TestProbe taskManager;
-    private TestProbe blockchain;
-    private TestProbe txRouter;
-    private MemoryStore memoryStore;
-    private DbftSettings settings;
+    private NeoSystem neoSystem = null!;
+    private MemoryStore memoryStore = null!;
+    private DbftSettings settings = null!;
 
     [TestInitialize]
     public void Setup()
     {
-        // Create test probes for actor dependencies
-        localNode = CreateTestProbe("localNode");
-        taskManager = CreateTestProbe("taskManager");
-        blockchain = CreateTestProbe("blockchain");
-        txRouter = CreateTestProbe("txRouter");
-
         // Create memory store
         memoryStore = new MemoryStore();
         var storeProvider = new MockMemoryStoreProvider(memoryStore);

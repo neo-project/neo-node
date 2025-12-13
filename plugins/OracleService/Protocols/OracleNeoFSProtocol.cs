@@ -43,7 +43,7 @@ class OracleNeoFSProtocol : IOracleProtocol
         privateKey.Dispose();
     }
 
-    public async Task<(OracleResponseCode, string)> ProcessAsync(Uri uri, CancellationToken cancellation)
+    public async Task<(OracleResponseCode, string?)> ProcessAsync(Uri uri, CancellationToken cancellation)
     {
         Utility.Log(nameof(OracleNeoFSProtocol), LogLevel.Debug, $"Request: {uri.AbsoluteUri}");
         try

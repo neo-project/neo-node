@@ -91,7 +91,7 @@ public partial class UT_RpcServer
     public void TestGetBlock_Genesis()
     {
         var snapshot = _neoSystem.GetSnapshotCache();
-        var genesisBlock = NativeContract.Ledger.GetBlock(snapshot, 0);
+        var genesisBlock = NativeContract.Ledger.GetBlock(snapshot, 0)!;
 
         // Test non-verbose
         var resultNonVerbose = _rpcServer.GetBlock(new BlockHashOrIndex(0), false);
@@ -103,13 +103,13 @@ public partial class UT_RpcServer
         var resultVerbose = _rpcServer.GetBlock(new BlockHashOrIndex(0), true);
         var expectedJson = genesisBlock.ToJson(TestProtocolSettings.Default);
         expectedJson["confirmations"] = NativeContract.Ledger.CurrentIndex(snapshot) - genesisBlock.Index + 1;
-        Assert.AreEqual(expectedJson["hash"].AsString(), resultVerbose["hash"].AsString());
-        Assert.AreEqual(expectedJson["size"].AsNumber(), resultVerbose["size"].AsNumber());
-        Assert.AreEqual(expectedJson["version"].AsNumber(), resultVerbose["version"].AsNumber());
-        Assert.AreEqual(expectedJson["merkleroot"].AsString(), resultVerbose["merkleroot"].AsString());
-        Assert.AreEqual(expectedJson["confirmations"].AsNumber(), resultVerbose["confirmations"].AsNumber());
+        Assert.AreEqual(expectedJson["hash"]!.AsString(), resultVerbose["hash"]!.AsString());
+        Assert.AreEqual(expectedJson["size"]!.AsNumber(), resultVerbose["size"]!.AsNumber());
+        Assert.AreEqual(expectedJson["version"]!.AsNumber(), resultVerbose["version"]!.AsNumber());
+        Assert.AreEqual(expectedJson["merkleroot"]!.AsString(), resultVerbose["merkleroot"]!.AsString());
+        Assert.AreEqual(expectedJson["confirmations"]!.AsNumber(), resultVerbose["confirmations"]!.AsNumber());
         // Genesis block should have 0 transactions
-        Assert.IsEmpty((JArray)resultVerbose["tx"]);
+        Assert.IsEmpty((JArray)resultVerbose["tx"]!);
     }
 
     [TestMethod]
@@ -146,10 +146,10 @@ public partial class UT_RpcServer
         var resultVerbose = _rpcServer.GetBlock(new BlockHashOrIndex(block.Index), true);
         var expectedJson = block.ToJson(TestProtocolSettings.Default);
         expectedJson["confirmations"] = NativeContract.Ledger.CurrentIndex(snapshot) - block.Index + 1;
-        Assert.AreEqual(expectedJson["hash"].AsString(), resultVerbose["hash"].AsString());
-        Assert.IsEmpty((JArray)resultVerbose["tx"]);
+        Assert.AreEqual(expectedJson["hash"]!.AsString(), resultVerbose["hash"]!.AsString());
+        Assert.IsEmpty((JArray)resultVerbose["tx"]!);
 
-        var ex = Assert.ThrowsExactly<RpcException>(() => _rpcServer.GetBlock(null, true));
+        var ex = Assert.ThrowsExactly<RpcException>(() => _rpcServer.GetBlock(null!, true));
         Assert.AreEqual(RpcError.InvalidParams.Code, ex.HResult);
     }
 
@@ -200,7 +200,7 @@ public partial class UT_RpcServer
         var header2 = headerArr.AsSerializable<Header>();
         Assert.AreEqual(block.Header.ToJson(_neoSystem.Settings).ToString(), header2.ToJson(_neoSystem.Settings).ToString());
 
-        var ex = Assert.ThrowsExactly<RpcException>(() => _rpcServer.GetBlockHeader(null, true));
+        var ex = Assert.ThrowsExactly<RpcException>(() => _rpcServer.GetBlockHeader(null!, true));
         Assert.AreEqual(RpcError.InvalidParams.Code, ex.HResult);
     }
 
@@ -230,7 +230,7 @@ public partial class UT_RpcServer
         var ex2 = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.GetContractState(new(contractState.Id)));
         Assert.AreEqual(RpcError.UnknownContract.Message, ex2.Message);
 
-        var ex3 = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.GetContractState(null));
+        var ex3 = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.GetContractState(null!));
         Assert.AreEqual(RpcError.InvalidParams.Code, ex3.HResult);
     }
 
@@ -242,9 +242,9 @@ public partial class UT_RpcServer
         var resultUpper = _rpcServer.GetContractState(new ContractNameOrHashOrId("GASTOKEN"));
         var resultMixed = _rpcServer.GetContractState(new ContractNameOrHashOrId("GasToken"));
 
-        Assert.AreEqual(gasTokenHash.ToString(), ((JObject)resultLower)["hash"].AsString());
-        Assert.AreEqual(gasTokenHash.ToString(), ((JObject)resultUpper)["hash"].AsString());
-        Assert.AreEqual(gasTokenHash.ToString(), ((JObject)resultMixed)["hash"].AsString());
+        Assert.AreEqual(gasTokenHash.ToString(), ((JObject)resultLower)["hash"]!.AsString());
+        Assert.AreEqual(gasTokenHash.ToString(), ((JObject)resultUpper)["hash"]!.AsString());
+        Assert.AreEqual(gasTokenHash.ToString(), ((JObject)resultMixed)["hash"]!.AsString());
     }
 
     [TestMethod]
@@ -270,10 +270,10 @@ public partial class UT_RpcServer
         _neoSystem.MemPool.TryAdd(tx, snapshot);
 
         var result = _rpcServer.GetRawMemPool();
-        Assert.IsTrue(((JArray)result).Any(p => p.AsString() == tx.Hash.ToString()));
+        Assert.IsTrue(((JArray)result).Any(p => p!.AsString() == tx.Hash.ToString()));
 
         result = _rpcServer.GetRawMemPool(true);
-        Assert.IsTrue(((JArray)result["verified"]).Any(p => p.AsString() == tx.Hash.ToString()));
+        Assert.IsTrue(((JArray)result["verified"]!).Any(p => p!.AsString() == tx.Hash.ToString()));
     }
 
     [TestMethod]
@@ -290,8 +290,8 @@ public partial class UT_RpcServer
         // Test with unverified
         result = _rpcServer.GetRawMemPool(true);
         Assert.IsInstanceOfType(result, typeof(JObject));
-        Assert.IsEmpty((JArray)((JObject)result)["verified"]);
-        Assert.IsEmpty((JArray)((JObject)result)["unverified"]);
+        Assert.IsEmpty((JArray)((JObject)result)["verified"]!);
+        Assert.IsEmpty((JArray)((JObject)result)["unverified"]!);
         Assert.IsTrue(((JObject)result).ContainsProperty("height"));
     }
 
@@ -320,8 +320,8 @@ public partial class UT_RpcServer
         // Call the RPC method
         var result = _rpcServer.GetRawMemPool(true);
         Assert.IsInstanceOfType(result, typeof(JObject));
-        var actualVerifiedHashes = ((JArray)((JObject)result)["verified"]).Select(p => p.AsString()).ToHashSet();
-        var actualUnverifiedHashes = ((JArray)((JObject)result)["unverified"]).Select(p => p.AsString()).ToHashSet();
+        var actualVerifiedHashes = ((JArray)((JObject)result)["verified"]!).Select(p => p!.AsString()).ToHashSet();
+        var actualUnverifiedHashes = ((JArray)((JObject)result)["unverified"]!).Select(p => p!.AsString()).ToHashSet();
 
         // Assert counts and contents match the pool's state
         Assert.HasCount(expectedVerifiedCount, actualVerifiedHashes);
@@ -348,7 +348,7 @@ public partial class UT_RpcServer
         var tx2 = Convert.FromBase64String(result.AsString()).AsSerializable<Transaction>();
         Assert.AreEqual(tx.ToJson(_neoSystem.Settings).ToString(), tx2.ToJson(_neoSystem.Settings).ToString());
 
-        var ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.GetRawTransaction(null, true));
+        var ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.GetRawTransaction(null!, true));
         Assert.AreEqual(RpcError.InvalidParams.Code, ex.HResult);
     }
 
@@ -378,9 +378,9 @@ public partial class UT_RpcServer
 
         Assert.IsInstanceOfType(resultVerbose, typeof(JObject));
         Assert.AreEqual(expectedJson.ToString(), resultVerbose.ToString()); // Compare full JSON for simplicity here
-        Assert.AreEqual(block.Hash.ToString(), ((JObject)resultVerbose)["blockhash"].AsString());
-        Assert.AreEqual(expectedJson["confirmations"].AsNumber(), ((JObject)resultVerbose)["confirmations"].AsNumber());
-        Assert.AreEqual(block.Header.Timestamp, ((JObject)resultVerbose)["blocktime"].AsNumber());
+        Assert.AreEqual(block.Hash.ToString(), ((JObject)resultVerbose)["blockhash"]!.AsString());
+        Assert.AreEqual(expectedJson["confirmations"]!.AsNumber(), ((JObject)resultVerbose)["confirmations"]!.AsNumber());
+        Assert.AreEqual(block.Header.Timestamp, ((JObject)resultVerbose)["blocktime"]!.AsNumber());
     }
 
     [TestMethod]
@@ -397,10 +397,10 @@ public partial class UT_RpcServer
         var result = _rpcServer.GetStorage(new(contractState.Hash), Convert.ToBase64String(key));
         Assert.AreEqual(Convert.ToBase64String(value), result.AsString());
 
-        var ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.GetStorage(null, Convert.ToBase64String(key)));
+        var ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.GetStorage(null!, Convert.ToBase64String(key)));
         Assert.AreEqual(RpcError.InvalidParams.Code, ex.HResult);
 
-        var ex2 = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.GetStorage(new(contractState.Hash), null));
+        var ex2 = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.GetStorage(new(contractState.Hash), null!));
         Assert.AreEqual(RpcError.InvalidParams.Code, ex2.HResult);
     }
 
@@ -440,8 +440,8 @@ public partial class UT_RpcServer
             .ForEach(i => TestUtils.StorageItemAdd(snapshot, contractState.Id, [0x01, (byte)i], [0x02]));
         snapshot.Commit();
         var result4 = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String(new byte[] { 0x01 }), 0);
-        Assert.AreEqual(RpcServersSettings.Default.FindStoragePageSize, result4["next"].AsNumber());
-        Assert.IsTrue(result4["truncated"].AsBoolean());
+        Assert.AreEqual(RpcServersSettings.Default.FindStoragePageSize, result4["next"]!.AsNumber());
+        Assert.IsTrue(result4["truncated"]!.AsBoolean());
     }
 
     [TestMethod]
@@ -457,20 +457,20 @@ public partial class UT_RpcServer
         var result = _rpcServer.GetStorage(new("GasToken"), Convert.ToBase64String(key));
         Assert.AreEqual(Convert.ToBase64String(value), result.AsString());
 
-        var ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.GetStorage(null, Convert.ToBase64String(key)));
+        var ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.GetStorage(null!, Convert.ToBase64String(key)));
         Assert.AreEqual(RpcError.InvalidParams.Code, ex.HResult);
 
-        ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.GetStorage(new("GasToken"), null));
+        ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.GetStorage(new("GasToken"), null!));
         Assert.AreEqual(RpcError.InvalidParams.Code, ex.HResult);
 
         // FindStorage
         var result2 = _rpcServer.FindStorage(new("GasToken"), Convert.ToBase64String(key), 0);
-        Assert.AreEqual(Convert.ToBase64String(value), result2["results"][0]["value"].AsString());
+        Assert.AreEqual(Convert.ToBase64String(value), result2["results"]![0]!["value"]!.AsString());
 
-        ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.FindStorage(null, Convert.ToBase64String(key), 0));
+        ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.FindStorage(null!, Convert.ToBase64String(key), 0));
         Assert.AreEqual(RpcError.InvalidParams.Code, ex.HResult);
 
-        ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.FindStorage(new("GasToken"), null, 0));
+        ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.FindStorage(new("GasToken"), null!, 0));
         Assert.AreEqual(RpcError.InvalidParams.Code, ex.HResult);
     }
 
@@ -493,16 +493,16 @@ public partial class UT_RpcServer
 
         // Get first page
         var resultPage1 = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String(prefix), 0);
-        Assert.IsTrue(resultPage1["truncated"].AsBoolean());
-        Assert.AreEqual(RpcServersSettings.Default.FindStoragePageSize, ((JArray)resultPage1["results"]).Count);
-        int nextIndex = (int)resultPage1["next"].AsNumber();
+        Assert.IsTrue(resultPage1["truncated"]!.AsBoolean());
+        Assert.AreEqual(RpcServersSettings.Default.FindStoragePageSize, ((JArray)resultPage1["results"]!).Count);
+        int nextIndex = (int)resultPage1["next"]!.AsNumber();
         Assert.AreEqual(RpcServersSettings.Default.FindStoragePageSize, nextIndex);
 
         // Get second page
         var resultPage2 = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String(prefix), nextIndex);
-        Assert.IsFalse(resultPage2["truncated"].AsBoolean());
-        Assert.HasCount(5, (JArray)resultPage2["results"]);
-        Assert.AreEqual(totalItems, (int)resultPage2["next"].AsNumber()); // Next should be total count
+        Assert.IsFalse(resultPage2["truncated"]!.AsBoolean());
+        Assert.HasCount(5, (JArray)resultPage2["results"]!);
+        Assert.AreEqual(totalItems, (int)resultPage2["next"]!.AsNumber()); // Next should be total count
     }
 
     [TestMethod]
@@ -524,23 +524,23 @@ public partial class UT_RpcServer
 
         // Get all items (assuming page size is larger than 3)
         var resultPage1 = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String(prefix), 0);
-        Assert.IsFalse(resultPage1["truncated"].AsBoolean());
-        Assert.AreEqual(totalItems, ((JArray)resultPage1["results"]).Count);
-        int nextIndex = (int)resultPage1["next"].AsNumber();
+        Assert.IsFalse(resultPage1["truncated"]!.AsBoolean());
+        Assert.AreEqual(totalItems, ((JArray)resultPage1["results"]!).Count);
+        int nextIndex = (int)resultPage1["next"]!.AsNumber();
         Assert.AreEqual(totalItems, nextIndex);
 
         // Try to get next page (should be empty)
         var resultPage2 = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String(prefix), nextIndex);
-        Assert.IsFalse(resultPage2["truncated"].AsBoolean());
-        Assert.IsEmpty((JArray)resultPage2["results"]);
-        Assert.AreEqual(nextIndex, (int)resultPage2["next"].AsNumber()); // Next index should remain the same
+        Assert.IsFalse(resultPage2["truncated"]!.AsBoolean());
+        Assert.IsEmpty((JArray)resultPage2["results"]!);
+        Assert.AreEqual(nextIndex, (int)resultPage2["next"]!.AsNumber()); // Next index should remain the same
 
         var ex = Assert.ThrowsExactly<RpcException>(
-            () => _ = _rpcServer.FindStorage(null, Convert.ToBase64String(prefix), 0));
+            () => _ = _rpcServer.FindStorage(null!, Convert.ToBase64String(prefix), 0));
         Assert.AreEqual(RpcError.InvalidParams.Code, ex.HResult);
 
         var ex2 = Assert.ThrowsExactly<RpcException>(
-            () => _ = _rpcServer.FindStorage(new(contractState.Hash), null, 0));
+            () => _ = _rpcServer.FindStorage(new(contractState.Hash), null!, 0));
         Assert.AreEqual(RpcError.InvalidParams.Code, ex2.HResult);
     }
 
@@ -636,7 +636,7 @@ public partial class UT_RpcServer
         var snapshot = _neoSystem.GetSnapshotCache();
         var result = _rpcServer.GetNativeContracts();
         var states = NativeContract.Contracts
-            .Select(p => NativeContract.ContractManagement.GetContract(snapshot, p.Hash).ToJson());
+            .Select(p => NativeContract.ContractManagement.GetContract(snapshot, p.Hash)!.ToJson());
         var contracts = new JArray(states);
         Assert.AreEqual(contracts.ToString(), result.ToString());
     }
@@ -794,7 +794,7 @@ public partial class UT_RpcServer
             Assert.AreEqual(RpcError.UnknownTransaction.Code, ex.HResult);
         }
 
-        var ex2 = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.GetTransactionHeight(null));
+        var ex2 = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.GetTransactionHeight(null!));
         Assert.AreEqual(RpcError.InvalidParams.Code, ex2.HResult);
     }
 
