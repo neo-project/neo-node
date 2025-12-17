@@ -8,7 +8,8 @@
     <PackageId>Neo.Plugins.$(MSBuildProjectName)</PackageId>
     <PackageIcon>neo.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageProjectUrl>https://github.com/neo-project/neo-modules</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/neo-project/neo-node</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/neo-project/neo-node.git</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/neo-project/neo-modules.git</RepositoryUrl>
