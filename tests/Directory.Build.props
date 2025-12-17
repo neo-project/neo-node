@@ -10,10 +10,6 @@
     <CoverletOutputFormat>lcov</CoverletOutputFormat>
     <OutputPath>../../bin/tests/$(MSBuildProjectName)</OutputPath>
     <OverwriteReadOnlyFiles>true</OverwriteReadOnlyFiles>
-    <EnableMSTestRunner>true</EnableMSTestRunner>
-    <TestingPlatformShowTestsFailure>true</TestingPlatformShowTestsFailure>
-    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
-    <MSTestAnalysisMode>Recommended</MSTestAnalysisMode>
   </PropertyGroup>
 
   <ItemGroup>
