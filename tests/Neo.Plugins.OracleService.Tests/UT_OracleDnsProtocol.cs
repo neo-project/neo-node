@@ -13,6 +13,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Neo.Network.P2P.Payloads;
 using Neo.Plugins.OracleService.Protocols;
+using Neo.VM;
+using Neo.VM.Types;
 using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
@@ -20,9 +22,10 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using VmArray = Neo.VM.Types.Array;
+using VmStruct = Neo.VM.Types.Struct;
 
 namespace Neo.Plugins.OracleService.Tests;
 
@@ -33,6 +36,34 @@ public class UT_OracleDnsProtocol
     public void Setup()
     {
         LoadSettings();
+    }
+
+    private static VmStruct DeserializeEnvelope(string payload)
+    {
+        byte[] bytes = Convert.FromBase64String(payload);
+        StackItem item = Neo.SmartContract.BinarySerializer.Deserialize(bytes, ExecutionEngineLimits.Default with
+        {
+            MaxItemSize = (uint)OracleResponse.MaxResultSize
+        });
+
+        Assert.IsInstanceOfType<VmStruct>(item);
+        return (VmStruct)item;
+    }
+
+    private static (string Name, string Type, VmArray Answers) ParseEnvelope(string payload)
+    {
+        VmStruct envelope = DeserializeEnvelope(payload);
+        Assert.AreEqual(3, envelope.Count);
+        Assert.IsInstanceOfType<VmArray>(envelope[2]);
+        return (envelope[0].GetString(), envelope[1].GetString(), (VmArray)envelope[2]);
+    }
+
+    private static VmStruct ParseAnswer(StackItem item)
+    {
+        Assert.IsInstanceOfType<VmStruct>(item);
+        VmStruct answer = (VmStruct)item;
+        Assert.AreEqual(4, answer.Count);
+        return answer;
     }
 
     [TestMethod]
@@ -107,22 +138,54 @@ public class UT_OracleDnsProtocol
         using var protocol = new OracleDnsProtocol(handler);
         (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:example.com?CLASS=IN;TYPE=TXT"), CancellationToken.None);
         Assert.AreEqual(OracleResponseCode.Success, code);
-        using JsonDocument doc = JsonDocument.Parse(payload);
-        Assert.AreEqual("TXT", doc.RootElement.GetProperty("Answers")[0].GetProperty("Type").GetString());
+        var (_, _, answers) = ParseEnvelope(payload);
+        VmStruct answer0 = ParseAnswer(answers[0]);
+        Assert.AreEqual("TXT", answer0[1].GetString());
+    }
+
+    [TestMethod]
+    public async Task ProcessAsync_ReturnsStackItemEnvelope()
+    {
+        byte[] dnsResponse = BuildDnsResponse("example.com", 16, 120, Encoding.ASCII.GetBytes("\x05hello"));
+        var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(dnsResponse)
+            {
+                Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/dns-message") }
+            }
+        });
+
+        using var protocol = new OracleDnsProtocol(handler);
+        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=TXT"), CancellationToken.None);
+
+        Assert.AreEqual(OracleResponseCode.Success, code);
+        Assert.IsNotNull(payload);
+
+        var (name, type, answers) = ParseEnvelope(payload);
+        Assert.AreEqual("example.com", name);
+        Assert.AreEqual("TXT", type);
+        Assert.AreEqual(1, answers.Count);
+
+        VmStruct answer0 = ParseAnswer(answers[0]);
+        Assert.AreEqual("example.com", answer0[0].GetString());
+        Assert.AreEqual("TXT", answer0[1].GetString());
+        Assert.AreEqual(120, (int)answer0[2].GetInteger());
+        Assert.AreEqual("\"hello\"", answer0[3].GetString());
     }
 
     [TestMethod]
     public async Task ProcessAsync_ReturnsTooLargeForOversizedResponse()
     {
-        // Create a response that will exceed MaxResultSize when serialized to JSON
-        // Generate many TXT records to make the final JSON payload too large
+        // Create a response that will exceed MaxResultSize when serialized.
+        // Generate many TXT records to make the final result payload too large.
         List<byte> response = new();
 
         // Header (12 bytes)
         response.AddRange(new byte[] { 0x00, 0x01 }); // ID
         response.AddRange(new byte[] { 0x81, 0x80 }); // Flags
         response.AddRange(new byte[] { 0x00, 0x01 }); // QDCOUNT: 1
-        response.AddRange(new byte[] { 0x00, 0x10 }); // ANCOUNT: 16 answers
+        const int answerCount = 32;
+        response.AddRange(new byte[] { 0x00, 0x20 }); // ANCOUNT: 32 answers
         response.AddRange(new byte[] { 0x00, 0x00 }); // NSCOUNT: 0
         response.AddRange(new byte[] { 0x00, 0x00 }); // ARCOUNT: 0
 
@@ -131,10 +194,10 @@ public class UT_OracleDnsProtocol
         response.AddRange(new byte[] { 0x00, 0x10 }); // TYPE TXT
         response.AddRange(new byte[] { 0x00, 0x01 }); // CLASS IN
 
-        // Add 16 answer records, each with ~4KB of data
+        // Add many answer records with large TXT data to exceed OracleResponse.MaxResultSize.
         string largeText = new('A', 4000);
         byte[] txtRdata = BuildTxtRdata(largeText);
-        for (int i = 0; i < 16; i++)
+        for (int i = 0; i < answerCount; i++)
         {
             EncodeDnsName(response, "big.example.com");
             response.AddRange(new byte[] { 0x00, 0x10 }); // TYPE TXT
@@ -198,8 +261,11 @@ public class UT_OracleDnsProtocol
         using var protocol = new OracleDnsProtocol(handler);
         (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:plain.example.com?TYPE=TXT"), CancellationToken.None);
         Assert.AreEqual(OracleResponseCode.Success, code);
-        using JsonDocument doc = JsonDocument.Parse(payload);
-        Assert.IsFalse(doc.RootElement.TryGetProperty("Certificate", out _));
+        var (_, _, answers) = ParseEnvelope(payload);
+        Assert.AreEqual(1, answers.Count);
+        VmStruct answer0 = ParseAnswer(answers[0]);
+        Assert.AreEqual("plain.example.com", answer0[0].GetString());
+        Assert.AreEqual("TXT", answer0[1].GetString());
     }
 
     [TestMethod]
@@ -223,12 +289,13 @@ public class UT_OracleDnsProtocol
         using var protocol = new OracleDnsProtocol(handler);
         (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:1alhai._domainkey.icloud.com?TYPE=TXT"), CancellationToken.None);
         Assert.AreEqual(OracleResponseCode.Success, code);
-        using JsonDocument doc = JsonDocument.Parse(payload);
-        Assert.AreEqual("1alhai._domainkey.icloud.com", doc.RootElement.GetProperty("Name").GetString());
-        var answers = doc.RootElement.GetProperty("Answers");
-        Assert.AreEqual(1, answers.GetArrayLength());
-        Assert.AreEqual("TXT", answers[0].GetProperty("Type").GetString());
-        StringAssert.Contains(answers[0].GetProperty("Data").GetString(), "k=rsa");
+        var (name, type, answers) = ParseEnvelope(payload);
+        Assert.AreEqual("1alhai._domainkey.icloud.com", name);
+        Assert.AreEqual("TXT", type);
+        Assert.AreEqual(1, answers.Count);
+        VmStruct answer0 = ParseAnswer(answers[0]);
+        Assert.AreEqual("TXT", answer0[1].GetString());
+        StringAssert.Contains(answer0[3].GetString(), "k=rsa");
     }
 
     [TestMethod]
@@ -323,9 +390,10 @@ public class UT_OracleDnsProtocol
         (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=A"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Success, code);
-        using JsonDocument doc = JsonDocument.Parse(payload);
-        Assert.AreEqual("A", doc.RootElement.GetProperty("Type").GetString());
-        Assert.AreEqual("192.168.1.1", doc.RootElement.GetProperty("Answers")[0].GetProperty("Data").GetString());
+        var (_, type, answers) = ParseEnvelope(payload);
+        Assert.AreEqual("A", type);
+        VmStruct answer0 = ParseAnswer(answers[0]);
+        Assert.AreEqual("192.168.1.1", answer0[3].GetString());
     }
 
     [TestMethod]
@@ -346,8 +414,8 @@ public class UT_OracleDnsProtocol
         (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:example.com"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Success, code);
-        using JsonDocument doc = JsonDocument.Parse(payload);
-        Assert.AreEqual("A", doc.RootElement.GetProperty("Type").GetString());
+        var (_, type, _) = ParseEnvelope(payload);
+        Assert.AreEqual("A", type);
     }
 
     #endregion
@@ -372,9 +440,10 @@ public class UT_OracleDnsProtocol
         (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=AAAA"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Success, code);
-        using JsonDocument doc = JsonDocument.Parse(payload);
-        Assert.AreEqual("AAAA", doc.RootElement.GetProperty("Type").GetString());
-        string ipv6 = doc.RootElement.GetProperty("Answers")[0].GetProperty("Data").GetString();
+        var (_, type, answers) = ParseEnvelope(payload);
+        Assert.AreEqual("AAAA", type);
+        VmStruct answer0 = ParseAnswer(answers[0]);
+        string ipv6 = answer0[3].GetString();
         Assert.IsTrue(ipv6.Contains("2001:db8", StringComparison.OrdinalIgnoreCase));
     }
 
@@ -406,11 +475,11 @@ public class UT_OracleDnsProtocol
         (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:cert.example.com?TYPE=CERT"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Success, code);
-        using JsonDocument doc = JsonDocument.Parse(payload);
-        Assert.AreEqual("CERT", doc.RootElement.GetProperty("Answers")[0].GetProperty("Type").GetString());
-        string data = doc.RootElement.GetProperty("Answers")[0].GetProperty("Data").GetString();
+        var (_, _, answers) = ParseEnvelope(payload);
+        VmStruct answer0 = ParseAnswer(answers[0]);
+        Assert.AreEqual("CERT", answer0[1].GetString());
+        string data = answer0[3].GetString();
         StringAssert.Contains(data, Convert.ToBase64String(certBytes));
-        Assert.IsFalse(doc.RootElement.TryGetProperty("Certificate", out _));
     }
 
     #endregion
@@ -455,9 +524,10 @@ public class UT_OracleDnsProtocol
         (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=A"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Success, code);
-        using JsonDocument doc = JsonDocument.Parse(payload);
-        Assert.AreEqual("example.com", doc.RootElement.GetProperty("Answers")[0].GetProperty("Name").GetString());
-        Assert.AreEqual("8.8.8.8", doc.RootElement.GetProperty("Answers")[0].GetProperty("Data").GetString());
+        var (_, _, answers) = ParseEnvelope(payload);
+        VmStruct answer0 = ParseAnswer(answers[0]);
+        Assert.AreEqual("example.com", answer0[0].GetString());
+        Assert.AreEqual("8.8.8.8", answer0[3].GetString());
     }
 
     #endregion
@@ -568,8 +638,8 @@ public class UT_OracleDnsProtocol
         (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=1"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Success, code);
-        using JsonDocument doc = JsonDocument.Parse(payload);
-        Assert.AreEqual("A", doc.RootElement.GetProperty("Type").GetString());
+        var (_, type, _) = ParseEnvelope(payload);
+        Assert.AreEqual("A", type);
     }
 
     [TestMethod]
@@ -709,12 +779,11 @@ public class UT_OracleDnsProtocol
         (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=A"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Success, code);
-        using JsonDocument doc = JsonDocument.Parse(payload);
-        var answers = doc.RootElement.GetProperty("Answers");
-        Assert.AreEqual(3, answers.GetArrayLength());
-        Assert.AreEqual("1.1.1.1", answers[0].GetProperty("Data").GetString());
-        Assert.AreEqual("8.8.8.8", answers[1].GetProperty("Data").GetString());
-        Assert.AreEqual("9.9.9.9", answers[2].GetProperty("Data").GetString());
+        var (_, _, answers) = ParseEnvelope(payload);
+        Assert.AreEqual(3, answers.Count);
+        Assert.AreEqual("1.1.1.1", ParseAnswer(answers[0])[3].GetString());
+        Assert.AreEqual("8.8.8.8", ParseAnswer(answers[1])[3].GetString());
+        Assert.AreEqual("9.9.9.9", ParseAnswer(answers[2])[3].GetString());
     }
 
     #endregion
@@ -739,8 +808,9 @@ public class UT_OracleDnsProtocol
         (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=A"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Success, code);
-        using JsonDocument doc = JsonDocument.Parse(payload);
-        Assert.AreEqual(expectedTtl, doc.RootElement.GetProperty("Answers")[0].GetProperty("Ttl").GetUInt32());
+        var (_, _, answers) = ParseEnvelope(payload);
+        VmStruct answer0 = ParseAnswer(answers[0]);
+        Assert.AreEqual(expectedTtl, (uint)answer0[2].GetInteger());
     }
 
     #endregion
@@ -845,8 +915,8 @@ public class UT_OracleDnsProtocol
 
         Assert.AreEqual(OracleResponseCode.Success, code);
         Assert.IsNotNull(payload);
-        using JsonDocument doc = JsonDocument.Parse(payload);
-        Assert.AreEqual("google.com", doc.RootElement.GetProperty("Name").GetString());
+        var (name, _, _) = ParseEnvelope(payload);
+        Assert.AreEqual("google.com", name);
     }
 
     [TestMethod]
@@ -863,8 +933,8 @@ public class UT_OracleDnsProtocol
 
         Assert.AreEqual(OracleResponseCode.Success, code);
         Assert.IsNotNull(payload);
-        using JsonDocument doc = JsonDocument.Parse(payload);
-        Assert.AreEqual("cloudflare.com", doc.RootElement.GetProperty("Name").GetString());
+        var (name, _, _) = ParseEnvelope(payload);
+        Assert.AreEqual("cloudflare.com", name);
     }
 
     #endregion
@@ -951,12 +1021,10 @@ public class UT_OracleDnsProtocol
         Assert.AreEqual(OracleResponseCode.Success, code, $"Failed to resolve {domain} via {endpoint}");
         Assert.IsNotNull(payload);
 
-        using JsonDocument doc = JsonDocument.Parse(payload);
-        Assert.AreEqual(domain, doc.RootElement.GetProperty("Name").GetString());
-        Assert.AreEqual(recordType, doc.RootElement.GetProperty("Type").GetString());
-
-        var answers = doc.RootElement.GetProperty("Answers");
-        Assert.IsGreaterThan(0, answers.GetArrayLength(), $"Expected at least one answer for {domain}");
+        var (name, type, answers) = ParseEnvelope(payload);
+        Assert.AreEqual(domain, name);
+        Assert.AreEqual(recordType, type);
+        Assert.IsGreaterThan(0, answers.Count, $"Expected at least one answer for {domain}");
     }
 
     private static void LoadSettingsWithEndpoint(string dnsEndpoint)

@@ -62,27 +62,20 @@ Examples:
 
 ## Response schema
 
-Successful queries return UTF-8 JSON. Attributes correspond to the `ResultEnvelope` produced by the oracle:
+Successful queries return a NeoVM-serialized **Struct** (use `StdLib.Deserialize(result)` in contracts).
 
-```jsonc
-{
-  "Name": "1alhai._domainkey.icloud.com",
-  "Type": "TXT",
-  "Answers": [
-    {
-      "Name": "1alhai._domainkey.icloud.com",
-      "Type": "TXT",
-      "Ttl": 299,
-      "Data": "\"k=rsa; p=...IDAQAB\""
-    }
-  ]
-}
-```
+Struct schema:
 
-- `Answers` mirrors the DoH response but normalizes record types and names.
-- CERT records are returned verbatim in `Answers[].Data` (type, key tag, algorithm, base64 payload). Contracts can parse the certificate themselves if needed.
+- `Envelope` (Struct, 3 items): `[Name, Type, Answers]`
+- `Answer` (Struct, 4 items): `[Name, Type, Ttl, Data]`
+
+Notes:
+
+- `Answers` mirrors the DoH answer section but normalizes record types and names.
+- CERT records are returned verbatim in `Answer[3]` (type, key tag, algorithm, base64 payload). Contracts can parse the certificate themselves if needed.
 - If the DoH server responds with NXDOMAIN, the oracle returns `OracleResponseCode.NotFound`.
-- Responses exceeding `OracleResponse.MaxResultSize` yield `OracleResponseCode.ResponseTooLarge`.
+- Results exceeding `OracleResponse.MaxResultSize` yield `OracleResponseCode.ResponseTooLarge`.
+- Oracle `filter` is not supported for DNS responses in struct mode; pass an empty filter string.
 
 ## Contract usage example
 
@@ -97,19 +90,22 @@ public static void OnOracleCallback(string url, byte[] userData, int code, byte[
 {
     if (code != (int)OracleResponseCode.Success) throw new Exception("Oracle query failed");
 
-    var envelope = (Neo.SmartContract.Framework.Services.Neo.Json.JsonObject)StdLib.JsonDeserialize(result);
-    var answers = (Neo.SmartContract.Framework.Services.Neo.Json.JsonArray)envelope["Answers"];
-    var txt = (Neo.SmartContract.Framework.Services.Neo.Json.JsonObject)answers[0];
-    Storage.Put(Storage.CurrentContext, "dkim", txt["Data"].AsString());
+    // Envelope = [Name, Type, Answers]
+    var envelope = (object[])StdLib.Deserialize(result);
+    var answers = (object[])envelope[2];
+
+    // Answer = [Name, Type, Ttl, Data]
+    var first = (object[])answers[0];
+    Storage.Put(Storage.CurrentContext, "dkim", (string)first[3]);
 }
 ```
 
 Tips:
 
 1. Always set `TYPE` when you need anything other than an A record.
-2. Budget enough `gasForResponse` to cover JSON payload size (TXT records are often kilobytes).
+2. Budget enough `gasForResponse` to cover payload size (TXT records are often kilobytes).
 3. Validate TTL or fingerprint data before trusting it.
-4. Combine oracle DNS data with existing filters (e.g., `Helper.JsonPath`/`OracleService.Filter`) if you only need a slice of the result.
+4. DNS oracle responses do not support the oracle `filter`; request the record type you need and parse `Answers` in-contract.
 
 ## Manual testing
 
@@ -121,4 +117,4 @@ curl -s \
   'https://cloudflare-dns.com/dns-query?name=1alhai._domainkey.icloud.com&type=TXT'
 ```
 
-Compare the JSON payload with the data returned by your contract callback to ensure parity.
+Compare the DNS answer content with `Answer[3]` returned by your contract callback (after `StdLib.Deserialize`).

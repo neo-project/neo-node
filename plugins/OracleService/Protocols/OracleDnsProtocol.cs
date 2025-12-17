@@ -10,6 +10,7 @@
 // modifications are permitted.
 
 using Neo.Network.P2P.Payloads;
+using Neo.VM;
 using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
@@ -22,11 +23,13 @@ using System.Net.Http.Headers;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using VmArray = Neo.VM.Types.Array;
+using VmByteString = Neo.VM.Types.ByteString;
+using VmInteger = Neo.VM.Types.Integer;
+using VmStruct = Neo.VM.Types.Struct;
 
 namespace Neo.Plugins.OracleService.Protocols;
 
@@ -35,7 +38,6 @@ namespace Neo.Plugins.OracleService.Protocols;
 /// </summary>
 class OracleDnsProtocol : IOracleProtocol
 {
-    private const ushort DnsClassIN = 1;
     private const int DnsHeaderSize = 12;
     private static readonly MediaTypeHeaderValue DnsMessageMediaType = new("application/dns-message");
     private sealed class ResponseTooLargeException : Exception { }
@@ -71,13 +73,6 @@ class OracleDnsProtocol : IOracleProtocol
         public string Data { get; set; }
     }
 
-    private sealed class ResultEnvelope
-    {
-        public string Name { get; set; }
-        public string Type { get; set; }
-        public ResultAnswer[] Answers { get; set; }
-    }
-
     private static readonly IReadOnlyDictionary<string, int> RecordTypeLookup = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
     {
         ["A"] = 1,
@@ -97,10 +92,6 @@ class OracleDnsProtocol : IOracleProtocol
         RecordTypeLookup.ToDictionary(p => p.Value, p => p.Key);
 
     private readonly HttpClient client;
-    private readonly JsonSerializerOptions resultSerializerOptions = new()
-    {
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
     private readonly object syncRoot = new();
     private bool configured;
     private Uri endpoint;
@@ -199,18 +190,40 @@ class OracleDnsProtocol : IOracleProtocol
             })
             .ToArray();
 
-        ResultEnvelope envelope = new()
-        {
-            Name = queryName,
-            Type = recordTypeLabel,
-            Answers = answers
-        };
-
-        string payload = JsonSerializer.Serialize(envelope, resultSerializerOptions);
-        if (Encoding.UTF8.GetByteCount(payload) > OracleResponse.MaxResultSize)
+        byte[] stackBytes = SerializeStackItemEnvelope(queryName, recordTypeLabel, answers);
+        if (stackBytes.Length > OracleResponse.MaxResultSize)
             return (OracleResponseCode.ResponseTooLarge, null);
 
-        return (OracleResponseCode.Success, payload);
+        return (OracleResponseCode.Success, Convert.ToBase64String(stackBytes));
+    }
+
+    private static byte[] SerializeStackItemEnvelope(string name, string recordType, IEnumerable<ResultAnswer> answers)
+    {
+        var envelope = new VmStruct
+        {
+            new VmByteString(Encoding.UTF8.GetBytes(name ?? string.Empty)),
+            new VmByteString(Encoding.UTF8.GetBytes(recordType ?? string.Empty))
+        };
+
+        var answerArray = new VmArray();
+        foreach (var answer in answers ?? Enumerable.Empty<ResultAnswer>())
+        {
+            var item = new VmStruct
+            {
+                new VmByteString(Encoding.UTF8.GetBytes(answer?.Name ?? string.Empty)),
+                new VmByteString(Encoding.UTF8.GetBytes(answer?.Type ?? string.Empty)),
+                new VmInteger((long)(answer?.Ttl ?? 0)),
+                new VmByteString(Encoding.UTF8.GetBytes(answer?.Data ?? string.Empty))
+            };
+            answerArray.Add(item);
+        }
+
+        envelope.Add(answerArray);
+
+        return Neo.SmartContract.BinarySerializer.Serialize(envelope, ExecutionEngineLimits.Default with
+        {
+            MaxItemSize = (uint)OracleResponse.MaxResultSize
+        });
     }
 
     /// <summary>
@@ -225,7 +238,14 @@ class OracleDnsProtocol : IOracleProtocol
 
         await EnsureEndpointAllowed(resolverEndpoint, cancellation);
 
-        using HttpResponseMessage response = await client.PostAsync(resolverEndpoint, content, cancellation);
+        using HttpRequestMessage request = new(HttpMethod.Post, resolverEndpoint)
+        {
+            Content = content,
+            Version = HttpVersion.Version20,
+            VersionPolicy = HttpVersionPolicy.RequestVersionOrHigher
+        };
+
+        using HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellation);
         if (!response.IsSuccessStatusCode)
             throw new InvalidOperationException($"DoH endpoint returned {(int)response.StatusCode} ({response.StatusCode})");
 
