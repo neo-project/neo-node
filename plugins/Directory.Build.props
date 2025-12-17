@@ -4,7 +4,10 @@
   <PropertyGroup>
     <Copyright>2015-2025 The Neo Project</Copyright>
     <Authors>The Neo Project</Authors>
+    <Company>$(Authors)</Company>
     <PackageId>Neo.Plugins.$(MSBuildProjectName)</PackageId>
+    <PackageIcon>neo.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/neo-project/neo-modules</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryType>git</RepositoryType>
@@ -13,9 +16,18 @@
     <VersionPrefix>4.0.0</VersionPrefix>
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>$(PackageId)</RootNamespace>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <EnableDynamicLoading>true</EnableDynamicLoading>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <OutputPath>../../bin/$(PackageId)</OutputPath>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../.neo/neo.png" Pack="true" Visible="false" PackagePath=""/>
+    <None Include="../../.neo/README.md" Pack="true" Visible="false" PackagePath=""/>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Neo" Version="4.0.0-CI02002" />
