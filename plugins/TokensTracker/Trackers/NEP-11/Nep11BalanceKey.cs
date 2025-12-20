@@ -17,8 +17,8 @@ namespace Neo.Plugins.Trackers.NEP_11;
 
 public class Nep11BalanceKey : IComparable<Nep11BalanceKey>, IEquatable<Nep11BalanceKey>, ISerializable
 {
-    public readonly UInt160 UserScriptHash;
-    public readonly UInt160 AssetScriptHash;
+    public UInt160 UserScriptHash { get; private set; }
+    public UInt160 AssetScriptHash { get; private set; }
     public ByteString Token;
     public int Size => UInt160.Length + UInt160.Length + Token.GetVarSize();
 
@@ -50,7 +50,9 @@ public class Nep11BalanceKey : IComparable<Nep11BalanceKey>, IEquatable<Nep11Bal
     {
         if (other is null) return false;
         if (ReferenceEquals(this, other)) return true;
-        return UserScriptHash.Equals(other.UserScriptHash) && AssetScriptHash.Equals(AssetScriptHash) && Token.Equals(other.Token);
+        return UserScriptHash.Equals(other.UserScriptHash)
+            && AssetScriptHash.Equals(other.AssetScriptHash)
+            && Token.Equals(other.Token);
     }
 
     public override bool Equals(object? other)
@@ -72,8 +74,8 @@ public class Nep11BalanceKey : IComparable<Nep11BalanceKey>, IEquatable<Nep11Bal
 
     public void Deserialize(ref MemoryReader reader)
     {
-        ((ISerializable)UserScriptHash).Deserialize(ref reader);
-        ((ISerializable)AssetScriptHash).Deserialize(ref reader);
+        UserScriptHash = reader.ReadSerializable<UInt160>();
+        AssetScriptHash = reader.ReadSerializable<UInt160>();
         Token = reader.ReadVarMemory();
     }
 }
