@@ -15,6 +15,7 @@ using Neo.Json;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence.Providers;
+using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using System.Net;
 
@@ -246,7 +247,8 @@ partial class UT_RpcServer
         var snapshot = _neoSystem.GetSnapshotCache();
         var tx = TestUtils.CreateValidTx(snapshot, _wallet, _walletAccount);
         var txString = Convert.ToBase64String(tx.ToArray());
-        NativeContract.Policy.BlockAccount(snapshot, _walletAccount.ScriptHash);
+        using var engine = ApplicationEngine.Create(TriggerType.Application, tx, snapshot);
+        NativeContract.Policy.BlockAccountInternal(engine, _walletAccount.ScriptHash);
         snapshot.Commit();
 
         var exception = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.SendRawTransaction(txString),
