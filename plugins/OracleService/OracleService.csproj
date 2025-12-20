@@ -2,7 +2,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="NeoFS.API" Version="3.5.0" />
-		<PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
+		<PackageReference Include="Grpc.Net.Client" Version="$(GrpcNetClientVersion)" />
 	</ItemGroup>
 
 	<ItemGroup>

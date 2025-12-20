@@ -17,6 +17,10 @@
     <EnableDynamicLoading>true</EnableDynamicLoading>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <GrpcNetClientVersion>2.71.0</GrpcNetClientVersion>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Neo" Version="3.9.0-CI01994" />
   </ItemGroup>
