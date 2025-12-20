@@ -98,7 +98,7 @@ partial class MainService
 
         public DisplayState()
         {
-            StartTime = DateTime.UtcNow;
+            StartTime = Process.GetCurrentProcess().StartTime.ToUniversalTime();
             LastRefresh = DateTime.MinValue;
             LastHeight = 0;
             LastHeaderHeight = 0;
