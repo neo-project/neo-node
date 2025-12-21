@@ -717,7 +717,7 @@ partial class UT_RpcServer
             validatorSigner.AsParameter<SignersAndWitnesses>()
         );
         Assert.AreEqual(nameof(VMState.FAULT), resp["state"]);
-        Assert.AreEqual("Object reference not set to an instance of an object.", resp["exception"]);
+        Assert.AreEqual("The argument \u0060hashOrPubkey\u0060 can\u0027t be null.", resp["exception"]);
 
         // invoke verify with 1 param and signer; should return true
         resp = (JObject)_rpcServer.InvokeContractVerify(
