@@ -147,6 +147,7 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
 
         this.wallet = wallet;
         protocols["https"] = new OracleHttpsProtocol();
+        protocols["dns"] = new OracleDnsProtocol();
         protocols["neofs"] = new OracleNeoFSProtocol(wallet, oracles);
         status = OracleStatus.Running;
         timer = new Timer(OnTimer, null, RefreshIntervalMilliSeconds, Timeout.Infinite);
@@ -296,7 +297,19 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
 
         (OracleResponseCode code, string data) = await ProcessUrlAsync(req.Url);
 
-        Log($"[{req.OriginalTxid}] Process oracle request end:<{req.Url}>, responseCode:{code}, response:{data}");
+        Uri.TryCreate(req.Url, UriKind.Absolute, out Uri requestUri);
+        bool dnsStackOutput = requestUri is not null && requestUri.Scheme.Equals("dns", StringComparison.OrdinalIgnoreCase);
+        Log($"[{req.OriginalTxid}] Process oracle request end:<{req.Url}>, responseCode:{code}, response:{FormatResponseForLog(code, data, dnsStackOutput)}");
+
+        byte[] dnsStackBytes = null;
+        if (code == OracleResponseCode.Success && dnsStackOutput)
+        {
+            if (!TryDecodeDnsStackItemPayload(data, out dnsStackBytes))
+            {
+                code = OracleResponseCode.Error;
+                Log($"[{req.OriginalTxid}] Invalid DNS stack item payload.", LogLevel.Warning);
+            }
+        }
 
         var oracleNodes = NativeContract.RoleManagement.GetDesignatedByRole(snapshot, Role.Oracle, height);
         foreach (var (requestId, request) in NativeContract.Oracle.GetRequestsByUrl(snapshot, req.Url))
@@ -306,7 +319,20 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
             {
                 try
                 {
-                    result = Filter(data, request.Filter);
+                    if (dnsStackOutput)
+                    {
+                        if (!string.IsNullOrEmpty(request.Filter))
+                            throw new InvalidOperationException("Filter is not supported for dns: requests.");
+                        if (dnsStackBytes is null)
+                            throw new InvalidOperationException("Missing DNS stack item payload.");
+                        if (dnsStackBytes.Length > OracleResponse.MaxResultSize)
+                            throw new InvalidOperationException("DNS stack item payload exceeds oracle maximum result size.");
+                        result = dnsStackBytes;
+                    }
+                    else
+                    {
+                        result = Filter(data, request.Filter);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -525,6 +551,35 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
         JToken beforeObject = JToken.Parse(input);
         JArray afterObjects = beforeObject.JsonPath(filterArgs);
         return afterObjects.ToByteArray(false);
+    }
+
+    private static string FormatResponseForLog(OracleResponseCode code, string data, bool dnsStackOutput)
+    {
+        if (code != OracleResponseCode.Success)
+            return data;
+
+        if (dnsStackOutput)
+            return string.IsNullOrEmpty(data) ? "<stackitem:empty>" : $"<stackitem:base64:{data.Length} chars>";
+
+        if (string.IsNullOrEmpty(data))
+            return data;
+
+        const int maxLen = 2048;
+        return data.Length <= maxLen ? data : data[..maxLen] + "...";
+    }
+
+    internal static bool TryDecodeDnsStackItemPayload(string payload, out byte[] result)
+    {
+        try
+        {
+            result = Convert.FromBase64String(payload);
+            return true;
+        }
+        catch (Exception ex) when (ex is ArgumentNullException or FormatException)
+        {
+            result = null;
+            return false;
+        }
     }
 
     private bool CheckTxSign(DataCache snapshot, Transaction tx, ConcurrentDictionary<ECPoint, byte[]> OracleSigns)
