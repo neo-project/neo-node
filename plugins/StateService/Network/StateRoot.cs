@@ -92,9 +92,12 @@ class StateRoot : IVerifiable
         return this.VerifyWitnesses(settings, snapshot, 2_00000000L);
     }
 
-    public UInt160[] GetScriptHashesForVerifying(DataCache snapshot)
+    public UInt160[] GetScriptHashesForVerifying(IReadOnlyStore? snapshot)
     {
-        var validators = NativeContract.RoleManagement.GetDesignatedByRole(snapshot, Role.StateValidator, Index);
+        if (snapshot is not DataCache snapshotCache)
+            throw new InvalidOperationException("Snapshot is required for verifying");
+
+        var validators = NativeContract.RoleManagement.GetDesignatedByRole(snapshotCache, Role.StateValidator, Index);
         if (validators.Length < 1) throw new InvalidOperationException("No script hash for state root verifying");
         return [Contract.GetBFTAddress(validators)];
     }

@@ -116,7 +116,7 @@ public class TransactionManager
 
     private void AddSignItem(Contract contract, KeyPair key)
     {
-        if (!Tx.GetScriptHashesForVerifying(null!).Contains(contract.ScriptHash))
+        if (!Tx.GetScriptHashesForVerifying().Contains(contract.ScriptHash))
         {
             throw new Exception($"Add SignItem error: Mismatch ScriptHash ({contract.ScriptHash})");
         }
@@ -163,7 +163,7 @@ public class TransactionManager
     public async Task<Transaction> SignAsync()
     {
         // Calculate NetworkFee
-        Tx.Witnesses = Tx.GetScriptHashesForVerifying(null!).Select(u => new Witness()
+        Tx.Witnesses = Tx.GetScriptHashesForVerifying().Select(u => new Witness()
         {
             InvocationScript = ReadOnlyMemory<byte>.Empty,
             VerificationScript = GetVerificationScript(u)
