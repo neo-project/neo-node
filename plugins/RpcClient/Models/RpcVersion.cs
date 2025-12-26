@@ -27,9 +27,9 @@ public class RpcVersion
         public uint MaxTransactionsPerBlock { get; set; }
         public int MemoryPoolMaxTransactions { get; set; }
         public ulong InitialGasDistribution { get; set; }
-        public IReadOnlyDictionary<Hardfork, uint> Hardforks { get; set; }
-        public IReadOnlyList<string> SeedList { get; set; }
-        public IReadOnlyList<ECPoint> StandbyCommittee { get; set; }
+        public required IReadOnlyDictionary<Hardfork, uint> Hardforks { get; set; }
+        public required IReadOnlyList<string> SeedList { get; set; }
+        public required IReadOnlyList<ECPoint> StandbyCommittee { get; set; }
 
         public JObject ToJson()
         {
@@ -58,24 +58,24 @@ public class RpcVersion
         {
             return new()
             {
-                Network = (uint)json["network"].AsNumber(),
-                ValidatorsCount = (int)json["validatorscount"].AsNumber(),
-                MillisecondsPerBlock = (uint)json["msperblock"].AsNumber(),
-                MaxValidUntilBlockIncrement = (uint)json["maxvaliduntilblockincrement"].AsNumber(),
-                MaxTraceableBlocks = (uint)json["maxtraceableblocks"].AsNumber(),
-                AddressVersion = (byte)json["addressversion"].AsNumber(),
-                MaxTransactionsPerBlock = (uint)json["maxtransactionsperblock"].AsNumber(),
-                MemoryPoolMaxTransactions = (int)json["memorypoolmaxtransactions"].AsNumber(),
-                InitialGasDistribution = (ulong)json["initialgasdistribution"].AsNumber(),
-                Hardforks = new Dictionary<Hardfork, uint>(((JArray)json["hardforks"]).Select(s =>
+                Network = (uint)json["network"]!.AsNumber(),
+                ValidatorsCount = (int)json["validatorscount"]!.AsNumber(),
+                MillisecondsPerBlock = (uint)json["msperblock"]!.AsNumber(),
+                MaxValidUntilBlockIncrement = (uint)json["maxvaliduntilblockincrement"]!.AsNumber(),
+                MaxTraceableBlocks = (uint)json["maxtraceableblocks"]!.AsNumber(),
+                AddressVersion = (byte)json["addressversion"]!.AsNumber(),
+                MaxTransactionsPerBlock = (uint)json["maxtransactionsperblock"]!.AsNumber(),
+                MemoryPoolMaxTransactions = (int)json["memorypoolmaxtransactions"]!.AsNumber(),
+                InitialGasDistribution = (ulong)json["initialgasdistribution"]!.AsNumber(),
+                Hardforks = new Dictionary<Hardfork, uint>(((JArray)json["hardforks"]!).Select(s =>
                 {
-                    var name = s["name"].AsString();
+                    var name = s!["name"]!.AsString();
                     // Add HF_ prefix to the hardfork response for proper Hardfork enum parsing.
                     var hardfork = Enum.Parse<Hardfork>(name.StartsWith("HF_") ? name : $"HF_{name}");
-                    return new KeyValuePair<Hardfork, uint>(hardfork, (uint)s["blockheight"].AsNumber());
+                    return new KeyValuePair<Hardfork, uint>(hardfork, (uint)s["blockheight"]!.AsNumber());
                 })),
-                SeedList = [.. ((JArray)json["seedlist"]).Select(s => s.AsString())],
-                StandbyCommittee = [.. ((JArray)json["standbycommittee"]).Select(s => ECPoint.Parse(s.AsString(), ECCurve.Secp256r1))]
+                SeedList = [.. ((JArray)json["seedlist"]!).Select(s => s!.AsString())],
+                StandbyCommittee = [.. ((JArray)json["standbycommittee"]!).Select(s => ECPoint.Parse(s!.AsString(), ECCurve.Secp256r1))]
             };
         }
 
@@ -89,9 +89,9 @@ public class RpcVersion
 
     public uint Nonce { get; set; }
 
-    public string UserAgent { get; set; }
+    public required string UserAgent { get; set; }
 
-    public RpcProtocol Protocol { get; set; } = new();
+    public required RpcProtocol Protocol { get; set; }
 
     public JObject ToJson()
     {
@@ -109,10 +109,10 @@ public class RpcVersion
     {
         return new()
         {
-            TcpPort = (int)json["tcpport"].AsNumber(),
-            Nonce = (uint)json["nonce"].AsNumber(),
-            UserAgent = json["useragent"].AsString(),
-            Protocol = RpcProtocol.FromJson((JObject)json["protocol"])
+            TcpPort = (int)json["tcpport"]!.AsNumber(),
+            Nonce = (uint)json["nonce"]!.AsNumber(),
+            UserAgent = json["useragent"]!.AsString(),
+            Protocol = RpcProtocol.FromJson((JObject)json["protocol"]!)
         };
     }
 }

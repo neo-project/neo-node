@@ -35,9 +35,9 @@ public class TransactionManagerFactory
     /// <param name="signers">Transaction Signers</param>
     /// <param name="attributes">Transaction Attributes</param>
     /// <returns></returns>
-    public async Task<TransactionManager> MakeTransactionAsync(ReadOnlyMemory<byte> script, Signer[] signers = null, TransactionAttribute[] attributes = null)
+    public async Task<TransactionManager> MakeTransactionAsync(ReadOnlyMemory<byte> script, Signer[]? signers = null, TransactionAttribute[]? attributes = null)
     {
-        RpcInvokeResult invokeResult = await rpcClient.InvokeScriptAsync(script, signers).ConfigureAwait(false);
+        RpcInvokeResult invokeResult = await rpcClient.InvokeScriptAsync(script, signers ?? []).ConfigureAwait(false);
         return await MakeTransactionAsync(script, invokeResult.GasConsumed, signers, attributes).ConfigureAwait(false);
     }
 
@@ -49,7 +49,7 @@ public class TransactionManagerFactory
     /// <param name="signers">Transaction Signers</param>
     /// <param name="attributes">Transaction Attributes</param>
     /// <returns></returns>
-    public async Task<TransactionManager> MakeTransactionAsync(ReadOnlyMemory<byte> script, long systemFee, Signer[] signers = null, TransactionAttribute[] attributes = null)
+    public async Task<TransactionManager> MakeTransactionAsync(ReadOnlyMemory<byte> script, long systemFee, Signer[]? signers = null, TransactionAttribute[]? attributes = null)
     {
         uint blockCount = await rpcClient.GetBlockCountAsync().ConfigureAwait(false) - 1;
 

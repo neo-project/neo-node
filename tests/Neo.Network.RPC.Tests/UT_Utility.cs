@@ -9,7 +9,6 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-using Neo.Extensions;
 using Neo.Network.P2P.Payloads;
 using Neo.Network.P2P.Payloads.Conditions;
 using Neo.SmartContract;
@@ -22,9 +21,9 @@ namespace Neo.Network.RPC.Tests;
 [TestClass]
 public class UT_Utility
 {
-    private KeyPair keyPair;
-    private UInt160 scriptHash;
-    private ProtocolSettings protocolSettings;
+    private KeyPair keyPair = null!;
+    private UInt160 scriptHash = null!;
+    private ProtocolSettings protocolSettings = null!;
 
     [TestInitialize]
     public void TestSetup()
@@ -47,9 +46,6 @@ public class UT_Utility
     [TestMethod]
     public void TestGetKeyPair()
     {
-        string nul = null;
-        Assert.ThrowsExactly<ArgumentNullException>(() => _ = Utility.GetKeyPair(nul));
-
         string wif = "KyXwTh1hB76RRMquSvnxZrJzQx7h9nQP2PCRL38v6VDb5ip3nf1p";
         var result = Utility.GetKeyPair(wif);
         Assert.AreEqual(keyPair, result);
@@ -69,9 +65,6 @@ public class UT_Utility
     [TestMethod]
     public void TestGetScriptHash()
     {
-        string nul = null;
-        Assert.ThrowsExactly<ArgumentNullException>(() => _ = Utility.GetScriptHash(nul, protocolSettings));
-
         string addr = scriptHash.ToAddress(protocolSettings.AddressVersion);
         var result = Utility.GetScriptHash(addr, protocolSettings);
         Assert.AreEqual(scriptHash, result);

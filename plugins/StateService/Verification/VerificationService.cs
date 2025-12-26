@@ -56,7 +56,7 @@ public class VerificationService : UntypedActor
         if (context.IsSender && context.CheckSignatures())
         {
             if (context.StateRootMessage is null) return;
-            Utility.Log(nameof(VerificationService), LogLevel.Info, $"relay state root, height={context.StateRoot.Index}, root={context.StateRoot.RootHash}");
+            Utility.Log(nameof(VerificationService), LogLevel.Info, $"relay state root, height={context.StateRoot!.Index}, root={context.StateRoot.RootHash}");
             StatePlugin.NeoSystem.Blockchain.Tell(context.StateRootMessage);
         }
     }
@@ -98,7 +98,7 @@ public class VerificationService : UntypedActor
 
     private void OnTimer(uint index)
     {
-        if (contexts.TryGetValue(index, out VerificationContext context))
+        if (contexts.TryGetValue(index, out VerificationContext? context))
         {
             SendVote(context);
             CheckVotes(context);

@@ -16,7 +16,7 @@ namespace Neo.Network.RPC.Models;
 
 public class RpcValidator
 {
-    public string PublicKey { get; set; }
+    public required string PublicKey { get; set; }
 
     public BigInteger Votes { get; set; }
 
@@ -26,8 +26,8 @@ public class RpcValidator
     {
         return new RpcValidator
         {
-            PublicKey = json["publickey"].AsString(),
-            Votes = BigInteger.Parse(json["votes"].AsString()),
+            PublicKey = json["publickey"]!.AsString(),
+            Votes = BigInteger.Parse(json["votes"]!.AsString()),
         };
     }
 }

@@ -15,11 +15,11 @@ namespace Neo.Network.RPC.Models;
 
 public class RpcPeers
 {
-    public RpcPeer[] Unconnected { get; set; }
+    public required RpcPeer[] Unconnected { get; set; }
 
-    public RpcPeer[] Bad { get; set; }
+    public required RpcPeer[] Bad { get; set; }
 
-    public RpcPeer[] Connected { get; set; }
+    public required RpcPeer[] Connected { get; set; }
 
     public JObject ToJson()
     {
@@ -35,16 +35,16 @@ public class RpcPeers
     {
         return new RpcPeers
         {
-            Unconnected = ((JArray)json["unconnected"]).Select(p => RpcPeer.FromJson((JObject)p)).ToArray(),
-            Bad = ((JArray)json["bad"]).Select(p => RpcPeer.FromJson((JObject)p)).ToArray(),
-            Connected = ((JArray)json["connected"]).Select(p => RpcPeer.FromJson((JObject)p)).ToArray()
+            Unconnected = ((JArray)json["unconnected"]!).Select(p => RpcPeer.FromJson((JObject)p!)).ToArray(),
+            Bad = ((JArray)json["bad"]!).Select(p => RpcPeer.FromJson((JObject)p!)).ToArray(),
+            Connected = ((JArray)json["connected"]!).Select(p => RpcPeer.FromJson((JObject)p!)).ToArray()
         };
     }
 }
 
 public class RpcPeer
 {
-    public string Address { get; set; }
+    public required string Address { get; set; }
 
     public int Port { get; set; }
 
@@ -54,8 +54,8 @@ public class RpcPeer
     {
         return new RpcPeer
         {
-            Address = json["address"].AsString(),
-            Port = int.Parse(json["port"].AsString())
+            Address = json["address"]!.AsString(),
+            Port = int.Parse(json["port"]!.AsString())
         };
     }
 }

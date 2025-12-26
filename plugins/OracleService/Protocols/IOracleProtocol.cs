@@ -16,5 +16,5 @@ namespace Neo.Plugins.OracleService.Protocols;
 interface IOracleProtocol : IDisposable
 {
     void Configure();
-    Task<(OracleResponseCode, string)> ProcessAsync(Uri uri, CancellationToken cancellation);
+    Task<(OracleResponseCode, string?)> ProcessAsync(Uri uri, CancellationToken cancellation);
 }

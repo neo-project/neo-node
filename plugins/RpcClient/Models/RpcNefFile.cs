@@ -20,11 +20,11 @@ class RpcNefFile
     {
         return new NefFile
         {
-            Compiler = json["compiler"].AsString(),
-            Source = json["source"].AsString(),
-            Tokens = ((JArray)json["tokens"]).Select(p => RpcMethodToken.FromJson((JObject)p)).ToArray(),
-            Script = Convert.FromBase64String(json["script"].AsString()),
-            CheckSum = (uint)json["checksum"].AsNumber()
+            Compiler = json["compiler"]!.AsString(),
+            Source = json["source"]!.AsString(),
+            Tokens = ((JArray)json["tokens"]!).Select(p => RpcMethodToken.FromJson((JObject)p!)).ToArray(),
+            Script = Convert.FromBase64String(json["script"]!.AsString()),
+            CheckSum = (uint)json["checksum"]!.AsNumber()
         };
     }
 }
