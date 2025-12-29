@@ -314,9 +314,21 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
                     Log($"[{req.OriginalTxid}] Filter '{request.Filter}' error:{ex.Message}");
                 }
             }
+
+            Transaction responseTx, backupTx;
             var response = new OracleResponse() { Id = requestId, Code = code, Result = result };
-            var responseTx = CreateResponseTx(snapshot, request, response, oracleNodes, _system.Settings);
-            var backupTx = CreateResponseTx(snapshot, request, new OracleResponse() { Code = OracleResponseCode.ConsensusUnreachable, Id = requestId, Result = Array.Empty<byte>() }, oracleNodes, _system.Settings, true);
+
+            try
+            {
+                responseTx = CreateResponseTx(snapshot, request, response, oracleNodes, _system.Settings);
+                backupTx = CreateResponseTx(snapshot, request, new OracleResponse() { Code = OracleResponseCode.ConsensusUnreachable, Id = requestId, Result = Array.Empty<byte>() }, oracleNodes, _system.Settings, true);
+            }
+            catch (Exception ex)
+            {
+                code = OracleResponseCode.Error;
+                Log($"[{req.OriginalTxid}] Create Response tx error:{ex.Message}");
+                continue;
+            }
 
             Log($"[{req.OriginalTxid}]-({requestId}) Built response tx[[{responseTx.Hash}]], responseCode:{code}, result:{result.ToHexString()}, validUntilBlock:{responseTx.ValidUntilBlock}, backupTx:{backupTx.Hash}-{backupTx.ValidUntilBlock}");
 
