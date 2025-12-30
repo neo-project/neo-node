@@ -20,10 +20,10 @@ namespace Neo.Plugins.DBFTPlugin.Messages;
 public class PrepareRequest : ConsensusMessage
 {
     public uint Version;
-    public UInt256 PrevHash;
+    public required UInt256 PrevHash;
     public ulong Timestamp;
     public ulong Nonce;
-    public UInt256[] TransactionHashes;
+    public required UInt256[] TransactionHashes;
 
     public override int Size => base.Size
         + sizeof(uint)                      //Version

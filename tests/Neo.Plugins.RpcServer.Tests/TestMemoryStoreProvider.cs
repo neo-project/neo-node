@@ -18,5 +18,5 @@ public class TestMemoryStoreProvider(MemoryStore memoryStore) : IStoreProvider
 {
     public MemoryStore MemoryStore { get; init; } = memoryStore;
     public string Name => nameof(MemoryStore);
-    public IStore GetStore(string path) => MemoryStore;
+    public IStore GetStore(string? path) => MemoryStore;
 }

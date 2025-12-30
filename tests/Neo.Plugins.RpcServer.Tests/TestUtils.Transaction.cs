@@ -49,13 +49,13 @@ public partial class TestUtils
         Assert.IsNull(data.GetSignatures(tx.Sender));
         Assert.IsTrue(wallet.Sign(data));
         Assert.IsTrue(data.Completed);
-        Assert.HasCount(1, data.GetSignatures(tx.Sender));
+        Assert.HasCount(1, data.GetSignatures(tx.Sender)!);
 
         tx.Witnesses = data.GetWitnesses();
         return tx;
     }
 
-    public static Transaction CreateInvalidTransaction(DataCache snapshot, NEP6Wallet wallet, WalletAccount account, InvalidTransactionType type, UInt256 conflict = null)
+    public static Transaction CreateInvalidTransaction(DataCache snapshot, NEP6Wallet wallet, WalletAccount account, InvalidTransactionType type, UInt256? conflict = null)
     {
         var sender = account.ScriptHash;
 
@@ -95,7 +95,7 @@ public partial class TestUtils
             case InvalidTransactionType.Conflicting:
                 // To create a conflicting transaction, we'd need another valid transaction.
                 // For simplicity, we'll just add a Conflicts attribute with a random hash.
-                tx.Attributes = [new Conflicts { Hash = conflict }];
+                tx.Attributes = [new Conflicts { Hash = conflict! }];
                 break;
         }
 
@@ -103,7 +103,7 @@ public partial class TestUtils
         Assert.IsNull(data.GetSignatures(tx.Sender));
         Assert.IsTrue(wallet.Sign(data));
         Assert.IsTrue(data.Completed);
-        Assert.HasCount(1, data.GetSignatures(tx.Sender));
+        Assert.HasCount(1, data.GetSignatures(tx.Sender)!);
         tx.Witnesses = data.GetWitnesses();
         if (type == InvalidTransactionType.InvalidSignature)
         {

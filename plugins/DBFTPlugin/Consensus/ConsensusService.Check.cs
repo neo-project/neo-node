@@ -21,7 +21,7 @@ partial class ConsensusService
 {
     private bool CheckPrepareResponse()
     {
-        if (context.TransactionHashes.Length == context.Transactions.Count)
+        if (context.TransactionHashes!.Length == context.Transactions!.Count)
         {
             // if we are the primary for this view, but acting as a backup because we recovered our own
             // previously sent prepare request, then we don't want to send a prepare response.
@@ -55,7 +55,7 @@ partial class ConsensusService
 
     private void CheckCommits()
     {
-        if (context.CommitPayloads.Count(p => context.GetMessage(p)?.ViewNumber == context.ViewNumber) >= context.M && context.TransactionHashes.All(p => context.Transactions.ContainsKey(p)))
+        if (context.CommitPayloads.Count(p => context.GetMessage(p)?.ViewNumber == context.ViewNumber) >= context.M && context.TransactionHashes!.All(p => context.Transactions!.ContainsKey(p)))
         {
             block_received_index = context.Block.Index;
             Block block = context.CreateBlock();
@@ -73,7 +73,7 @@ partial class ConsensusService
         {
             if (!context.WatchOnly)
             {
-                ChangeView message = messages[context.MyIndex];
+                ChangeView? message = messages[context.MyIndex];
                 // Communicate the network about my agreement to move to `viewNumber`
                 // if my last change view payload, `message`, has NewViewNumber lower than current view to change
                 if (message is null || message.NewViewNumber < viewNumber)
@@ -85,7 +85,7 @@ partial class ConsensusService
 
     private void CheckPreparations()
     {
-        if (context.PreparationPayloads.Count(p => p != null) >= context.M && context.TransactionHashes.All(p => context.Transactions.ContainsKey(p)))
+        if (context.PreparationPayloads.Count(p => p != null) >= context.M && context.TransactionHashes!.All(p => context.Transactions!.ContainsKey(p)))
         {
             ExtensiblePayload payload = context.MakeCommit();
             Log($"Sending {nameof(Commit)}");
