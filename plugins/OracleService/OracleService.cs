@@ -36,7 +36,7 @@ using System.Text;
 
 namespace Neo.Plugins.OracleService;
 
-public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHandler, IWalletChangedHandler
+public sealed class OracleService : Plugin, ICommittingHandler
 {
     private const int RefreshIntervalMilliSeconds = 1000 * 60 * 3;
 
@@ -46,15 +46,15 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
         MaxResponseContentBufferSize = ushort.MaxValue
     };
 
-    private Wallet wallet;
+    private Wallet wallet = null!;
     private readonly ConcurrentDictionary<ulong, OracleTask> pendingQueue = new();
     private readonly ConcurrentDictionary<ulong, DateTime> finishedCache = new();
-    private Timer timer;
+    private Timer? timer;
     internal readonly CancellationTokenSource cancelSource = new();
     private OracleStatus status = OracleStatus.Unstarted;
-    private IWalletProvider walletProvider;
+    private IWalletProvider? walletProvider;
     private int counter;
-    private NeoSystem _system;
+    private NeoSystem _system = null!;
 
     private readonly Dictionary<string, IOracleProtocol> protocols = new();
 
@@ -80,28 +80,31 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
     {
         if (system.Settings.Network != OracleSettings.Default.Network) return;
         _system = system;
-        _system.ServiceAdded += ((IServiceAddedHandler)this).NeoSystem_ServiceAdded_Handler;
+        _system.ServiceAdded += NeoSystem_ServiceAdded_Handler;
         RpcServerPlugin.RegisterMethods(this, OracleSettings.Default.Network);
     }
 
 
-    void IServiceAddedHandler.NeoSystem_ServiceAdded_Handler(object sender, object service)
+    void NeoSystem_ServiceAdded_Handler(object? sender, object service)
     {
-        if (service is IWalletProvider)
+        if (service is IWalletProvider provider)
         {
-            walletProvider = service as IWalletProvider;
-            _system.ServiceAdded -= ((IServiceAddedHandler)this).NeoSystem_ServiceAdded_Handler;
+            walletProvider = provider;
+            _system.ServiceAdded -= NeoSystem_ServiceAdded_Handler;
             if (OracleSettings.Default.AutoStart)
             {
-                walletProvider.WalletChanged += ((IWalletChangedHandler)this).IWalletProvider_WalletChanged_Handler;
+                walletProvider.WalletChanged += IWalletProvider_WalletChanged_Handler;
             }
         }
     }
 
-    void IWalletChangedHandler.IWalletProvider_WalletChanged_Handler(object sender, Wallet wallet)
+    void IWalletProvider_WalletChanged_Handler(object? sender, Wallet? wallet)
     {
-        walletProvider.WalletChanged -= ((IWalletChangedHandler)this).IWalletProvider_WalletChanged_Handler;
-        Start(wallet);
+        if (wallet != null)
+        {
+            walletProvider!.WalletChanged -= IWalletProvider_WalletChanged_Handler;
+            Start(wallet);
+        }
     }
 
     protected override void Dispose(bool disposing)
@@ -124,7 +127,7 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
         Start(walletProvider?.GetWallet());
     }
 
-    public Task Start(Wallet wallet)
+    public Task Start(Wallet? wallet)
     {
         if (status == OracleStatus.Running) return Task.CompletedTask;
 
@@ -186,7 +189,7 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
             OnStop();
     }
 
-    private async void OnTimer(object state)
+    private async void OnTimer(object? state)
     {
         try
         {
@@ -204,8 +207,8 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
                 if (span > TimeSpan.FromMilliseconds(RefreshIntervalMilliSeconds))
                 {
                     foreach (var account in wallet.GetAccounts())
-                        if (task.BackupSigns.TryGetValue(account.GetKey().PublicKey, out byte[] sign))
-                            tasks.Add(SendResponseSignatureAsync(id, sign, account.GetKey()));
+                        if (task.BackupSigns.TryGetValue(account.GetKey()!.PublicKey, out byte[]? sign))
+                            tasks.Add(SendResponseSignatureAsync(id, sign, account.GetKey()!));
                 }
             }
 
@@ -294,7 +297,7 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
 
         uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
 
-        (OracleResponseCode code, string data) = await ProcessUrlAsync(req.Url);
+        (OracleResponseCode code, string? data) = await ProcessUrlAsync(req.Url);
 
         Log($"[{req.OriginalTxid}] Process oracle request end:<{req.Url}>, responseCode:{code}, response:{data}");
 
@@ -306,7 +309,7 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
             {
                 try
                 {
-                    result = Filter(data, request.Filter);
+                    result = Filter(data!, request.Filter);
                 }
                 catch (Exception ex)
                 {
@@ -336,16 +339,17 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
             ECPoint[] oraclePublicKeys = NativeContract.RoleManagement.GetDesignatedByRole(snapshot, Role.Oracle, height);
             foreach (var account in wallet.GetAccounts())
             {
-                var oraclePub = account.GetKey()?.PublicKey;
-                if (!account.HasKey || account.Lock || !oraclePublicKeys.Contains(oraclePub)) continue;
+                if (!account.HasKey || account.Lock) continue;
+                var key = account.GetKey()!;
+                if (!oraclePublicKeys.Contains(key.PublicKey)) continue;
 
-                var txSign = responseTx.Sign(account.GetKey(), _system.Settings.Network);
-                var backTxSign = backupTx.Sign(account.GetKey(), _system.Settings.Network);
+                var txSign = responseTx.Sign(key, _system.Settings.Network);
+                var backTxSign = backupTx.Sign(key, _system.Settings.Network);
 
-                AddResponseTxSign(snapshot, requestId, oraclePub, txSign, responseTx, backupTx, backTxSign);
-                tasks.Add(SendResponseSignatureAsync(requestId, txSign, account.GetKey()));
+                AddResponseTxSign(snapshot, requestId, key.PublicKey, txSign, responseTx, backupTx, backTxSign);
+                tasks.Add(SendResponseSignatureAsync(requestId, txSign, key));
 
-                Log($"[{request.OriginalTxid}]-[[{responseTx.Hash}]] Send oracle sign data, Oracle node: {oraclePub}, Sign: {txSign.ToHexString()}");
+                Log($"[{request.OriginalTxid}]-[[{responseTx.Hash}]] Send oracle sign data, Oracle node: {key.PublicKey}, Sign: {txSign.ToHexString()}");
             }
             await Task.WhenAll(tasks);
         }
@@ -361,7 +365,7 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
                 foreach (var (id, request) in NativeContract.Oracle.GetRequests(snapshot))
                 {
                     if (cancelSource.IsCancellationRequested) break;
-                    if (!finishedCache.ContainsKey(id) && (!pendingQueue.TryGetValue(id, out OracleTask task) || task.Tx is null))
+                    if (!finishedCache.ContainsKey(id) && (!pendingQueue.TryGetValue(id, out OracleTask? task) || task.Tx is null))
                         await ProcessRequestAsync(snapshot, request);
                 }
             }
@@ -383,11 +387,11 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
         }
     }
 
-    private async Task<(OracleResponseCode, string)> ProcessUrlAsync(string url)
+    private async Task<(OracleResponseCode, string?)> ProcessUrlAsync(string url)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
             return (OracleResponseCode.Error, $"Invalid url:<{url}>");
-        if (!protocols.TryGetValue(uri.Scheme, out IOracleProtocol protocol))
+        if (!protocols.TryGetValue(uri.Scheme, out IOracleProtocol? protocol))
             return (OracleResponseCode.ProtocolNotSupported, $"Invalid Protocol:<{url}>");
 
         using CancellationTokenSource ctsTimeout = new(OracleSettings.Default.MaxOracleTimeout);
@@ -405,7 +409,7 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
 
     public static Transaction CreateResponseTx(DataCache snapshot, OracleRequest request, OracleResponse response, ECPoint[] oracleNodes, ProtocolSettings settings, bool useCurrentHeight = false)
     {
-        var requestTx = NativeContract.Ledger.GetTransactionState(snapshot, request.OriginalTxid);
+        var requestTx = NativeContract.Ledger.GetTransactionState(snapshot, request.OriginalTxid)!;
         var n = oracleNodes.Length;
         var m = n - (n - 1) / 3;
         var oracleSignContract = Contract.CreateMultiSigContract(m, oracleNodes);
@@ -446,11 +450,11 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
 
         // Calculate network fee
 
-        var oracleContract = NativeContract.ContractManagement.GetContract(snapshot, NativeContract.Oracle.Hash);
+        var oracleContract = NativeContract.ContractManagement.GetContract(snapshot, NativeContract.Oracle.Hash)!;
         var engine = ApplicationEngine.Create(TriggerType.Verification, tx, snapshot.CloneCache(), settings: settings);
-        ContractMethodDescriptor md = oracleContract.Manifest.Abi.GetMethod(ContractBasicMethod.Verify, ContractBasicMethod.VerifyPCount);
+        ContractMethodDescriptor md = oracleContract.Manifest.Abi.GetMethod(ContractBasicMethod.Verify, ContractBasicMethod.VerifyPCount)!;
         engine.LoadContract(oracleContract, md, CallFlags.None);
-        if (engine.Execute() != VMState.HALT) return null;
+        engine.Execute(); //FAULT is impossible
         tx.NetworkFee += engine.FeeConsumed;
 
         var executionFactor = NativeContract.Policy.GetExecFeeFactor(snapshot);
@@ -485,12 +489,12 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
         return tx;
     }
 
-    private void AddResponseTxSign(DataCache snapshot, ulong requestId, ECPoint oraclePub, byte[] sign, Transaction responseTx = null, Transaction backupTx = null, byte[] backupSign = null)
+    private void AddResponseTxSign(DataCache snapshot, ulong requestId, ECPoint oraclePub, byte[] sign, Transaction? responseTx = null, Transaction? backupTx = null, byte[]? backupSign = null)
     {
         var task = pendingQueue.GetOrAdd(requestId, _ => new OracleTask
         {
             Id = requestId,
-            Request = NativeContract.Oracle.GetRequest(snapshot, requestId),
+            Request = NativeContract.Oracle.GetRequest(snapshot, requestId)!,
             Signs = new ConcurrentDictionary<ECPoint, byte[]>(),
             BackupSigns = new ConcurrentDictionary<ECPoint, byte[]>()
         });
@@ -506,7 +510,7 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
             task.BackupTx = backupTx;
             var data = task.BackupTx.GetSignData(_system.Settings.Network);
             task.BackupSigns.Where(p => !Crypto.VerifySignature(data, p.Value, p.Key)).ForEach(p => task.BackupSigns.Remove(p.Key, out _));
-            task.BackupSigns.TryAdd(oraclePub, backupSign);
+            task.BackupSigns.TryAdd(oraclePub, backupSign!);
         }
         if (task.Tx == null)
         {
@@ -517,25 +521,25 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
 
         if (Crypto.VerifySignature(task.Tx.GetSignData(_system.Settings.Network), sign, oraclePub))
             task.Signs.TryAdd(oraclePub, sign);
-        else if (Crypto.VerifySignature(task.BackupTx.GetSignData(_system.Settings.Network), sign, oraclePub))
+        else if (Crypto.VerifySignature(task.BackupTx!.GetSignData(_system.Settings.Network), sign, oraclePub))
             task.BackupSigns.TryAdd(oraclePub, sign);
         else
             throw new RpcException(RpcErrorFactory.InvalidSignature($"Invalid oracle response transaction signature from '{oraclePub}'."));
 
-        if (CheckTxSign(snapshot, task.Tx, task.Signs) || CheckTxSign(snapshot, task.BackupTx, task.BackupSigns))
+        if (CheckTxSign(snapshot, task.Tx, task.Signs) || CheckTxSign(snapshot, task.BackupTx!, task.BackupSigns))
         {
             finishedCache.TryAdd(requestId, new DateTime());
             pendingQueue.TryRemove(requestId, out _);
         }
     }
 
-    public static byte[] Filter(string input, string filterArgs)
+    public static byte[] Filter(string input, string? filterArgs)
     {
         if (string.IsNullOrEmpty(filterArgs))
             return input.ToStrictUtf8Bytes();
 
-        JToken beforeObject = JToken.Parse(input);
-        JArray afterObjects = beforeObject.JsonPath(filterArgs);
+        JToken? beforeObject = JToken.Parse(input);
+        JArray afterObjects = beforeObject?.JsonPath(filterArgs) ?? new();
         return afterObjects.ToByteArray(false);
     }
 
@@ -588,11 +592,11 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
     class OracleTask
     {
         public ulong Id;
-        public OracleRequest Request;
-        public Transaction Tx;
-        public Transaction BackupTx;
-        public ConcurrentDictionary<ECPoint, byte[]> Signs;
-        public ConcurrentDictionary<ECPoint, byte[]> BackupSigns;
+        public required OracleRequest Request;
+        public Transaction? Tx;
+        public Transaction? BackupTx;
+        public required ConcurrentDictionary<ECPoint, byte[]> Signs;
+        public required ConcurrentDictionary<ECPoint, byte[]> BackupSigns;
         public readonly DateTime Timestamp = TimeProvider.Current.UtcNow;
     }
 

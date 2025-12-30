@@ -11,7 +11,6 @@
 
 using Akka.Actor;
 using Neo.Cryptography;
-using Neo.Extensions;
 using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
@@ -48,7 +47,7 @@ partial class ConsensusService
         }
         if (message.ValidatorIndex >= context.Validators.Length) return;
         if (payload.Sender != Contract.CreateSignatureRedeemScript(context.Validators[message.ValidatorIndex]).ToScriptHash()) return;
-        context.LastSeenMessage[context.Validators[message.ValidatorIndex]] = message.BlockIndex;
+        context.LastSeenMessage?[context.Validators[message.ValidatorIndex]] = message.BlockIndex;
         switch (message)
         {
             case PrepareRequest request:
@@ -106,13 +105,13 @@ partial class ConsensusService
         context.VerificationContext = new TransactionVerificationContext();
         for (int i = 0; i < context.PreparationPayloads.Length; i++)
             if (context.PreparationPayloads[i] != null)
-                if (!context.GetMessage<PrepareResponse>(context.PreparationPayloads[i]).PreparationHash.Equals(payload.Hash))
+                if (!context.GetMessage<PrepareResponse>(context.PreparationPayloads[i]!).PreparationHash.Equals(payload.Hash))
                     context.PreparationPayloads[i] = null;
         context.PreparationPayloads[message.ValidatorIndex] = payload;
-        byte[] hashData = context.EnsureHeader().GetSignData(neoSystem.Settings.Network);
+        byte[] hashData = context.EnsureHeader()!.GetSignData(neoSystem.Settings.Network);
         for (int i = 0; i < context.CommitPayloads.Length; i++)
             if (context.GetMessage(context.CommitPayloads[i])?.ViewNumber == context.ViewNumber)
-                if (!Crypto.VerifySignature(hashData, context.GetMessage<Commit>(context.CommitPayloads[i]).Signature.Span, context.Validators[i]))
+                if (!Crypto.VerifySignature(hashData, context.GetMessage<Commit>(context.CommitPayloads[i]!).Signature.Span, context.Validators[i]))
                     context.CommitPayloads[i] = null;
 
         if (context.TransactionHashes.Length == 0)
@@ -127,7 +126,7 @@ partial class ConsensusService
         var mtb = neoSystem.Settings.MaxTraceableBlocks;
         foreach (UInt256 hash in context.TransactionHashes)
         {
-            if (mempoolVerified.TryGetValue(hash, out Transaction tx))
+            if (mempoolVerified.TryGetValue(hash, out Transaction? tx))
             {
                 if (NativeContract.Ledger.ContainsConflictHash(context.Snapshot, hash, tx.Signers.Select(s => s.Account), mtb))
                 {
@@ -165,7 +164,7 @@ partial class ConsensusService
     {
         if (message.ViewNumber != context.ViewNumber) return;
         if (context.PreparationPayloads[message.ValidatorIndex] != null || context.NotAcceptingPayloadsDueToViewChanging) return;
-        if (context.PreparationPayloads[context.Block.PrimaryIndex] != null && !message.PreparationHash.Equals(context.PreparationPayloads[context.Block.PrimaryIndex].Hash))
+        if (context.PreparationPayloads[context.Block.PrimaryIndex] != null && !message.PreparationHash.Equals(context.PreparationPayloads[context.Block.PrimaryIndex]!.Hash))
             return;
 
         // Timeout extension: prepare response has been received with success
@@ -197,7 +196,7 @@ partial class ConsensusService
 
     private void OnCommitReceived(ExtensiblePayload payload, Commit commit)
     {
-        ref ExtensiblePayload existingCommitPayload = ref context.CommitPayloads[commit.ValidatorIndex];
+        ref ExtensiblePayload? existingCommitPayload = ref context.CommitPayloads[commit.ValidatorIndex];
         if (existingCommitPayload != null)
         {
             if (existingCommitPayload.Hash != payload.Hash)
@@ -213,7 +212,7 @@ partial class ConsensusService
 
             Log($"{nameof(OnCommitReceived)}: height={commit.BlockIndex} view={commit.ViewNumber} index={commit.ValidatorIndex} nc={context.CountCommitted} nf={context.CountFailed}");
 
-            byte[] hashData = context.EnsureHeader()?.GetSignData(neoSystem.Settings.Network);
+            byte[]? hashData = context.EnsureHeader()?.GetSignData(neoSystem.Settings.Network);
             if (hashData == null)
             {
                 existingCommitPayload = payload;
@@ -254,7 +253,7 @@ partial class ConsensusService
             {
                 if (!context.RequestSentOrReceived)
                 {
-                    ExtensiblePayload prepareRequestPayload = message.GetPrepareRequestPayload(context);
+                    ExtensiblePayload? prepareRequestPayload = message.GetPrepareRequestPayload(context);
                     if (prepareRequestPayload != null)
                     {
                         totalPrepReq = 1;

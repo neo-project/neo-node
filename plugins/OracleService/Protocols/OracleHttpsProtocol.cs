@@ -24,7 +24,7 @@ class OracleHttpsProtocol : IOracleProtocol
     public OracleHttpsProtocol()
     {
         CustomAttributeData attribute = Assembly.GetExecutingAssembly().CustomAttributes.First(p => p.AttributeType == typeof(AssemblyInformationalVersionAttribute));
-        string version = (string)attribute.ConstructorArguments[0].Value;
+        string version = (string)attribute.ConstructorArguments[0].Value!;
         client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("NeoOracleService", version));
     }
 
@@ -41,11 +41,11 @@ class OracleHttpsProtocol : IOracleProtocol
         client.Dispose();
     }
 
-    public async Task<(OracleResponseCode, string)> ProcessAsync(Uri uri, CancellationToken cancellation)
+    public async Task<(OracleResponseCode, string?)> ProcessAsync(Uri uri, CancellationToken cancellation)
     {
         Utility.Log(nameof(OracleHttpsProtocol), LogLevel.Debug, $"Request: {uri.AbsoluteUri}");
 
-        HttpResponseMessage message;
+        HttpResponseMessage? message;
         try
         {
             int redirects = 2;
@@ -77,6 +77,8 @@ class OracleHttpsProtocol : IOracleProtocol
             return (OracleResponseCode.Forbidden, null);
         if (!message.IsSuccessStatusCode)
             return (OracleResponseCode.Error, message.StatusCode.ToString());
+        if (message.Content.Headers.ContentType is null)
+            return (OracleResponseCode.ContentTypeNotSupported, null);
         if (!OracleSettings.Default.AllowedContentTypes.Contains(message.Content.Headers.ContentType.MediaType))
             return (OracleResponseCode.ContentTypeNotSupported, null);
         if (message.Content.Headers.ContentLength.HasValue && message.Content.Headers.ContentLength > OracleResponse.MaxResultSize)
@@ -98,7 +100,7 @@ class OracleHttpsProtocol : IOracleProtocol
 
     private static Encoding GetEncoding(HttpContentHeaders headers)
     {
-        Encoding encoding = null;
+        Encoding? encoding = null;
         if ((headers.ContentType != null) && (headers.ContentType.CharSet != null))
         {
             encoding = Encoding.GetEncoding(headers.ContentType.CharSet);

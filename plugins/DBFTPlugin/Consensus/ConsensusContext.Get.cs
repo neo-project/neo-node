@@ -9,27 +9,29 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-using Neo.Extensions;
 using Neo.Network.P2P.Payloads;
 using Neo.Plugins.DBFTPlugin.Messages;
 using Neo.SmartContract;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace Neo.Plugins.DBFTPlugin.Consensus;
 
 partial class ConsensusContext
 {
-    public ConsensusMessage GetMessage(ExtensiblePayload payload)
+    [return: NotNullIfNotNull(nameof(payload))]
+    public ConsensusMessage? GetMessage(ExtensiblePayload? payload)
     {
         if (payload is null) return null;
-        if (!cachedMessages.TryGetValue(payload.Hash, out ConsensusMessage message))
+        if (!cachedMessages.TryGetValue(payload.Hash, out ConsensusMessage? message))
             cachedMessages.Add(payload.Hash, message = ConsensusMessage.DeserializeFrom(payload.Data));
         return message;
     }
 
-    public T GetMessage<T>(ExtensiblePayload payload) where T : ConsensusMessage
+    [return: NotNullIfNotNull(nameof(payload))]
+    public T? GetMessage<T>(ExtensiblePayload? payload) where T : ConsensusMessage
     {
-        return (T)GetMessage(payload);
+        return (T?)GetMessage(payload);
     }
 
     private RecoveryMessage.ChangeViewPayloadCompact GetChangeViewPayloadCompact(ExtensiblePayload payload)
@@ -82,7 +84,7 @@ partial class ConsensusContext
     /// </summary>
     public int GetExpectedBlockSize()
     {
-        return GetExpectedBlockSizeWithoutTransactions(Transactions.Count) + // Base size
+        return GetExpectedBlockSizeWithoutTransactions(Transactions!.Count) + // Base size
             Transactions.Values.Sum(u => u.Size);   // Sum Txs
     }
 
@@ -91,7 +93,7 @@ partial class ConsensusContext
     /// </summary>
     public long GetExpectedBlockSystemFee()
     {
-        return Transactions.Values.Sum(u => u.SystemFee);  // Sum Txs
+        return Transactions!.Values.Sum(u => u.SystemFee);  // Sum Txs
     }
 
     /// <summary>

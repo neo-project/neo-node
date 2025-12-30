@@ -16,11 +16,11 @@ namespace Neo.Network.RPC.Models;
 
 public class RpcTransferOut
 {
-    public UInt160 Asset { get; set; }
+    public required UInt160 Asset { get; set; }
 
-    public UInt160 ScriptHash { get; set; }
+    public required UInt160 ScriptHash { get; set; }
 
-    public string Value { get; set; }
+    public required string Value { get; set; }
 
     public JObject ToJson(ProtocolSettings protocolSettings)
     {
@@ -36,9 +36,9 @@ public class RpcTransferOut
     {
         return new RpcTransferOut
         {
-            Asset = json["asset"].ToScriptHash(protocolSettings),
-            Value = json["value"].AsString(),
-            ScriptHash = json["address"].ToScriptHash(protocolSettings),
+            Asset = json["asset"]!.ToScriptHash(protocolSettings),
+            Value = json["value"]!.AsString(),
+            ScriptHash = json["address"]!.ToScriptHash(protocolSettings),
         };
     }
 }

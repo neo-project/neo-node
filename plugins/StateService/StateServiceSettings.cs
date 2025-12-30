@@ -21,7 +21,7 @@ internal class StateServiceSettings : IPluginSettings
     public bool AutoVerify { get; }
     public int MaxFindResultItems { get; }
 
-    public static StateServiceSettings Default { get; private set; }
+    public static StateServiceSettings Default { get; private set; } = null!;
 
     public UnhandledExceptionPolicy ExceptionPolicy { get; }
 

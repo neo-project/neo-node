@@ -31,7 +31,7 @@ class StateStore : UntypedActor
     private readonly Dictionary<uint, StateRoot> _cache = [];
     private StateSnapshot _currentSnapshot;
     private StateSnapshot? _stateSnapshot;
-    public UInt256 CurrentLocalRootHash => _currentSnapshot.CurrentLocalRootHash();
+    public UInt256? CurrentLocalRootHash => _currentSnapshot.CurrentLocalRootHash();
     public uint? LocalRootIndex => _currentSnapshot.CurrentLocalRootIndex();
     public uint? ValidatedRootIndex => _currentSnapshot.CurrentValidatedRootIndex();
 

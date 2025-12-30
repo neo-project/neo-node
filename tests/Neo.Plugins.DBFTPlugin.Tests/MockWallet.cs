@@ -20,7 +20,7 @@ public class MockWallet : Wallet
 {
     private readonly Dictionary<UInt160, TestWalletAccount> accounts = new();
 
-    public MockWallet(ProtocolSettings settings) : base(null, settings)
+    public MockWallet(ProtocolSettings settings) : base(null!, settings)
     {
     }
 
@@ -59,7 +59,7 @@ public class MockWallet : Wallet
         throw new NotImplementedException();
     }
 
-    public override WalletAccount CreateAccount(Contract contract, KeyPair key)
+    public override WalletAccount CreateAccount(Contract contract, KeyPair? key)
     {
         throw new NotImplementedException();
     }
@@ -74,7 +74,7 @@ public class MockWallet : Wallet
         return accounts.Remove(scriptHash);
     }
 
-    public override WalletAccount GetAccount(UInt160 scriptHash)
+    public override WalletAccount? GetAccount(UInt160 scriptHash)
     {
         return accounts.TryGetValue(scriptHash, out var account) ? account : null;
     }
