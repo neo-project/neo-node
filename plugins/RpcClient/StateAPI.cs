@@ -52,7 +52,7 @@ public class StateAPI
         return (localRootIndex, validatedRootIndex);
     }
 
-    static uint? ToNullableUint(JToken json) => (json == null) ? null : (uint?)json.AsNumber();
+    static uint? ToNullableUint(JToken? json) => (json == null) ? null : (uint?)json.AsNumber();
 
     public static JToken[] MakeFindStatesParams(UInt256 rootHash, UInt160 scriptHash, ReadOnlySpan<byte> prefix, ReadOnlySpan<byte> from = default, int? count = null)
     {

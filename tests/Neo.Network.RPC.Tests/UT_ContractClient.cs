@@ -23,9 +23,9 @@ namespace Neo.Network.RPC.Tests;
 [TestClass]
 public class UT_ContractClient
 {
-    Mock<RpcClient> rpcClientMock;
-    KeyPair keyPair1;
-    UInt160 sender;
+    Mock<RpcClient> rpcClientMock = null!;
+    KeyPair keyPair1 = null!;
+    UInt160 sender = null!;
 
     [TestInitialize]
     public void TestSetup()

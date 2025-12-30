@@ -99,10 +99,10 @@ partial class UT_RpcServer
     public void TestDumpPrivKey()
     {
         TestUtilOpenWallet();
-        var account = _rpcServer.wallet.GetAccounts().FirstOrDefault();
+        var account = _rpcServer.wallet!.GetAccounts().FirstOrDefault();
         Assert.IsNotNull(account);
 
-        var privKey = account.GetKey().Export();
+        var privKey = account.GetKey()!.Export();
         var address = account.Address;
         var result = _rpcServer.DumpPrivKey(new JString(address).ToAddress(ProtocolSettings.Default.AddressVersion));
         Assert.AreEqual(privKey, result.AsString());
@@ -140,7 +140,7 @@ partial class UT_RpcServer
         TestUtilOpenWallet();
         var result = _rpcServer.GetNewAddress();
         Assert.IsInstanceOfType(result, typeof(JString));
-        Assert.IsTrue(_rpcServer.wallet.GetAccounts().Any(a => a.Address == result.AsString()));
+        Assert.IsTrue(_rpcServer.wallet!.GetAccounts().Any(a => a.Address == result.AsString()));
         TestUtilCloseWallet();
     }
 
@@ -195,7 +195,7 @@ partial class UT_RpcServer
     public void TestImportPrivKey()
     {
         TestUtilOpenWallet();
-        var privKey = _walletAccount.GetKey().Export();
+        var privKey = _walletAccount.GetKey()!.Export();
         var result = _rpcServer.ImportPrivKey(privKey);
         Assert.IsInstanceOfType(result, typeof(JObject));
 
@@ -210,7 +210,7 @@ partial class UT_RpcServer
     [TestMethod]
     public void TestImportPrivKeyNoWallet()
     {
-        var privKey = _walletAccount.GetKey().Export();
+        var privKey = _walletAccount.GetKey()!.Export();
         var exception = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.ImportPrivKey(privKey));
         Assert.AreEqual(exception.HResult, RpcError.NoOpenedWallet.Code);
     }
@@ -232,17 +232,17 @@ partial class UT_RpcServer
         TestUtilOpenWallet();
 
         // Get a key already in the default test wallet
-        var existingAccount = _rpcServer.wallet.GetAccounts().First(a => a.HasKey);
-        var existingWif = existingAccount.GetKey().Export();
+        var existingAccount = _rpcServer.wallet!.GetAccounts().First(a => a.HasKey);
+        var existingWif = existingAccount.GetKey()!.Export();
 
         // Import the existing key
         var result = (JObject)_rpcServer.ImportPrivKey(existingWif);
 
         // Verify the returned account details match the existing one
-        Assert.AreEqual(existingAccount.Address, result["address"].AsString());
-        Assert.AreEqual(existingAccount.HasKey, result["haskey"].AsBoolean());
+        Assert.AreEqual(existingAccount.Address, result["address"]!.AsString());
+        Assert.AreEqual(existingAccount.HasKey, result["haskey"]!.AsBoolean());
         Assert.AreEqual(existingAccount.Label, result["label"]?.AsString());
-        Assert.AreEqual(existingAccount.WatchOnly, result["watchonly"].AsBoolean());
+        Assert.AreEqual(existingAccount.WatchOnly, result["watchonly"]!.AsBoolean());
 
         // Ensure no duplicate account was created (check count remains same)
         var initialCount = _rpcServer.wallet.GetAccounts().Count();
@@ -321,10 +321,10 @@ partial class UT_RpcServer
         Assert.AreEqual(12, resp.Count);
         Assert.AreEqual(resp["sender"], ValidatorAddress);
 
-        var signers = (JArray)resp["signers"];
+        var signers = (JArray)resp["signers"]!;
         Assert.HasCount(1, signers);
-        Assert.AreEqual(signers[0]["account"], ValidatorScriptHash.ToString());
-        Assert.AreEqual(nameof(WitnessScope.CalledByEntry), signers[0]["scopes"]);
+        Assert.AreEqual(signers[0]!["account"], ValidatorScriptHash.ToString());
+        Assert.AreEqual(nameof(WitnessScope.CalledByEntry), signers[0]!["scopes"]);
         _rpcServer.wallet = null;
     }
 
@@ -346,10 +346,10 @@ partial class UT_RpcServer
         Assert.AreEqual(12, resp.Count);
         Assert.AreEqual(resp["sender"], ValidatorAddress);
 
-        var signers = (JArray)resp["signers"];
+        var signers = (JArray)resp["signers"]!;
         Assert.HasCount(1, signers);
-        Assert.AreEqual(signers[0]["account"], ValidatorScriptHash.ToString());
-        Assert.AreEqual(nameof(WitnessScope.CalledByEntry), signers[0]["scopes"]);
+        Assert.AreEqual(signers[0]!["account"], ValidatorScriptHash.ToString());
+        Assert.AreEqual(nameof(WitnessScope.CalledByEntry), signers[0]!["scopes"]);
         _rpcServer.wallet = null;
     }
 
@@ -369,10 +369,10 @@ partial class UT_RpcServer
         Assert.AreEqual(12, resp.Count);
         Assert.AreEqual(resp["sender"], ValidatorAddress);
 
-        var signers = (JArray)resp["signers"];
+        var signers = (JArray)resp["signers"]!;
         Assert.HasCount(1, signers);
-        Assert.AreEqual(signers[0]["account"], ValidatorScriptHash.ToString());
-        Assert.AreEqual(nameof(WitnessScope.CalledByEntry), signers[0]["scopes"]);
+        Assert.AreEqual(signers[0]!["account"], ValidatorScriptHash.ToString());
+        Assert.AreEqual(nameof(WitnessScope.CalledByEntry), signers[0]!["scopes"]);
         _rpcServer.wallet = null;
     }
 
@@ -528,7 +528,7 @@ partial class UT_RpcServer
     public void TestImportPrivKey_WhenWalletNotOpen()
     {
         _rpcServer.wallet = null;
-        var privKey = _walletAccount.GetKey().Export();
+        var privKey = _walletAccount.GetKey()!.Export();
         var exception = Assert.ThrowsExactly<RpcException>(
             () => _ = _rpcServer.ImportPrivKey(privKey),
             "Should throw RpcException for no opened wallet");
@@ -604,17 +604,17 @@ partial class UT_RpcServer
             "1"
         );
 
-        var txHash = resp["hash"];
+        var txHash = resp["hash"]!;
         resp = (JObject)_rpcServer.CancelTransaction(
             txHash.AsParameter<UInt256>(), new JArray(ValidatorAddress).AsParameter<Address[]>(), "1");
         Assert.AreEqual(12, resp.Count);
         Assert.AreEqual(resp["sender"], ValidatorAddress);
 
-        var signers = (JArray)resp["signers"];
+        var signers = (JArray)resp["signers"]!;
         Assert.HasCount(1, signers);
-        Assert.AreEqual(signers[0]["account"], ValidatorScriptHash.ToString());
-        Assert.AreEqual(nameof(WitnessScope.None), signers[0]["scopes"]);
-        Assert.AreEqual(nameof(TransactionAttributeType.Conflicts), resp["attributes"][0]["type"]);
+        Assert.AreEqual(signers[0]!["account"], ValidatorScriptHash.ToString());
+        Assert.AreEqual(nameof(WitnessScope.None), signers[0]!["scopes"]);
+        Assert.AreEqual(nameof(TransactionAttributeType.Conflicts), resp["attributes"]![0]!["type"]);
         _rpcServer.wallet = null;
     }
 
@@ -683,7 +683,7 @@ partial class UT_RpcServer
         );
         Assert.AreEqual(nameof(VMState.HALT), deployResp["state"]);
 
-        var deployedScriptHash = new UInt160(Convert.FromBase64String(deployResp["notifications"][0]["state"]["value"][0]["value"].AsString()));
+        var deployedScriptHash = new UInt160(Convert.FromBase64String(deployResp["notifications"]![0]!["state"]!["value"]![0]!["value"]!.AsString()));
         var snapshot = _neoSystem.GetSnapshotCache();
         var tx = new Transaction
         {
@@ -691,8 +691,8 @@ partial class UT_RpcServer
             ValidUntilBlock = NativeContract.Ledger.CurrentIndex(snapshot) + _neoSystem.Settings.MaxValidUntilBlockIncrement,
             Signers = [new Signer() { Account = ValidatorScriptHash, Scopes = WitnessScope.CalledByEntry }],
             Attributes = Array.Empty<TransactionAttribute>(),
-            Script = Convert.FromBase64String(deployResp["script"].AsString()),
-            Witnesses = null,
+            Script = Convert.FromBase64String(deployResp["script"]!.AsString()),
+            Witnesses = null!,
         };
 
         var engine = ApplicationEngine.Run(tx.Script, snapshot, container: tx, settings: _neoSystem.Settings, gas: 1200_0000_0000);
@@ -701,12 +701,12 @@ partial class UT_RpcServer
         // invoke verify without signer; should return false
         var resp = (JObject)_rpcServer.InvokeContractVerify(deployedScriptHash);
         Assert.AreEqual(nameof(VMState.HALT), resp["state"]);
-        Assert.IsFalse(resp["stack"][0]["value"].AsBoolean());
+        Assert.IsFalse(resp["stack"]![0]!["value"]!.AsBoolean());
 
         // invoke verify with signer; should return true
         resp = (JObject)_rpcServer.InvokeContractVerify(deployedScriptHash, [], validatorSigner.AsParameter<SignersAndWitnesses>());
         Assert.AreEqual(nameof(VMState.HALT), resp["state"]);
-        Assert.IsTrue(resp["stack"][0]["value"].AsBoolean());
+        Assert.IsTrue(resp["stack"]![0]!["value"]!.AsBoolean());
 
         // invoke verify with wrong input value; should FAULT
         resp = (JObject)_rpcServer.InvokeContractVerify(
@@ -718,7 +718,7 @@ partial class UT_RpcServer
         );
         Assert.AreEqual(nameof(VMState.FAULT), resp["state"]);
         Assert.IsNotNull(resp["exception"]);
-        Assert.Contains("hashOrPubkey", resp["exception"].AsString());
+        Assert.Contains("hashOrPubkey", resp["exception"]!.AsString());
 
         // invoke verify with 1 param and signer; should return true
         resp = (JObject)_rpcServer.InvokeContractVerify(
@@ -729,7 +729,7 @@ partial class UT_RpcServer
             validatorSigner.AsParameter<SignersAndWitnesses>()
         );
         Assert.AreEqual(nameof(VMState.HALT), resp["state"]);
-        Assert.IsTrue(resp["stack"][0]["value"].AsBoolean());
+        Assert.IsTrue(resp["stack"]![0]!["value"]!.AsBoolean());
 
         // invoke verify with 2 param (which does not exist); should throw Exception
         Assert.ThrowsExactly<RpcException>(

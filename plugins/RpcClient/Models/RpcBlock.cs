@@ -16,11 +16,11 @@ namespace Neo.Network.RPC.Models;
 
 public class RpcBlock
 {
-    public Block Block { get; set; }
+    public required Block Block { get; set; }
 
     public uint Confirmations { get; set; }
 
-    public UInt256 NextBlockHash { get; set; }
+    public UInt256? NextBlockHash { get; set; }
 
     public JObject ToJson(ProtocolSettings protocolSettings)
     {
@@ -35,8 +35,8 @@ public class RpcBlock
         return new RpcBlock
         {
             Block = Utility.BlockFromJson(json, protocolSettings),
-            Confirmations = (uint)json["confirmations"].AsNumber(),
-            NextBlockHash = json["nextblockhash"] is null ? null : UInt256.Parse(json["nextblockhash"].AsString())
+            Confirmations = (uint)json["confirmations"]!.AsNumber(),
+            NextBlockHash = json["nextblockhash"] is null ? null : UInt256.Parse(json["nextblockhash"]!.AsString())
         };
     }
 }
