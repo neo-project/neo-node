@@ -27,6 +27,6 @@ public static partial class TestUtils
             ["extra"] = null
         };
         Assert.AreEqual("{\"name\":\"noname\",\"version\":\"1.0\",\"scrypt\":{\"n\":2,\"r\":1,\"p\":1},\"accounts\":[],\"extra\":null}", wallet.ToString());
-        return new NEP6Wallet(null, password, TestProtocolSettings.Default, wallet);
+        return new NEP6Wallet(null!, password, TestProtocolSettings.Default, wallet);
     }
 }

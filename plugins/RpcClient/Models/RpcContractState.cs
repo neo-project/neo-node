@@ -17,7 +17,7 @@ namespace Neo.Network.RPC.Models;
 
 public class RpcContractState
 {
-    public ContractState ContractState { get; set; }
+    public required ContractState ContractState { get; set; }
 
     public JObject ToJson()
     {
@@ -30,11 +30,11 @@ public class RpcContractState
         {
             ContractState = new ContractState
             {
-                Id = (int)json["id"].AsNumber(),
-                UpdateCounter = (ushort)json["updatecounter"].AsNumber(),
-                Hash = UInt160.Parse(json["hash"].AsString()),
-                Nef = RpcNefFile.FromJson((JObject)json["nef"]),
-                Manifest = ContractManifest.FromJson((JObject)json["manifest"])
+                Id = (int)json["id"]!.AsNumber(),
+                UpdateCounter = (ushort)json["updatecounter"]!.AsNumber(),
+                Hash = UInt160.Parse(json["hash"]!.AsString()),
+                Nef = RpcNefFile.FromJson((JObject)json["nef"]!),
+                Manifest = ContractManifest.FromJson((JObject)json["manifest"]!)
             }
         };
     }

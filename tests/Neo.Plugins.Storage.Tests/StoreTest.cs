@@ -21,8 +21,8 @@ public class StoreTest
 {
     private const string Path_leveldb = "Data_LevelDB_UT";
     private const string Path_rocksdb = "Data_RocksDB_UT";
-    private static LevelDBStore s_levelDbStore;
-    private static RocksDBStore s_rocksDBStore;
+    private static LevelDBStore s_levelDbStore = null!;
+    private static RocksDBStore s_rocksDBStore = null!;
 
     [AssemblyInitialize]
     public static void OnStart(TestContext testContext)

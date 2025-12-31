@@ -26,13 +26,13 @@ namespace Neo.Plugins.RpcServer.Tests;
 [TestClass]
 public partial class UT_RpcServer
 {
-    private NeoSystem _neoSystem;
-    private RpcServersSettings _rpcServerSettings;
-    private RpcServer _rpcServer;
-    private TestMemoryStoreProvider _memoryStoreProvider;
-    private MemoryStore _memoryStore;
+    private NeoSystem _neoSystem = null!;
+    private RpcServersSettings _rpcServerSettings = null!;
+    private RpcServer _rpcServer = null!;
+    private TestMemoryStoreProvider _memoryStoreProvider = null!;
+    private MemoryStore _memoryStore = null!;
     private readonly NEP6Wallet _wallet = TestUtils.GenerateTestWallet("123");
-    private WalletAccount _walletAccount;
+    private WalletAccount _walletAccount = null!;
 
     [TestInitialize]
     public void TestSetup()
@@ -131,8 +131,8 @@ public partial class UT_RpcServer
         context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(requestBody));
         context.Request.ContentType = "application/json";
 
-        JToken requestJson = null;
-        JToken responseJson = null;
+        JToken? requestJson = null;
+        JToken responseJson;
         try
         {
             requestJson = JToken.Parse(requestBody);
@@ -145,7 +145,7 @@ public partial class UT_RpcServer
 
         if (requestJson is JObject singleRequest)
         {
-            responseJson = await _rpcServer.ProcessRequestAsync(context, singleRequest);
+            responseJson = (await _rpcServer.ProcessRequestAsync(context, singleRequest))!;
         }
         else if (requestJson is JArray batchRequest)
         {
@@ -185,7 +185,7 @@ public partial class UT_RpcServer
         var response = await SimulatePostRequest(malformedJson);
 
         Assert.IsNotNull(response["error"]);
-        Assert.AreEqual(RpcError.BadRequest.Code, response["error"]["code"].AsNumber());
+        Assert.AreEqual(RpcError.BadRequest.Code, response["error"]!["code"]!.AsNumber());
     }
 
     [TestMethod]
@@ -195,7 +195,7 @@ public partial class UT_RpcServer
         var response = await SimulatePostRequest(emptyBatchJson);
 
         Assert.IsNotNull(response["error"]);
-        Assert.AreEqual(RpcError.InvalidRequest.Code, response["error"]["code"].AsNumber());
+        Assert.AreEqual(RpcError.InvalidRequest.Code, response["error"]!["code"]!.AsNumber());
     }
 
     [TestMethod]
@@ -217,24 +217,24 @@ public partial class UT_RpcServer
         Assert.HasCount(4, batchResults);
 
         // Check response 1 (valid getblockcount)
-        Assert.IsNull(batchResults[0]["error"]);
-        Assert.IsNotNull(batchResults[0]["result"]);
-        Assert.AreEqual(1, batchResults[0]["id"].AsNumber());
+        Assert.IsNull(batchResults[0]!["error"]);
+        Assert.IsNotNull(batchResults[0]!["result"]);
+        Assert.AreEqual(1, batchResults[0]!["id"]!.AsNumber());
 
         // Check response 2 (invalid method)
-        Assert.IsNotNull(batchResults[1]["error"]);
-        Assert.AreEqual(RpcError.MethodNotFound.Code, batchResults[1]["error"]["code"].AsNumber());
-        Assert.AreEqual(2, batchResults[1]["id"].AsNumber());
+        Assert.IsNotNull(batchResults[1]!["error"]);
+        Assert.AreEqual(RpcError.MethodNotFound.Code, batchResults[1]!["error"]!["code"]!.AsNumber());
+        Assert.AreEqual(2, batchResults[1]!["id"]!.AsNumber());
 
         // Check response 3 (invalid params for getblock)
-        Assert.IsNotNull(batchResults[2]["error"]);
-        Assert.AreEqual(RpcError.InvalidParams.Code, batchResults[2]["error"]["code"].AsNumber());
-        Assert.AreEqual(3, batchResults[2]["id"].AsNumber());
+        Assert.IsNotNull(batchResults[2]!["error"]);
+        Assert.AreEqual(RpcError.InvalidParams.Code, batchResults[2]!["error"]!["code"]!.AsNumber());
+        Assert.AreEqual(3, batchResults[2]!["id"]!.AsNumber());
 
         // Check response 4 (valid getversion)
-        Assert.IsNull(batchResults[3]["error"]);
-        Assert.IsNotNull(batchResults[3]["result"]);
-        Assert.AreEqual(4, batchResults[3]["id"].AsNumber());
+        Assert.IsNull(batchResults[3]!["error"]);
+        Assert.IsNotNull(batchResults[3]!["result"]);
+        Assert.AreEqual(4, batchResults[3]!["id"]!.AsNumber());
     }
 
     private class MockRpcMethods
@@ -289,65 +289,65 @@ public partial class UT_RpcServer
         var output = new StreamReader(responseBody).ReadToEnd();
 
         // Parse the JSON response and check the result
-        var responseJson = JToken.Parse(output);
+        var responseJson = JToken.Parse(output)!;
         Assert.IsNotNull(responseJson["result"]);
-        Assert.AreEqual("string test", responseJson["result"].AsString());
+        Assert.AreEqual("string test", responseJson["result"]!.AsString());
         Assert.AreEqual(200, context.Response.StatusCode);
     }
 
     [TestMethod]
     public void TestNullableParameter()
     {
-        var method = typeof(MockRpcMethods).GetMethod("GetMockMethod");
+        var method = typeof(MockRpcMethods).GetMethod("GetMockMethod")!;
         var parameter = RpcServer.AsRpcParameter(method.GetParameters()[0]);
         Assert.IsTrue(parameter.Required);
         Assert.AreEqual(typeof(string), parameter.Type);
         Assert.AreEqual("info", parameter.Name);
 
-        method = typeof(MockRpcMethods).GetMethod("NullableMethod");
+        method = typeof(MockRpcMethods).GetMethod("NullableMethod")!;
         parameter = RpcServer.AsRpcParameter(method.GetParameters()[0]);
         Assert.IsFalse(parameter.Required);
         Assert.AreEqual(typeof(string), parameter.Type);
         Assert.AreEqual("info", parameter.Name);
 
-        method = typeof(MockRpcMethods).GetMethod("NullContextMethod");
+        method = typeof(MockRpcMethods).GetMethod("NullContextMethod")!;
         parameter = RpcServer.AsRpcParameter(method.GetParameters()[0]);
         Assert.IsFalse(parameter.Required);
         Assert.AreEqual(typeof(string), parameter.Type);
         Assert.AreEqual("info", parameter.Name);
 
-        method = typeof(MockRpcMethods).GetMethod("OptionalMethod");
+        method = typeof(MockRpcMethods).GetMethod("OptionalMethod")!;
         parameter = RpcServer.AsRpcParameter(method.GetParameters()[0]);
         Assert.IsFalse(parameter.Required);
         Assert.AreEqual(typeof(string), parameter.Type);
         Assert.AreEqual("info", parameter.Name);
         Assert.AreEqual("default", parameter.DefaultValue);
 
-        method = typeof(MockRpcMethods).GetMethod("IntMethod");
+        method = typeof(MockRpcMethods).GetMethod("IntMethod")!;
         parameter = RpcServer.AsRpcParameter(method.GetParameters()[0]);
         Assert.IsTrue(parameter.Required);
         Assert.AreEqual(typeof(int), parameter.Type);
         Assert.AreEqual("info", parameter.Name);
 
-        method = typeof(MockRpcMethods).GetMethod("IntNullableMethod");
+        method = typeof(MockRpcMethods).GetMethod("IntNullableMethod")!;
         parameter = RpcServer.AsRpcParameter(method.GetParameters()[0]);
         Assert.IsFalse(parameter.Required);
         Assert.AreEqual(typeof(int?), parameter.Type);
         Assert.AreEqual("info", parameter.Name);
 
-        method = typeof(MockRpcMethods).GetMethod("NotNullMethod");
+        method = typeof(MockRpcMethods).GetMethod("NotNullMethod")!;
         parameter = RpcServer.AsRpcParameter(method.GetParameters()[0]);
         Assert.IsTrue(parameter.Required);
         Assert.AreEqual(typeof(string), parameter.Type);
         Assert.AreEqual("info", parameter.Name);
 
-        method = typeof(MockRpcMethods).GetMethod("AllowNullMethod");
+        method = typeof(MockRpcMethods).GetMethod("AllowNullMethod")!;
         parameter = RpcServer.AsRpcParameter(method.GetParameters()[0]);
         Assert.IsFalse(parameter.Required);
         Assert.AreEqual(typeof(string), parameter.Type);
         Assert.AreEqual("info", parameter.Name);
 
-        method = typeof(MockRpcMethods).GetMethod("DisallowNullMethod");
+        method = typeof(MockRpcMethods).GetMethod("DisallowNullMethod")!;
         parameter = RpcServer.AsRpcParameter(method.GetParameters()[0]);
         Assert.IsTrue(parameter.Required);
         Assert.AreEqual(typeof(string), parameter.Type);

@@ -15,11 +15,11 @@ namespace Neo.Network.RPC.Models;
 
 public class RpcPlugin
 {
-    public string Name { get; set; }
+    public required string Name { get; set; }
 
-    public string Version { get; set; }
+    public required string Version { get; set; }
 
-    public string[] Interfaces { get; set; }
+    public required string[] Interfaces { get; set; }
 
     public JObject ToJson()
     {
@@ -35,9 +35,9 @@ public class RpcPlugin
     {
         return new RpcPlugin
         {
-            Name = json["name"].AsString(),
-            Version = json["version"].AsString(),
-            Interfaces = ((JArray)json["interfaces"]).Select(p => p.AsString()).ToArray()
+            Name = json["name"]!.AsString(),
+            Version = json["version"]!.AsString(),
+            Interfaces = ((JArray)json["interfaces"]!).Select(p => p!.AsString()).ToArray()
         };
     }
 }

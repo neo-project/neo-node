@@ -24,13 +24,13 @@ namespace Neo.CLI.Tests;
 [TestClass]
 public class UT_MainService_Contracts
 {
-    private MainService _mainService;
-    private NeoSystem _neoSystem;
-    private Mock<Wallet> _mockWallet;
-    private UInt160 _contractHash;
-    private ContractState _contractState;
-    private StringWriter _consoleOutput;
-    private TextWriter _originalOutput;
+    private MainService _mainService = null!;
+    private NeoSystem _neoSystem = null!;
+    private Mock<Wallet> _mockWallet = null!;
+    private UInt160 _contractHash = null!;
+    private ContractState _contractState = null!;
+    private StringWriter _consoleOutput = null!;
+    private TextWriter _originalOutput = null!;
 
     [TestInitialize]
     public void TestSetup()
@@ -53,7 +53,7 @@ public class UT_MainService_Contracts
 
         // Setup mock wallet
         _mockWallet = new Mock<Wallet>();
-        var mockAccount = new Mock<WalletAccount>(UInt160.Zero, null);
+        var mockAccount = new Mock<WalletAccount>(UInt160.Zero, null!);
         _mockWallet.Setup(w => w.GetDefaultAccount()).Returns(mockAccount.Object);
 
         // Set CurrentWallet using reflection
@@ -184,12 +184,12 @@ public class UT_MainService_Contracts
         var method = GetPrivateMethod("ParseParameterFromAbi");
 
         // Test true value
-        var result = (ContractParameter)method.Invoke(_mainService, [ContractParameterType.Boolean, JToken.Parse("true")]);
+        var result = (ContractParameter)method.Invoke(_mainService, [ContractParameterType.Boolean, JToken.Parse("true")])!;
         Assert.AreEqual(ContractParameterType.Boolean, result.Type);
         Assert.IsTrue((bool?)result.Value);
 
         // Test false value
-        result = (ContractParameter)method.Invoke(_mainService, new object[] { ContractParameterType.Boolean, JToken.Parse("false") });
+        result = (ContractParameter)method.Invoke(_mainService, [ContractParameterType.Boolean, JToken.Parse("false")])!;
         Assert.AreEqual(ContractParameterType.Boolean, result.Type);
         Assert.IsFalse((bool?)result.Value);
     }
@@ -200,17 +200,17 @@ public class UT_MainService_Contracts
         var method = GetPrivateMethod("ParseParameterFromAbi");
 
         // Test positive integer
-        var result = (ContractParameter)method.Invoke(_mainService, new object[] { ContractParameterType.Integer, JToken.Parse("\"123\"") });
+        var result = (ContractParameter)method.Invoke(_mainService, [ContractParameterType.Integer, JToken.Parse("\"123\"")])!;
         Assert.AreEqual(ContractParameterType.Integer, result.Type);
         Assert.AreEqual(new BigInteger(123), result.Value);
 
         // Test negative integer
-        result = (ContractParameter)method.Invoke(_mainService, new object[] { ContractParameterType.Integer, JToken.Parse("\"-456\"") });
+        result = (ContractParameter)method.Invoke(_mainService, [ContractParameterType.Integer, JToken.Parse("\"-456\"")])!;
         Assert.AreEqual(ContractParameterType.Integer, result.Type);
         Assert.AreEqual(new BigInteger(-456), result.Value);
 
         // Test large integer
-        result = (ContractParameter)method.Invoke(_mainService, new object[] { ContractParameterType.Integer, JToken.Parse("\"999999999999999999999\"") });
+        result = (ContractParameter)method.Invoke(_mainService, [ContractParameterType.Integer, JToken.Parse("\"999999999999999999999\"")])!;
         Assert.AreEqual(ContractParameterType.Integer, result.Type);
         Assert.AreEqual(BigInteger.Parse("999999999999999999999"), result.Value);
     }
@@ -220,12 +220,12 @@ public class UT_MainService_Contracts
     {
         var method = GetPrivateMethod("ParseParameterFromAbi");
 
-        var result = (ContractParameter)method.Invoke(_mainService, new object[] { ContractParameterType.String, JToken.Parse("\"Hello, World!\"") });
+        var result = (ContractParameter)method.Invoke(_mainService, [ContractParameterType.String, JToken.Parse("\"Hello, World!\"")])!;
         Assert.AreEqual(ContractParameterType.String, result.Type);
         Assert.AreEqual("Hello, World!", result.Value);
 
         // Test empty string
-        result = (ContractParameter)method.Invoke(_mainService, new object[] { ContractParameterType.String, JToken.Parse("\"\"") });
+        result = (ContractParameter)method.Invoke(_mainService, [ContractParameterType.String, JToken.Parse("\"\"")])!;
         Assert.AreEqual(ContractParameterType.String, result.Type);
         Assert.AreEqual("", result.Value);
     }
@@ -236,7 +236,7 @@ public class UT_MainService_Contracts
         var method = GetPrivateMethod("ParseParameterFromAbi");
 
         var hash160 = "0x1234567890abcdef1234567890abcdef12345678";
-        var result = (ContractParameter)method.Invoke(_mainService, new object[] { ContractParameterType.Hash160, JToken.Parse($"\"{hash160}\"") });
+        var result = (ContractParameter)method.Invoke(_mainService, [ContractParameterType.Hash160, JToken.Parse($"\"{hash160}\"")])!;
         Assert.AreEqual(ContractParameterType.Hash160, result.Type);
         Assert.AreEqual(UInt160.Parse(hash160), result.Value);
     }
@@ -247,9 +247,9 @@ public class UT_MainService_Contracts
         var method = GetPrivateMethod("ParseParameterFromAbi");
 
         var base64 = Convert.ToBase64String(new byte[] { 0x01, 0x02, 0x03, 0x04 });
-        var result = (ContractParameter)method.Invoke(_mainService, new object[] { ContractParameterType.ByteArray, JToken.Parse($"\"{base64}\"") });
+        var result = (ContractParameter)method.Invoke(_mainService, [ContractParameterType.ByteArray, JToken.Parse($"\"{base64}\"")])!;
         Assert.AreEqual(ContractParameterType.ByteArray, result.Type);
-        CollectionAssert.AreEqual(new byte[] { 0x01, 0x02, 0x03, 0x04 }, (byte[])result.Value);
+        CollectionAssert.AreEqual(new byte[] { 0x01, 0x02, 0x03, 0x04 }, (byte[])result.Value!);
     }
 
     [TestMethod]
@@ -258,10 +258,10 @@ public class UT_MainService_Contracts
         var method = GetPrivateMethod("ParseParameterFromAbi");
 
         var arrayJson = "[1, \"hello\", true]";
-        var result = (ContractParameter)method.Invoke(_mainService, new object[] { ContractParameterType.Array, JToken.Parse(arrayJson) });
+        var result = (ContractParameter)method.Invoke(_mainService, [ContractParameterType.Array, JToken.Parse(arrayJson)])!;
         Assert.AreEqual(ContractParameterType.Array, result.Type);
 
-        var array = (ContractParameter[])result.Value;
+        var array = (ContractParameter[])result.Value!;
         Assert.HasCount(3, array);
         Assert.AreEqual(ContractParameterType.Integer, array[0].Type);
         Assert.AreEqual(ContractParameterType.String, array[1].Type);
@@ -274,10 +274,10 @@ public class UT_MainService_Contracts
         var method = GetPrivateMethod("ParseParameterFromAbi");
 
         var mapJson = "{\"key1\": \"value1\", \"key2\": 123}";
-        var result = (ContractParameter)method.Invoke(_mainService, new object[] { ContractParameterType.Map, JToken.Parse(mapJson) });
+        var result = (ContractParameter)method.Invoke(_mainService, [ContractParameterType.Map, JToken.Parse(mapJson)])!;
         Assert.AreEqual(ContractParameterType.Map, result.Type);
 
-        var map = (List<KeyValuePair<ContractParameter, ContractParameter>>)result.Value;
+        var map = (List<KeyValuePair<ContractParameter, ContractParameter>>)result.Value!;
         Assert.HasCount(2, map);
         Assert.AreEqual("key1", map[0].Key.Value);
         Assert.AreEqual("value1", map[0].Value.Value);
@@ -291,24 +291,24 @@ public class UT_MainService_Contracts
         var method = GetPrivateMethod("ParseParameterFromAbi");
 
         // Test Any with boolean
-        var result = (ContractParameter)method.Invoke(_mainService, new object[] { ContractParameterType.Any, JToken.Parse("true") });
+        var result = (ContractParameter)method.Invoke(_mainService, [ContractParameterType.Any, JToken.Parse("true")])!;
         Assert.AreEqual(ContractParameterType.Boolean, result.Type);
         Assert.IsTrue((bool?)result.Value);
 
         // Test Any with integer
-        result = (ContractParameter)method.Invoke(_mainService, new object[] { ContractParameterType.Any, JToken.Parse("123") });
+        result = (ContractParameter)method.Invoke(_mainService, [ContractParameterType.Any, JToken.Parse("123")])!;
         Assert.AreEqual(ContractParameterType.Integer, result.Type);
         Assert.AreEqual(new BigInteger(123), result.Value);
 
         // Test Any with string
-        result = (ContractParameter)method.Invoke(_mainService, new object[] { ContractParameterType.Any, JToken.Parse("\"test\"") });
+        result = (ContractParameter)method.Invoke(_mainService, [ContractParameterType.Any, JToken.Parse("\"test\"")])!;
         Assert.AreEqual(ContractParameterType.String, result.Type);
         Assert.AreEqual("test", result.Value);
 
         // Test Any with array
-        result = (ContractParameter)method.Invoke(_mainService, new object[] { ContractParameterType.Any, JToken.Parse("[1, 2, 3]") });
+        result = (ContractParameter)method.Invoke(_mainService, [ContractParameterType.Any, JToken.Parse("[1, 2, 3]")])!;
         Assert.AreEqual(ContractParameterType.Array, result.Type);
-        Assert.HasCount(3, (ContractParameter[])result.Value);
+        Assert.HasCount(3, (ContractParameter[])result.Value!);
     }
 
     [TestMethod]
@@ -316,11 +316,11 @@ public class UT_MainService_Contracts
     {
         var method = GetPrivateMethod("ParseParameterFromAbi");
 
-        var result = (ContractParameter)method.Invoke(_mainService, new object[] { ContractParameterType.String, null });
+        var result = (ContractParameter)method.Invoke(_mainService, [ContractParameterType.String, null])!;
         Assert.AreEqual(ContractParameterType.String, result.Type);
         Assert.IsNull(result.Value);
 
-        result = (ContractParameter)method.Invoke(_mainService, new object[] { ContractParameterType.String, JToken.Null });
+        result = (ContractParameter)method.Invoke(_mainService, [ContractParameterType.String, JToken.Null])!;
         Assert.AreEqual(ContractParameterType.String, result.Type);
         Assert.IsNull(result.Value);
     }
@@ -332,7 +332,7 @@ public class UT_MainService_Contracts
 
         // This should throw because "abc" is not a valid integer
         Assert.ThrowsExactly<TargetInvocationException>(() =>
-            method.Invoke(_mainService, new object[] { ContractParameterType.Integer, JToken.Parse("\"abc\"") }));
+            method.Invoke(_mainService, [ContractParameterType.Integer, JToken.Parse("\"abc\"")]));
     }
 
     [TestMethod]
@@ -342,7 +342,7 @@ public class UT_MainService_Contracts
 
         // This should throw because the hash is invalid
         Assert.ThrowsExactly<TargetInvocationException>(() =>
-            method.Invoke(_mainService, new object[] { ContractParameterType.Hash160, JToken.Parse("\"invalid_hash\"") }));
+            method.Invoke(_mainService, [ContractParameterType.Hash160, JToken.Parse("\"invalid_hash\"")]));
     }
 
     [TestMethod]
@@ -352,7 +352,7 @@ public class UT_MainService_Contracts
 
         // InteropInterface is not supported for JSON parsing
         Assert.ThrowsExactly<TargetInvocationException>(() =>
-            method.Invoke(_mainService, new object[] { ContractParameterType.InteropInterface, JToken.Parse("\"test\"") }));
+            method.Invoke(_mainService, [ContractParameterType.InteropInterface, JToken.Parse("\"test\"")]));
     }
 
     private static MethodInfo GetPrivateMethod(string methodName)
@@ -373,7 +373,7 @@ public class UT_MainService_Contracts
 
         // Act
         var invokeAbiMethod = GetPrivateMethod("OnInvokeAbiCommand");
-        invokeAbiMethod.Invoke(_mainService, new object[] { nonExistentHash, "test", null, null, null, 20m });
+        invokeAbiMethod.Invoke(_mainService, [nonExistentHash, "test", null, null, null, 20m]);
 
         // Assert
         var output = _consoleOutput.ToString();
@@ -388,7 +388,7 @@ public class UT_MainService_Contracts
 
         // Act
         var invokeAbiMethod = GetPrivateMethod("OnInvokeAbiCommand");
-        invokeAbiMethod.Invoke(_mainService, new object[] { _contractHash, "nonExistentMethod", null, null, null, 20m });
+        invokeAbiMethod.Invoke(_mainService, [_contractHash, "nonExistentMethod", null, null, null, 20m]);
 
         // Assert
         var output = _consoleOutput.ToString();
@@ -404,7 +404,7 @@ public class UT_MainService_Contracts
 
         // Act
         var invokeAbiMethod = GetPrivateMethod("OnInvokeAbiCommand");
-        invokeAbiMethod.Invoke(_mainService, new object[] { _contractHash, "testBoolean", args, null, null, 20m });
+        invokeAbiMethod.Invoke(_mainService, [_contractHash, "testBoolean", args, null, null, 20m]);
 
         // Assert
         var output = _consoleOutput.ToString();
@@ -420,7 +420,7 @@ public class UT_MainService_Contracts
 
         // Act
         var invokeAbiMethod = GetPrivateMethod("OnInvokeAbiCommand");
-        invokeAbiMethod.Invoke(_mainService, new object[] { _contractHash, "testMultipleParams", args, null, null, 20m });
+        invokeAbiMethod.Invoke(_mainService, [_contractHash, "testMultipleParams", args, null, null, 20m]);
 
         // Assert
         var output = _consoleOutput.ToString();
@@ -436,7 +436,7 @@ public class UT_MainService_Contracts
 
         // Act
         var invokeAbiMethod = GetPrivateMethod("OnInvokeAbiCommand");
-        invokeAbiMethod.Invoke(_mainService, new object[] { _contractHash, "testMultipleParams", args, null, null, 20m });
+        invokeAbiMethod.Invoke(_mainService, [_contractHash, "testMultipleParams", args, null, null, 20m]);
 
         // Assert
         var output = _consoleOutput.ToString();
@@ -451,7 +451,7 @@ public class UT_MainService_Contracts
 
         // Act - calling testBoolean with no arguments when it expects 1
         var invokeAbiMethod = GetPrivateMethod("OnInvokeAbiCommand");
-        invokeAbiMethod.Invoke(_mainService, new object[] { _contractHash, "testBoolean", null, null, null, 20m });
+        invokeAbiMethod.Invoke(_mainService, [_contractHash, "testBoolean", null, null, null, 20m]);
 
         // Assert
         var output = _consoleOutput.ToString();
@@ -467,7 +467,7 @@ public class UT_MainService_Contracts
 
         // Act
         var invokeAbiMethod = GetPrivateMethod("OnInvokeAbiCommand");
-        invokeAbiMethod.Invoke(_mainService, new object[] { _contractHash, "testHash160", args, null, null, 20m });
+        invokeAbiMethod.Invoke(_mainService, [_contractHash, "testHash160", args, null, null, 20m]);
 
         // Assert
         var output = _consoleOutput.ToString();
@@ -488,7 +488,7 @@ public class UT_MainService_Contracts
         var invokeAbiMethod = GetPrivateMethod("OnInvokeAbiCommand");
         try
         {
-            invokeAbiMethod.Invoke(_mainService, new object[] { _contractHash, "testBoolean", args, null, null, 20m });
+            invokeAbiMethod.Invoke(_mainService, [_contractHash, "testBoolean", args, null, null, 20m]);
         }
         catch (TargetInvocationException ex) when (ex.InnerException?.Message.Contains("This method does not not exist") == true)
         {
@@ -524,7 +524,7 @@ public class UT_MainService_Contracts
         var invokeAbiMethod = GetPrivateMethod("OnInvokeAbiCommand");
         try
         {
-            invokeAbiMethod.Invoke(_mainService, new object[] { _contractHash, "testArray", arrayArgs, null, null, 20m });
+            invokeAbiMethod.Invoke(_mainService, [_contractHash, "testArray", arrayArgs, null, null, 20m]);
         }
         catch (TargetInvocationException)
         {
@@ -551,7 +551,7 @@ public class UT_MainService_Contracts
         var invokeAbiMethod = GetPrivateMethod("OnInvokeAbiCommand");
         try
         {
-            invokeAbiMethod.Invoke(_mainService, new object[] { _contractHash, "testMultipleParams", args, null, null, 20m });
+            invokeAbiMethod.Invoke(_mainService, [_contractHash, "testMultipleParams", args, null, null, 20m]);
         }
         catch (TargetInvocationException)
         {
@@ -596,7 +596,7 @@ public class UT_MainService_Contracts
         // Test invalid integer format with helpful error
         try
         {
-            method.Invoke(_mainService, new object[] { ContractParameterType.Integer, JToken.Parse("\"abc\"") });
+            method.Invoke(_mainService, [ContractParameterType.Integer, JToken.Parse("\"abc\"")]);
             Assert.Fail("Expected exception for invalid integer");
         }
         catch (TargetInvocationException ex)
@@ -609,7 +609,7 @@ public class UT_MainService_Contracts
         // Test invalid Hash160 format with helpful error
         try
         {
-            method.Invoke(_mainService, new object[] { ContractParameterType.Hash160, JToken.Parse("\"invalid\"") });
+            method.Invoke(_mainService, [ContractParameterType.Hash160, JToken.Parse("\"invalid\"")]);
             Assert.Fail("Expected exception for invalid Hash160");
         }
         catch (TargetInvocationException ex)
@@ -623,7 +623,7 @@ public class UT_MainService_Contracts
         // Test invalid Base64 format with helpful error
         try
         {
-            method.Invoke(_mainService, new object[] { ContractParameterType.ByteArray, JToken.Parse("\"not-base64!@#$\"") });
+            method.Invoke(_mainService, [ContractParameterType.ByteArray, JToken.Parse("\"not-base64!@#$\"")]);
             Assert.Fail("Expected exception for invalid Base64");
         }
         catch (TargetInvocationException ex)
@@ -641,10 +641,10 @@ public class UT_MainService_Contracts
 
         // Test parsing an array with ContractParameter objects (the issue from superboyiii)
         var arrayWithContractParam = JToken.Parse(@"[4, [{""type"":""PublicKey"",""value"":""0244d12f3e6b8eba7d0bc0cf0c176d9df545141f4d3447f8463c1b16afb90b1ea8""}]]");
-        var result = (ContractParameter)method.Invoke(_mainService, new object[] { ContractParameterType.Array, arrayWithContractParam });
+        var result = (ContractParameter)method.Invoke(_mainService, [ContractParameterType.Array, arrayWithContractParam])!;
 
         Assert.AreEqual(ContractParameterType.Array, result.Type);
-        var array = (ContractParameter[])result.Value;
+        var array = (ContractParameter[])result.Value!;
         Assert.HasCount(2, array);
 
         // First element should be Integer
@@ -653,7 +653,7 @@ public class UT_MainService_Contracts
 
         // Second element should be Array containing a PublicKey
         Assert.AreEqual(ContractParameterType.Array, array[1].Type);
-        var innerArray = (ContractParameter[])array[1].Value;
+        var innerArray = (ContractParameter[])array[1].Value!;
         Assert.HasCount(1, innerArray);
         Assert.AreEqual(ContractParameterType.PublicKey, innerArray[0].Type);
 
@@ -669,13 +669,13 @@ public class UT_MainService_Contracts
 
         // Test regular map (should be treated as Map)
         var regularMap = JToken.Parse(@"{""key1"": ""value1"", ""key2"": 123}");
-        var mapResult = (ContractParameter)method.Invoke(_mainService, new object[] { ContractParameterType.Any, regularMap });
+        var mapResult = (ContractParameter)method.Invoke(_mainService, [ContractParameterType.Any, regularMap])!;
         Assert.AreEqual(ContractParameterType.Map, mapResult.Type);
 
         // Test ContractParameter object with Any type - should be treated as Map since we only parse 
         // ContractParameter format inside arrays
         var contractParamObj = JToken.Parse(@"{""type"": ""String"", ""value"": ""test""}");
-        var paramResult = (ContractParameter)method.Invoke(_mainService, new object[] { ContractParameterType.Any, contractParamObj });
+        var paramResult = (ContractParameter)method.Invoke(_mainService, [ContractParameterType.Any, contractParamObj])!;
         Assert.AreEqual(ContractParameterType.Map, paramResult.Type);
     }
 
@@ -691,10 +691,10 @@ public class UT_MainService_Contracts
                 ""key3"": ""simple string""
             }");
 
-        var result = (ContractParameter)method.Invoke(_mainService, new object[] { ContractParameterType.Map, mapWithContractParams });
+        var result = (ContractParameter)method.Invoke(_mainService, [ContractParameterType.Map, mapWithContractParams])!;
         Assert.AreEqual(ContractParameterType.Map, result.Type);
 
-        var map = (List<KeyValuePair<ContractParameter, ContractParameter>>)result.Value;
+        var map = (List<KeyValuePair<ContractParameter, ContractParameter>>)result.Value!;
         Assert.HasCount(3, map);
 
         // Check each key-value pair
@@ -731,10 +731,10 @@ public class UT_MainService_Contracts
                 ]
             }");
 
-        var result = (ContractParameter)method.Invoke(_mainService, new object[] { ContractParameterType.Map, completeMapFormat });
+        var result = (ContractParameter)method.Invoke(_mainService, [ContractParameterType.Map, completeMapFormat])!;
         Assert.AreEqual(ContractParameterType.Map, result.Type);
 
-        var map = (List<KeyValuePair<ContractParameter, ContractParameter>>)result.Value;
+        var map = (List<KeyValuePair<ContractParameter, ContractParameter>>)result.Value!;
         Assert.HasCount(2, map);
 
         Assert.AreEqual("name", map[0].Key.Value);
@@ -792,7 +792,7 @@ public class UT_MainService_Contracts
 
         try
         {
-            invokeAbiMethod.Invoke(_mainService, new object[] { _contractHash, "transfer", args2, null, null, 20m });
+            invokeAbiMethod.Invoke(_mainService, [_contractHash, "transfer", args2, null, null, 20m]);
         }
         catch (TargetInvocationException)
         {
@@ -807,7 +807,7 @@ public class UT_MainService_Contracts
         _consoleOutput.GetStringBuilder().Clear();
         var args4 = new JArray("0x1234567890abcdef1234567890abcdef12345678", "0xabcdef1234567890abcdef1234567890abcdef12", 100, "extra");
 
-        invokeAbiMethod.Invoke(_mainService, new object[] { _contractHash, "transfer", args4, null, null, 20m });
+        invokeAbiMethod.Invoke(_mainService, [_contractHash, "transfer", args4, null, null, 20m]);
 
         output = _consoleOutput.ToString();
         Assert.IsTrue(output.Contains("Method 'transfer' exists but expects") || output.Contains("expects exactly"));

@@ -29,7 +29,7 @@ using static Neo.Ledger.Blockchain;
 
 namespace Neo.Plugins.StateService;
 
-public class StatePlugin : Plugin, ICommittingHandler, ICommittedHandler, IWalletChangedHandler, IServiceAddedHandler
+public class StatePlugin : Plugin, ICommittingHandler, ICommittedHandler
 {
     public const string StatePayloadCategory = "StateService";
     public override string Name => "StateService";
@@ -38,14 +38,14 @@ public class StatePlugin : Plugin, ICommittingHandler, ICommittedHandler, IWalle
 
     protected override UnhandledExceptionPolicy ExceptionPolicy => StateServiceSettings.Default.ExceptionPolicy;
 
-    internal IActorRef Store;
-    internal IActorRef Verifier;
+    internal IActorRef Store = null!;
+    internal IActorRef Verifier = null!;
 
-    private static NeoSystem _system;
+    private static NeoSystem _system = null!;
 
     internal static NeoSystem NeoSystem => _system;
 
-    private IWalletProvider walletProvider;
+    private IWalletProvider? walletProvider;
 
     public StatePlugin()
     {
@@ -63,27 +63,30 @@ public class StatePlugin : Plugin, ICommittingHandler, ICommittedHandler, IWalle
         if (system.Settings.Network != StateServiceSettings.Default.Network) return;
         _system = system;
         Store = _system.ActorSystem.ActorOf(StateStore.Props(this, string.Format(StateServiceSettings.Default.Path, system.Settings.Network.ToString("X8"))));
-        _system.ServiceAdded += ((IServiceAddedHandler)this).NeoSystem_ServiceAdded_Handler;
+        _system.ServiceAdded += NeoSystem_ServiceAdded_Handler;
         RpcServerPlugin.RegisterMethods(this, StateServiceSettings.Default.Network);
     }
 
-    void IServiceAddedHandler.NeoSystem_ServiceAdded_Handler(object sender, object service)
+    void NeoSystem_ServiceAdded_Handler(object? sender, object service)
     {
-        if (service is IWalletProvider)
+        if (service is IWalletProvider provider)
         {
-            walletProvider = service as IWalletProvider;
-            _system.ServiceAdded -= ((IServiceAddedHandler)this).NeoSystem_ServiceAdded_Handler;
+            walletProvider = provider;
+            _system.ServiceAdded -= NeoSystem_ServiceAdded_Handler;
             if (StateServiceSettings.Default.AutoVerify)
             {
-                walletProvider.WalletChanged += ((IWalletChangedHandler)this).IWalletProvider_WalletChanged_Handler;
+                walletProvider.WalletChanged += IWalletProvider_WalletChanged_Handler;
             }
         }
     }
 
-    void IWalletChangedHandler.IWalletProvider_WalletChanged_Handler(object sender, Wallet wallet)
+    void IWalletProvider_WalletChanged_Handler(object? sender, Wallet? wallet)
     {
-        walletProvider.WalletChanged -= ((IWalletChangedHandler)this).IWalletProvider_WalletChanged_Handler;
-        Start(wallet);
+        if (wallet != null)
+        {
+            walletProvider!.WalletChanged -= IWalletProvider_WalletChanged_Handler;
+            Start(wallet);
+        }
     }
 
     protected override void Dispose(bool disposing)
@@ -125,10 +128,10 @@ public class StatePlugin : Plugin, ICommittingHandler, ICommittedHandler, IWalle
     private void OnStartVerifyingState()
     {
         CheckNetwork();
-        Start(walletProvider.GetWallet());
+        Start(walletProvider?.GetWallet());
     }
 
-    public void Start(Wallet wallet)
+    public void Start(Wallet? wallet)
     {
         if (Verifier is not null)
         {
@@ -284,7 +287,7 @@ public class StatePlugin : Plugin, ICommittingHandler, ICommittedHandler, IWalle
         };
     }
 
-    private ContractState GetHistoricalContractState(Trie trie, UInt160 scriptHash)
+    private ContractState? GetHistoricalContractState(Trie trie, UInt160 scriptHash)
     {
         const byte prefix = 8;
         var skey = new KeyBuilder(NativeContract.ContractManagement.Id, prefix).Add(scriptHash);
@@ -307,7 +310,7 @@ public class StatePlugin : Plugin, ICommittingHandler, ICommittedHandler, IWalle
     }
 
     [RpcMethod]
-    public JToken FindStates(UInt256 rootHash, UInt160 scriptHash, byte[] prefix, byte[] key = null, int count = 0)
+    public JToken FindStates(UInt256 rootHash, UInt160 scriptHash, byte[] prefix, byte[]? key = null, int count = 0)
     {
         CheckRootHash(rootHash);
 
@@ -339,11 +342,11 @@ public class StatePlugin : Plugin, ICommittingHandler, ICommittedHandler, IWalle
         }
         if (0 < jarr.Count)
         {
-            json["firstProof"] = GetProof(trie, contract.Id, Convert.FromBase64String(jarr.First()["key"].AsString()));
+            json["firstProof"] = GetProof(trie, contract.Id, Convert.FromBase64String(jarr.First()!["key"]!.AsString()));
         }
         if (1 < jarr.Count)
         {
-            json["lastProof"] = GetProof(trie, contract.Id, Convert.FromBase64String(jarr.Last()["key"].AsString()));
+            json["lastProof"] = GetProof(trie, contract.Id, Convert.FromBase64String(jarr.Last()!["key"]!.AsString()));
         }
         json["truncated"] = count < i;
         json["results"] = jarr;
