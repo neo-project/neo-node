@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // UT_SQLiteWallet.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -10,7 +10,6 @@
 // modifications are permitted.
 
 using Microsoft.Data.Sqlite;
-using Neo.Extensions;
 using Neo.SmartContract;
 using Neo.Wallets.NEP6;
 using System.Security.Cryptography;
