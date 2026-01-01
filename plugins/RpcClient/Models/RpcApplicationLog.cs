@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // RpcApplicationLog.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -9,7 +9,6 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-using Neo.Extensions;
 using Neo.Json;
 using Neo.SmartContract;
 using Neo.VM;
@@ -19,11 +18,11 @@ namespace Neo.Network.RPC.Models;
 
 public class RpcApplicationLog
 {
-    public UInt256 TxId { get; set; }
+    public UInt256? TxId { get; set; }
 
-    public UInt256 BlockHash { get; set; }
+    public UInt256? BlockHash { get; set; }
 
-    public List<Execution> Executions { get; set; }
+    public required List<Execution> Executions { get; set; }
 
     public JObject ToJson()
     {
@@ -40,9 +39,9 @@ public class RpcApplicationLog
     {
         return new RpcApplicationLog
         {
-            TxId = json["txid"] is null ? null : UInt256.Parse(json["txid"].AsString()),
-            BlockHash = json["blockhash"] is null ? null : UInt256.Parse(json["blockhash"].AsString()),
-            Executions = ((JArray)json["executions"]).Select(p => Execution.FromJson((JObject)p, protocolSettings)).ToList(),
+            TxId = json["txid"] is null ? null : UInt256.Parse(json["txid"]!.AsString()),
+            BlockHash = json["blockhash"] is null ? null : UInt256.Parse(json["blockhash"]!.AsString()),
+            Executions = ((JArray)json["executions"]!).Select(p => Execution.FromJson((JObject)p!, protocolSettings)).ToList(),
         };
     }
 }
@@ -55,11 +54,11 @@ public class Execution
 
     public long GasConsumed { get; set; }
 
-    public string ExceptionMessage { get; set; }
+    public string? ExceptionMessage { get; set; }
 
-    public List<StackItem> Stack { get; set; }
+    public required List<StackItem> Stack { get; set; }
 
-    public List<RpcNotifyEventArgs> Notifications { get; set; }
+    public required List<RpcNotifyEventArgs> Notifications { get; set; }
 
     public JObject ToJson()
     {
@@ -78,23 +77,23 @@ public class Execution
     {
         return new Execution
         {
-            Trigger = json["trigger"].GetEnum<TriggerType>(),
-            VMState = json["vmstate"].GetEnum<VMState>(),
-            GasConsumed = long.Parse(json["gasconsumed"].AsString()),
+            Trigger = json["trigger"]!.GetEnum<TriggerType>(),
+            VMState = json["vmstate"]!.GetEnum<VMState>(),
+            GasConsumed = long.Parse(json["gasconsumed"]!.AsString()),
             ExceptionMessage = json["exception"]?.AsString(),
-            Stack = ((JArray)json["stack"]).Select(p => Utility.StackItemFromJson((JObject)p)).ToList(),
-            Notifications = ((JArray)json["notifications"]).Select(p => RpcNotifyEventArgs.FromJson((JObject)p, protocolSettings)).ToList()
+            Stack = ((JArray)json["stack"]!).Select(p => Utility.StackItemFromJson((JObject)p!)).ToList(),
+            Notifications = ((JArray)json["notifications"]!).Select(p => RpcNotifyEventArgs.FromJson((JObject)p!, protocolSettings)).ToList()
         };
     }
 }
 
 public class RpcNotifyEventArgs
 {
-    public UInt160 Contract { get; set; }
+    public required UInt160 Contract { get; set; }
 
-    public string EventName { get; set; }
+    public required string EventName { get; set; }
 
-    public StackItem State { get; set; }
+    public required StackItem State { get; set; }
 
     public JObject ToJson()
     {
@@ -110,9 +109,9 @@ public class RpcNotifyEventArgs
     {
         return new RpcNotifyEventArgs
         {
-            Contract = json["contract"].ToScriptHash(protocolSettings),
-            EventName = json["eventname"].AsString(),
-            State = Utility.StackItemFromJson((JObject)json["state"])
+            Contract = json["contract"]!.ToScriptHash(protocolSettings),
+            EventName = json["eventname"]!.AsString(),
+            State = Utility.StackItemFromJson((JObject)json["state"]!)
         };
     }
 }

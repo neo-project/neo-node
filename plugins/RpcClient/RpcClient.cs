@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // RpcClient.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -9,7 +9,6 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-using Neo.Extensions;
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.Network.RPC.Models;
@@ -35,7 +34,7 @@ public class RpcClient : IDisposable
 
     internal readonly ProtocolSettings protocolSettings;
 
-    public RpcClient(Uri url, string rpcUser = default, string rpcPass = default, ProtocolSettings protocolSettings = null)
+    public RpcClient(Uri url, string? rpcUser = null, string? rpcPass = null, ProtocolSettings? protocolSettings = null)
     {
         _httpClient = new HttpClient();
         _baseAddress = url;
@@ -47,7 +46,7 @@ public class RpcClient : IDisposable
         this.protocolSettings = protocolSettings ?? ProtocolSettings.Default;
     }
 
-    public RpcClient(HttpClient client, Uri url, ProtocolSettings protocolSettings = null)
+    public RpcClient(HttpClient client, Uri url, ProtocolSettings? protocolSettings = null)
     {
         _httpClient = client;
         _baseAddress = url;
@@ -76,7 +75,7 @@ public class RpcClient : IDisposable
     }
     #endregion
 
-    static RpcRequest AsRpcRequest(string method, params JToken[] paraArgs)
+    static RpcRequest AsRpcRequest(string method, params JToken?[] paraArgs)
     {
         return new RpcRequest
         {
@@ -89,7 +88,7 @@ public class RpcClient : IDisposable
 
     static RpcResponse AsRpcResponse(string content, bool throwOnError)
     {
-        var response = RpcResponse.FromJson((JObject)JToken.Parse(content));
+        var response = RpcResponse.FromJson((JObject)JToken.Parse(content)!);
         response.RawResponse = content;
 
         if (response.Error != null && throwOnError)
@@ -134,19 +133,19 @@ public class RpcClient : IDisposable
     {
         var request = AsRpcRequest(method, paraArgs);
         var response = Send(request);
-        return response.Result;
+        return response.Result!;
     }
 
-    public virtual async Task<JToken> RpcSendAsync(string method, params JToken[] paraArgs)
+    public virtual async Task<JToken> RpcSendAsync(string method, params JToken?[] paraArgs)
     {
         var request = AsRpcRequest(method, paraArgs);
         var response = await SendAsync(request).ConfigureAwait(false);
-        return response.Result;
+        return response.Result!;
     }
 
-    public static string GetRpcName([CallerMemberName] string methodName = null)
+    public static string GetRpcName([CallerMemberName] string? methodName = null)
     {
-        return s_rpcNameRegex.Replace(methodName, "$1").ToLowerInvariant();
+        return s_rpcNameRegex.Replace(methodName!, "$1").ToLowerInvariant();
     }
 
     #region Blockchain
@@ -256,11 +255,11 @@ public class RpcClient : IDisposable
     {
         return new ContractState
         {
-            Id = (int)json["id"].AsNumber(),
+            Id = (int)json["id"]!.AsNumber(),
             UpdateCounter = (ushort)(json["updatecounter"]?.AsNumber() ?? 0),
-            Hash = UInt160.Parse(json["hash"].AsString()),
-            Nef = RpcNefFile.FromJson((JObject)json["nef"]),
-            Manifest = ContractManifest.FromJson((JObject)json["manifest"])
+            Hash = UInt160.Parse(json["hash"]!.AsString()),
+            Nef = RpcNefFile.FromJson((JObject)json["nef"]!),
+            Manifest = ContractManifest.FromJson((JObject)json["manifest"]!)
         };
     }
 
@@ -270,7 +269,7 @@ public class RpcClient : IDisposable
     public async Task<ContractState[]> GetNativeContractsAsync()
     {
         var result = await RpcSendAsync(GetRpcName()).ConfigureAwait(false);
-        return ((JArray)result).Select(p => ContractStateFromJson((JObject)p)).ToArray();
+        return ((JArray)result).Select(p => ContractStateFromJson((JObject)p!)).ToArray();
     }
 
     /// <summary>
@@ -279,7 +278,7 @@ public class RpcClient : IDisposable
     public async Task<string[]> GetRawMempoolAsync()
     {
         var result = await RpcSendAsync(GetRpcName()).ConfigureAwait(false);
-        return ((JArray)result).Select(p => p.AsString()).ToArray();
+        return ((JArray)result).Select(p => p!.AsString()).ToArray();
     }
 
     /// <summary>
@@ -320,7 +319,7 @@ public class RpcClient : IDisposable
     {
         var json = await RpcSendAsync(GetRpcName(), Convert.ToBase64String(tx.ToArray()))
             .ConfigureAwait(false);
-        return (long)json["networkfee"].AsNumber();
+        return (long)json["networkfee"]!.AsNumber();
     }
 
     /// <summary>
@@ -347,7 +346,7 @@ public class RpcClient : IDisposable
     public async Task<RpcValidator[]> GetNextBlockValidatorsAsync()
     {
         var result = await RpcSendAsync(GetRpcName()).ConfigureAwait(false);
-        return ((JArray)result).Select(p => RpcValidator.FromJson((JObject)p)).ToArray();
+        return ((JArray)result).Select(p => RpcValidator.FromJson((JObject)p!)).ToArray();
     }
 
     /// <summary>
@@ -356,7 +355,7 @@ public class RpcClient : IDisposable
     public async Task<string[]> GetCommitteeAsync()
     {
         var result = await RpcSendAsync(GetRpcName()).ConfigureAwait(false);
-        return [.. ((JArray)result).Select(p => p.AsString())];
+        return [.. ((JArray)result).Select(p => p!.AsString())];
     }
 
     #endregion Blockchain
@@ -396,7 +395,7 @@ public class RpcClient : IDisposable
     public async Task<UInt256> SendRawTransactionAsync(byte[] rawTransaction)
     {
         var result = await RpcSendAsync(GetRpcName(), Convert.ToBase64String(rawTransaction)).ConfigureAwait(false);
-        return UInt256.Parse(result["hash"].AsString());
+        return UInt256.Parse(result["hash"]!.AsString());
     }
 
     /// <summary>
@@ -413,7 +412,7 @@ public class RpcClient : IDisposable
     public async Task<UInt256> SubmitBlockAsync(byte[] block)
     {
         var result = await RpcSendAsync(GetRpcName(), Convert.ToBase64String(block)).ConfigureAwait(false);
-        return UInt256.Parse(result["hash"].AsString());
+        return UInt256.Parse(result["hash"]!.AsString());
     }
 
     #endregion Node
@@ -464,9 +463,9 @@ public class RpcClient : IDisposable
         {
             var result = await RpcSendAsync(GetRpcName(), sessionId, id, count).ConfigureAwait(false);
             var array = (JArray)result;
-            foreach (JObject jObject in array)
+            foreach (var jObject in array)
             {
-                yield return jObject;
+                yield return (JObject)jObject!;
             }
             if (array.Count < count) break;
         }
@@ -485,9 +484,9 @@ public class RpcClient : IDisposable
         var result = await RpcSendAsync(GetRpcName(), sessionId, id, count).ConfigureAwait(false);
         if (result is JArray { Count: > 0 } array)
         {
-            foreach (JObject jObject in array)
+            foreach (var jObject in array)
             {
-                yield return jObject;
+                yield return (JObject)jObject!;
             }
         }
     }
@@ -512,7 +511,7 @@ public class RpcClient : IDisposable
     public async Task<RpcPlugin[]> ListPluginsAsync()
     {
         var result = await RpcSendAsync(GetRpcName()).ConfigureAwait(false);
-        return [.. ((JArray)result).Select(p => RpcPlugin.FromJson((JObject)p))];
+        return [.. ((JArray)result).Select(p => RpcPlugin.FromJson((JObject)p!))];
     }
 
     /// <summary>
@@ -563,7 +562,7 @@ public class RpcClient : IDisposable
     public async Task<BigDecimal> GetWalletBalanceAsync(string assetId)
     {
         var result = await RpcSendAsync(GetRpcName(), assetId).ConfigureAwait(false);
-        BigInteger balance = BigInteger.Parse(result["balance"].AsString());
+        BigInteger balance = BigInteger.Parse(result["balance"]!.AsString());
         byte decimals = await new Nep17API(this).DecimalsAsync(UInt160.Parse(assetId.AsScriptHash())).ConfigureAwait(false);
         return new BigDecimal(balance, decimals);
     }
@@ -592,7 +591,7 @@ public class RpcClient : IDisposable
     public async Task<List<RpcAccount>> ListAddressAsync()
     {
         var result = await RpcSendAsync(GetRpcName()).ConfigureAwait(false);
-        return [.. ((JArray)result).Select(p => RpcAccount.FromJson((JObject)p))];
+        return [.. ((JArray)result).Select(p => RpcAccount.FromJson((JObject)p!))];
     }
 
     /// <summary>

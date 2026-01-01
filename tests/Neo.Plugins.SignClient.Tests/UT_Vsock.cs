@@ -1,5 +1,5 @@
-// Copyright (C) 2015-2025 The Neo Project.
-// 
+// Copyright (C) 2015-2026 The Neo Project.
+//
 // UT_Vsock.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
 // accompanying file LICENSE in the main directory of the
