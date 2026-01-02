@@ -126,6 +126,7 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
         if (wallet is null)
         {
             ConsoleHelper.Warning("Please open wallet first!");
+            this.wallet = null;
             return Task.CompletedTask;
         }
 
