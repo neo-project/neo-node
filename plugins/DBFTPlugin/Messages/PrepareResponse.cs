@@ -16,7 +16,7 @@ namespace Neo.Plugins.DBFTPlugin.Messages;
 
 public class PrepareResponse : ConsensusMessage
 {
-    public required UInt256 PreparationHash;
+    public UInt256 PreparationHash;
 
     public override int Size => base.Size + PreparationHash.Size;
 
