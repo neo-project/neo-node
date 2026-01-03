@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // UT_SignClient.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -15,7 +15,6 @@ using Microsoft.Extensions.Configuration;
 using Moq;
 using Neo.Cryptography;
 using Neo.Cryptography.ECC;
-using Neo.Extensions;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
