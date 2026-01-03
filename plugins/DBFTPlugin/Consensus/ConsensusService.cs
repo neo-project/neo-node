@@ -249,13 +249,19 @@ internal partial class ConsensusService : UntypedActor
             return;
         if (context.Transactions!.ContainsKey(transaction.Hash)) return;
         if (!context.TransactionHashes.Contains(transaction.Hash)) return;
-        AddTransaction(transaction, true);
+        if (!AddTransaction(transaction, true))
+        {
+            // TODO: Drop the transaction if it cannot be added to the context
+        }
     }
 
     private bool AddTransaction(Transaction tx, bool verify)
     {
         if (verify)
         {
+            // Must not be more than MaxBlockSystemFee
+            if (tx.SystemFee > dbftSettings.MaxBlockSystemFee) return false;
+
             // At this step we're sure that there's no on-chain transaction that conflicts with
             // the provided tx because of the previous Blockchain's OnReceive check. Thus, we only
             // need to check that current context doesn't contain conflicting transactions.
