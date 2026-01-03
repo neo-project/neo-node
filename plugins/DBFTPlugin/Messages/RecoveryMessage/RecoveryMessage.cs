@@ -19,13 +19,13 @@ namespace Neo.Plugins.DBFTPlugin.Messages;
 
 public partial class RecoveryMessage : ConsensusMessage
 {
-    public required Dictionary<byte, ChangeViewPayloadCompact> ChangeViewMessages;
-    public PrepareRequest? PrepareRequestMessage;
+    public Dictionary<byte, ChangeViewPayloadCompact> ChangeViewMessages;
+    public PrepareRequest PrepareRequestMessage;
     /// The PreparationHash in case the PrepareRequest hasn't been received yet.
     /// This can be null if the PrepareRequest information is present, since it can be derived in that case.
-    public UInt256? PreparationHash;
-    public required Dictionary<byte, PreparationPayloadCompact> PreparationMessages;
-    public required Dictionary<byte, CommitPayloadCompact> CommitMessages;
+    public UInt256 PreparationHash;
+    public Dictionary<byte, PreparationPayloadCompact> PreparationMessages;
+    public Dictionary<byte, CommitPayloadCompact> CommitMessages;
 
     public override int Size => base.Size
         + (ChangeViewMessages?.Values.GetVarSize() ?? 0) // ChangeViewMessages
@@ -86,17 +86,17 @@ public partial class RecoveryMessage : ConsensusMessage
         }, p.InvocationScript)).ToArray();
     }
 
-    internal ExtensiblePayload? GetPrepareRequestPayload(ConsensusContext context)
+    internal ExtensiblePayload GetPrepareRequestPayload(ConsensusContext context)
     {
         if (PrepareRequestMessage == null) return null;
-        if (!PreparationMessages.TryGetValue(context.Block.PrimaryIndex, out PreparationPayloadCompact? compact))
+        if (!PreparationMessages.TryGetValue(context.Block.PrimaryIndex, out PreparationPayloadCompact compact))
             return null;
         return context.CreatePayload(PrepareRequestMessage, compact.InvocationScript);
     }
 
     internal ExtensiblePayload[] GetPrepareResponsePayloads(ConsensusContext context)
     {
-        UInt256? preparationHash = PreparationHash ?? context.PreparationPayloads[context.Block.PrimaryIndex]?.Hash;
+        UInt256 preparationHash = PreparationHash ?? context.PreparationPayloads[context.Block.PrimaryIndex]?.Hash;
         if (preparationHash is null) return Array.Empty<ExtensiblePayload>();
         return PreparationMessages.Values.Where(p => p.ValidatorIndex != context.Block.PrimaryIndex).Select(p => context.CreatePayload(new PrepareResponse
         {
@@ -111,14 +111,12 @@ public partial class RecoveryMessage : ConsensusMessage
     {
         base.Serialize(writer);
         writer.Write(ChangeViewMessages.Values.ToArray());
-        if (PrepareRequestMessage != null)
-        {
-            writer.Write(true);
+        bool hasPrepareRequestMessage = PrepareRequestMessage != null;
+        writer.Write(hasPrepareRequestMessage);
+        if (hasPrepareRequestMessage)
             writer.Write(PrepareRequestMessage);
-        }
         else
         {
-            writer.Write(false);
             if (PreparationHash == null)
                 writer.WriteVarInt(0);
             else

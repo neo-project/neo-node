@@ -133,6 +133,7 @@ public class StatePlugin : Plugin, ICommittingHandler, ICommittedHandler, IWalle
         }
         if (wallet is null)
         {
+            Verifier = null;
             ConsoleHelper.Warning("Please open wallet first!");
             return;
         }
