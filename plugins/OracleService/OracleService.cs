@@ -568,7 +568,7 @@ public sealed class OracleService : Plugin, ICommittingHandler, IServiceAddedHan
         return data.Length <= maxLen ? data : data[..maxLen] + "...";
     }
 
-    internal static bool TryDecodeDnsStackItemPayload(string payload, out byte[] result)
+    internal static bool TryDecodeDnsStackItemPayload(string payload, [NotNullWhen(true)] out byte[] result)
     {
         try
         {
