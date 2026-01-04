@@ -318,18 +318,14 @@ public sealed class OracleService : Plugin, ICommittingHandler
                 }
             }
 
-            Transaction responseTx, backupTx;
             var response = new OracleResponse() { Id = requestId, Code = code, Result = result };
+            Transaction? responseTx = CreateResponseTx(snapshot, request, response, oracleNodes, _system.Settings);
+            Transaction? backupTx = CreateResponseTx(snapshot, request, new OracleResponse() { Code = OracleResponseCode.ConsensusUnreachable, Id = requestId, Result = Array.Empty<byte>() }, oracleNodes, _system.Settings, true);
 
-            try
-            {
-                responseTx = CreateResponseTx(snapshot, request, response, oracleNodes, _system.Settings);
-                backupTx = CreateResponseTx(snapshot, request, new OracleResponse() { Code = OracleResponseCode.ConsensusUnreachable, Id = requestId, Result = Array.Empty<byte>() }, oracleNodes, _system.Settings, true);
-            }
-            catch (Exception ex)
+            if (responseTx is null || backupTx is null)
             {
                 code = OracleResponseCode.Error;
-                Log($"[{req.OriginalTxid}] Create Response tx error:{ex.Message}");
+                Log($"[{req.OriginalTxid}] Create Response tx error");
                 continue;
             }
 
@@ -407,9 +403,11 @@ public sealed class OracleService : Plugin, ICommittingHandler
         }
     }
 
-    public static Transaction CreateResponseTx(DataCache snapshot, OracleRequest request, OracleResponse response, ECPoint[] oracleNodes, ProtocolSettings settings, bool useCurrentHeight = false)
+    public static Transaction? CreateResponseTx(DataCache snapshot, OracleRequest request, OracleResponse response, ECPoint[] oracleNodes, ProtocolSettings settings, bool useCurrentHeight = false)
     {
-        var requestTx = NativeContract.Ledger.GetTransactionState(snapshot, request.OriginalTxid)!;
+        var requestTx = NativeContract.Ledger.GetTransactionState(snapshot, request.OriginalTxid);
+        if (requestTx == null) return null;
+
         var n = oracleNodes.Length;
         var m = n - (n - 1) / 3;
         var oracleSignContract = Contract.CreateMultiSigContract(m, oracleNodes);
@@ -485,7 +483,6 @@ public sealed class OracleService : Plugin, ICommittingHandler
         // Calcualte system fee
 
         tx.SystemFee = request.GasForResponse - tx.NetworkFee;
-
         return tx;
     }
 
