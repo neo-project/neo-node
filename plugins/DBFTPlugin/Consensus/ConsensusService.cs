@@ -68,12 +68,12 @@ internal partial class ConsensusService : UntypedActor
         this.context = context;
         Context.System.EventStream.Subscribe(Self, typeof(PersistCompleted));
         Context.System.EventStream.Subscribe(Self, typeof(RelayResult));
-        neoSystem.MemPool.PolicyValidator = MemPoolPolicyValidator;
+        neoSystem.MemPool.NewTransaction += MemPool_NewTransaction;
     }
 
-    private bool MemPoolPolicyValidator(Transaction tx, IReadOnlyStore store)
+    private void MemPool_NewTransaction(object sender, NewTransactionEventArgs e)
     {
-        return tx.SystemFee <= dbftSettings.MaxBlockSystemFee;
+        e.Cancel = e.Transaction.SystemFee <= dbftSettings.MaxBlockSystemFee;
     }
 
     private void OnPersistCompleted(Block block)
