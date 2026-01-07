@@ -420,7 +420,7 @@ partial class RpcServer
     {
         var scriptHash = address.ScriptHash;
         var snapshot = system.StoreView;
-        using var engine = ApplicationEngine.Create(TriggerType.Verification, null, snapshot, settings: system.Settings);
+        using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, settings: system.Settings);
         var unclaimed = NativeContract.NEO.UnclaimedGas(engine, scriptHash, NativeContract.Ledger.CurrentIndex(snapshot) + 1);
         return new JObject()
         {

@@ -152,7 +152,7 @@ partial class RpcServer
         var datoshi = BigInteger.Zero;
         using (var snapshot = system.GetSnapshotCache())
         {
-            using var engine = ApplicationEngine.Create(TriggerType.Verification, null, snapshot, settings: system.Settings);
+            using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, settings: system.Settings);
             uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
             foreach (var account in wallet.GetAccounts().Select(p => p.ScriptHash))
                 datoshi += NativeContract.NEO.UnclaimedGas(engine, account, height);
