@@ -74,7 +74,7 @@ public class StorageDumper : Plugin
             prefix = BitConverter.GetBytes(contract.Id);
         }
         var states = _system.StoreView.Find(prefix);
-        JArray array = new JArray(states.Where(p => !StorageSettings.Default!.Exclude.Contains(p.Key.Id)).Select(p => new JObject
+        var array = new JArray(states.Where(p => !StorageSettings.Default!.Exclude.Contains(p.Key.Id)).Select(p => new JObject
         {
             ["key"] = Convert.ToBase64String(p.Key.ToArray()),
             ["value"] = Convert.ToBase64String(p.Value.ToArray())
@@ -88,14 +88,9 @@ public class StorageDumper : Plugin
 
     void Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot, IReadOnlyList<Blockchain.ApplicationExecuted> applicationExecutedList)
     {
-        InitFileWriter(system.Settings.Network, snapshot);
-        OnPersistStorage(system.Settings.Network, snapshot);
-    }
+        InitFileWriter(system.Settings.Network, block);
 
-    private void OnPersistStorage(uint network, DataCache snapshot)
-    {
-        var blockIndex = NativeContract.Ledger.CurrentIndex(snapshot);
-        if (blockIndex >= StorageSettings.Default!.HeightToBegin)
+        if (block.Index >= StorageSettings.Default!.HeightToBegin)
         {
             var stateChangeArray = new JArray();
 
@@ -127,13 +122,30 @@ public class StorageDumper : Plugin
                 stateChangeArray.Add(state);
             }
 
-            var bsItem = new JObject()
+            // Add transaction states
+
+            var txStates = new JArray();
+
+            foreach (var appExec in applicationExecutedList)
             {
-                ["block"] = blockIndex,
+                if (appExec.Transaction == null) continue;
+
+                var tx = new JObject();
+
+                tx["hash"] = appExec.Transaction.Hash.ToString();
+                tx["gas"] = appExec.GasConsumed.ToString();
+                tx["vmstate"] = appExec.VMState.ToString();
+
+                txStates.Add(tx);
+            }
+
+            _currentBlock = new JObject()
+            {
+                ["block"] = block.Index,
                 ["size"] = stateChangeArray.Count,
-                ["storage"] = stateChangeArray
+                ["storage"] = stateChangeArray,
+                ["txs"] = txStates
             };
-            _currentBlock = bsItem;
         }
     }
 
@@ -152,14 +164,13 @@ public class StorageDumper : Plugin
         }
     }
 
-    private void InitFileWriter(uint network, IReadOnlyStore snapshot)
+    private void InitFileWriter(uint network, Block block)
     {
-        uint blockIndex = NativeContract.Ledger.CurrentIndex(snapshot);
         if (_writer == null
-            || blockIndex % StorageSettings.Default!.BlockCacheSize == 0)
+            || block.Index % StorageSettings.Default!.BlockCacheSize == 0)
         {
-            string path = GetOrCreateDirectory(network, blockIndex);
-            var filepart = (blockIndex / StorageSettings.Default!.BlockCacheSize) * StorageSettings.Default.BlockCacheSize;
+            string path = GetOrCreateDirectory(network, block.Index);
+            var filepart = (block.Index / StorageSettings.Default!.BlockCacheSize) * StorageSettings.Default.BlockCacheSize;
             path = $"{path}/dump-block-{filepart}.dump";
             if (_writer != null)
             {
@@ -180,7 +191,7 @@ public class StorageDumper : Plugin
         return dirPathWithBlock;
     }
 
-    private string GetDirectoryPath(uint network, uint blockIndex)
+    private static string GetDirectoryPath(uint network, uint blockIndex)
     {
         uint folder = (blockIndex / StorageSettings.Default!.StoragePerFolder) * StorageSettings.Default.StoragePerFolder;
         return $"./StorageDumper_{network}/BlockStorage_{folder}";
