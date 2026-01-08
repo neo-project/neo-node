@@ -242,13 +242,28 @@ partial class UT_RpcServer
     }
 
     [TestMethod]
-    public void TestSendRawTransaction_PolicyFailed()
+    public async Task TestSendRawTransaction_PolicyFailed()
     {
+        var block = new Block
+        {
+            Header = new Header
+            {
+                Index = 1,
+                PrimaryIndex = 0,
+                Timestamp = (ulong)DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                Nonce = 0,
+                NextConsensus = UInt160.Zero,
+                PrevHash = UInt256.Zero,
+                MerkleRoot = UInt256.Zero,
+                Witness = Witness.Empty
+            },
+            Transactions = Array.Empty<Transaction>()
+        };
         var snapshot = _neoSystem.GetSnapshotCache();
         var tx = TestUtils.CreateValidTx(snapshot, _wallet, _walletAccount);
         var txString = Convert.ToBase64String(tx.ToArray());
-        using var engine = ApplicationEngine.Create(TriggerType.Application, tx, snapshot);
-        NativeContract.Policy.BlockAccountInternal(engine, _walletAccount.ScriptHash);
+        using var engine = ApplicationEngine.Create(TriggerType.Application, tx, snapshot, block);
+        await NativeContract.Policy.BlockAccountInternal(engine, _walletAccount.ScriptHash);
         snapshot.Commit();
 
         var exception = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.SendRawTransaction(txString),
