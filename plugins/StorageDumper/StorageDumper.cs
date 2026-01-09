@@ -139,13 +139,16 @@ public class StorageDumper : Plugin
                 txStates.Add(tx);
             }
 
-            _currentBlock = new JObject()
+            var bsItem = new JObject()
             {
                 ["block"] = block.Index,
-                ["size"] = stateChangeArray.Count,
-                ["storage"] = stateChangeArray,
-                ["txs"] = txStates
+                ["size"] = stateChangeArray.Count
             };
+
+            if (stateChangeArray?.Count > 0) bsItem["storage"] = stateChangeArray;
+            if (txStates.Count > 0) bsItem["txs"] = txStates;
+
+            _currentBlock = bsItem;
         }
     }
 
