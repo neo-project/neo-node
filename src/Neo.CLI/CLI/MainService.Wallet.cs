@@ -11,8 +11,10 @@
 
 using Akka.Actor;
 using Neo.ConsoleService;
+using Neo.Cryptography;
 using Neo.Extensions;
 using Neo.Json;
+using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.Sign;
@@ -23,7 +25,9 @@ using Neo.Wallets;
 using Neo.Wallets.NEP6;
 using System.Numerics;
 using System.Security.Cryptography;
+using System.Text;
 using static Neo.SmartContract.Helper;
+using ECCurve = Neo.Cryptography.ECC.ECCurve;
 using ECPoint = Neo.Cryptography.ECC.ECPoint;
 
 namespace Neo.CLI;
@@ -470,8 +474,8 @@ partial class MainService
     /// <summary>
     /// Process "sign" command
     /// </summary>
-    /// <param name="jsonObjectToSign">Json object to sign</param>
-    [ConsoleCommand("sign", Category = "Wallet Commands")]
+    /// <param name="jsonObjectToSign">The json string that records the transaction information</param>
+    [ConsoleCommand("sign transaction", Category = "Wallet Commands")]
     private void OnSignCommand(JObject jsonObjectToSign)
     {
         if (NoWallet()) return;
@@ -500,6 +504,86 @@ partial class MainService
         catch (Exception e)
         {
             ConsoleHelper.Error(GetExceptionMessage(e));
+        }
+    }
+
+    /// <summary>
+    /// Process "sign message" command
+    /// </summary>
+    /// <param name="message">Message to sign</param>
+    [ConsoleCommand("sign message", Category = "Wallet Commands")]
+    private void OnSignMessageCommand(string message)
+    {
+        if (NoWallet()) return;
+
+        message = NormalizeMessage(message);
+
+        string password = ReadUserInput("password", true);
+        if (password.Length == 0)
+        {
+            ConsoleHelper.Info("Cancelled");
+            return;
+        }
+
+        if (!CurrentWallet!.VerifyPassword(password))
+        {
+            ConsoleHelper.Error("Incorrect password");
+            return;
+        }
+
+        if (message == null)
+        {
+            ConsoleHelper.Error("Null message");
+            return;
+        }
+
+        var saltBytes = new byte[16];
+        RandomNumberGenerator.Fill(saltBytes);
+        var saltHex = saltBytes.ToHexString().ToLowerInvariant();
+
+        var paramBytes = Encoding.UTF8.GetBytes(saltHex + message);
+
+        byte[] payload;
+        using (var ms = new MemoryStream())
+        using (var w = new BinaryWriter(ms, Encoding.UTF8, true))
+        {
+            // We add these 4 bytes to prevent the signature from being a valid transaction
+            w.Write((byte)0x01);
+            w.Write((byte)0x00);
+            w.Write((byte)0x01);
+            w.Write((byte)0xF0);
+            // Write the actual message to sign
+            w.WriteVarBytes(paramBytes);
+            // We add these 2 bytes to prevent the signature from being a valid transaction
+            w.Write((ushort)0);
+            w.Flush();
+            payload = ms.ToArray();
+        }
+
+        ConsoleHelper.Info("Signed Payload: ", $"{payload.ToHexString()}");
+        Console.WriteLine();
+        ConsoleHelper.Info("    Curve: ", "secp256r1");
+        ConsoleHelper.Info("Algorithm: ", "payload = 010001f0 + VarBytes(Salt + Message) + 0000");
+        ConsoleHelper.Info("Algorithm: ", "Sign(SHA256(network || Hash256(payload)))");
+        ConsoleHelper.Info("           ", "See the online documentation for details on how to verify this signature.");
+        ConsoleHelper.Info("           ", "https://developers.neo.org/docs/n3/node/cli/cli#sign_message");
+        Console.WriteLine();
+        ConsoleHelper.Info("Generated signatures:");
+        Console.WriteLine();
+
+        var hash = new UInt256(Crypto.Hash256(payload));
+        var signData = hash.GetSignData(NeoSystem.Settings.Network);
+
+        foreach (WalletAccount account in CurrentWallet.GetAccounts().Where(p => p.HasKey))
+        {
+            var key = account.GetKey();
+            var signature = Crypto.Sign(signData, key!.PrivateKey, ECCurve.Secp256r1);
+
+            ConsoleHelper.Info("    Address: ", account.Address);
+            ConsoleHelper.Info("  PublicKey: ", key.PublicKey.EncodePoint(true).ToHexString());
+            ConsoleHelper.Info("  Signature: ", signature.ToHexString());
+            ConsoleHelper.Info("       Salt: ", saltHex);
+            Console.WriteLine();
         }
     }
 
@@ -735,7 +819,18 @@ partial class MainService
             ConsoleHelper.Error("Failed to change password");
         }
     }
+    private string NormalizeMessage(string message)
+    {
+        if (string.IsNullOrEmpty(message) || message.Length < 2) return message;
 
+        var first = message[0];
+        var last = message[^1];
+
+        if (first == last && (first == '"' || first == '\''))
+            return message[1..^1];
+
+        return message;
+    }
     private void SignAndSendTx(DataCache snapshot, Transaction tx)
     {
         if (NoWallet()) return;
@@ -762,4 +857,5 @@ partial class MainService
             ConsoleHelper.Info("Incomplete signature:\n", $"{context}");
         }
     }
+    internal Func<string, bool, string> ReadUserInput { get; set; } = ConsoleHelper.ReadUserInput;
 }
