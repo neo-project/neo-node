@@ -6,10 +6,21 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
+    <CollectCoverage>true</CollectCoverage>
+    <CoverletOutput>../../TestResults/$(MSBuildProjectName)/</CoverletOutput>
+    <CoverletOutputFormat>lcov</CoverletOutputFormat>
+    <OutputPath>../../bin/tests/$(MSBuildProjectName)</OutputPath>
+    <OverwriteReadOnlyFiles>true</OverwriteReadOnlyFiles>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="MSTest" Version="4.0.2" />
+    <PackageReference Include="coverlet.collector" Version="6.0.4" >
+      <IncludeAssets>all</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.msbuild" Version="6.0.4">
+      <IncludeAssets>all</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
