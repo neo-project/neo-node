@@ -5,6 +5,7 @@
     <AssemblyName>neo-cli</AssemblyName>
     <OutputType>Exe</OutputType>
     <ApplicationIcon>neo.ico</ApplicationIcon>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
