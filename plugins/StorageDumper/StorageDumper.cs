@@ -145,7 +145,7 @@ public class StorageDumper : Plugin
                 ["size"] = stateChangeArray.Count
             };
 
-            if (stateChangeArray?.Count > 0) bsItem["storage"] = stateChangeArray;
+            if (stateChangeArray.Count > 0) bsItem["storage"] = stateChangeArray;
             if (txStates.Count > 0) bsItem["txs"] = txStates;
 
             _currentBlock = bsItem;
