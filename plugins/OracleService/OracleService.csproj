@@ -1,25 +1,25 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <ItemGroup>
-    <PackageReference Include="Neo.FileStorage.API" Version="3.8.1" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Neo.FileStorage.API" Version="3.8.1" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\Neo.ConsoleService\Neo.ConsoleService.csproj" />
-    <ProjectReference Include="..\RpcServer\RpcServer.csproj">
-      <Private>false</Private>
-      <ExcludeAssets>runtime</ExcludeAssets>
-    </ProjectReference>
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\..\src\Neo.ConsoleService\Neo.ConsoleService.csproj" />
+		<ProjectReference Include="..\RpcServer\RpcServer.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
+	</ItemGroup>
 
-  <ItemGroup>
-    <None Update="OracleService.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+	<ItemGroup>
+		<None Update="OracleService.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
 
-  <ItemGroup>
-    <InternalsVisibleTo Include="Neo.Plugins.OracleService.Tests" />
-  </ItemGroup>
+	<ItemGroup>
+		<InternalsVisibleTo Include="Neo.Plugins.OracleService.Tests" />
+	</ItemGroup>
 
 </Project>
