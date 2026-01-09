@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // TestUtils.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -27,6 +27,6 @@ public static partial class TestUtils
             ["extra"] = null
         };
         Assert.AreEqual("{\"name\":\"noname\",\"version\":\"1.0\",\"scrypt\":{\"n\":2,\"r\":1,\"p\":1},\"accounts\":[],\"extra\":null}", wallet.ToString());
-        return new NEP6Wallet(null, password, TestProtocolSettings.Default, wallet);
+        return new NEP6Wallet(null!, password, TestProtocolSettings.Default, wallet);
     }
 }

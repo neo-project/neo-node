@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // ConsensusTestUtilities.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -80,7 +80,7 @@ public class ConsensusTestUtilities
     /// <summary>
     /// Creates a PrepareRequest message
     /// </summary>
-    public PrepareRequest CreatePrepareRequest(UInt256 prevHash = null, UInt256[] transactionHashes = null, ulong nonce = 0)
+    public PrepareRequest CreatePrepareRequest(UInt256? prevHash = null, UInt256[]? transactionHashes = null, ulong nonce = 0)
     {
         return new PrepareRequest
         {
@@ -95,7 +95,7 @@ public class ConsensusTestUtilities
     /// <summary>
     /// Creates a PrepareResponse message
     /// </summary>
-    public PrepareResponse CreatePrepareResponse(UInt256 preparationHash = null)
+    public PrepareResponse CreatePrepareResponse(UInt256? preparationHash = null)
     {
         return new PrepareResponse
         {
@@ -106,7 +106,7 @@ public class ConsensusTestUtilities
     /// <summary>
     /// Creates a Commit message
     /// </summary>
-    public Commit CreateCommit(byte[] signature = null)
+    public Commit CreateCommit(byte[]? signature = null)
     {
         return new Commit
         {
@@ -224,7 +224,7 @@ public class ConsensusTestUtilities
     /// <summary>
     /// Simulates a complete consensus round with proper message flow
     /// </summary>
-    public async Task SimulateCompleteConsensusRoundAsync(IActorRef[] consensusServices, uint blockIndex = 1, UInt256[] transactions = null)
+    public async Task SimulateCompleteConsensusRoundAsync(IActorRef[] consensusServices, uint blockIndex = 1, UInt256[]? transactions = null)
     {
         var validatorCount = consensusServices.Length;
         var primaryIndex = (int)(blockIndex % (uint)validatorCount);
@@ -272,7 +272,7 @@ public class ConsensusTestUtilities
     /// Simulates a complete consensus round (legacy synchronous version)
     /// </summary>
     [Obsolete("Use SimulateCompleteConsensusRoundAsync for proper message flow testing")]
-    public void SimulateCompleteConsensusRound(IActorRef[] consensusServices, uint blockIndex = 1, UInt256[] transactions = null)
+    public void SimulateCompleteConsensusRound(IActorRef[] consensusServices, uint blockIndex = 1, UInt256[]? transactions = null)
     {
         var validatorCount = consensusServices.Length;
         var primaryIndex = (int)(blockIndex % (uint)validatorCount);

@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // StateRoot.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -26,27 +26,16 @@ class StateRoot : IVerifiable
 
     public byte Version;
     public uint Index;
-    public UInt256 RootHash;
-    public Witness Witness;
+    public required UInt256 RootHash;
+    public Witness? Witness;
 
-    private UInt256 _hash = null;
-    public UInt256 Hash
-    {
-        get
-        {
-            if (_hash is null)
-            {
-                _hash = this.CalculateHash();
-            }
-            return _hash;
-        }
-    }
+    public UInt256 Hash => field ??= this.CalculateHash();
 
     Witness[] IVerifiable.Witnesses
     {
         get
         {
-            return [Witness];
+            return [Witness!];
         }
         set
         {
@@ -103,9 +92,12 @@ class StateRoot : IVerifiable
         return this.VerifyWitnesses(settings, snapshot, 2_00000000L);
     }
 
-    public UInt160[] GetScriptHashesForVerifying(DataCache snapshot)
+    public UInt160[] GetScriptHashesForVerifying(IReadOnlyStore? snapshot)
     {
-        var validators = NativeContract.RoleManagement.GetDesignatedByRole(snapshot, Role.StateValidator, Index);
+        if (snapshot is not DataCache snapshotCache)
+            throw new InvalidOperationException("Snapshot is required for verifying");
+
+        var validators = NativeContract.RoleManagement.GetDesignatedByRole(snapshotCache, Role.StateValidator, Index);
         if (validators.Length < 1) throw new InvalidOperationException("No script hash for state root verifying");
         return [Contract.GetBFTAddress(validators)];
     }

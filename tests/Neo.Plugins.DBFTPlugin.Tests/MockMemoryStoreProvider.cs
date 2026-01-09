@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // MockMemoryStoreProvider.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -18,5 +18,5 @@ public class MockMemoryStoreProvider(MemoryStore memoryStore) : IStoreProvider
 {
     public MemoryStore MemoryStore { get; init; } = memoryStore;
     public string Name => nameof(MemoryStore);
-    public IStore GetStore(string path) => MemoryStore;
+    public IStore GetStore(string? path) => MemoryStore;
 }

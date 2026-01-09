@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // RpcBlockHeader.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -16,11 +16,11 @@ namespace Neo.Network.RPC.Models;
 
 public class RpcBlockHeader
 {
-    public Header Header { get; set; }
+    public required Header Header { get; set; }
 
     public uint Confirmations { get; set; }
 
-    public UInt256 NextBlockHash { get; set; }
+    public UInt256? NextBlockHash { get; set; }
 
     public JObject ToJson(ProtocolSettings protocolSettings)
     {
@@ -35,8 +35,8 @@ public class RpcBlockHeader
         return new RpcBlockHeader
         {
             Header = Utility.HeaderFromJson(json, protocolSettings),
-            Confirmations = (uint)json["confirmations"].AsNumber(),
-            NextBlockHash = json["nextblockhash"] is null ? null : UInt256.Parse(json["nextblockhash"].AsString())
+            Confirmations = (uint)json["confirmations"]!.AsNumber(),
+            NextBlockHash = json["nextblockhash"] is null ? null : UInt256.Parse(json["nextblockhash"]!.AsString())
         };
     }
 }

@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // UT_CommandServiceBase.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -53,7 +53,7 @@ public class UT_CommandServiceBase
     public void TestParseIndicatorArguments()
     {
         var service = new TestConsoleService();
-        var method = typeof(TestConsoleService).GetMethod("TestMethod");
+        var method = typeof(TestConsoleService).GetMethod("TestMethod")!;
 
         // Test case 1: Basic indicator arguments
         var args1 = "test --strParam hello --intParam 42 --boolParam".Tokenize();
@@ -77,7 +77,7 @@ public class UT_CommandServiceBase
         Assert.ThrowsExactly<ArgumentException>(() => service.ParseIndicatorArguments(method, args2[1..]));
 
         // Test case 3: Enum parameter
-        var enumMethod = typeof(TestConsoleService).GetMethod("TestEnumMethod");
+        var enumMethod = typeof(TestConsoleService).GetMethod("TestEnumMethod")!;
         var args3 = "testenum --enumParam Value2".Tokenize();
         var result3 = service.ParseIndicatorArguments(enumMethod, args3[1..]);
         Assert.HasCount(1, result3);
@@ -96,7 +96,7 @@ public class UT_CommandServiceBase
     public void TestParseSequentialArguments()
     {
         var service = new TestConsoleService();
-        var method = typeof(TestConsoleService).GetMethod("TestMethod");
+        var method = typeof(TestConsoleService).GetMethod("TestMethod")!;
 
         // Test case 1: All parameters provided
         var args1 = "test hello 42 true custom".Tokenize();
@@ -117,7 +117,7 @@ public class UT_CommandServiceBase
         Assert.AreEqual("default", result2[3]); // optionalParam default value
 
         // Test case 3: Enum parameter
-        var enumMethod = typeof(TestConsoleService).GetMethod("TestEnumMethod");
+        var enumMethod = typeof(TestConsoleService).GetMethod("TestEnumMethod")!;
         var args3 = "testenum Value1".Tokenize();
         var result3 = service.ParseSequentialArguments(enumMethod, args3[1..].Trim());
         Assert.HasCount(1, result3);

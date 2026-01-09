@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // UT_RpcServer.SmartContract.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -73,13 +73,13 @@ public partial class UT_RpcServer
         Assert.AreEqual(resp["script"], NeoTotalSupplyScript);
         Assert.IsTrue(resp.ContainsProperty("gasconsumed"));
         Assert.IsTrue(resp.ContainsProperty("diagnostics"));
-        Assert.AreEqual(resp["diagnostics"]["invokedcontracts"]["call"][0]["hash"], s_neoHash);
-        Assert.IsEmpty((JArray)resp["diagnostics"]["storagechanges"]);
+        Assert.AreEqual(resp["diagnostics"]!["invokedcontracts"]!["call"]![0]!["hash"], s_neoHash);
+        Assert.IsEmpty((JArray)resp["diagnostics"]!["storagechanges"]!);
         Assert.AreEqual(nameof(VMState.HALT), resp["state"]);
         Assert.IsNull(resp["exception"]);
-        Assert.IsEmpty((JArray)resp["notifications"]);
-        Assert.AreEqual(nameof(Integer), resp["stack"][0]["type"]);
-        Assert.AreEqual("100000000", resp["stack"][0]["value"]);
+        Assert.IsEmpty((JArray)resp["notifications"]!);
+        Assert.AreEqual(nameof(Integer), resp["stack"]![0]!["type"]);
+        Assert.AreEqual("100000000", resp["stack"]![0]!["value"]);
         Assert.IsTrue(resp.ContainsProperty("tx"));
 
         resp = (JObject)_rpcServer.InvokeFunction(s_neoHash, "symbol");
@@ -88,9 +88,9 @@ public partial class UT_RpcServer
         Assert.IsTrue(resp.ContainsProperty("gasconsumed"));
         Assert.AreEqual(nameof(VMState.HALT), resp["state"]);
         Assert.IsNull(resp["exception"]);
-        Assert.IsEmpty((JArray)resp["notifications"]);
-        Assert.AreEqual(nameof(ByteString), resp["stack"][0]["type"]);
-        Assert.AreEqual(resp["stack"][0]["value"], Convert.ToBase64String(Encoding.UTF8.GetBytes("NEO")));
+        Assert.IsEmpty((JArray)resp["notifications"]!);
+        Assert.AreEqual(nameof(ByteString), resp["stack"]![0]!["type"]);
+        Assert.AreEqual(resp["stack"]![0]!["value"], Convert.ToBase64String(Encoding.UTF8.GetBytes("NEO")));
 
         // This call triggers not only NEO but also unclaimed GAS
         resp = (JObject)_rpcServer.InvokeFunction(
@@ -109,19 +109,19 @@ public partial class UT_RpcServer
         Assert.AreEqual(resp["script"], NeoTransferScript);
         Assert.IsTrue(resp.ContainsProperty("gasconsumed"));
         Assert.IsTrue(resp.ContainsProperty("diagnostics"));
-        Assert.AreEqual(resp["diagnostics"]["invokedcontracts"]["call"][0]["hash"], s_neoHash);
-        Assert.HasCount(4, (JArray)resp["diagnostics"]["storagechanges"]);
+        Assert.AreEqual(resp["diagnostics"]!["invokedcontracts"]!["call"]![0]!["hash"], s_neoHash);
+        Assert.HasCount(4, (JArray)resp["diagnostics"]!["storagechanges"]!);
         Assert.AreEqual(nameof(VMState.HALT), resp["state"]);
         Assert.AreEqual(resp["exception"], $"The smart contract or address {MultisigScriptHash} ({MultisigAddress}) is not found. " +
                             $"If this is your wallet address and you want to sign a transaction with it, make sure you have opened this wallet.");
-        JArray notifications = (JArray)resp["notifications"];
+        JArray notifications = (JArray)resp["notifications"]!;
         Assert.HasCount(2, notifications);
-        Assert.AreEqual("Transfer", notifications[0]["eventname"].AsString());
-        Assert.AreEqual(notifications[0]["contract"].AsString(), s_neoHash);
-        Assert.AreEqual("1", notifications[0]["state"]["value"][2]["value"]);
-        Assert.AreEqual("Transfer", notifications[1]["eventname"].AsString());
-        Assert.AreEqual(notifications[1]["contract"].AsString(), s_gasHash);
-        Assert.AreEqual("50000000", notifications[1]["state"]["value"][2]["value"]);
+        Assert.AreEqual("Transfer", notifications[0]!["eventname"]!.AsString());
+        Assert.AreEqual(notifications[0]!["contract"]!.AsString(), s_neoHash);
+        Assert.AreEqual("1", notifications[0]!["state"]!["value"]![2]!["value"]);
+        Assert.AreEqual("Transfer", notifications[1]!["eventname"]!.AsString());
+        Assert.AreEqual(notifications[1]!["contract"]!.AsString(), s_gasHash);
+        Assert.AreEqual("50000000", notifications[1]!["state"]!["value"]![2]!["value"]);
 
         _rpcServer.wallet = null;
     }
@@ -140,12 +140,12 @@ public partial class UT_RpcServer
             ["params"] = new JArray("0", "totalSupply", new JArray([]), validatorSigner, true),
         };
 
-        var resp = _rpcServer.ProcessRequestAsync(context, json).GetAwaiter().GetResult();
+        var resp = _rpcServer.ProcessRequestAsync(context, json).GetAwaiter().GetResult()!;
 
         Console.WriteLine(resp);
         Assert.AreEqual(3, resp.Count);
         Assert.IsNotNull(resp["error"]);
-        Assert.AreEqual(-32602, resp["error"]["code"]);
+        Assert.AreEqual(-32602, resp["error"]!["code"]);
 
         _rpcServer.wallet = null;
     }
@@ -161,17 +161,17 @@ public partial class UT_RpcServer
         Assert.AreEqual(7, resp.Count);
         Assert.IsTrue(resp.ContainsProperty("gasconsumed"));
         Assert.IsTrue(resp.ContainsProperty("diagnostics"));
-        Assert.AreEqual(resp["diagnostics"]["invokedcontracts"]["call"][0]["hash"], s_neoHash);
+        Assert.AreEqual(resp["diagnostics"]!["invokedcontracts"]!["call"]![0]!["hash"], s_neoHash);
         Assert.AreEqual(nameof(VMState.HALT), resp["state"]);
         Assert.IsNull(resp["exception"]);
-        Assert.IsEmpty((JArray)resp["notifications"]);
-        Assert.AreEqual(nameof(Integer), resp["stack"][0]["type"]);
-        Assert.AreEqual("100000000", resp["stack"][0]["value"]);
+        Assert.IsEmpty((JArray)resp["notifications"]!);
+        Assert.AreEqual(nameof(Integer), resp["stack"]![0]!["type"]);
+        Assert.AreEqual("100000000", resp["stack"]![0]!["value"]);
 
         resp = (JObject)_rpcServer.InvokeScript(Convert.FromBase64String(NeoTransferScript));
         Assert.AreEqual(6, resp.Count);
-        Assert.AreEqual(nameof(Boolean), resp["stack"][0]["type"]);
-        Assert.IsFalse(resp["stack"][0]["value"].GetBoolean());
+        Assert.AreEqual(nameof(Boolean), resp["stack"]![0]!["type"]);
+        Assert.IsFalse(resp["stack"]![0]!["value"]!.GetBoolean());
     }
 
     [TestMethod]
@@ -181,9 +181,9 @@ public partial class UT_RpcServer
         var functionName = "nonExistentMethod";
         var resp = (JObject)_rpcServer.InvokeFunction(s_neoHash, functionName, []);
 
-        Assert.AreEqual(nameof(VMState.FAULT), resp["state"].AsString());
-        Assert.IsNotNull(resp["exception"].AsString());
-        Assert.Contains("doesn't exist in the contract", resp["exception"].AsString()); // Fix based on test output
+        Assert.AreEqual(nameof(VMState.FAULT), resp["state"]!.AsString());
+        Assert.IsNotNull(resp["exception"]!.AsString());
+        Assert.Contains("doesn't exist in the contract", resp["exception"]!.AsString()); // Fix based on test output
     }
 
     [TestMethod]
@@ -198,9 +198,9 @@ public partial class UT_RpcServer
         }
 
         var resp = (JObject)_rpcServer.InvokeScript(abortScript);
-        Assert.AreEqual(nameof(VMState.FAULT), resp["state"].AsString());
-        Assert.IsNotNull(resp["exception"].AsString());
-        Assert.Contains("ABORT is executed", resp["exception"].AsString()); // Check for specific ABORT message
+        Assert.AreEqual(nameof(VMState.FAULT), resp["state"]!.AsString());
+        Assert.IsNotNull(resp["exception"]!.AsString());
+        Assert.Contains("ABORT is executed", resp["exception"]!.AsString()); // Check for specific ABORT message
     }
 
     [TestMethod]
@@ -222,10 +222,10 @@ public partial class UT_RpcServer
         var tempRpcServer = new RpcServer(_neoSystem, lowGasSettings);
 
         var resp = (JObject)tempRpcServer.InvokeScript(loopScript);
-        Assert.AreEqual(nameof(VMState.FAULT), resp["state"].AsString());
-        Assert.IsNotNull(resp["exception"].AsString());
-        Assert.Contains("Insufficient GAS", resp["exception"].AsString());
-        Assert.IsGreaterThan(lowGasSettings.MaxGasInvoke, long.Parse(resp["gasconsumed"].AsString()));
+        Assert.AreEqual(nameof(VMState.FAULT), resp["state"]!.AsString());
+        Assert.IsNotNull(resp["exception"]!.AsString());
+        Assert.Contains("Insufficient GAS", resp["exception"]!.AsString());
+        Assert.IsGreaterThan(lowGasSettings.MaxGasInvoke, long.Parse(resp["gasconsumed"]!.AsString()));
     }
 
     [TestMethod]
@@ -342,32 +342,32 @@ public partial class UT_RpcServer
         );
 
         Assert.IsTrue(resp.ContainsProperty("diagnostics"));
-        var diagnostics = (JObject)resp["diagnostics"];
+        var diagnostics = (JObject)resp["diagnostics"]!;
 
         // Verify Invoked Contracts structure
         Assert.IsTrue(diagnostics.ContainsProperty("invokedcontracts"));
-        var invokedContracts = (JObject)diagnostics["invokedcontracts"];
+        var invokedContracts = (JObject)diagnostics["invokedcontracts"]!;
 
         // Don't assert on root hash for raw script invoke, structure might differ
         Assert.IsTrue(invokedContracts.ContainsProperty("call")); // Nested calls
 
-        var calls = (JArray)invokedContracts["call"];
+        var calls = (JArray)invokedContracts["call"]!;
         Assert.IsGreaterThanOrEqualTo(1, calls.Count); // Should call at least GAS contract for claim
 
         // Also check for NEO call, as it's part of the transfer
-        Assert.IsTrue(calls.Any(c => c["hash"].AsString() == s_neoHash)); // Fix based on test output
+        Assert.IsTrue(calls.Any(c => c!["hash"]!.AsString() == s_neoHash)); // Fix based on test output
 
         // Verify Storage Changes
         Assert.IsTrue(diagnostics.ContainsProperty("storagechanges"));
-        var storageChanges = (JArray)diagnostics["storagechanges"];
+        var storageChanges = (JArray)diagnostics["storagechanges"]!;
         Assert.IsGreaterThan(0, storageChanges.Count, "Expected storage changes for transfer");
 
         // Check structure of a storage change item
-        var firstChange = (JObject)storageChanges[0];
+        var firstChange = (JObject)storageChanges[0]!;
         Assert.IsTrue(firstChange.ContainsProperty("state"));
         Assert.IsTrue(firstChange.ContainsProperty("key"));
         Assert.IsTrue(firstChange.ContainsProperty("value"));
-        Assert.IsTrue(new[] { "Added", "Changed", "Deleted" }.Contains(firstChange["state"].AsString()));
+        Assert.IsTrue(new[] { "Added", "Changed", "Deleted" }.Contains(firstChange["state"]!.AsString()));
     }
 
     [TestMethod]
@@ -375,8 +375,8 @@ public partial class UT_RpcServer
     {
         // GetAllCandidates that should return 0 candidates
         var resp = (JObject)_rpcServer.InvokeFunction(s_neoHash, "getAllCandidates", [], validatorSigner.AsParameter<SignersAndWitnesses>(), true);
-        var sessionId = resp["session"];
-        var iteratorId = resp["stack"][0]["id"];
+        var sessionId = resp["session"]!;
+        var iteratorId = resp["stack"]![0]!["id"]!;
         var respArray = (JArray)_rpcServer.TraverseIterator(sessionId.AsParameter<Guid>(), iteratorId.AsParameter<Guid>(), 100);
         Assert.IsEmpty(respArray);
 
@@ -403,8 +403,8 @@ public partial class UT_RpcServer
             ValidUntilBlock = NativeContract.Ledger.CurrentIndex(snapshot) + _neoSystem.Settings.MaxValidUntilBlockIncrement,
             Signers = [new Signer() { Account = ValidatorScriptHash, Scopes = WitnessScope.CalledByEntry }],
             Attributes = Array.Empty<TransactionAttribute>(),
-            Script = Convert.FromBase64String(resp["script"].AsString()),
-            Witnesses = null,
+            Script = Convert.FromBase64String(resp["script"]!.AsString()),
+            Witnesses = null!,
         };
 
         var engine = ApplicationEngine.Run(tx.Script, snapshot, container: tx, settings: _neoSystem.Settings, gas: 1200_0000_0000);
@@ -412,18 +412,18 @@ public partial class UT_RpcServer
 
         // GetAllCandidates that should return 1 candidate
         resp = (JObject)_rpcServer.InvokeFunction(s_neoHash, "getAllCandidates", [], validatorSigner.AsParameter<SignersAndWitnesses>(), true);
-        sessionId = resp["session"];
-        iteratorId = resp["stack"][0]["id"];
+        sessionId = resp["session"]!;
+        iteratorId = resp["stack"]![0]!["id"]!;
         respArray = (JArray)_rpcServer.TraverseIterator(sessionId.AsParameter<Guid>(), iteratorId.AsParameter<Guid>(), 100);
         Assert.HasCount(1, respArray);
-        Assert.AreEqual(nameof(Struct), respArray[0]["type"]);
+        Assert.AreEqual(nameof(Struct), respArray[0]!["type"]);
 
-        var value = (JArray)respArray[0]["value"];
+        var value = (JArray)respArray[0]!["value"]!;
         Assert.HasCount(2, value);
-        Assert.AreEqual(nameof(ByteString), value[0]["type"]);
-        Assert.AreEqual(value[0]["value"], Convert.ToBase64String(TestProtocolSettings.SoleNode.StandbyCommittee[0].ToArray()));
-        Assert.AreEqual(nameof(Integer), value[1]["type"]);
-        Assert.AreEqual("0", value[1]["value"]);
+        Assert.AreEqual(nameof(ByteString), value[0]!["type"]);
+        Assert.AreEqual(value[0]!["value"], Convert.ToBase64String(TestProtocolSettings.SoleNode.StandbyCommittee[0].ToArray()));
+        Assert.AreEqual(nameof(Integer), value[1]!["type"]);
+        Assert.AreEqual("0", value[1]!["value"]);
 
         // No result when traversed again
         respArray = (JArray)_rpcServer.TraverseIterator(sessionId.AsParameter<Guid>(), iteratorId.AsParameter<Guid>(), 100);
@@ -431,8 +431,8 @@ public partial class UT_RpcServer
 
         // GetAllCandidates again
         resp = (JObject)_rpcServer.InvokeFunction(s_neoHash, "getAllCandidates", [], validatorSigner.AsParameter<SignersAndWitnesses>(), true);
-        sessionId = resp["session"];
-        iteratorId = resp["stack"][0]["id"];
+        sessionId = resp["session"]!;
+        iteratorId = resp["stack"]![0]!["id"]!;
 
         // Insufficient result count limit
         respArray = (JArray)_rpcServer.TraverseIterator(sessionId.AsParameter<Guid>(), iteratorId.AsParameter<Guid>(), 0);
@@ -449,8 +449,8 @@ public partial class UT_RpcServer
 
         // build another session that did not expire
         resp = (JObject)_rpcServer.InvokeFunction(s_neoHash, "getAllCandidates", [], validatorSigner.AsParameter<SignersAndWitnesses>(), true);
-        var notExpiredSessionId = resp["session"];
-        var notExpiredIteratorId = resp["stack"][0]["id"];
+        var notExpiredSessionId = resp["session"]!;
+        var notExpiredIteratorId = resp["stack"]![0]!["id"]!;
 
         _rpcServer.OnTimer(new object());
         Assert.ThrowsExactly<RpcException>(
@@ -460,8 +460,8 @@ public partial class UT_RpcServer
 
         // Mocking disposal
         resp = (JObject)_rpcServer.InvokeFunction(s_neoHash, "getAllCandidates", [], validatorSigner.AsParameter<SignersAndWitnesses>(), true);
-        sessionId = resp["session"];
-        iteratorId = resp["stack"][0]["id"];
+        sessionId = resp["session"]!;
+        iteratorId = resp["stack"]![0]!["id"]!;
         _rpcServer.Dispose_SmartContract();
 
         Assert.ThrowsExactly<RpcException>(
@@ -493,8 +493,8 @@ public partial class UT_RpcServer
     {
         // Need an active session and iterator first
         var resp = (JObject)_rpcServer.InvokeFunction(s_neoHash, "getAllCandidates", [], validatorSigner.AsParameter<SignersAndWitnesses>(), true);
-        var sessionId = resp["session"];
-        var iteratorId = resp["stack"][0]["id"];
+        var sessionId = resp["session"]!;
+        var iteratorId = resp["stack"]![0]!["id"]!;
 
         // Request more items than allowed
         int requestedCount = _rpcServerSettings.MaxIteratorResultItems + 1;

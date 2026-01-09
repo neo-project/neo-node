@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Nullable>enable</Nullable>
     <RootNamespace>Neo.Plugins.RestServer.Tests</RootNamespace>
     <NoWarn>NU1605;</NoWarn>
   </PropertyGroup>

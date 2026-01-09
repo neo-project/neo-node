@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // RpcMethodToken.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -20,11 +20,11 @@ class RpcMethodToken
     {
         return new MethodToken
         {
-            Hash = UInt160.Parse(json["hash"].AsString()),
-            Method = json["method"].AsString(),
-            ParametersCount = (ushort)json["paramcount"].AsNumber(),
-            HasReturnValue = json["hasreturnvalue"].AsBoolean(),
-            CallFlags = (CallFlags)Enum.Parse(typeof(CallFlags), json["callflags"].AsString())
+            Hash = UInt160.Parse(json["hash"]!.AsString()),
+            Method = json["method"]!.AsString(),
+            ParametersCount = (ushort)json["paramcount"]!.AsNumber(),
+            HasReturnValue = json["hasreturnvalue"]!.AsBoolean(),
+            CallFlags = Enum.Parse<CallFlags>(json["callflags"]!.AsString())
         };
     }
 }

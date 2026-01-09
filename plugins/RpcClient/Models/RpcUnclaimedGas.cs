@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // RpcUnclaimedGas.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -17,7 +17,7 @@ public class RpcUnclaimedGas
 {
     public long Unclaimed { get; set; }
 
-    public string Address { get; set; }
+    public required string Address { get; set; }
 
     public JObject ToJson() => new() { ["unclaimed"] = Unclaimed.ToString(), ["address"] = Address };
 
@@ -25,8 +25,8 @@ public class RpcUnclaimedGas
     {
         return new RpcUnclaimedGas
         {
-            Unclaimed = long.Parse(json["unclaimed"].AsString()),
-            Address = json["address"].AsString()
+            Unclaimed = long.Parse(json["unclaimed"]!.AsString()),
+            Address = json["address"]!.AsString()
         };
     }
 }

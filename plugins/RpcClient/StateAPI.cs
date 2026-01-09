@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // StateAPI.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -52,7 +52,7 @@ public class StateAPI
         return (localRootIndex, validatedRootIndex);
     }
 
-    static uint? ToNullableUint(JToken json) => (json == null) ? null : (uint?)json.AsNumber();
+    static uint? ToNullableUint(JToken? json) => (json == null) ? null : (uint?)json.AsNumber();
 
     public static JToken[] MakeFindStatesParams(UInt256 rootHash, UInt160 scriptHash, ReadOnlySpan<byte> prefix, ReadOnlySpan<byte> from = default, int? count = null)
     {

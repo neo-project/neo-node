@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // UT_Nep17API.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -23,10 +23,10 @@ namespace Neo.Network.RPC.Tests;
 [TestClass]
 public class UT_Nep17API
 {
-    Mock<RpcClient> rpcClientMock;
-    KeyPair keyPair1;
-    UInt160 sender;
-    Nep17API nep17API;
+    Mock<RpcClient> rpcClientMock = null!;
+    KeyPair keyPair1 = null!;
+    UInt160 sender = null!;
+    Nep17API nep17API = null!;
 
     [TestInitialize]
     public void TestSetup()
@@ -105,10 +105,10 @@ public class UT_Nep17API
         var haveNeoTokenUT = false;
         foreach (var test in tests)
         {
-            rpcClientMock.Setup(p => p.RpcSendAsync("getcontractstate", It.Is<JToken[]>(u => true)))
-            .ReturnsAsync(test.Response.Result)
-            .Verifiable();
-            if (test.Request.Params[0].AsString() == NativeContract.GAS.Hash.ToString() || test.Request.Params[0].AsString().Equals(NativeContract.GAS.Name, StringComparison.OrdinalIgnoreCase))
+            rpcClientMock.Setup(p => p.RpcSendAsync("getcontractstate", It.Is<JToken?[]>(u => true)))
+                .ReturnsAsync(test.Response.Result!)
+                .Verifiable();
+            if (test.Request.Params[0]!.AsString() == NativeContract.GAS.Hash.ToString() || test.Request.Params[0]!.AsString().Equals(NativeContract.GAS.Name, StringComparison.OrdinalIgnoreCase))
             {
                 var result = await nep17API.GetTokenInfoAsync(NativeContract.GAS.Name.ToLower());
                 Assert.AreEqual(NativeContract.GAS.Symbol, result.Symbol);
@@ -123,7 +123,7 @@ public class UT_Nep17API
                 Assert.AreEqual("GasToken", result.Name);
                 haveGasTokenUT = true;
             }
-            else if (test.Request.Params[0].AsString() == NativeContract.NEO.Hash.ToString() || test.Request.Params[0].AsString().Equals(NativeContract.NEO.Name, StringComparison.OrdinalIgnoreCase))
+            else if (test.Request.Params[0]!.AsString() == NativeContract.NEO.Hash.ToString() || test.Request.Params[0]!.AsString().Equals(NativeContract.NEO.Name, StringComparison.OrdinalIgnoreCase))
             {
                 var result = await nep17API.GetTokenInfoAsync(NativeContract.NEO.Name.ToLower());
                 Assert.AreEqual(NativeContract.NEO.Symbol, result.Symbol);

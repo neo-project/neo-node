@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // RpcBlock.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -16,11 +16,11 @@ namespace Neo.Network.RPC.Models;
 
 public class RpcBlock
 {
-    public Block Block { get; set; }
+    public required Block Block { get; set; }
 
     public uint Confirmations { get; set; }
 
-    public UInt256 NextBlockHash { get; set; }
+    public UInt256? NextBlockHash { get; set; }
 
     public JObject ToJson(ProtocolSettings protocolSettings)
     {
@@ -35,8 +35,8 @@ public class RpcBlock
         return new RpcBlock
         {
             Block = Utility.BlockFromJson(json, protocolSettings),
-            Confirmations = (uint)json["confirmations"].AsNumber(),
-            NextBlockHash = json["nextblockhash"] is null ? null : UInt256.Parse(json["nextblockhash"].AsString())
+            Confirmations = (uint)json["confirmations"]!.AsNumber(),
+            NextBlockHash = json["nextblockhash"] is null ? null : UInt256.Parse(json["nextblockhash"]!.AsString())
         };
     }
 }

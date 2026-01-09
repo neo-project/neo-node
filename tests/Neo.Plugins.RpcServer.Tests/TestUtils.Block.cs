@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // TestUtils.Block.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -70,7 +70,7 @@ public partial class TestUtils
     {
         var block = (Block)RuntimeHelpers.GetUninitializedObject(typeof(Block));
         var key = NativeContract.Ledger.CreateStorageKey(Prefix_CurrentBlock);
-        var state = snapshot.TryGet(key).GetInteroperable<HashIndexState>();
+        var state = snapshot.TryGet(key)!.GetInteroperable<HashIndexState>();
         var header = MakeHeader(snapshot, state.Hash);
 
         block.Header = header;
@@ -79,7 +79,7 @@ public partial class TestUtils
         header.MerkleRoot = MerkleTree.ComputeRoot(block.Transactions.Select(p => p.Hash).ToArray());
         var contract = Contract.CreateMultiSigContract(1, TestProtocolSettings.SoleNode.StandbyCommittee);
         var sc = new ContractParametersContext(snapshot, header, TestProtocolSettings.SoleNode.Network);
-        var signature = header.Sign(account.GetKey(), TestProtocolSettings.SoleNode.Network);
+        var signature = header.Sign(account.GetKey()!, TestProtocolSettings.SoleNode.Network);
         sc.AddSignature(contract, TestProtocolSettings.SoleNode.StandbyCommittee[0], [.. signature]);
         block.Header.Witness = sc.GetWitnesses()[0];
 
@@ -90,7 +90,7 @@ public partial class TestUtils
     {
         foreach (var tx in txs)
         {
-            var key = NativeContract.Ledger.CreateStorageKey(Prefix_Transaction, tx.Transaction.Hash);
+            var key = NativeContract.Ledger.CreateStorageKey(Prefix_Transaction, tx.Transaction!.Hash);
             snapshot.Add(key, new StorageItem(tx));
         }
     }

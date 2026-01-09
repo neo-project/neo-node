@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // UT_RpcServer.Node.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -45,7 +45,7 @@ partial class UT_RpcServer
         Assert.IsInstanceOfType(result, typeof(JObject));
         var json = (JObject)result;
         Assert.IsTrue(json.ContainsProperty("unconnected"));
-        Assert.HasCount(3, json["unconnected"] as JArray);
+        Assert.HasCount(3, (JArray)json["unconnected"]!);
         Assert.IsTrue(json.ContainsProperty("bad"));
         Assert.IsTrue(json.ContainsProperty("connected"));
     }
@@ -64,7 +64,7 @@ partial class UT_RpcServer
         Assert.IsInstanceOfType(result, typeof(JObject));
         var json = (JObject)result;
         Assert.IsTrue(json.ContainsProperty("unconnected"));
-        Assert.IsEmpty(json["unconnected"] as JArray);
+        Assert.IsEmpty((JArray)json["unconnected"]!);
         Assert.IsTrue(json.ContainsProperty("bad"));
         Assert.IsTrue(json.ContainsProperty("connected"));
     }
@@ -85,7 +85,7 @@ partial class UT_RpcServer
         Assert.IsTrue(json.ContainsProperty("unconnected"));
         Assert.IsTrue(json.ContainsProperty("bad"));
         Assert.IsTrue(json.ContainsProperty("connected"));
-        Assert.IsEmpty(json["connected"] as JArray); // Directly check connected count
+        Assert.IsEmpty((JArray)json["connected"]!); // Directly check connected count
     }
 
     [TestMethod]
@@ -100,7 +100,7 @@ partial class UT_RpcServer
         Assert.IsTrue(json.ContainsProperty("useragent"));
 
         Assert.IsTrue(json.ContainsProperty("protocol"));
-        var protocol = (JObject)json["protocol"];
+        var protocol = (JObject)json["protocol"]!;
         Assert.IsTrue(protocol.ContainsProperty("addressversion"));
         Assert.IsTrue(protocol.ContainsProperty("network"));
         Assert.IsTrue(protocol.ContainsProperty("validatorscount"));
@@ -121,21 +121,21 @@ partial class UT_RpcServer
         var json = (JObject)result;
 
         Assert.IsTrue(json.ContainsProperty("protocol"));
-        var protocol = (JObject)json["protocol"];
+        var protocol = (JObject)json["protocol"]!;
         Assert.IsTrue(protocol.ContainsProperty("hardforks"));
-        var hardforks = (JArray)protocol["hardforks"];
+        var hardforks = (JArray)protocol["hardforks"]!;
 
         // Check if there are any hardforks defined in settings
         if (hardforks.Count > 0)
         {
             Assert.IsTrue(hardforks.All(hf => hf is JObject)); // Each item should be an object
-            foreach (JObject hfJson in hardforks)
+            foreach (JObject hfJson in hardforks.Cast<JObject>())
             {
                 Assert.IsTrue(hfJson.ContainsProperty("name"));
                 Assert.IsTrue(hfJson.ContainsProperty("blockheight"));
                 Assert.IsInstanceOfType(hfJson["name"], typeof(JString));
                 Assert.IsInstanceOfType(hfJson["blockheight"], typeof(JNumber));
-                Assert.DoesNotStartWith("HF_", hfJson["name"].AsString()); // Check if prefix was stripped
+                Assert.DoesNotStartWith("HF_", hfJson["name"]!.AsString()); // Check if prefix was stripped
             }
         }
         // If no hardforks are defined, the array should be empty
@@ -374,7 +374,7 @@ partial class UT_RpcServer
     [TestMethod]
     public void TestSendRawTransaction_NullInput()
     {
-        var exception = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.SendRawTransaction((string)null),
+        var exception = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.SendRawTransaction(null!),
             "Should throw RpcException for null input");
         Assert.AreEqual(RpcError.InvalidParams.Code, exception.HResult);
     }
@@ -390,7 +390,7 @@ partial class UT_RpcServer
     [TestMethod]
     public void TestSubmitBlock_NullInput()
     {
-        var exception = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.SubmitBlock((string)null),
+        var exception = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.SubmitBlock(null!),
             "Should throw RpcException for null input");
         Assert.AreEqual(RpcError.InvalidParams.Code, exception.HResult);
     }

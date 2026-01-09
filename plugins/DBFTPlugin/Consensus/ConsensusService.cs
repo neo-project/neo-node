@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // ConsensusService.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -30,7 +30,7 @@ internal partial class ConsensusService : UntypedActor
     private readonly IActorRef localNode;
     private readonly IActorRef taskManager;
     private readonly IActorRef blockchain;
-    private ICancelable timer_token;
+    private ICancelable? timer_token;
     private DateTime prepareRequestReceivedTime;
     private uint prepareRequestReceivedBlockIndex;
     private uint block_received_index;
@@ -200,7 +200,7 @@ internal partial class ConsensusService : UntypedActor
         if (context.Validators.Length == 1)
             CheckPreparations();
 
-        if (context.TransactionHashes.Length > 0)
+        if (context.TransactionHashes!.Length > 0)
         {
             foreach (InvPayload payload in InvPayload.CreateGroup(InventoryType.TX, context.TransactionHashes))
                 localNode.Tell(Message.Create(MessageCommand.Inv, payload));
@@ -247,7 +247,7 @@ internal partial class ConsensusService : UntypedActor
     {
         if (!context.IsBackup || context.NotAcceptingPayloadsDueToViewChanging || !context.RequestSentOrReceived || context.ResponseSent || context.BlockSent)
             return;
-        if (context.Transactions.ContainsKey(transaction.Hash)) return;
+        if (context.Transactions!.ContainsKey(transaction.Hash)) return;
         if (!context.TransactionHashes.Contains(transaction.Hash)) return;
         AddTransaction(transaction, true);
     }
@@ -273,7 +273,7 @@ internal partial class ConsensusService : UntypedActor
                 }
             }
             // After that, check whether context's transactions have Conflicts attribute with tx's hash.
-            foreach (var pooledTx in context.Transactions.Values)
+            foreach (var pooledTx in context.Transactions!.Values)
             {
                 if (pooledTx.GetAttributes<Conflicts>().Select(attr => attr.Hash).Contains(tx.Hash))
                 {
@@ -295,7 +295,7 @@ internal partial class ConsensusService : UntypedActor
                 return false;
             }
         }
-        context.Transactions[tx.Hash] = tx;
+        context.Transactions![tx.Hash] = tx;
         context.VerificationContext.AddTransaction(tx);
         return CheckPrepareResponse();
     }

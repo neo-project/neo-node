@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // StateSnapshot.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -28,7 +28,7 @@ class StateSnapshot : IDisposable
         Trie = new Trie(_snapshot, CurrentLocalRootHash(), StateServiceSettings.Default.FullState);
     }
 
-    public StateRoot GetStateRoot(uint index)
+    public StateRoot? GetStateRoot(uint index)
     {
         return _snapshot.TryGet(Keys.StateRoot(index), out var data) ? data.AsSerializable<StateRoot>() : null;
     }
@@ -46,7 +46,7 @@ class StateSnapshot : IDisposable
         return null;
     }
 
-    public UInt256 CurrentLocalRootHash()
+    public UInt256? CurrentLocalRootHash()
     {
         var index = CurrentLocalRootIndex();
         if (index is null) return null;
@@ -68,7 +68,7 @@ class StateSnapshot : IDisposable
         return null;
     }
 
-    public UInt256 CurrentValidatedRootHash()
+    public UInt256? CurrentValidatedRootHash()
     {
         var index = CurrentLocalRootIndex();
         if (index is null) return null;
