@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // RpcNep17Transfers.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -17,11 +17,11 @@ namespace Neo.Network.RPC.Models;
 
 public class RpcNep17Transfers
 {
-    public UInt160 UserScriptHash { get; set; }
+    public required UInt160 UserScriptHash { get; set; }
 
-    public List<RpcNep17Transfer> Sent { get; set; }
+    public required List<RpcNep17Transfer> Sent { get; set; }
 
-    public List<RpcNep17Transfer> Received { get; set; }
+    public required List<RpcNep17Transfer> Received { get; set; }
 
     public JObject ToJson(ProtocolSettings protocolSettings)
     {
@@ -37,9 +37,9 @@ public class RpcNep17Transfers
     {
         return new()
         {
-            Sent = ((JArray)json["sent"]).Select(p => RpcNep17Transfer.FromJson((JObject)p, protocolSettings)).ToList(),
-            Received = ((JArray)json["received"]).Select(p => RpcNep17Transfer.FromJson((JObject)p, protocolSettings)).ToList(),
-            UserScriptHash = json["address"].ToScriptHash(protocolSettings)
+            Sent = ((JArray)json["sent"]!).Select(p => RpcNep17Transfer.FromJson((JObject)p!, protocolSettings)).ToList(),
+            Received = ((JArray)json["received"]!).Select(p => RpcNep17Transfer.FromJson((JObject)p!, protocolSettings)).ToList(),
+            UserScriptHash = json["address"]!.ToScriptHash(protocolSettings)
         };
     }
 }
@@ -48,9 +48,9 @@ public class RpcNep17Transfer
 {
     public ulong TimestampMS { get; set; }
 
-    public UInt160 AssetHash { get; set; }
+    public required UInt160 AssetHash { get; set; }
 
-    public UInt160 UserScriptHash { get; set; }
+    public UInt160? UserScriptHash { get; set; }
 
     public BigInteger Amount { get; set; }
 
@@ -58,7 +58,7 @@ public class RpcNep17Transfer
 
     public ushort TransferNotifyIndex { get; set; }
 
-    public UInt256 TxHash { get; set; }
+    public required UInt256 TxHash { get; set; }
 
     public JObject ToJson(ProtocolSettings protocolSettings)
     {
@@ -78,13 +78,13 @@ public class RpcNep17Transfer
     {
         return new RpcNep17Transfer
         {
-            TimestampMS = (ulong)json["timestamp"].AsNumber(),
-            AssetHash = json["assethash"].ToScriptHash(protocolSettings),
+            TimestampMS = (ulong)json["timestamp"]!.AsNumber(),
+            AssetHash = json["assethash"]!.ToScriptHash(protocolSettings),
             UserScriptHash = json["transferaddress"]?.ToScriptHash(protocolSettings),
-            Amount = BigInteger.Parse(json["amount"].AsString()),
-            BlockIndex = (uint)json["blockindex"].AsNumber(),
-            TransferNotifyIndex = (ushort)json["transfernotifyindex"].AsNumber(),
-            TxHash = UInt256.Parse(json["txhash"].AsString())
+            Amount = BigInteger.Parse(json["amount"]!.AsString()),
+            BlockIndex = (uint)json["blockindex"]!.AsNumber(),
+            TransferNotifyIndex = (ushort)json["transfernotifyindex"]!.AsNumber(),
+            TxHash = UInt256.Parse(json["txhash"]!.AsString())
         };
     }
 }

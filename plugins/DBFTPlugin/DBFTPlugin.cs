@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // DBFTPlugin.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -20,13 +20,13 @@ using Neo.Wallets;
 
 namespace Neo.Plugins.DBFTPlugin;
 
-public sealed class DBFTPlugin : Plugin, IServiceAddedHandler, IMessageReceivedHandler, IWalletChangedHandler
+public sealed class DBFTPlugin : Plugin, IMessageReceivedHandler
 {
-    private IWalletProvider walletProvider;
-    private IActorRef consensus;
+    private IWalletProvider? walletProvider;
+    private IActorRef consensus = null!;
     private bool started = false;
-    private NeoSystem neoSystem;
-    private DbftSettings settings;
+    private NeoSystem neoSystem = null!;
+    private DbftSettings settings = null!;
 
     public override string Description => "Consensus plugin with dBFT algorithm.";
 
@@ -60,24 +60,27 @@ public sealed class DBFTPlugin : Plugin, IServiceAddedHandler, IMessageReceivedH
     {
         if (system.Settings.Network != settings.Network) return;
         neoSystem = system;
-        neoSystem.ServiceAdded += ((IServiceAddedHandler)this).NeoSystem_ServiceAdded_Handler;
+        neoSystem.ServiceAdded += NeoSystem_ServiceAdded_Handler;
     }
 
-    void IServiceAddedHandler.NeoSystem_ServiceAdded_Handler(object sender, object service)
+    void NeoSystem_ServiceAdded_Handler(object? sender, object service)
     {
         if (service is not IWalletProvider provider) return;
         walletProvider = provider;
-        neoSystem.ServiceAdded -= ((IServiceAddedHandler)this).NeoSystem_ServiceAdded_Handler;
+        neoSystem.ServiceAdded -= NeoSystem_ServiceAdded_Handler;
         if (settings.AutoStart)
         {
-            walletProvider.WalletChanged += ((IWalletChangedHandler)this).IWalletProvider_WalletChanged_Handler;
+            walletProvider.WalletChanged += IWalletProvider_WalletChanged_Handler;
         }
     }
 
-    void IWalletChangedHandler.IWalletProvider_WalletChanged_Handler(object sender, Wallet wallet)
+    void IWalletProvider_WalletChanged_Handler(object? sender, Wallet? wallet)
     {
-        walletProvider.WalletChanged -= ((IWalletChangedHandler)this).IWalletProvider_WalletChanged_Handler;
-        Start(wallet);
+        if (wallet != null)
+        {
+            walletProvider!.WalletChanged -= IWalletProvider_WalletChanged_Handler;
+            Start(wallet);
+        }
     }
 
     /// <summary>
@@ -89,8 +92,14 @@ public sealed class DBFTPlugin : Plugin, IServiceAddedHandler, IMessageReceivedH
     [ConsoleCommand("start consensus", Category = "Consensus", Description = "Start consensus service (dBFT)")]
     private void OnStart(string signerName = "")
     {
-        var signer = SignerManager.GetSignerOrDefault(signerName);
-        Start(signer ?? walletProvider.GetWallet());
+        var signer = SignerManager.GetSignerOrDefault(signerName)
+            ?? walletProvider?.GetWallet();
+        if (signer == null)
+        {
+            ConsoleHelper.Warning("Please open wallet first!");
+            return;
+        }
+        Start(signer);
     }
 
     public void Start(ISigner signer)
@@ -105,7 +114,7 @@ public sealed class DBFTPlugin : Plugin, IServiceAddedHandler, IMessageReceivedH
     {
         if (message.Command == MessageCommand.Transaction)
         {
-            Transaction tx = (Transaction)message.Payload;
+            Transaction tx = (Transaction)message.Payload!;
             if (tx.SystemFee > settings.MaxBlockSystemFee)
                 return false;
             consensus?.Tell(tx);

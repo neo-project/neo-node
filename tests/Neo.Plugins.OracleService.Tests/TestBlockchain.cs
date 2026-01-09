@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // TestBlockchain.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -34,7 +34,7 @@ public static class TestBlockchain
     private class StoreProvider : IStoreProvider
     {
         public string Name => "TestProvider";
-        public IStore GetStore(string path) => s_store;
+        public IStore GetStore(string? path) => s_store;
     }
 
     static TestBlockchain()
@@ -99,7 +99,7 @@ public static class TestBlockchain
             Signers = [new Signer() { Account = TestUtils.ValidatorScriptHash, Scopes = WitnessScope.CalledByEntry }],
             Attributes = [],
             Script = script,
-            Witnesses = null,
+            Witnesses = null!,
         };
         var engine = ApplicationEngine.Run(tx.Script, snapshot, container: tx, settings: s_theNeoSystem.Settings, gas: 1200_0000_0000);
         engine.SnapshotCache.Commit();

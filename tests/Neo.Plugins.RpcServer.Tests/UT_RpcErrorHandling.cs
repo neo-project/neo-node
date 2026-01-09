@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // UT_RpcErrorHandling.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -25,12 +25,12 @@ namespace Neo.Plugins.RpcServer.Tests;
 [TestClass]
 public class UT_RpcErrorHandling
 {
-    private MemoryStore _memoryStore;
-    private TestMemoryStoreProvider _memoryStoreProvider;
-    private NeoSystem _neoSystem;
-    private RpcServer _rpcServer;
-    private NEP6Wallet _wallet;
-    private WalletAccount _walletAccount;
+    private MemoryStore _memoryStore = null!;
+    private TestMemoryStoreProvider _memoryStoreProvider = null!;
+    private NeoSystem _neoSystem = null!;
+    private RpcServer _rpcServer = null!;
+    private NEP6Wallet _wallet = null!;
+    private WalletAccount _walletAccount = null!;
 
     [TestInitialize]
     public void TestSetup()
@@ -94,13 +94,13 @@ public class UT_RpcErrorHandling
         // Verify that the error code in the JSON response is -501 (Inventory already exists)
         Assert.IsNotNull(response["error"]);
         Console.WriteLine($"Response: {response}");
-        Console.WriteLine($"Error code: {response["error"]["code"].AsNumber()}");
+        Console.WriteLine($"Error code: {response["error"]!["code"]!.AsNumber()}");
         Console.WriteLine($"Expected code: {RpcError.AlreadyExists.Code}");
-        Assert.AreEqual(RpcError.AlreadyExists.Code, response["error"]["code"].AsNumber());
+        Assert.AreEqual(RpcError.AlreadyExists.Code, response["error"]!["code"]!.AsNumber());
 
         // The message might include additional data and stack trace in DEBUG mode,
         // so just check that it contains the expected message
-        var actualMessage = response["error"]["message"].AsString();
+        var actualMessage = response["error"]!["message"]!.AsString();
         Assert.Contains(RpcError.AlreadyExists.Message, actualMessage,
             $"Expected message to contain '{RpcError.AlreadyExists.Message}' but got '{actualMessage}'");
     }
@@ -128,18 +128,18 @@ public class UT_RpcErrorHandling
         };
 
         // Process the request directly through the RPC server
-        var response = await _rpcServer.ProcessRequestAsync(context, request);
+        var response = (await _rpcServer.ProcessRequestAsync(context, request))!;
 
         // Verify that the error code in the JSON response is -501 (Inventory already exists)
         Assert.IsNotNull(response["error"]);
         Console.WriteLine($"Response: {response}");
-        Console.WriteLine($"Error code: {response["error"]["code"].AsNumber()}");
+        Console.WriteLine($"Error code: {response["error"]!["code"]!.AsNumber()}");
         Console.WriteLine($"Expected code: {RpcError.AlreadyExists.Code}");
-        Assert.AreEqual(RpcError.AlreadyExists.Code, response["error"]["code"].AsNumber());
+        Assert.AreEqual(RpcError.AlreadyExists.Code, response["error"]!["code"]!.AsNumber());
 
         // The message might include additional data and stack trace in DEBUG mode,
         // so just check that it contains the expected message
-        var actualMessage = response["error"]["message"].AsString();
+        var actualMessage = response["error"]!["message"]!.AsString();
         Assert.Contains(RpcError.AlreadyExists.Message, actualMessage,
             $"Expected message to contain '{RpcError.AlreadyExists.Message}' but got '{actualMessage}'");
     }
@@ -293,18 +293,18 @@ public class UT_RpcErrorHandling
         };
 
         // Process the request - this should use the standard RPC processing
-        var response = await _rpcServer.ProcessRequestAsync(context, request);
+        var response = (await _rpcServer.ProcessRequestAsync(context, request))!;
 
         // Verify that the error code in the JSON response is -501 (Inventory already exists)
         Assert.IsNotNull(response["error"]);
         Console.WriteLine($"Response: {response}");
-        Console.WriteLine($"Error code: {response["error"]["code"].AsNumber()}");
+        Console.WriteLine($"Error code: {response["error"]!["code"]!.AsNumber()}");
         Console.WriteLine($"Expected code: {RpcError.AlreadyExists.Code}");
-        Assert.AreEqual(RpcError.AlreadyExists.Code, response["error"]["code"].AsNumber());
+        Assert.AreEqual(RpcError.AlreadyExists.Code, response["error"]!["code"]!.AsNumber());
 
         // The message might include additional data and stack trace in DEBUG mode,
         // so just check that it contains the expected message
-        var actualMessage = response["error"]["message"].AsString();
+        var actualMessage = response["error"]!["message"]!.AsString();
         Assert.Contains(RpcError.AlreadyExists.Message, actualMessage,
             $"Expected message to contain '{RpcError.AlreadyExists.Message}' but got '{actualMessage}'");
     }
@@ -317,8 +317,8 @@ public class UT_RpcErrorHandling
         context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(requestBody));
         context.Request.ContentType = "application/json";
 
-        JToken requestJson = null;
-        JToken responseJson = null;
+        JToken? requestJson = null;
+        JToken responseJson;
         try
         {
             requestJson = JToken.Parse(requestBody);
@@ -334,7 +334,7 @@ public class UT_RpcErrorHandling
             try
             {
                 // Extract the method and parameters
-                var method = singleRequest["method"].AsString();
+                var method = singleRequest["method"]!.AsString();
                 var parameters = singleRequest["params"] as JArray;
 
                 // For sendrawtransaction, directly call the method to ensure proper error handling
@@ -342,7 +342,7 @@ public class UT_RpcErrorHandling
                 {
                     try
                     {
-                        var result = _rpcServer.SendRawTransaction(parameters[0].AsString());
+                        var result = _rpcServer.SendRawTransaction(parameters[0]!.AsString());
                         // Create a successful response
                         responseJson = new JObject()
                         {
@@ -365,13 +365,13 @@ public class UT_RpcErrorHandling
                 else
                 {
                     // For other methods, use the standard processing
-                    responseJson = await _rpcServer.ProcessRequestAsync(context, singleRequest);
+                    responseJson = (await _rpcServer.ProcessRequestAsync(context, singleRequest))!;
                 }
             }
             catch (Exception)
             {
                 // Fallback to standard processing
-                responseJson = await _rpcServer.ProcessRequestAsync(context, singleRequest);
+                responseJson = (await _rpcServer.ProcessRequestAsync(context, singleRequest))!;
             }
         }
         else if (requestJson is JArray batchRequest)

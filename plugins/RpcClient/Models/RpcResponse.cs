@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // RpcResponse.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -15,28 +15,28 @@ namespace Neo.Network.RPC.Models;
 
 public class RpcResponse
 {
-    public JToken Id { get; set; }
+    public JToken? Id { get; set; }
 
-    public string JsonRpc { get; set; }
+    public required string JsonRpc { get; set; }
 
-    public RpcResponseError Error { get; set; }
+    public RpcResponseError? Error { get; set; }
 
-    public JToken Result { get; set; }
+    public JToken? Result { get; set; }
 
-    public string RawResponse { get; set; }
+    public string RawResponse { get; set; } = null!;
 
     public static RpcResponse FromJson(JObject json)
     {
         var response = new RpcResponse
         {
             Id = json["id"],
-            JsonRpc = json["jsonrpc"].AsString(),
+            JsonRpc = json["jsonrpc"]!.AsString(),
             Result = json["result"]
         };
 
         if (json["error"] != null)
         {
-            response.Error = RpcResponseError.FromJson((JObject)json["error"]);
+            response.Error = RpcResponseError.FromJson((JObject)json["error"]!);
         }
 
         return response;
@@ -58,16 +58,16 @@ public class RpcResponseError
 {
     public int Code { get; set; }
 
-    public string Message { get; set; }
+    public required string Message { get; set; }
 
-    public JToken Data { get; set; }
+    public JToken? Data { get; set; }
 
     public static RpcResponseError FromJson(JObject json)
     {
         return new RpcResponseError
         {
-            Code = (int)json["code"].AsNumber(),
-            Message = json["message"].AsString(),
+            Code = (int)json["code"]!.AsNumber(),
+            Message = json["message"]!.AsString(),
             Data = json["data"],
         };
     }

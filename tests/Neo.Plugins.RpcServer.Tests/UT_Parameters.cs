@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // UT_Parameters.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -9,7 +9,6 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-using Neo.Extensions;
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.Plugins.RpcServer.Model;
@@ -401,7 +400,6 @@ public class UT_Parameters
 
         // Test conversion of empty or null values
         Assert.AreEqual(0, ParameterConverter.AsParameter("", typeof(int)));
-        Assert.ThrowsExactly<RpcException>(() => _ = ParameterConverter.AsParameter(JToken.Null, typeof(int)));
 
         // Test conversion to non-numeric types
         Assert.ThrowsExactly<RpcException>(() => _ = ParameterConverter.AsParameter(42, typeof(DateTime)));

@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // UT_Trie.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -12,6 +12,7 @@
 using Neo.Extensions.IO;
 using Neo.Persistence;
 using Neo.Persistence.Providers;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace Neo.Cryptography.MPTTrie.Tests;
@@ -41,16 +42,16 @@ class TestSnapshot : IStoreSnapshot
 
     public bool Contains(byte[] key) { throw new NotImplementedException(); }
 
-    public IEnumerable<(byte[] Key, byte[] Value)> Find(byte[] key, SeekDirection direction) { throw new NotImplementedException(); }
+    public IEnumerable<(byte[] Key, byte[] Value)> Find(byte[]? key, SeekDirection direction) { throw new NotImplementedException(); }
 
-    public byte[] TryGet(byte[] key)
+    public byte[]? TryGet(byte[] key)
     {
-        var result = _store.TryGetValue(StoreKey(key), out byte[] value);
+        var result = _store.TryGetValue(StoreKey(key), out byte[]? value);
         if (result) return value;
         return null;
     }
 
-    public bool TryGet(byte[] key, out byte[] value)
+    public bool TryGet(byte[] key, [NotNullWhen(true)] out byte[]? value)
     {
         return _store.TryGetValue(StoreKey(key), out value);
     }
@@ -63,8 +64,8 @@ class TestSnapshot : IStoreSnapshot
 [TestClass]
 public class UT_Trie
 {
-    private Node _root;
-    private IStore _mptdb;
+    private Node _root = null!;
+    private IStore _mptdb = null!;
 
     private void PutToStore(IStore store, Node node)
     {

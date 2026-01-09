@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // WalletAPI.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -142,7 +142,7 @@ public class WalletAPI
     /// <param name="data">onPayment data</param>
     /// <param name="addAssert">Add assert at the end of the script</param>
     /// <returns></returns>
-    public async Task<Transaction> TransferAsync(string tokenHash, string fromKey, string toAddress, decimal amount, object data = null, bool addAssert = true)
+    public async Task<Transaction> TransferAsync(string tokenHash, string fromKey, string toAddress, decimal amount, object? data = null, bool addAssert = true)
     {
         UInt160 scriptHash = Utility.GetScriptHash(tokenHash, rpcClient.protocolSettings);
         var decimals = await nep17API.DecimalsAsync(scriptHash).ConfigureAwait(false);
@@ -163,7 +163,7 @@ public class WalletAPI
     /// <param name="data">onPayment data</param>
     /// <param name="addAssert">Add assert at the end of the script</param>
     /// <returns></returns>
-    public async Task<Transaction> TransferAsync(UInt160 scriptHash, KeyPair from, UInt160 to, BigInteger amountInteger, object data = null, bool addAssert = true)
+    public async Task<Transaction> TransferAsync(UInt160 scriptHash, KeyPair from, UInt160 to, BigInteger amountInteger, object? data = null, bool addAssert = true)
     {
         Transaction transaction = await nep17API.CreateTransferTxAsync(scriptHash, from, to, amountInteger, data, addAssert).ConfigureAwait(false);
         await rpcClient.SendRawTransactionAsync(transaction).ConfigureAwait(false);
@@ -182,7 +182,7 @@ public class WalletAPI
     /// <param name="data">onPayment data</param>
     /// <param name="addAssert">Add assert at the end of the script</param>
     /// <returns></returns>
-    public async Task<Transaction> TransferAsync(UInt160 scriptHash, int m, ECPoint[] pubKeys, KeyPair[] keys, UInt160 to, BigInteger amountInteger, object data = null, bool addAssert = true)
+    public async Task<Transaction> TransferAsync(UInt160 scriptHash, int m, ECPoint[] pubKeys, KeyPair[] keys, UInt160 to, BigInteger amountInteger, object? data = null, bool addAssert = true)
     {
         Transaction transaction = await nep17API.CreateTransferTxAsync(scriptHash, m, pubKeys, keys, to, amountInteger, data, addAssert).ConfigureAwait(false);
         await rpcClient.SendRawTransactionAsync(transaction).ConfigureAwait(false);
@@ -198,7 +198,7 @@ public class WalletAPI
     public async Task<RpcTransaction> WaitTransactionAsync(Transaction transaction, int timeout = 60)
     {
         DateTime deadline = DateTime.UtcNow.AddSeconds(timeout);
-        RpcTransaction rpcTx = null;
+        RpcTransaction? rpcTx = null;
         while (rpcTx == null || rpcTx.Confirmations == null)
         {
             if (deadline < DateTime.UtcNow)

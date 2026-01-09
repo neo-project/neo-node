@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // E2E_Https.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -25,7 +25,7 @@ namespace Neo.Plugins.OracleService.Tests;
 [TestClass]
 public class E2E_Https
 {
-    UInt160 customContract;
+    UInt160 customContract = null!;
 
     [TestInitialize]
     public void TestSetup()
@@ -65,7 +65,7 @@ public class E2E_Https
                 Witnesses = []
             }
         ];
-        byte[] signature = txs[0].Sign(s_walletAccount.GetKey(), settings.Network);
+        byte[] signature = txs[0].Sign(s_walletAccount.GetKey()!, settings.Network);
         txs[0].Witnesses = [new Witness
         {
             InvocationScript = new byte[] { (byte)OpCode.PUSHDATA1, (byte)signature.Length }.Concat(signature).ToArray(),
@@ -86,7 +86,7 @@ public class E2E_Https
             Transactions = txs,
         };
         block.Header.MerkleRoot ??= MerkleTree.ComputeRoot(block.Transactions.Select(t => t.Hash).ToArray());
-        signature = block.Sign(s_walletAccount.GetKey(), settings.Network);
+        signature = block.Sign(s_walletAccount.GetKey()!, settings.Network);
         block.Header.Witness = new Witness
         {
             InvocationScript = new byte[] { (byte)OpCode.PUSHDATA1, (byte)signature.Length }.Concat(signature).ToArray(),

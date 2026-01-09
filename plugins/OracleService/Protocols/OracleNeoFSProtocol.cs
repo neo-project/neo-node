@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // OracleNeoFSProtocol.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -43,7 +43,7 @@ class OracleNeoFSProtocol : IOracleProtocol
         privateKey.Dispose();
     }
 
-    public async Task<(OracleResponseCode, string)> ProcessAsync(Uri uri, CancellationToken cancellation)
+    public async Task<(OracleResponseCode, string?)> ProcessAsync(Uri uri, CancellationToken cancellation)
     {
         Utility.Log(nameof(OracleNeoFSProtocol), LogLevel.Debug, $"Request: {uri.AbsoluteUri}");
         try
