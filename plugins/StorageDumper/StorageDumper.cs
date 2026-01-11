@@ -122,23 +122,6 @@ public class StorageDumper : Plugin
                 stateChangeArray.Add(state);
             }
 
-            // Add transaction states
-
-            var txStates = new JArray();
-
-            foreach (var appExec in applicationExecutedList)
-            {
-                if (appExec.Transaction == null) continue;
-
-                var tx = new JObject();
-
-                tx["hash"] = appExec.Transaction.Hash.ToString();
-                tx["gas"] = appExec.GasConsumed.ToString();
-                tx["vmstate"] = appExec.VMState.ToString();
-
-                txStates.Add(tx);
-            }
-
             var bsItem = new JObject()
             {
                 ["block"] = block.Index,
@@ -146,8 +129,6 @@ public class StorageDumper : Plugin
             };
 
             if (stateChangeArray.Count > 0) bsItem["storage"] = stateChangeArray;
-            if (txStates.Count > 0) bsItem["txs"] = txStates;
-
             _currentBlock = bsItem;
         }
     }
