@@ -122,14 +122,12 @@ public class StorageDumper : Plugin
                 stateChangeArray.Add(state);
             }
 
-            var bsItem = new JObject()
+            _currentBlock = new JObject()
             {
-                ["block"] = block.Index,
-                ["size"] = stateChangeArray.Count
+                ["block"] = blockIndex,
+                ["size"] = stateChangeArray.Count,
+                ["storage"] = stateChangeArray
             };
-
-            if (stateChangeArray.Count > 0) bsItem["storage"] = stateChangeArray;
-            _currentBlock = bsItem;
         }
     }
 
