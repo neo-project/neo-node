@@ -588,6 +588,109 @@ partial class MainService
     }
 
     /// <summary>
+    /// Process "verify message" command
+    /// </summary>
+    /// <param name="message">Original message that was signed</param>
+    /// <param name="signature">Signature in hex format</param>
+    /// <param name="publicKey">Public key in hex format</param>
+    /// <param name="salt">Salt in hex format</param>
+    [ConsoleCommand("verify message", Category = "Wallet Commands")]
+    private void OnVerifyMessageCommand(string message, string signature, string publicKey, string salt)
+    {
+        try
+        {
+            if (message.Length >= 2)
+            {
+                if ((message[0] == '"' && message[^1] == '"') || (message[0] == '\'' && message[^1] == '\''))
+                {
+                    message = message[1..^1];
+                }
+            }
+
+            // Parse public key
+            if (!ECPoint.TryParse(publicKey, ECCurve.Secp256r1, out var pubKey))
+            {
+                ConsoleHelper.Error("Invalid public key format");
+                return;
+            }
+
+            // Parse signature
+            byte[] signatureBytes;
+            try
+            {
+                signatureBytes = signature.HexToBytes();
+            }
+            catch
+            {
+                ConsoleHelper.Error("Invalid signature format (must be hex string)");
+                return;
+            }
+
+            // Validate salt format (should be hex string, typically 32 characters for 16 bytes)
+            if (string.IsNullOrEmpty(salt))
+            {
+                ConsoleHelper.Error("Salt cannot be empty");
+                return;
+            }
+
+            // Reconstruct payload: 010001f0 + VarBytes(Salt + Message) + 0000
+            // Note: salt is used as hex string (lowercase), same as in signing
+            var saltHex = salt.ToLowerInvariant();
+            var paramBytes = Encoding.UTF8.GetBytes(saltHex + message);
+            byte[] payload;
+            using (var ms = new MemoryStream())
+            using (var w = new BinaryWriter(ms, Encoding.UTF8, true))
+            {
+                w.Write((byte)0x01);
+                w.Write((byte)0x00);
+                w.Write((byte)0x01);
+                w.Write((byte)0xF0);
+                w.WriteVarBytes(paramBytes);
+                w.Write((ushort)0);
+                w.Flush();
+                payload = ms.ToArray();
+            }
+
+            // Calculate signData: SHA256(network || Hash256(payload))
+            var hash = new UInt256(Crypto.Hash256(payload));
+            var signData = hash.GetSignData(NeoSystem.Settings.Network);
+            bool isValid = Crypto.VerifySignature(signData, signatureBytes, pubKey);
+            var contract = Contract.CreateSignatureContract(pubKey);
+            var address = contract.ScriptHash.ToAddress(NeoSystem.Settings.AddressVersion);
+
+            Console.WriteLine();
+            ConsoleHelper.Info("Verification Result:");
+            Console.WriteLine();
+            ConsoleHelper.Info("    Address: ", address);
+            ConsoleHelper.Info("  PublicKey: ", pubKey.EncodePoint(true).ToHexString());
+            ConsoleHelper.Info("  Signature: ", signature);
+            ConsoleHelper.Info("       Salt: ", saltHex);
+            ConsoleHelper.Info("     Status: ", isValid ? "Valid" : "Invalid");
+            Console.WriteLine();
+
+            if (!isValid)
+            {
+                ConsoleHelper.Info("Debug Information:");
+                Console.WriteLine();
+                ConsoleHelper.Info("  Message used: ", $"\"{message}\"");
+                ConsoleHelper.Info("  Message bytes: ", Encoding.UTF8.GetBytes(message).ToHexString());
+                ConsoleHelper.Info("  Salt+Message: ", $"{saltHex}{message}");
+                ConsoleHelper.Info("  Reconstructed Payload: ", payload.ToHexString());
+                ConsoleHelper.Info("  Payload Hash256: ", hash.ToString());
+                Console.WriteLine();
+                ConsoleHelper.Warning("Note: The message must match exactly what was signed.");
+                ConsoleHelper.Warning("If you used 'sign message \"Hello world!\"', the actual message signed is 'Hello world!' (without quotes).");
+                ConsoleHelper.Warning("If the signed message contains quote characters, you need to include them in the verify command.");
+                Console.WriteLine();
+            }
+        }
+        catch (Exception e)
+        {
+            ConsoleHelper.Error($"Verification failed: {GetExceptionMessage(e)}");
+        }
+    }
+
+    /// <summary>
     /// Process "send" command
     /// </summary>
     /// <param name="asset">Asset id</param>
