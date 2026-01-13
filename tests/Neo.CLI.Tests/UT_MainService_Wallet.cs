@@ -150,7 +150,6 @@ public class UT_MainService_Wallet
 
         // 2) Verify with the exact message
         var verifyOutput = CreateServiceAndVerifyMessage(message, signature!, publicKey!, salt!);
-
         Assert.IsFalse(string.IsNullOrWhiteSpace(verifyOutput), "Verify output should not be empty");
         Assert.Contains("Verification Result", verifyOutput, "Should print verification header");
         Assert.Contains("Status:", verifyOutput, "Should print Status line");
