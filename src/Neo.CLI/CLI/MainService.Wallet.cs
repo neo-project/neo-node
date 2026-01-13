@@ -13,6 +13,7 @@ using Akka.Actor;
 using Neo.ConsoleService;
 using Neo.Cryptography;
 using Neo.Extensions;
+using Neo.Extensions.Factories;
 using Neo.Json;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
@@ -538,8 +539,8 @@ partial class MainService
         }
 
         var saltBytes = new byte[16];
-        RandomNumberGenerator.Fill(saltBytes);
-        var saltHex = saltBytes.ToHexString().ToLowerInvariant();
+        saltBytes = RandomNumberFactory.NextBytes(saltBytes.Length, cryptography: true);
+        var saltHex = Convert.ToHexStringLower(saltBytes);
 
         var paramBytes = Encoding.UTF8.GetBytes(saltHex + message);
 
