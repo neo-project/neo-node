@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // ConsensusService.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -14,6 +14,7 @@ using Neo.Extensions;
 using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
+using Neo.Persistence;
 using Neo.Plugins.DBFTPlugin.Messages;
 using Neo.Plugins.DBFTPlugin.Types;
 using Neo.Sign;
@@ -67,6 +68,12 @@ internal partial class ConsensusService : UntypedActor
         this.context = context;
         Context.System.EventStream.Subscribe(Self, typeof(PersistCompleted));
         Context.System.EventStream.Subscribe(Self, typeof(RelayResult));
+        neoSystem.MemPool.NewTransaction += MemPool_NewTransaction;
+    }
+
+    private void MemPool_NewTransaction(object sender, NewTransactionEventArgs e)
+    {
+        e.Cancel = e.Transaction.SystemFee <= dbftSettings.MaxBlockSystemFee;
     }
 
     private void OnPersistCompleted(Block block)
@@ -256,6 +263,13 @@ internal partial class ConsensusService : UntypedActor
     {
         if (verify)
         {
+            // Must not be more than MaxBlockSystemFee
+            if (tx.SystemFee > dbftSettings.MaxBlockSystemFee)
+            {
+                Log($"Rejected tx: {tx.Hash}, SystemFee {tx.SystemFee} exceeds MaxBlockSystemFee {dbftSettings.MaxBlockSystemFee}", LogLevel.Warning);
+                return false;
+            }
+
             // At this step we're sure that there's no on-chain transaction that conflicts with
             // the provided tx because of the previous Blockchain's OnReceive check. Thus, we only
             // need to check that current context doesn't contain conflicting transactions.

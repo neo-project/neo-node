@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // MainService.Wallet.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -671,9 +671,10 @@ partial class MainService
         if (NoWallet()) return;
         BigInteger gas = BigInteger.Zero;
         var snapshot = NeoSystem.StoreView;
+        using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, settings: _neoSystem?.Settings);
         uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
         foreach (UInt160 account in CurrentWallet!.GetAccounts().Select(p => p.ScriptHash))
-            gas += NativeContract.NEO.UnclaimedGas(snapshot, account, height);
+            gas += NativeContract.NEO.UnclaimedGas(engine, account, height);
         ConsoleHelper.Info("Unclaimed gas: ", new BigDecimal(gas, NativeContract.GAS.Decimals).ToString());
     }
 

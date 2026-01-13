@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Neo" Version="3.9.0-CI01984" />
+    <PackageReference Include="Neo" Version="3.9.0-CI02005" />
     <PackageReference Include="System.CommandLine" Version="2.0.0" />
   </ItemGroup>
 

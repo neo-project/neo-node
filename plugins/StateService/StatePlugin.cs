@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // StatePlugin.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -13,7 +13,6 @@ using Akka.Actor;
 using Neo.ConsoleService;
 using Neo.Cryptography.MPTTrie;
 using Neo.Extensions;
-using Neo.IEventHandlers;
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
@@ -28,7 +27,7 @@ using static Neo.Ledger.Blockchain;
 
 namespace Neo.Plugins.StateService;
 
-public class StatePlugin : Plugin, ICommittingHandler, ICommittedHandler, IWalletChangedHandler, IServiceAddedHandler
+public class StatePlugin : Plugin
 {
     public const string StatePayloadCategory = "StateService";
     public override string Name => "StateService";
@@ -48,8 +47,8 @@ public class StatePlugin : Plugin, ICommittingHandler, ICommittedHandler, IWalle
 
     public StatePlugin()
     {
-        Committing += ((ICommittingHandler)this).Blockchain_Committing_Handler;
-        Committed += ((ICommittedHandler)this).Blockchain_Committed_Handler;
+        Committing += Blockchain_Committing_Handler;
+        Committed += Blockchain_Committed_Handler;
     }
 
     protected override void Configure()
@@ -62,39 +61,39 @@ public class StatePlugin : Plugin, ICommittingHandler, ICommittedHandler, IWalle
         if (system.Settings.Network != StateServiceSettings.Default.Network) return;
         _system = system;
         Store = _system.ActorSystem.ActorOf(StateStore.Props(this, string.Format(StateServiceSettings.Default.Path, system.Settings.Network.ToString("X8"))));
-        _system.ServiceAdded += ((IServiceAddedHandler)this).NeoSystem_ServiceAdded_Handler;
+        _system.ServiceAdded += NeoSystem_ServiceAdded_Handler;
         RpcServerPlugin.RegisterMethods(this, StateServiceSettings.Default.Network);
     }
 
-    void IServiceAddedHandler.NeoSystem_ServiceAdded_Handler(object sender, object service)
+    void NeoSystem_ServiceAdded_Handler(object sender, object service)
     {
         if (service is IWalletProvider)
         {
             walletProvider = service as IWalletProvider;
-            _system.ServiceAdded -= ((IServiceAddedHandler)this).NeoSystem_ServiceAdded_Handler;
+            _system.ServiceAdded -= NeoSystem_ServiceAdded_Handler;
             if (StateServiceSettings.Default.AutoVerify)
             {
-                walletProvider.WalletChanged += ((IWalletChangedHandler)this).IWalletProvider_WalletChanged_Handler;
+                walletProvider.WalletChanged += IWalletProvider_WalletChanged_Handler;
             }
         }
     }
 
-    void IWalletChangedHandler.IWalletProvider_WalletChanged_Handler(object sender, Wallet wallet)
+    void IWalletProvider_WalletChanged_Handler(object sender, Wallet wallet)
     {
-        walletProvider.WalletChanged -= ((IWalletChangedHandler)this).IWalletProvider_WalletChanged_Handler;
+        walletProvider.WalletChanged -= IWalletProvider_WalletChanged_Handler;
         Start(wallet);
     }
 
     public override void Dispose()
     {
-        Committing -= ((ICommittingHandler)this).Blockchain_Committing_Handler;
-        Committed -= ((ICommittedHandler)this).Blockchain_Committed_Handler;
+        Committing -= Blockchain_Committing_Handler;
+        Committed -= Blockchain_Committed_Handler;
         if (Store is not null) _system.EnsureStopped(Store);
         if (Verifier is not null) _system.EnsureStopped(Verifier);
         base.Dispose();
     }
 
-    void ICommittingHandler.Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
+    void Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
         IReadOnlyList<ApplicationExecuted> applicationExecutedList)
     {
         if (system.Settings.Network != StateServiceSettings.Default.Network) return;
@@ -104,7 +103,7 @@ public class StatePlugin : Plugin, ICommittingHandler, ICommittedHandler, IWalle
                 .ToList());
     }
 
-    void ICommittedHandler.Blockchain_Committed_Handler(NeoSystem system, Block block)
+    void Blockchain_Committed_Handler(NeoSystem system, Block block)
     {
         if (system.Settings.Network != StateServiceSettings.Default.Network) return;
         StateStore.Singleton.UpdateLocalStateRoot(block.Index);
@@ -133,6 +132,7 @@ public class StatePlugin : Plugin, ICommittingHandler, ICommittedHandler, IWalle
         }
         if (wallet is null)
         {
+            Verifier = null;
             ConsoleHelper.Warning("Please open wallet first!");
             return;
         }

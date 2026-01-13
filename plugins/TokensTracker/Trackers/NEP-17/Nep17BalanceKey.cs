@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // Nep17BalanceKey.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -16,8 +16,8 @@ namespace Neo.Plugins.Trackers.NEP_17;
 
 public class Nep17BalanceKey : IComparable<Nep17BalanceKey>, IEquatable<Nep17BalanceKey>, ISerializable
 {
-    public readonly UInt160 UserScriptHash;
-    public readonly UInt160 AssetScriptHash;
+    public UInt160 UserScriptHash { get; private set; }
+    public UInt160 AssetScriptHash { get; private set; }
 
     public int Size => UInt160.Length + UInt160.Length;
 
@@ -45,7 +45,7 @@ public class Nep17BalanceKey : IComparable<Nep17BalanceKey>, IEquatable<Nep17Bal
     {
         if (other is null) return false;
         if (ReferenceEquals(this, other)) return true;
-        return UserScriptHash.Equals(other.UserScriptHash) && AssetScriptHash.Equals(AssetScriptHash);
+        return UserScriptHash.Equals(other.UserScriptHash) && AssetScriptHash.Equals(other.AssetScriptHash);
     }
 
     public override bool Equals(object? other)
@@ -66,7 +66,7 @@ public class Nep17BalanceKey : IComparable<Nep17BalanceKey>, IEquatable<Nep17Bal
 
     public void Deserialize(ref MemoryReader reader)
     {
-        ((ISerializable)UserScriptHash).Deserialize(ref reader);
-        ((ISerializable)AssetScriptHash).Deserialize(ref reader);
+        UserScriptHash = reader.ReadSerializable<UInt160>();
+        AssetScriptHash = reader.ReadSerializable<UInt160>();
     }
 }

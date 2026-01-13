@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // OracleNeoFSProtocol.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -29,13 +29,15 @@ class OracleNeoFSProtocol : IOracleProtocol
 
     public OracleNeoFSProtocol(Wallet wallet, ECPoint[] oracles)
     {
-        byte[] key = oracles.Select(p => wallet.GetAccount(p)).Where(p => p is not null && p.HasKey && !p.Lock).FirstOrDefault().GetKey().PrivateKey;
+        byte[] key = oracles.Select(wallet.GetAccount)
+            .Where(p => p is not null && p.HasKey && !p.Lock)
+            .FirstOrDefault()?
+            .GetKey()?
+            .PrivateKey ?? throw new InvalidOperationException("No available account found for oracle");
         privateKey = key.LoadPrivateKey();
     }
 
-    public void Configure()
-    {
-    }
+    public void Configure() { }
 
     public void Dispose()
     {

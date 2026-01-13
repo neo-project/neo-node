@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // LogReader.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -11,7 +11,6 @@
 
 using Neo.ConsoleService;
 using Neo.Extensions;
-using Neo.IEventHandlers;
 using Neo.Json;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
@@ -26,7 +25,7 @@ using static System.IO.Path;
 
 namespace Neo.Plugins.ApplicationLogs;
 
-public class LogReader : Plugin, ICommittingHandler, ICommittedHandler, ILogHandler
+public class LogReader : Plugin
 {
     #region Globals
 
@@ -47,8 +46,8 @@ public class LogReader : Plugin, ICommittingHandler, ICommittedHandler, ILogHand
         _neostore = default!;
         _neosystem = default!;
         _logEvents = new();
-        Blockchain.Committing += ((ICommittingHandler)this).Blockchain_Committing_Handler;
-        Blockchain.Committed += ((ICommittedHandler)this).Blockchain_Committed_Handler;
+        Blockchain.Committing += Blockchain_Committing_Handler;
+        Blockchain.Committed += Blockchain_Committed_Handler;
     }
 
     #endregion
@@ -59,8 +58,8 @@ public class LogReader : Plugin, ICommittingHandler, ICommittedHandler, ILogHand
 
     public override void Dispose()
     {
-        Blockchain.Committing -= ((ICommittingHandler)this).Blockchain_Committing_Handler;
-        Blockchain.Committed -= ((ICommittedHandler)this).Blockchain_Committed_Handler;
+        Blockchain.Committing -= Blockchain_Committing_Handler;
+        Blockchain.Committed -= Blockchain_Committed_Handler;
         if (ApplicationLogsSettings.Default.Debug)
             ApplicationEngine.InstanceHandler -= ConfigureAppEngine;
         base.Dispose();
@@ -68,7 +67,7 @@ public class LogReader : Plugin, ICommittingHandler, ICommittedHandler, ILogHand
 
     private void ConfigureAppEngine(ApplicationEngine engine)
     {
-        engine.Log += ((ILogHandler)this).ApplicationEngine_Log_Handler;
+        engine.Log += ApplicationEngine_Log_Handler;
     }
 
     protected override void Configure()
@@ -225,7 +224,7 @@ public class LogReader : Plugin, ICommittingHandler, ICommittedHandler, ILogHand
 
     #region Blockchain Events
 
-    void ICommittingHandler.Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
+    void Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
         IReadOnlyList<Blockchain.ApplicationExecuted> applicationExecutedList)
     {
         if (system.Settings.Network != ApplicationLogsSettings.Default.Network)
@@ -247,7 +246,7 @@ public class LogReader : Plugin, ICommittingHandler, ICommittedHandler, ILogHand
         }
     }
 
-    void ICommittedHandler.Blockchain_Committed_Handler(NeoSystem system, Block block)
+    void Blockchain_Committed_Handler(NeoSystem system, Block block)
     {
         if (system.Settings.Network != ApplicationLogsSettings.Default.Network)
             return;
@@ -256,7 +255,7 @@ public class LogReader : Plugin, ICommittingHandler, ICommittedHandler, ILogHand
         _neostore.CommitBlockLog();
     }
 
-    void ILogHandler.ApplicationEngine_Log_Handler(ApplicationEngine sender, LogEventArgs e)
+    void ApplicationEngine_Log_Handler(ApplicationEngine sender, LogEventArgs e)
     {
         if (ApplicationLogsSettings.Default.Debug == false)
             return;

@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // RpcServer.SmartContract.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -420,7 +420,8 @@ partial class RpcServer
     {
         var scriptHash = address.ScriptHash;
         var snapshot = system.StoreView;
-        var unclaimed = NativeContract.NEO.UnclaimedGas(snapshot, scriptHash, NativeContract.Ledger.CurrentIndex(snapshot) + 1);
+        using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, settings: system.Settings);
+        var unclaimed = NativeContract.NEO.UnclaimedGas(engine, scriptHash, NativeContract.Ledger.CurrentIndex(snapshot) + 1);
         return new JObject()
         {
             ["unclaimed"] = unclaimed.ToString(),

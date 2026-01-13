@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // MainService.Node.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -98,7 +98,7 @@ partial class MainService
 
         public DisplayState()
         {
-            StartTime = DateTime.UtcNow;
+            StartTime = Process.GetCurrentProcess().StartTime.ToUniversalTime();
             LastRefresh = DateTime.MinValue;
             LastHeight = 0;
             LastHeaderHeight = 0;

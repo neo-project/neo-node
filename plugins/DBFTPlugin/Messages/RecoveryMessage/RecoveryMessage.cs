@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // RecoveryMessage.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -28,11 +28,11 @@ public partial class RecoveryMessage : ConsensusMessage
     public Dictionary<byte, CommitPayloadCompact> CommitMessages;
 
     public override int Size => base.Size
-        + /* ChangeViewMessages */ ChangeViewMessages?.Values.GetVarSize() ?? 0
-        + /* PrepareRequestMessage */ 1 + PrepareRequestMessage?.Size ?? 0
-        + /* PreparationHash */ PreparationHash?.Size ?? 0
-        + /* PreparationMessages */ PreparationMessages?.Values.GetVarSize() ?? 0
-        + /* CommitMessages */ CommitMessages?.Values.GetVarSize() ?? 0;
+        + (ChangeViewMessages?.Values.GetVarSize() ?? 0) // ChangeViewMessages
+        + (1 + (PrepareRequestMessage?.Size ?? 0)) // PrepareRequestMessage
+        + (PreparationHash?.Size ?? 0) // PreparationHash
+        + (PreparationMessages?.Values.GetVarSize() ?? 0) // PreparationMessages
+        + (CommitMessages?.Values.GetVarSize() ?? 0); // CommitMessages
 
     public RecoveryMessage() : base(ConsensusMessageType.RecoveryMessage) { }
 

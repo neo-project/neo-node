@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // VMInstruction.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -98,7 +98,7 @@ internal sealed class VMInstruction : IEnumerable<VMInstruction>
     public override string ToString()
     {
         var sb = new StringBuilder();
-        sb.AppendFormat("{1:X04} {2,-10}{3}{4}", Position, OpCode, DecodeOperand());
+        sb.AppendFormat("{0:X04} {1,-10}{2}", Position, OpCode, DecodeOperand());
         return sb.ToString();
     }
 

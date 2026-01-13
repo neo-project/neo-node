@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // RpcServer.Wallet.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -152,9 +152,10 @@ partial class RpcServer
         var datoshi = BigInteger.Zero;
         using (var snapshot = system.GetSnapshotCache())
         {
+            using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot, settings: system.Settings);
             uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
             foreach (var account in wallet.GetAccounts().Select(p => p.ScriptHash))
-                datoshi += NativeContract.NEO.UnclaimedGas(snapshot, account, height);
+                datoshi += NativeContract.NEO.UnclaimedGas(engine, account, height);
         }
         return datoshi.ToString();
     }
@@ -371,13 +372,7 @@ partial class RpcServer
         if (!transContext.Completed) return transContext.ToJson();
 
         tx.Witnesses = transContext.GetWitnesses();
-        if (tx.Size > 1024)
-        {
-            long calFee = tx.Size * NativeContract.Policy.GetFeePerByte(snapshot) + 100000;
-            if (tx.NetworkFee < calFee)
-                tx.NetworkFee = calFee;
-        }
-        (tx.NetworkFee <= settings.MaxFee).True_Or(RpcError.WalletFeeLimit);
+        EnsureNetworkFee(snapshot, tx);
         return SignAndRelay(snapshot, tx);
     }
 
@@ -488,13 +483,7 @@ partial class RpcServer
         if (!transContext.Completed) return transContext.ToJson();
 
         tx.Witnesses = transContext.GetWitnesses();
-        if (tx.Size > 1024)
-        {
-            long calFee = tx.Size * NativeContract.Policy.GetFeePerByte(snapshot) + 100000;
-            if (tx.NetworkFee < calFee)
-                tx.NetworkFee = calFee;
-        }
-        (tx.NetworkFee <= settings.MaxFee).True_Or(RpcError.WalletFeeLimit);
+        EnsureNetworkFee(snapshot, tx);
         return SignAndRelay(snapshot, tx);
     }
 
@@ -551,14 +540,16 @@ partial class RpcServer
             return transContext.ToJson();
 
         tx.Witnesses = transContext.GetWitnesses();
-        if (tx.Size > 1024)
-        {
-            long calFee = tx.Size * NativeContract.Policy.GetFeePerByte(snapshot) + 100000;
-            if (tx.NetworkFee < calFee)
-                tx.NetworkFee = calFee;
-        }
-        (tx.NetworkFee <= settings.MaxFee).True_Or(RpcError.WalletFeeLimit);
+        EnsureNetworkFee(snapshot, tx);
         return SignAndRelay(snapshot, tx);
+    }
+
+    private void EnsureNetworkFee(StoreCache snapshot, Transaction tx)
+    {
+        long calFee = tx.Size * NativeContract.Policy.GetFeePerByte(snapshot) + 100000;
+        if (tx.NetworkFee < calFee)
+            tx.NetworkFee = calFee;
+        (tx.NetworkFee <= settings.MaxFee).True_Or(RpcError.WalletFeeLimit);
     }
 
     /// <summary>
