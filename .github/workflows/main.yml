@@ -44,3 +44,37 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         format: lcov
         file: ${{ github.workspace }}/TestResults/coverage/coverage.info
+
+  Test-with-plugins:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+    - name: Check format
+      if: runner.os == 'Linux'
+      run: dotnet format --no-restore --verify-no-changes --verbosity diagnostic
+    - name: Build CLI
+      if: runner.os == 'Linux'
+      run: |
+        dotnet publish -o ./out -c Release src/Neo.CLI
+    - name: Create Plugins folder and copy plugins
+      if: runner.os == 'Linux'
+      run: |
+        mkdir -p ./out/Plugins
+        for plugin_dir in plugins/*/; do
+          plugin_name=$(basename "$plugin_dir")
+          cp -r "$plugin_dir" "./out/Plugins/$plugin_name"
+        done
+    - name: Install dependencies
+      if: runner.os == 'Linux'
+      run: sudo apt-get install libleveldb-dev expect
+    - name: Run tests with expect
+      if: runner.os == 'Linux'
+      run: expect ./.github/workflows/test-neo-cli.expect
