@@ -63,18 +63,36 @@ jobs:
     - name: Build CLI
       if: runner.os == 'Linux'
       run: |
+        dotnet build -c Release
         dotnet publish -o ./out -c Release src/Neo.CLI
-    - name: Create Plugins folder and copy plugins
+    - name: Create Plugins folder and copy plugin DLLs
       if: runner.os == 'Linux'
       run: |
         mkdir -p ./out/Plugins
         for plugin_dir in plugins/*/; do
           plugin_name=$(basename "$plugin_dir")
-          cp -r "$plugin_dir" "./out/Plugins/$plugin_name"
+          build_output="$plugin_dir/bin/Release/net10.0"
+          if [ -d "$build_output" ]; then
+            mkdir -p "./out/Plugins/$plugin_name"
+            cp -r "$build_output"/* "./out/Plugins/$plugin_name/"
+          else
+            echo "Warning: Build output not found for $plugin_name"
+          fi
         done
     - name: Install dependencies
       if: runner.os == 'Linux'
       run: sudo apt-get install libleveldb-dev expect
+    - name: Debug - List Plugins folder contents
+      if: runner.os == 'Linux'
+      run: |
+        echo "Plugins folder contents:"
+        ls -la ./out/Plugins/ || echo "Plugins folder does not exist"
+        echo ""
+        echo "Plugin directories:"
+        find ./out/Plugins -mindepth 1 -maxdepth 1 -type d | sort || echo "No plugin directories found"
+        echo ""
+        echo "Sample plugin DLLs (ApplicationLogs):"
+        ls -la ./out/Plugins/ApplicationLogs/*.dll 2>/dev/null | head -5 || echo "No DLLs found"
     - name: Run tests with expect
       if: runner.os == 'Linux'
       run: expect ./.github/workflows/test-neo-cli-plugins.expect
