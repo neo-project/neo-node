@@ -77,4 +77,4 @@ jobs:
       run: sudo apt-get install libleveldb-dev expect
     - name: Run tests with expect
       if: runner.os == 'Linux'
-      run: expect ./.github/workflows/test-neo-cli.expect
+      run: expect ./.github/workflows/test-neo-cli-plugins.expect
