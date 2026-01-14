@@ -73,7 +73,7 @@ internal partial class ConsensusService : UntypedActor
 
     private void MemPool_NewTransaction(object sender, NewTransactionEventArgs e)
     {
-        e.Cancel = e.Transaction.SystemFee <= dbftSettings.MaxBlockSystemFee;
+        e.Cancel = e.Transaction.SystemFee >= dbftSettings.MaxBlockSystemFee;
     }
 
     private void OnPersistCompleted(Block block)
