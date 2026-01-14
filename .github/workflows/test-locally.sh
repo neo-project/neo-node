@@ -17,7 +17,7 @@ echo "✓ Build complete"
 echo ""
 
 # Step 2: Create Plugins folder and copy plugin DLLs
-echo "Step 3: Creating Plugins folder and copying plugin DLLs..."
+echo "Step 2: Creating Plugins folder and copying plugin DLLs..."
 mkdir -p ./out/Plugins
 for plugin_dir in plugins/*/; do
   plugin_name=$(basename "$plugin_dir")
@@ -30,6 +30,10 @@ for plugin_dir in plugins/*/; do
     echo "  Warning: Build output not found for $plugin_name"
   fi
 done
+# Remove duplicated RpcServer.dll from TokensTracker and StorageDumper (they can't load twice)
+echo "  Removing duplicated RpcServer.dll from TokensTracker and StorageDumper..."
+rm -f ./out/Plugins/TokensTracker/RpcServer.dll
+rm -f ./out/Plugins/StateService/RpcServer.dll
 echo "✓ Plugin DLLs copied"
 echo ""
 

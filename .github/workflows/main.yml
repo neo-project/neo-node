@@ -79,6 +79,9 @@ jobs:
             echo "Warning: Build output not found for $plugin_name"
           fi
         done
+        # Remove duplicated RpcServer.dll from TokensTracker and StorageDumper (they can't load twice)
+        rm -f ./out/Plugins/TokensTracker/RpcServer.dll
+        rm -f ./out/Plugins/StateService/RpcServer.dll
     - name: Install dependencies
       if: runner.os == 'Linux'
       run: sudo apt-get install libleveldb-dev expect
