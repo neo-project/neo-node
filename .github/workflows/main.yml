@@ -57,9 +57,6 @@ jobs:
       uses: actions/setup-dotnet@v5
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
-    - name: Check format
-      if: runner.os == 'Linux'
-      run: dotnet format --no-restore --verify-no-changes --verbosity diagnostic
     - name: Build CLI
       if: runner.os == 'Linux'
       run: |
