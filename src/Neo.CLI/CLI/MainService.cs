@@ -258,9 +258,34 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
             throw new FileNotFoundException($"Wallet file not found at path: {path}. Please verify the file path is correct and the wallet file exists.", path);
         }
 
-        if (CurrentWallet is not null) SignerManager.UnregisterSigner(CurrentWallet.Name);
+        // Unregister the current wallet's signer if exists
+        string? currentWalletName = null;
+        if (CurrentWallet is not null)
+        {
+            currentWalletName = CurrentWallet.Name;
+            SignerManager.UnregisterSigner(currentWalletName);
+        }
 
-        CurrentWallet = Wallet.Open(path, password, NeoSystem.Settings) ?? throw new NotSupportedException($"Failed to open wallet at path: {path}. The wallet format may not be supported or the password may be incorrect. Please verify the wallet file integrity and password.");
+        // Open the new wallet
+        var newWallet = Wallet.Open(path, password, NeoSystem.Settings) ?? throw new NotSupportedException($"Failed to open wallet at path: {path}. The wallet format may not be supported or the password may be incorrect. Please verify the wallet file integrity and password.");
+
+        // Always try to unregister any existing signer with the same name before registering
+        // This handles edge cases where:
+        // 1. A wallet with the same name was previously opened and closed (but signer wasn't properly unregistered)
+        // 2. A plugin or other component registered a signer with the same name
+        // 3. Multiple wallets with null/empty name fields (they might have the same Name property)
+        // Note: We do this even if names match, because the signer might be from a different source
+        try
+        {
+            SignerManager.UnregisterSigner(newWallet.Name);
+        }
+        catch (ArgumentException)
+        {
+            // Ignore if the signer doesn't exist - this is expected if it's a new wallet name
+        }
+
+        // Register the new wallet's signer
+        CurrentWallet = newWallet;
         SignerManager.RegisterSigner(CurrentWallet.Name, CurrentWallet);
     }
 
