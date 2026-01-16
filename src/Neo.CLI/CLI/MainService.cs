@@ -152,6 +152,7 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         }
         wallet.Save();
 
+        if (CurrentWallet is not null) SignerManager.UnregisterSigner(CurrentWallet.Name);
         CurrentWallet = wallet;
         SignerManager.RegisterSigner(wallet.Name, wallet);
     }
