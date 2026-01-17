@@ -21,6 +21,7 @@ public class TokenTransferKey : ISerializable
     public ulong TimestampMS { get; protected set; }
     public UInt160 AssetScriptHash { get; protected set; }
     public uint BlockXferNotificationIndex { get; protected set; }
+    public TokenTransferKey() : this(UInt160.Zero, 0, UInt160.Zero, 0) { }
 
     public TokenTransferKey(UInt160 userScriptHash, ulong timestamp, UInt160 assetScriptHash, uint xferIndex)
     {
@@ -42,9 +43,9 @@ public class TokenTransferKey : ISerializable
 
     public virtual void Deserialize(ref MemoryReader reader)
     {
-        UserScriptHash.Deserialize(ref reader);
+        UserScriptHash = reader.ReadSerializable<UInt160>();
         TimestampMS = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(reader.ReadUInt64()) : reader.ReadUInt64();
-        AssetScriptHash.Deserialize(ref reader);
+        AssetScriptHash = reader.ReadSerializable<UInt160>();
         BlockXferNotificationIndex = reader.ReadUInt32();
     }
 
