@@ -2,15 +2,15 @@
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
   <PropertyGroup>
-    <Copyright>2015-2025 The Neo Project</Copyright>
+    <Copyright>2015-2026 The Neo Project</Copyright>
     <Authors>The Neo Project</Authors>
     <PackageId>Neo.Plugins.$(MSBuildProjectName)</PackageId>
-    <PackageProjectUrl>https://github.com/neo-project/neo-modules</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/neo-project/neo-node</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/neo-project/neo-modules.git</RepositoryUrl>
+    <RepositoryUrl>https://github.com/neo-project/neo-node.git</RepositoryUrl>
     <PackageTags>NEO;Blockchain</PackageTags>
-    <VersionPrefix>3.9.0</VersionPrefix>
+    <Version>3.9.0</Version>
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>$(PackageId)</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -18,7 +18,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Neo" Version="3.9.0-CI02009" />
+    <PackageReference Include="Neo" Version="3.9.0" />
   </ItemGroup>
 
   <ItemGroup>
