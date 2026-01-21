@@ -600,13 +600,7 @@ partial class MainService
     {
         try
         {
-            if (message.Length >= 2)
-            {
-                if ((message[0] == '"' && message[^1] == '"') || (message[0] == '\'' && message[^1] == '\''))
-                {
-                    message = message[1..^1];
-                }
-            }
+            message = NormalizeMessage(message);
 
             // Parse public key
             if (!ECPoint.TryParse(publicKey, ECCurve.Secp256r1, out var pubKey))
