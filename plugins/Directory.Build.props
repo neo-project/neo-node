@@ -10,7 +10,7 @@
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/neo-project/neo-node.git</RepositoryUrl>
     <PackageTags>NEO;Blockchain</PackageTags>
-    <VersionPrefix>3.10.0</VersionPrefix>
+    <VersionPrefix>3.9.3</VersionPrefix>
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>$(PackageId)</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
