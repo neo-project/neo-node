@@ -8,6 +8,7 @@
     <Version>3.9.1</Version>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
