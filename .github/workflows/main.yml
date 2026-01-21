@@ -1,11 +1,15 @@
-name: .NET Core Test
+name: .NET Core Test and Publish
 
-on: pull_request
+on:
+  push:
+    branches: [master-n3]
+  pull_request:
 
 env:
   DOTNET_VERSION: 10.0.x
 
 jobs:
+
   Test:
     strategy:
       matrix:
@@ -91,3 +95,43 @@ jobs:
         ls -la ./out/Plugins/ApplicationLogs/*.dll 2>/dev/null | head -5 || echo "No DLLs found"
     - name: Run tests with expect
       run: expect ./.github/workflows/test-neo-cli-plugins.expect
+      
+  Release:
+    if: github.ref == 'refs/heads/master-n3' && startsWith(github.repository, 'neo-project/')
+    needs: Test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+    - name: Get version
+      id: get_version
+      run: |
+        sudo apt install xmlstarlet
+        find plugins -name Directory.Build.props | xargs xmlstarlet sel -N i=http://schemas.microsoft.com/developer/msbuild/2003 -t -v "concat('version=v',//i:Version/text())" | xargs echo >> $GITHUB_OUTPUT
+    - name: Check tag
+      if: steps.get_version.outputs.version != 'v' && startsWith(steps.get_version.outputs.version, 'v')
+      id: check_tag
+      run: curl -s -I ${{ format('https://github.com/{0}/releases/tag/{1}', github.repository, steps.get_version.outputs.version) }} | head -n 1 | cut -d$' ' -f2 | xargs printf "statusCode=%s" | xargs echo >> $GITHUB_OUTPUT
+    - name: Create release
+      if: steps.check_tag.outputs.statusCode == '404'
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.get_version.outputs.version }}
+        release_name: ${{ steps.get_version.outputs.version }}
+        draft: true
+        prerelease: ${{ contains(steps.get_version.outputs.version, '-') }}
+    - name: Setup .NET Core
+      if: steps.check_tag.outputs.statusCode == '404'
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+    - name: Publish to NuGet
+      if: steps.check_tag.outputs.statusCode == '404'
+      run: |
+        dotnet pack -o out -c Release
+        dotnet nuget push out/*.nupkg -s https://api.nuget.org/v3/index.json -k ${NUGET_TOKEN}
+      env:
+        NUGET_TOKEN: ${{ secrets.NUGET_TOKEN }}
