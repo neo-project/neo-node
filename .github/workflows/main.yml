@@ -74,6 +74,7 @@ jobs:
       with:
         tag_name: ${{ steps.get_version.outputs.version }}
         release_name: ${{ steps.get_version.outputs.version }}
+        draft: true
         prerelease: ${{ contains(steps.get_version.outputs.version, '-') }}
     - name: Setup .NET Core
       if: steps.check_tag.outputs.statusCode == '404'
