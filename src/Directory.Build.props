@@ -5,7 +5,7 @@
     <Copyright>2015-2026 The Neo Project</Copyright>
     <Authors>The Neo Project</Authors>
     <TargetFramework>net10.0</TargetFramework>
-    <Version>3.9.2</Version>
+    <VersionPrefix>3.9.3</VersionPrefix>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
