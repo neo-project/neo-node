@@ -11,6 +11,7 @@
 
 using Akka.Actor;
 using Neo.Cryptography;
+using Neo.Cryptography.ECC;
 using Neo.Extensions;
 using Neo.Ledger;
 using Neo.Network.P2P;
@@ -197,10 +198,14 @@ partial class ConsensusService
         {
             case ChangeViewReason.TxRejectedByPolicy:
             case ChangeViewReason.TxInvalid:
-                if (context.InvalidTransactions.TryGetValue(message.RejectedHash, out var hashset))
-                    hashset.Add(context.Validators[message.ValidatorIndex]);
-                else
-                    context.InvalidTransactions.Add(message.RejectedHash, [context.Validators[message.ValidatorIndex]]);
+                foreach (UInt256 hash in message.RejectedHashes)
+                {
+                    ECPoint pubkey = context.Validators[message.ValidatorIndex];
+                    if (context.InvalidTransactions.TryGetValue(hash, out var hashset))
+                        hashset.Add(pubkey);
+                    else
+                        context.InvalidTransactions.Add(hash, [pubkey]);
+                }
                 break;
         }
         CheckExpectedView(message.NewViewNumber);

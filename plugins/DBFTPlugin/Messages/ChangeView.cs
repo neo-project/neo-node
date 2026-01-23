@@ -34,7 +34,7 @@ public class ChangeView : ConsensusMessage
     /// </summary>
     public ChangeViewReason Reason;
 
-    public UInt256 RejectedHash;
+    public UInt256[] RejectedHashes;
 
     public override int Size => base.Size +
         sizeof(ulong) +             // Timestamp
@@ -42,7 +42,7 @@ public class ChangeView : ConsensusMessage
         Reason switch
         {
             ChangeViewReason.TxRejectedByPolicy or
-            ChangeViewReason.TxInvalid => UInt256.Length,
+            ChangeViewReason.TxInvalid => RejectedHashes.GetVarSize(),
             _ => 0
         };
 
@@ -57,7 +57,7 @@ public class ChangeView : ConsensusMessage
         {
             case ChangeViewReason.TxRejectedByPolicy:
             case ChangeViewReason.TxInvalid:
-                RejectedHash = reader.ReadSerializable<UInt256>();
+                RejectedHashes = reader.ReadSerializableArray<UInt256>(ushort.MaxValue);
                 break;
         }
     }
@@ -71,7 +71,7 @@ public class ChangeView : ConsensusMessage
         {
             case ChangeViewReason.TxRejectedByPolicy:
             case ChangeViewReason.TxInvalid:
-                writer.Write(RejectedHash);
+                writer.Write(RejectedHashes);
                 break;
         }
     }

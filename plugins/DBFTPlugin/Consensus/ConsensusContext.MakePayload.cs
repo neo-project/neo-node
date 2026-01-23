@@ -21,13 +21,13 @@ namespace Neo.Plugins.DBFTPlugin.Consensus;
 
 partial class ConsensusContext
 {
-    public ExtensiblePayload MakeChangeView(ChangeViewReason reason, UInt256 rejectedHash = null)
+    public ExtensiblePayload MakeChangeView(ChangeViewReason reason, params UInt256[] rejectedHashes)
     {
         return ChangeViewPayloads[MyIndex] = MakeSignedPayload(new ChangeView
         {
             Timestamp = TimeProvider.Current.UtcNow.ToTimestampMS(),
             Reason = reason,
-            RejectedHash = rejectedHash
+            RejectedHashes = rejectedHashes
         });
     }
 
