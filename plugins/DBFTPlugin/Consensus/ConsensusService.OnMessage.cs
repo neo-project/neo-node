@@ -198,9 +198,9 @@ partial class ConsensusService
             case ChangeViewReason.TxRejectedByPolicy:
             case ChangeViewReason.TxInvalid:
                 if (context.InvalidTransactions.TryGetValue(message.RejectedHash, out var hashset))
-                    hashset.Add(message.ValidatorIndex);
+                    hashset.Add(context.Validators[message.ValidatorIndex]);
                 else
-                    context.InvalidTransactions.Add(message.RejectedHash, [message.ValidatorIndex]);
+                    context.InvalidTransactions.Add(message.RejectedHash, [context.Validators[message.ValidatorIndex]]);
                 break;
         }
         CheckExpectedView(message.NewViewNumber);
