@@ -1,11 +1,15 @@
-name: .NET Core Test
+name: .NET Core Test and Publish
 
-on: pull_request
+on:
+  push:
+    branches: [master-n3]
+  pull_request:
 
 env:
   DOTNET_VERSION: 10.0.x
 
 jobs:
+
   Test:
     strategy:
       matrix:
@@ -44,3 +48,90 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         format: lcov
         file: ${{ github.workspace }}/TestResults/coverage/coverage.info
+
+  Test-with-plugins:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+    - name: Build CLI
+      run: |
+        dotnet build -c Release
+        dotnet publish -o ./out -c Release src/Neo.CLI
+    - name: Create Plugins folder and copy plugin DLLs
+      run: |
+        mkdir -p ./out/Plugins
+        for plugin_dir in plugins/*/; do
+          plugin_name=$(basename "$plugin_dir")
+          build_output="$plugin_dir/bin/Release/net10.0"
+          if [ -d "$build_output" ]; then
+            mkdir -p "./out/Plugins/$plugin_name"
+            cp -r "$build_output"/* "./out/Plugins/$plugin_name/"
+          else
+            echo "Warning: Build output not found for $plugin_name"
+          fi
+        done
+        # Remove duplicated RpcServer.dll from TokensTracker and StorageDumper (they can't load twice)
+        rm -f ./out/Plugins/TokensTracker/RpcServer.dll
+        rm -f ./out/Plugins/StateService/RpcServer.dll
+    - name: Install dependencies
+      run: sudo apt-get install libleveldb-dev expect
+    - name: Debug - List Plugins folder contents
+      run: |
+        echo "Plugins folder contents:"
+        ls -la ./out/Plugins/ || echo "Plugins folder does not exist"
+        echo ""
+        echo "Plugin directories:"
+        find ./out/Plugins -mindepth 1 -maxdepth 1 -type d | sort || echo "No plugin directories found"
+        echo ""
+        echo "Sample plugin DLLs (ApplicationLogs):"
+        ls -la ./out/Plugins/ApplicationLogs/*.dll 2>/dev/null | head -5 || echo "No DLLs found"
+    - name: Run tests with expect
+      run: expect ./.github/workflows/test-neo-cli-plugins.expect
+      
+  Release:
+    if: github.ref == 'refs/heads/master-n3' && startsWith(github.repository, 'neo-project/')
+    needs: Test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+    - name: Get version
+      id: get_version
+      run: |
+        sudo apt install xmlstarlet
+        find plugins -name Directory.Build.props | xargs xmlstarlet sel -N i=http://schemas.microsoft.com/developer/msbuild/2003 -t -v "concat('version=v',//i:Version/text())" | xargs echo >> $GITHUB_OUTPUT
+    - name: Check tag
+      if: steps.get_version.outputs.version != 'v' && startsWith(steps.get_version.outputs.version, 'v')
+      id: check_tag
+      run: curl -s -I ${{ format('https://github.com/{0}/releases/tag/{1}', github.repository, steps.get_version.outputs.version) }} | head -n 1 | cut -d$' ' -f2 | xargs printf "statusCode=%s" | xargs echo >> $GITHUB_OUTPUT
+    - name: Create release
+      if: steps.check_tag.outputs.statusCode == '404'
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.get_version.outputs.version }}
+        release_name: ${{ steps.get_version.outputs.version }}
+        draft: true
+        prerelease: ${{ contains(steps.get_version.outputs.version, '-') }}
+    - name: Setup .NET Core
+      if: steps.check_tag.outputs.statusCode == '404'
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+    - name: Publish to NuGet
+      if: steps.check_tag.outputs.statusCode == '404'
+      run: |
+        dotnet pack -o out -c Release
+        dotnet nuget push out/*.nupkg -s https://api.nuget.org/v3/index.json -k ${NUGET_TOKEN}
+      env:
+        NUGET_TOKEN: ${{ secrets.NUGET_TOKEN }}
