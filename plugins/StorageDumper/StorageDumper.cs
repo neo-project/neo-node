@@ -124,7 +124,7 @@ public class StorageDumper : Plugin
 
             _currentBlock = new JObject()
             {
-                ["block"] = blockIndex,
+                ["block"] = block.Index,
                 ["size"] = stateChangeArray.Count,
                 ["storage"] = stateChangeArray
             };
