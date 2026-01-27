@@ -14,7 +14,6 @@ using Neo.Extensions;
 using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
-using Neo.Persistence;
 using Neo.Plugins.DBFTPlugin.Messages;
 using Neo.Plugins.DBFTPlugin.Types;
 using Neo.Sign;
@@ -69,11 +68,18 @@ internal partial class ConsensusService : UntypedActor
         Context.System.EventStream.Subscribe(Self, typeof(PersistCompleted));
         Context.System.EventStream.Subscribe(Self, typeof(RelayResult));
         neoSystem.MemPool.NewTransaction += MemPool_NewTransaction;
+        neoSystem.MemPool.TransactionRemoved += MemPool_TransactionRemoved;
     }
 
     private void MemPool_NewTransaction(object sender, NewTransactionEventArgs e)
     {
         e.Cancel = e.Transaction.SystemFee > dbftSettings.MaxBlockSystemFee;
+    }
+
+    private void MemPool_TransactionRemoved(object sender, TransactionRemovedEventArgs e)
+    {
+        foreach (var tx in e.Transactions)
+            context.InvalidTransactions.Remove(tx.Hash);
     }
 
     private void OnPersistCompleted(Block block)
@@ -221,7 +227,7 @@ internal partial class ConsensusService : UntypedActor
         localNode.Tell(new LocalNode.SendDirectly(context.MakeRecoveryRequest()));
     }
 
-    private void RequestChangeView(ChangeViewReason reason)
+    private void RequestChangeView(ChangeViewReason reason, UInt256 rejectedHash = null)
     {
         if (context.WatchOnly) return;
         // Request for next view is always one view more than the current context.ViewNumber
@@ -237,7 +243,7 @@ internal partial class ConsensusService : UntypedActor
         else
         {
             Log($"Sending {nameof(ChangeView)}: height={context.Block.Index} view={context.ViewNumber} nv={expectedView} nc={context.CountCommitted} nf={context.CountFailed} reason={reason}");
-            localNode.Tell(new LocalNode.SendDirectly(context.MakeChangeView(reason)));
+            localNode.Tell(new LocalNode.SendDirectly(context.MakeChangeView(reason, rejectedHash)));
             CheckExpectedView(expectedView);
         }
     }
@@ -282,7 +288,7 @@ internal partial class ConsensusService : UntypedActor
                 {
                     result = VerifyResult.HasConflicts;
                     Log($"Rejected tx: {tx.Hash}, {result}{Environment.NewLine}{tx.ToArray().ToHexString()}", LogLevel.Warning);
-                    RequestChangeView(ChangeViewReason.TxInvalid);
+                    RequestChangeView(ChangeViewReason.TxInvalid, tx.Hash);
                     return false;
                 }
             }
@@ -293,7 +299,7 @@ internal partial class ConsensusService : UntypedActor
                 {
                     result = VerifyResult.HasConflicts;
                     Log($"Rejected tx: {tx.Hash}, {result}{Environment.NewLine}{tx.ToArray().ToHexString()}", LogLevel.Warning);
-                    RequestChangeView(ChangeViewReason.TxInvalid);
+                    RequestChangeView(ChangeViewReason.TxInvalid, tx.Hash);
                     return false;
                 }
             }
@@ -305,7 +311,7 @@ internal partial class ConsensusService : UntypedActor
             if (result != VerifyResult.Succeed)
             {
                 Log($"Rejected tx: {tx.Hash}, {result}{Environment.NewLine}{tx.ToArray().ToHexString()}", LogLevel.Warning);
-                RequestChangeView(result == VerifyResult.PolicyFail ? ChangeViewReason.TxRejectedByPolicy : ChangeViewReason.TxInvalid);
+                RequestChangeView(result == VerifyResult.PolicyFail ? ChangeViewReason.TxRejectedByPolicy : ChangeViewReason.TxInvalid, tx.Hash);
                 return false;
             }
         }

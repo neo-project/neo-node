@@ -50,6 +50,7 @@ public sealed partial class ConsensusContext : IDisposable, ISerializable
     /// Store all verified unsorted transactions' senders' fee currently in the consensus context.
     /// </summary>
     public TransactionVerificationContext VerificationContext = new();
+    public Dictionary<UInt256, HashSet<ECPoint>> InvalidTransactions = new();
 
     public StoreCache Snapshot { get; private set; }
     private ECPoint _myPublicKey;
