@@ -9,6 +9,7 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using Neo.Extensions;
 using Neo.IO;
 using Neo.Plugins.DBFTPlugin.Types;
 
@@ -33,9 +34,17 @@ public class ChangeView : ConsensusMessage
     /// </summary>
     public ChangeViewReason Reason;
 
+    public UInt256[] RejectedHashes;
+
     public override int Size => base.Size +
         sizeof(ulong) +             // Timestamp
-        sizeof(ChangeViewReason);   // Reason
+        sizeof(ChangeViewReason) +  // Reason
+        Reason switch
+        {
+            ChangeViewReason.TxRejectedByPolicy or
+            ChangeViewReason.TxInvalid => RejectedHashes.GetVarSize(),
+            _ => 0
+        };
 
     public ChangeView() : base(ConsensusMessageType.ChangeView) { }
 
@@ -44,6 +53,13 @@ public class ChangeView : ConsensusMessage
         base.Deserialize(ref reader);
         Timestamp = reader.ReadUInt64();
         Reason = (ChangeViewReason)reader.ReadByte();
+        switch (Reason)
+        {
+            case ChangeViewReason.TxRejectedByPolicy:
+            case ChangeViewReason.TxInvalid:
+                RejectedHashes = reader.ReadSerializableArray<UInt256>(ushort.MaxValue);
+                break;
+        }
     }
 
     public override void Serialize(BinaryWriter writer)
@@ -51,5 +67,12 @@ public class ChangeView : ConsensusMessage
         base.Serialize(writer);
         writer.Write(Timestamp);
         writer.Write((byte)Reason);
+        switch (Reason)
+        {
+            case ChangeViewReason.TxRejectedByPolicy:
+            case ChangeViewReason.TxInvalid:
+                writer.Write(RejectedHashes);
+                break;
+        }
     }
 }

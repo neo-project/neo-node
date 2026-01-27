@@ -11,11 +11,13 @@
 
 using Akka.Actor;
 using Neo.Cryptography;
+using Neo.Cryptography.ECC;
 using Neo.Extensions;
 using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.Plugins.DBFTPlugin.Messages;
+using Neo.Plugins.DBFTPlugin.Types;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 
@@ -192,6 +194,20 @@ partial class ConsensusService
 
         Log($"{nameof(OnChangeViewReceived)}: height={message.BlockIndex} view={message.ViewNumber} index={message.ValidatorIndex} nv={message.NewViewNumber} reason={message.Reason}");
         context.ChangeViewPayloads[message.ValidatorIndex] = payload;
+        switch (message.Reason)
+        {
+            case ChangeViewReason.TxRejectedByPolicy:
+            case ChangeViewReason.TxInvalid:
+                foreach (UInt256 hash in message.RejectedHashes)
+                {
+                    ECPoint pubkey = context.Validators[message.ValidatorIndex];
+                    if (context.InvalidTransactions.TryGetValue(hash, out var hashset))
+                        hashset.Add(pubkey);
+                    else
+                        context.InvalidTransactions.Add(hash, [pubkey]);
+                }
+                break;
+        }
         CheckExpectedView(message.NewViewNumber);
     }
 

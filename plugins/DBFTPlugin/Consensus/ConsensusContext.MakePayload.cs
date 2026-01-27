@@ -21,12 +21,13 @@ namespace Neo.Plugins.DBFTPlugin.Consensus;
 
 partial class ConsensusContext
 {
-    public ExtensiblePayload MakeChangeView(ChangeViewReason reason)
+    public ExtensiblePayload MakeChangeView(ChangeViewReason reason, params UInt256[] rejectedHashes)
     {
         return ChangeViewPayloads[MyIndex] = MakeSignedPayload(new ChangeView
         {
+            Timestamp = TimeProvider.Current.UtcNow.ToTimestampMS(),
             Reason = reason,
-            Timestamp = TimeProvider.Current.UtcNow.ToTimestampMS()
+            RejectedHashes = rejectedHashes
         });
     }
 
@@ -83,6 +84,9 @@ partial class ConsensusContext
         // Iterate transaction until reach the size or maximum system fee
         foreach (Transaction tx in txs)
         {
+            if (InvalidTransactions.TryGetValue(tx.Hash, out var hashset))
+                if (hashset.Count > F) continue;
+
             // Check if maximum block size has been already exceeded with the current selected set
             blockSize += tx.Size;
             if (blockSize > dbftSettings.MaxBlockSize) break;
