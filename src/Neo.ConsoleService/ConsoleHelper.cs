@@ -23,6 +23,13 @@ public static class ConsoleHelper
     private static readonly ConsoleColorSet WarningColor = new(ConsoleColor.Yellow);
     private static readonly ConsoleColorSet ErrorColor = new(ConsoleColor.Red);
 
+    /// <summary>
+    /// A shared lock object for synchronizing console output.
+    /// Use this to prevent interleaved output from multiple threads/plugins.
+    /// Example: lock(ConsoleHelper.Locker) { /* multiple Console.Write calls */ }
+    /// </summary>
+    public static readonly object Locker = new();
+
     public static bool ReadingPassword { get; private set; } = false;
 
     /// <summary>
@@ -32,18 +39,21 @@ public static class ConsoleHelper
     /// <param name="values">The log message in pairs of (tag, message)</param>
     public static void Info(params string[] values)
     {
-        var currentColor = new ConsoleColorSet();
-
-        for (int i = 0; i < values.Length; i++)
+        lock (Locker)
         {
-            if (i % 2 == 0)
-                InfoColor.Apply();
-            else
-                currentColor.Apply();
-            Console.Write(values[i]);
+            var currentColor = new ConsoleColorSet();
+
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (i % 2 == 0)
+                    InfoColor.Apply();
+                else
+                    currentColor.Apply();
+                Console.Write(values[i]);
+            }
+            currentColor.Apply();
+            Console.WriteLine();
         }
-        currentColor.Apply();
-        Console.WriteLine();
     }
 
     /// <summary>
@@ -71,12 +81,15 @@ public static class ConsoleHelper
 
     private static void Log(string tag, ConsoleColorSet colorSet, string msg)
     {
-        var currentColor = new ConsoleColorSet();
+        lock (Locker)
+        {
+            var currentColor = new ConsoleColorSet();
 
-        colorSet.Apply();
-        Console.Write($"{tag}: ");
-        currentColor.Apply();
-        Console.WriteLine(msg);
+            colorSet.Apply();
+            Console.Write($"{tag}: ");
+            currentColor.Apply();
+            Console.WriteLine(msg);
+        }
     }
 
     public static string ReadUserInput(string prompt, bool password = false)
