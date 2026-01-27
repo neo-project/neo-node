@@ -39,6 +39,14 @@
     "MaxValidUntilBlockIncrement": 8640,
     "InitialGasDistribution": 5200000000000000,
     "ValidatorsCount": 7,
+    "Hardforks": {
+      "HF_Aspidochelone": 0,
+      "HF_Basilisk": 0,
+      "HF_Cockatrice": 0,
+      "HF_Domovoi": 0,
+      "HF_Echidna": 0,
+      "HF_Faun": 19340000
+    },
     "StandbyCommittee": [
       "0337f5f45e5be5aeae4a919d0787fcb743656560949061d5b8b05509b85ffbfd53",
       "020b86534a9a264d28b79155b0ec36d555ed0068eb1b0c4d40c35cc7d2f04759b8",
