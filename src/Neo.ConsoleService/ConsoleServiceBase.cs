@@ -125,6 +125,7 @@ public abstract class ConsoleServiceBase
         var possibleHelp = "";
         var tokens = commandLine.Tokenize();
         var availableCommands = new List<(ConsoleCommandMethod Command, object?[] Arguments)>();
+
         foreach (var entries in _verbs.Values)
         {
             foreach (var command in entries)
@@ -133,6 +134,7 @@ public abstract class ConsoleServiceBase
                 if (consumed <= 0) continue;
 
                 var args = tokens.Skip(consumed).ToList().Trim();
+
                 try
                 {
                     if (args.Any(u => u.IsIndicator))
@@ -170,7 +172,8 @@ public abstract class ConsoleServiceBase
 
         // Show Ambiguous call
         var ambiguousCommands = availableCommands.Select(u => u.Command.Key).Distinct().ToList();
-        throw new ArgumentException($"Ambiguous calls for: {string.Join(',', ambiguousCommands)}");
+        var ambiguousCommandsQuoted = ambiguousCommands.Select(u => $"'{u}'").ToList();
+        throw new ArgumentException($"Ambiguous calls for: {string.Join(',', ambiguousCommandsQuoted)}");
     }
 
     private bool TryProcessValue(Type parameterType, IList<CommandToken> args, bool consumeAll, out object? value)
