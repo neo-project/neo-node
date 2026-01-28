@@ -574,7 +574,7 @@ public class RpcClient : IDisposable
     public async Task<BigDecimal> GetWalletUnclaimedGasAsync()
     {
         var result = await RpcSendAsync(GetRpcName()).ConfigureAwait(false);
-        return BigDecimal.Parse(result.AsString(), NativeContract.GAS.Decimals);
+        return BigDecimal.Parse(result.AsString(), Governance.GasTokenDecimals);
     }
 
     /// <summary>

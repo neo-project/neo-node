@@ -46,7 +46,7 @@ public class UT_RpcErrorHandling
         var key = new KeyBuilder(NativeContract.GAS.Id, 20).Add(_walletAccount.ScriptHash);
         var snapshot = _neoSystem.GetSnapshotCache();
         var entry = snapshot.GetAndChange(key, () => new StorageItem(new AccountState()));
-        entry.GetInteroperable<AccountState>().Balance = 100_000_000 * NativeContract.GAS.Factor;
+        entry.GetInteroperable<AccountState>().Balance = 100_000_000 * Governance.GasTokenFactor;
         snapshot.Commit();
     }
 

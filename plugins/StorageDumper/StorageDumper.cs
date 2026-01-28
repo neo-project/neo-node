@@ -11,7 +11,6 @@
 
 using Neo.ConsoleService;
 using Neo.Extensions.IO;
-using Neo.IEventHandlers;
 using Neo.Json;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;

@@ -439,15 +439,15 @@ partial class MainService
         {
             Console.WriteLine(account.ToAddress(NeoSystem.Settings.AddressVersion));
             ConsoleHelper.Info("NEO: ", $"{CurrentWallet.GetBalance(snapshot, NativeContract.NEO.Hash, account)}");
-            ConsoleHelper.Info("GAS: ", $"{CurrentWallet.GetBalance(snapshot, NativeContract.GAS.Hash, account)}");
+            ConsoleHelper.Info("GAS: ", $"{CurrentWallet.GetBalance(snapshot, NativeContract.Governance.Hash, account)}");
             Console.WriteLine();
         }
         Console.WriteLine("----------------------------------------------------");
         ConsoleHelper.Info("Total:   NEO: ", $"{CurrentWallet.GetAvailable(snapshot, NativeContract.NEO.Hash),10}     ",
-            "GAS: ", $"{CurrentWallet.GetAvailable(snapshot, NativeContract.GAS.Hash),18}");
+            "GAS: ", $"{CurrentWallet.GetAvailable(snapshot, NativeContract.Governance.Hash),18}");
         Console.WriteLine();
         ConsoleHelper.Info("NEO hash: ", NativeContract.NEO.Hash.ToString());
-        ConsoleHelper.Info("GAS hash: ", NativeContract.GAS.Hash.ToString());
+        ConsoleHelper.Info("GAS hash: ", NativeContract.Governance.Hash.ToString());
     }
 
     /// <summary>
@@ -568,8 +568,8 @@ partial class MainService
 
         ConsoleHelper.Info(
             "Send To: ", $"{to.ToAddress(NeoSystem.Settings.AddressVersion)}\n",
-            "Network fee: ", $"{new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)}\t",
-            "Total fee: ", $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
+            "Network fee: ", $"{new BigDecimal((BigInteger)tx.NetworkFee, Governance.GasTokenDecimals)}\t",
+            "Total fee: ", $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), Governance.GasTokenDecimals)} GAS");
         if (!ConsoleHelper.ReadUserInput("Relay tx? (no|yes)").IsYes())
         {
             return;
@@ -640,7 +640,7 @@ partial class MainService
         else
         {
             var snapshot = NeoSystem.StoreView;
-            AssetDescriptor descriptor = new(snapshot, NeoSystem.Settings, NativeContract.GAS.Hash);
+            AssetDescriptor descriptor = new(snapshot, NeoSystem.Settings, NativeContract.Governance.Hash);
             string extracFee = ConsoleHelper.ReadUserInput("This tx is not in mempool, please input extra fee (datoshi) manually");
             if (!BigDecimal.TryParse(extracFee, descriptor.Decimals, out BigDecimal decimalExtraFee) || decimalExtraFee.Sign <= 0)
             {
@@ -651,9 +651,9 @@ partial class MainService
         }
 
         ConsoleHelper.Info("Network fee: ",
-            $"{new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)} GAS\t",
+            $"{new BigDecimal((BigInteger)tx.NetworkFee, Governance.GasTokenDecimals)} GAS\t",
             "Total fee: ",
-            $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
+            $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), Governance.GasTokenDecimals)} GAS");
         if (!ConsoleHelper.ReadUserInput("Relay tx? (no|yes)").IsYes())
         {
             return;
@@ -673,7 +673,7 @@ partial class MainService
         uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
         foreach (UInt160 account in CurrentWallet!.GetAccounts().Select(p => p.ScriptHash))
             gas += NativeContract.NEO.UnclaimedGas(snapshot, account, height);
-        ConsoleHelper.Info("Unclaimed gas: ", new BigDecimal(gas, NativeContract.GAS.Decimals).ToString());
+        ConsoleHelper.Info("Unclaimed gas: ", new BigDecimal(gas, Governance.GasTokenDecimals).ToString());
     }
 
     /// <summary>

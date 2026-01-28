@@ -42,7 +42,7 @@ partial class MainService
     [ConsoleCommand("register candidate", Category = "Vote Commands")]
     private void OnRegisterCandidateCommand(UInt160 account)
     {
-        var testGas = NativeContract.NEO.GetRegisterPrice(NeoSystem.StoreView) + (BigInteger)Math.Pow(10, NativeContract.GAS.Decimals) * 10;
+        var testGas = NativeContract.NEO.GetRegisterPrice(NeoSystem.StoreView) + (BigInteger)Math.Pow(10, Governance.GasTokenDecimals) * 10;
         if (NoWallet()) return;
 
         var currentAccount = GetValidAccountOrWarn(account);

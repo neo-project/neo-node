@@ -237,7 +237,7 @@ public partial class UT_RpcServer
     [TestMethod]
     public void TestGetContractState_Native_CaseInsensitive()
     {
-        var gasTokenHash = NativeContract.GAS.Hash;
+        var gasTokenHash = NativeContract.Governance.Hash;
         var resultLower = _rpcServer.GetContractState(new ContractNameOrHashOrId("gastoken"));
         var resultUpper = _rpcServer.GetContractState(new ContractNameOrHashOrId("GASTOKEN"));
         var resultMixed = _rpcServer.GetContractState(new ContractNameOrHashOrId("GasToken"));

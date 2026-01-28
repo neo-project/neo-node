@@ -11,7 +11,6 @@
 
 using Neo.ConsoleService;
 using Neo.Extensions.VM;
-using Neo.IEventHandlers;
 using Neo.Json;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
@@ -285,7 +284,7 @@ public class LogReader : Plugin, ICommittingHandler, ICommittedHandler, ILogHand
             ConsoleHelper.Error($"Exception: {model.Exception}");
         else
             ConsoleHelper.Info("Exception: ", "null");
-        ConsoleHelper.Info("Gas Consumed: ", $"{new BigDecimal((BigInteger)model.GasConsumed, NativeContract.GAS.Decimals)}");
+        ConsoleHelper.Info("Gas Consumed: ", $"{new BigDecimal((BigInteger)model.GasConsumed, Governance.GasTokenDecimals)}");
         if (model.Stack.Length == 0)
             ConsoleHelper.Info("Stack: ", "[]");
         else

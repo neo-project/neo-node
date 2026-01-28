@@ -11,7 +11,6 @@
 
 using Akka.Actor;
 using Neo.ConsoleService;
-using Neo.IEventHandlers;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.Plugins.DBFTPlugin.Consensus;
