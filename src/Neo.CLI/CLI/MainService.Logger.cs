@@ -10,13 +10,12 @@
 // modifications are permitted.
 
 using Neo.ConsoleService;
-using Neo.IEventHandlers;
 using System.Text;
 using static System.IO.Path;
 
 namespace Neo.CLI;
 
-partial class MainService : ILoggingHandler
+partial class MainService
 {
     private static readonly ConsoleColorSet DebugColor = new(ConsoleColor.Cyan);
     private static readonly ConsoleColorSet InfoColor = new(ConsoleColor.White);
@@ -29,12 +28,12 @@ partial class MainService : ILoggingHandler
 
     private void Initialize_Logger()
     {
-        Utility.Logging += ((ILoggingHandler)this).Utility_Logging_Handler;
+        Utility.Logging += Utility_Logging_Handler;
     }
 
     private void Dispose_Logger()
     {
-        Utility.Logging -= ((ILoggingHandler)this).Utility_Logging_Handler;
+        Utility.Logging -= Utility_Logging_Handler;
     }
 
     /// <summary>
@@ -75,7 +74,7 @@ partial class MainService : ILoggingHandler
         }
     }
 
-    void ILoggingHandler.Utility_Logging_Handler(string source, LogLevel level, object message)
+    void Utility_Logging_Handler(string source, LogLevel level, object message)
     {
         if (!Settings.Default.Logger.Active)
             return;

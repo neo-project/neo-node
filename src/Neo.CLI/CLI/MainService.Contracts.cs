@@ -45,9 +45,9 @@ partial class MainService
         UInt160 hash = SmartContract.Helper.GetContractHash(tx.Sender, nef.CheckSum, manifest.Name);
 
         ConsoleHelper.Info("Contract hash: ", $"{hash}");
-        ConsoleHelper.Info("Gas consumed: ", $"{new BigDecimal((BigInteger)tx.SystemFee, NativeContract.GAS.Decimals)} GAS");
-        ConsoleHelper.Info("Network fee: ", $"{new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)} GAS");
-        ConsoleHelper.Info("Total fee: ", $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
+        ConsoleHelper.Info("Gas consumed: ", $"{new BigDecimal((BigInteger)tx.SystemFee, Governance.GasTokenDecimals)} GAS");
+        ConsoleHelper.Info("Network fee: ", $"{new BigDecimal((BigInteger)tx.NetworkFee, Governance.GasTokenDecimals)} GAS");
+        ConsoleHelper.Info("Total fee: ", $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), Governance.GasTokenDecimals)} GAS");
         if (!ConsoleHelper.ReadUserInput("Relay tx? (no|yes)").IsYes()) // Add this in case just want to get hash but not relay
         {
             return;
@@ -107,9 +107,9 @@ partial class MainService
         {
             ConsoleHelper.Info("Contract hash: ", $"{scriptHash}");
             ConsoleHelper.Info("Updated times: ", $"{contract.UpdateCounter}");
-            ConsoleHelper.Info("Gas consumed: ", $"{new BigDecimal((BigInteger)tx.SystemFee, NativeContract.GAS.Decimals)} GAS");
-            ConsoleHelper.Info("Network fee: ", $"{new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)} GAS");
-            ConsoleHelper.Info("Total fee: ", $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
+            ConsoleHelper.Info("Gas consumed: ", $"{new BigDecimal((BigInteger)tx.SystemFee, Governance.GasTokenDecimals)} GAS");
+            ConsoleHelper.Info("Network fee: ", $"{new BigDecimal((BigInteger)tx.NetworkFee, Governance.GasTokenDecimals)} GAS");
+            ConsoleHelper.Info("Total fee: ", $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), Governance.GasTokenDecimals)} GAS");
             if (!ConsoleHelper.ReadUserInput("Relay tx? (no|yes)").IsYes()) // Add this in case just want to get hash but not relay
             {
                 return;
@@ -131,7 +131,7 @@ partial class MainService
     private void OnInvokeCommand(UInt160 scriptHash, string operation, JArray? contractParameters = null, UInt160? sender = null, UInt160[]? signerAccounts = null, decimal maxGas = 20)
     {
         // In the unit of datoshi, 1 datoshi = 1e-8 GAS
-        var datoshi = new BigDecimal(maxGas, NativeContract.GAS.Decimals);
+        var datoshi = new BigDecimal(maxGas, Governance.GasTokenDecimals);
         Signer[] signers = Array.Empty<Signer>();
         if (!NoWallet())
         {
@@ -176,9 +176,9 @@ partial class MainService
             return;
         }
         ConsoleHelper.Info("Network fee: ",
-            $"{new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)} GAS\t",
+            $"{new BigDecimal((BigInteger)tx.NetworkFee, Governance.GasTokenDecimals)} GAS\t",
             "Total fee: ",
-            $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
+            $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), Governance.GasTokenDecimals)} GAS");
         if (!ConsoleHelper.ReadUserInput("Relay tx? (no|yes)").IsYes())
         {
             return;

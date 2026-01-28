@@ -85,7 +85,7 @@ internal partial class MainForm : Form
                 },
                 new ListViewItem.ListViewSubItem
                 {
-                    Name = NativeContract.GAS.Symbol
+                    Name = Governance.GasTokenSymbol
                 }
             }, -1, listView1.Groups[groupName])
             {
@@ -218,8 +218,8 @@ internal partial class MainForm : Form
             string symbol = null;
             if (assetId.Equals(NativeContract.NEO.Hash))
                 symbol = NativeContract.NEO.Symbol;
-            else if (assetId.Equals(NativeContract.GAS.Hash))
-                symbol = NativeContract.GAS.Symbol;
+            else if (assetId.Equals(NativeContract.Governance.Hash))
+                symbol = Governance.GasTokenSymbol;
             if (symbol != null)
                 for (int i = 0; i < addresses.Length; i++)
                     listView1.Items[addresses[i].ToAddress(Service.NeoSystem.Settings.AddressVersion)].SubItems[symbol].Text = new BigDecimal(balances[i], decimals).ToString();

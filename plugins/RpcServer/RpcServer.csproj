@@ -14,4 +14,8 @@
     <InternalsVisibleTo Include="Neo.Plugins.RpcServer.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Update="Neo" Version="4.0.0-CI02018" />
+  </ItemGroup>
+
 </Project>

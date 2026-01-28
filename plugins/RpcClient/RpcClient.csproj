@@ -9,4 +9,8 @@
     <InternalsVisibleTo Include="Neo.Network.RPC.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Update="Neo" Version="4.0.0-CI02018" />
+  </ItemGroup>
+
 </Project>

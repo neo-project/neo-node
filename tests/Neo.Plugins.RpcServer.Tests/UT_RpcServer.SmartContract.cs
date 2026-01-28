@@ -42,7 +42,7 @@ public partial class UT_RpcServer
     static readonly string MultisigAddress = MultisigScriptHash.ToAddress(ProtocolSettings.Default.AddressVersion);
 
     static readonly string s_neoHash = NativeContract.NEO.Hash.ToString();
-    static readonly string s_gasHash = NativeContract.GAS.Hash.ToString();
+    static readonly string s_gasHash = NativeContract.Governance.Hash.ToString();
 
     static readonly JArray validatorSigner = [new JObject()
     {
