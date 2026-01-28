@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RpcServer\RpcServer.csproj" />
+    <ProjectReference Include="..\..\src\Neo.ConsoleService\Neo.ConsoleService.csproj" />
   </ItemGroup>
 
   <ItemGroup>
