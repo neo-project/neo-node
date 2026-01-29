@@ -79,7 +79,7 @@ public class TokensTracker : Plugin
         // TokensTracker default path format: "TokensBalanceData" or "TokensBalanceData_{0}"
         string defaultPath = _dbPath.Contains("{0}") ? _dbPath : $"{_dbPath}_{{0}}";
         var pluginPath = string.Format(defaultPath, networkId);
-        var path = Neo.UnifiedStoragePath.Apply(pluginPath);
+        var path = Plugin.ApplyUnifiedStoragePath(pluginPath);
         var fullPath = GetFullPath(path);
         System.IO.Directory.CreateDirectory(System.IO.Path.GetFullPath(fullPath));
         _db = neoSystem.LoadStore(fullPath);

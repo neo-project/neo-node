@@ -82,7 +82,7 @@ public class LogReader : Plugin
         // Get path from plugin's own configuration, optionally combined with base path from config.json
         var networkId = ApplicationLogsSettings.Default.Network.ToString("X8");
         var pluginPath = string.Format(ApplicationLogsSettings.Default.Path, networkId);
-        var path = Neo.UnifiedStoragePath.Apply(pluginPath);
+        var path = Plugin.ApplyUnifiedStoragePath(pluginPath);
         var fullPath = GetFullPath(path);
         // Ensure directory exists for the underlying storage provider
         System.IO.Directory.CreateDirectory(System.IO.Path.GetFullPath(fullPath));

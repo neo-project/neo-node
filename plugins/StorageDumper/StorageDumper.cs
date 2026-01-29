@@ -68,7 +68,7 @@ public class StorageDumper : Plugin
         var networkId = _system.Settings.Network.ToString("X8");
         // dump file path: plugin default naming, optionally combined with base path from config.json
         var pluginPath = string.Format("dump_{0}.json", networkId);
-        var path = Neo.UnifiedStoragePath.Apply(pluginPath);
+        var path = Plugin.ApplyUnifiedStoragePath(pluginPath);
         byte[]? prefix = null;
         if (contractHash is not null)
         {
@@ -182,7 +182,7 @@ public class StorageDumper : Plugin
         var networkId = network.ToString("X8");
         // Base folder for StorageDumper, optionally combined with base path from config.json
         var pluginFolder = string.Format("StorageDumper_{0}", networkId);
-        var baseFolder = Neo.UnifiedStoragePath.Apply(pluginFolder);
+        var baseFolder = Plugin.ApplyUnifiedStoragePath(pluginFolder);
         return System.IO.Path.Combine(baseFolder, $"BlockStorage_{folder}");
     }
 

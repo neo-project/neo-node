@@ -123,7 +123,7 @@ public sealed partial class ConsensusContext : IDisposable, ISerializable
             // DBFTPlugin default path format: "ConsensusState" or "ConsensusState_{0}"
             string defaultPath = settings.RecoveryLogs.Contains("{0}") ? settings.RecoveryLogs : $"{settings.RecoveryLogs}_{{0}}";
             var pluginPath = string.Format(defaultPath, networkId);
-            var path = Neo.UnifiedStoragePath.Apply(pluginPath);
+            var path = Plugin.ApplyUnifiedStoragePath(pluginPath);
             var fullPath = System.IO.Path.GetFullPath(path);
             System.IO.Directory.CreateDirectory(fullPath);
             store = neoSystem.LoadStore(fullPath);
