@@ -103,6 +103,32 @@ public class StorageSettings
     }
 
     public StorageSettings() { }
+
+    /// <summary>
+    /// Checks if the Path is a base path (doesn't contain {0} placeholder)
+    /// </summary>
+    public bool IsBasePath => !string.IsNullOrEmpty(Path) && !Path.Contains("{0}");
+
+    /// <summary>
+    /// Gets the base path for unified storage configuration
+    /// </summary>
+    public string? GetBasePath() => IsBasePath ? Path : null;
+
+    /// <summary>
+    /// Combines base path with a plugin's default path
+    /// If this is a base path, combines it with the plugin's default path.
+    /// Otherwise, returns the formatted default path (plugin uses its own configuration).
+    /// </summary>
+    public string CombinePath(string defaultPath, string networkId)
+    {
+        if (IsBasePath)
+        {
+            var formattedDefaultPath = string.Format(defaultPath, networkId);
+            return System.IO.Path.Combine(Path, formattedDefaultPath);
+        }
+        // If not a base path, return the plugin's own default path (formatted)
+        return string.Format(defaultPath, networkId);
+    }
 }
 
 public class P2PSettings
