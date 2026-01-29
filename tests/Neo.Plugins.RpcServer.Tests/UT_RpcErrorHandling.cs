@@ -9,6 +9,7 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using Akka.Actor.Dsl;
 using Microsoft.AspNetCore.Http;
 using Neo.Extensions.IO;
 using Neo.Json;
@@ -43,7 +44,7 @@ public class UT_RpcErrorHandling
         _walletAccount = _wallet.CreateAccount();
 
         // Add some GAS to the wallet account for transactions
-        var key = new KeyBuilder(NativeContract.GAS.Id, 20).Add(_walletAccount.ScriptHash);
+        var key = new KeyBuilder(NativeContract.TokenManagement.Id, 20).Add(_walletAccount.ScriptHash).Add(NativeContract.Governance.GasTokenId);
         var snapshot = _neoSystem.GetSnapshotCache();
         var entry = snapshot.GetAndChange(key, () => new StorageItem(new AccountState()));
         entry.GetInteroperable<AccountState>().Balance = 100_000_000 * Governance.GasTokenFactor;
