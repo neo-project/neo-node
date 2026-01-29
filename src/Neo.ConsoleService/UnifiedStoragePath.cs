@@ -18,6 +18,25 @@ namespace Neo;
 public static class UnifiedStoragePath
 {
     /// <summary>
+    /// Finds a file by searching upward from the specified directory.
+    /// Returns the full path if found, null otherwise.
+    /// </summary>
+    private static string? FindFile(string fileName, string startDirectory)
+    {
+        var currentDir = new System.IO.DirectoryInfo(startDirectory);
+        while (currentDir != null)
+        {
+            var filePath = System.IO.Path.Combine(currentDir.FullName, fileName);
+            if (System.IO.File.Exists(filePath))
+            {
+                return filePath;
+            }
+            currentDir = currentDir.Parent;
+        }
+        return null;
+    }
+
+    /// <summary>
     /// Gets unified storage base path from config.json when configured as a base directory.
     /// Base path is defined as a non-empty Path WITHOUT "{0}" placeholder.
     /// Returns null if config.json is not found, invalid, or not configured as base path.
@@ -26,7 +45,7 @@ public static class UnifiedStoragePath
     {
         try
         {
-            var configFile = ProtocolSettings.FindFile("config.json", Environment.CurrentDirectory);
+            var configFile = FindFile("config.json", Environment.CurrentDirectory);
             if (configFile is null) return null;
 
             using var doc = System.Text.Json.JsonDocument.Parse(System.IO.File.ReadAllText(configFile));
