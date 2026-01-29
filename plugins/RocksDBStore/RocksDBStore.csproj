@@ -9,8 +9,4 @@
     <PackageReference Include="rocksdb" Version="10.4.2.62659" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Update="Neo" Version="4.0.0-CI02018" />
-  </ItemGroup>
-
 </Project>
