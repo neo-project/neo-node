@@ -14,7 +14,6 @@ using Neo.ConsoleService;
 using Neo.Cryptography.MPTTrie;
 using Neo.Extensions;
 using Neo.Extensions.IO;
-using Neo.IEventHandlers;
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;

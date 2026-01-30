@@ -2,7 +2,7 @@
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
   <PropertyGroup>
-    <Copyright>2015-2025 The Neo Project</Copyright>
+    <Copyright>2015-2026 The Neo Project</Copyright>
     <Authors>The Neo Project</Authors>
     <PackageId>Neo.Plugins.$(MSBuildProjectName)</PackageId>
     <PackageProjectUrl>https://github.com/neo-project/neo-modules</PackageProjectUrl>
@@ -19,14 +19,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Neo" Version="4.0.0-CI02011" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Include="config.json" Condition="Exists('config.json')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Neo" Version="4.0.0-CI02018" />
+  </ItemGroup>
 </Project>

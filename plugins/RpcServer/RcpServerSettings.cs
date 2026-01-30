@@ -56,12 +56,12 @@ public record RpcServersSettings
     /// <summary>
     /// In the unit of datoshi, 1 GAS = 10^8 datoshi
     /// </summary>
-    public long MaxGasInvoke { get; init; } = (long)new BigDecimal(10M, NativeContract.GAS.Decimals).Value;
+    public long MaxGasInvoke { get; init; } = (long)new BigDecimal(10M, Governance.GasTokenDecimals).Value;
 
     /// <summary>
     /// In the unit of datoshi, 1 GAS = 10^8 datoshi
     /// </summary>
-    public long MaxFee { get; init; } = (long)new BigDecimal(0.1M, NativeContract.GAS.Decimals).Value;
+    public long MaxFee { get; init; } = (long)new BigDecimal(0.1M, Governance.GasTokenDecimals).Value;
     public int MaxIteratorResultItems { get; init; } = 100;
     public int MaxStackSize { get; init; } = ushort.MaxValue;
     public string[] DisabledMethods { get; init; } = [];
@@ -88,8 +88,8 @@ public record RpcServersSettings
             AllowOrigins = GetStrings(section, "AllowOrigins"),
             KeepAliveTimeout = section.GetValue(nameof(KeepAliveTimeout), @default.KeepAliveTimeout),
             RequestHeadersTimeout = section.GetValue(nameof(RequestHeadersTimeout), @default.RequestHeadersTimeout),
-            MaxGasInvoke = (long)new BigDecimal(section.GetValue<decimal>("MaxGasInvoke", @default.MaxGasInvoke), NativeContract.GAS.Decimals).Value,
-            MaxFee = (long)new BigDecimal(section.GetValue<decimal>("MaxFee", @default.MaxFee), NativeContract.GAS.Decimals).Value,
+            MaxGasInvoke = (long)new BigDecimal(section.GetValue<decimal>("MaxGasInvoke", @default.MaxGasInvoke), Governance.GasTokenDecimals).Value,
+            MaxFee = (long)new BigDecimal(section.GetValue<decimal>("MaxFee", @default.MaxFee), Governance.GasTokenDecimals).Value,
             MaxIteratorResultItems = section.GetValue("MaxIteratorResultItems", @default.MaxIteratorResultItems),
             MaxStackSize = section.GetValue("MaxStackSize", @default.MaxStackSize),
             DisabledMethods = GetStrings(section, "DisabledMethods"),

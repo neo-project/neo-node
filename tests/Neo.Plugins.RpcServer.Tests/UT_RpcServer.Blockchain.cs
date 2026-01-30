@@ -237,7 +237,7 @@ public partial class UT_RpcServer
     [TestMethod]
     public void TestGetContractState_Native_CaseInsensitive()
     {
-        var gasTokenHash = NativeContract.GAS.Hash;
+        var gasTokenHash = NativeContract.Governance.Hash;
         var resultLower = _rpcServer.GetContractState(new ContractNameOrHashOrId("gastoken"));
         var resultUpper = _rpcServer.GetContractState(new ContractNameOrHashOrId("GASTOKEN"));
         var resultMixed = _rpcServer.GetContractState(new ContractNameOrHashOrId("GasToken"));
@@ -450,7 +450,7 @@ public partial class UT_RpcServer
         var snapshot = _neoSystem.GetSnapshotCache();
         var key = new byte[] { 0x01 };
         var value = new byte[] { 0x02 };
-        TestUtils.StorageItemAdd(snapshot, NativeContract.GAS.Id, key, value);
+        TestUtils.StorageItemAdd(snapshot, NativeContract.Governance.Id, key, value);
         snapshot.Commit();
 
         // GetStorage

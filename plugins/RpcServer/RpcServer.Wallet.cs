@@ -620,7 +620,7 @@ partial class RpcServer
         }
         else if (extraFee is not null)
         {
-            var descriptor = new AssetDescriptor(system.StoreView, system.Settings, NativeContract.GAS.Hash);
+            var descriptor = new AssetDescriptor(system.StoreView, system.Settings, NativeContract.Governance.Hash);
             (BigDecimal.TryParse(extraFee, descriptor.Decimals, out var decimalExtraFee) && decimalExtraFee.Sign > 0)
                 .True_Or(RpcErrorFactory.InvalidParams("Incorrect amount format."));
 

@@ -17,7 +17,6 @@ using Neo.Cryptography.ECC;
 using Neo.Extensions;
 using Neo.Extensions.Collections;
 using Neo.Extensions.IO;
-using Neo.IEventHandlers;
 using Neo.Json;
 using Neo.Ledger;
 using Neo.Network.P2P;

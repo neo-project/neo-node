@@ -292,7 +292,7 @@ partial class UT_RpcServer
     [TestMethod]
     public void TestSendFromNoWallet()
     {
-        var assetId = NativeContract.GAS.Hash;
+        var assetId = NativeContract.Governance.Hash;
         var from = new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion);
         var to = new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion);
         var amount = "1";
@@ -307,7 +307,7 @@ partial class UT_RpcServer
     {
         TestUtilOpenWallet();
 
-        var assetId = NativeContract.GAS.Hash;
+        var assetId = NativeContract.Governance.Hash;
         var from = new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion);
         var to = new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion);
         var amount = "1";
@@ -333,7 +333,7 @@ partial class UT_RpcServer
     {
         var from = _walletAccount.Address;
         var to = new JArray {
-            new JObject { ["asset"] = NativeContract.GAS.Hash.ToString(), ["value"] = "1", ["address"] = _walletAccount.Address }
+            new JObject { ["asset"] = NativeContract.Governance.Hash.ToString(), ["value"] = "1", ["address"] = _walletAccount.Address }
         };
 
         var exception = Assert.ThrowsExactly<RpcException>(
@@ -356,7 +356,7 @@ partial class UT_RpcServer
     [TestMethod]
     public void TestSendToAddress()
     {
-        var assetId = NativeContract.GAS.Hash;
+        var assetId = NativeContract.Governance.Hash;
         var to = new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion);
         var amount = "1";
         var exception = Assert.ThrowsExactly<RpcException>(
@@ -395,7 +395,7 @@ partial class UT_RpcServer
     public void TestSendToAddress_InvalidToAddress()
     {
         TestUtilOpenWallet();
-        var assetId = NativeContract.GAS.Hash;
+        var assetId = NativeContract.Governance.Hash;
         var invalidToAddress = "NotAnAddress";
         var amount = "1";
 
@@ -411,7 +411,7 @@ partial class UT_RpcServer
     public void TestSendToAddress_NegativeAmount()
     {
         TestUtilOpenWallet();
-        var assetId = NativeContract.GAS.Hash;
+        var assetId = NativeContract.Governance.Hash;
         var to = new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion);
         var amount = "-1";
 
@@ -424,7 +424,7 @@ partial class UT_RpcServer
     public void TestSendToAddress_ZeroAmount()
     {
         TestUtilOpenWallet();
-        var assetId = NativeContract.GAS.Hash;
+        var assetId = NativeContract.Governance.Hash;
         var to = new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion);
         var amount = "0";
 
@@ -438,7 +438,7 @@ partial class UT_RpcServer
     public void TestSendToAddress_InsufficientFunds()
     {
         TestUtilOpenWallet();
-        var assetId = NativeContract.GAS.Hash;
+        var assetId = NativeContract.Governance.Hash;
 
         var to = new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion);
         var hugeAmount = "100000000000000000"; // Exceeds likely balance
@@ -455,7 +455,7 @@ partial class UT_RpcServer
         TestUtilOpenWallet();
         var invalidFrom = "NotAnAddress";
         var to = new JArray {
-            new JObject { ["asset"] = NativeContract.GAS.Hash.ToString(), ["value"] = "1", ["address"] = _walletAccount.Address }
+            new JObject { ["asset"] = NativeContract.Governance.Hash.ToString(), ["value"] = "1", ["address"] = _walletAccount.Address }
         };
 
         var ex = Assert.ThrowsExactly<RpcException>(() => _rpcServer.SendMany(new JArray(invalidFrom, to)));
@@ -598,7 +598,7 @@ partial class UT_RpcServer
         // Test valid cancel
         _rpcServer.wallet = _wallet;
         var resp = (JObject)_rpcServer.SendFrom(
-            NativeContract.GAS.Hash,
+            NativeContract.Governance.Hash,
             new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion),
             new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion),
             "1"
