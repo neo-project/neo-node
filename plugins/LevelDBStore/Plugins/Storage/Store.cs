@@ -78,6 +78,58 @@ internal class Store : IStore, IEnumerable<KeyValuePair<byte[], byte[]>>
     public IEnumerable<(byte[], byte[])> Find(byte[]? keyOrPrefix, SeekDirection direction = SeekDirection.Forward) =>
         _db.Seek(ReadOptions.Default, keyOrPrefix, direction);
 
+    public IEnumerable<(byte[] Key, byte[] Value)> FindRange(byte[] start, byte[] end, SeekDirection direction = SeekDirection.Forward)
+    {
+        ArgumentNullException.ThrowIfNull(start);
+        ArgumentNullException.ThrowIfNull(end);
+
+        if (Helper.CompareLex(start, end) >= 0)
+            yield break;
+
+        using var iterator = _db.CreateIterator(ReadOptions.Default);
+
+        if (direction == SeekDirection.Forward)
+        {
+            iterator.Seek(start);
+
+            while (iterator.Valid())
+            {
+                var key = iterator.Key();
+                if (key is null) break;
+
+                if (Helper.CompareLex(key, end) >= 0)
+                    break;
+
+                yield return (key, iterator.Value()!);
+                iterator.Next();
+            }
+        }
+        else
+        {
+            iterator.Seek(end);
+
+            if (!iterator.Valid())
+            {
+                iterator.SeekToLast();
+            }
+            else
+            {
+                iterator.Prev();
+            }
+
+            while (iterator.Valid())
+            {
+                var key = iterator.Key();
+                if (key is null) break;
+
+                if (Helper.CompareLex(key, start) < 0)
+                    break;
+
+                yield return (key, iterator.Value()!);
+                iterator.Prev();
+            }
+        }
+    }
     public IEnumerator<KeyValuePair<byte[], byte[]>> GetEnumerator() =>
         _db.GetEnumerator();
 
