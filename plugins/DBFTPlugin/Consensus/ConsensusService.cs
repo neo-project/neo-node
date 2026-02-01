@@ -273,7 +273,7 @@ internal partial class ConsensusService : UntypedActor
             if (tx.SystemFee > dbftSettings.MaxBlockSystemFee)
             {
                 Log($"Rejected tx: {tx.Hash}, SystemFee {tx.SystemFee} exceeds MaxBlockSystemFee {dbftSettings.MaxBlockSystemFee}", LogLevel.Warning);
-                RequestChangeView(ChangeViewReason.TxRejectedByPolicy);
+                RequestChangeView(ChangeViewReason.TxRejectedByPolicy, tx.Hash);
                 return false;
             }
 
