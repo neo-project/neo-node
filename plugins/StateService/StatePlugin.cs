@@ -63,7 +63,7 @@ public class StatePlugin : Plugin
         // Get path from plugin's own configuration, optionally combined with base path from config.json
         var networkId = system.Settings.Network.ToString("X8");
         var pluginPath = string.Format(StateServiceSettings.Default.Path, networkId);
-        var path = StoragePathHelper.ApplyUnifiedStoragePath(pluginPath);
+        var path = PluginHelper.ApplyUnifiedStoragePath(pluginPath);
         var fullPath = System.IO.Path.GetFullPath(path);
         System.IO.Directory.CreateDirectory(fullPath);
         Store = _system.ActorSystem.ActorOf(StateStore.Props(this, fullPath));

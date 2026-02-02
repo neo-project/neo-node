@@ -13,8 +13,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Compile Include="..\PluginHelpers\StoragePathHelper.cs">
-			<Link>PluginHelpers\StoragePathHelper.cs</Link>
+		<Compile Include="..\PluginHelpers\PluginHelper.cs">
+			<Link>PluginHelpers\PluginHelper.cs</Link>
 		</Compile>
 	</ItemGroup>
 

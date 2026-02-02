@@ -1,6 +1,6 @@
 // Copyright (C) 2015-2026 The Neo Project.
 //
-// StoragePathHelper.cs file belongs to the neo project and is free
+// PluginHelper.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
 // accompanying file LICENSE in the main directory of the
 // repository or http://www.opensource.org/licenses/mit-license.php
@@ -22,7 +22,7 @@ namespace Neo.Plugins;
 /// Allows plugins to use a common base path configured in config.json.
 /// This is a shared source file included by plugins that need unified storage path functionality.
 /// </summary>
-public static class StoragePathHelper
+public static class PluginHelper
 {
     /// <summary>
     /// Finds a file by searching upward from the specified directory.
