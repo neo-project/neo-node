@@ -7,6 +7,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<Compile Include="..\PluginHelper\PluginHelper.cs">
+			<Link>PluginHelper\PluginHelper.cs</Link>
+		</Compile>
+	</ItemGroup>
+
+	<ItemGroup>
 		<None Update="StateService.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>

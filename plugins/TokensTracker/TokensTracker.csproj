@@ -9,6 +9,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\PluginHelper\PluginHelper.cs">
+      <Link>PluginHelper\PluginHelper.cs</Link>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="TokensTracker.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

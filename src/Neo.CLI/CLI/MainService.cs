@@ -350,7 +350,33 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
             engine = nameof(MemoryStore);
         }
 
-        var storagePath = string.Format(Settings.Default.Storage.Path, protocol.Network.ToString("X8"));
+        string storagePath;
+        var networkId = protocol.Network.ToString("X8");
+        string defaultPath = engine switch
+        {
+            "LevelDBStore" => "Data_LevelDB_{0}",
+            "RocksDBStore" => "Data_RocksDB_{0}",
+            _ => "Data_{0}"
+        };
+
+        if (Settings.Default.Storage.IsBasePath)
+        {
+            // If Path is a base path, combine it with the default storage folder name
+            storagePath = Settings.Default.Storage.CombinePath(defaultPath, networkId);
+        }
+        else
+        {
+            // If Path is empty (not configured), fall back to the default storage folder name
+            storagePath = string.IsNullOrEmpty(Settings.Default.Storage.Path)
+                ? string.Format(defaultPath, networkId)
+                : string.Format(Settings.Default.Storage.Path, networkId);
+        }
+
+        string fullStoragePath = storagePath;
+        if (!Path.IsPathRooted(fullStoragePath))
+        {
+            fullStoragePath = Path.GetFullPath(fullStoragePath);
+        }
 
         if (!engine.Equals(nameof(MemoryStore), StringComparison.OrdinalIgnoreCase))
         {
@@ -364,11 +390,14 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
                     throw new ArgumentException($"Not possible to install provider {engine}", nameof(Settings.Default.Storage.Engine));
                 }
             }
+
+            // Ensure the storage directory (including unified base path) exists
+            Directory.CreateDirectory(fullStoragePath);
         }
 
         try
         {
-            NeoSystem = new NeoSystem(protocol, engine, storagePath);
+            NeoSystem = new NeoSystem(protocol, engine, fullStoragePath);
         }
         catch (DllNotFoundException ex)
         {

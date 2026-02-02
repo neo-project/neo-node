@@ -9,6 +9,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<Compile Include="..\PluginHelper\PluginHelper.cs">
+			<Link>PluginHelper\PluginHelper.cs</Link>
+		</Compile>
+	</ItemGroup>
+
+	<ItemGroup>
 		<None Update="DBFTPlugin.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
