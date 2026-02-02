@@ -9,6 +9,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<Compile Include="..\PluginHelpers\StoragePathHelper.cs">
+			<Link>PluginHelpers\StoragePathHelper.cs</Link>
+		</Compile>
+	</ItemGroup>
+
+	<ItemGroup>
 		<None Update="DBFTPlugin.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
