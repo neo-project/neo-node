@@ -18,6 +18,5 @@ fi
 unzip -n ApplicationLogs.zip -d ./neo-cli/
 unzip -n RpcServer.zip -d ./neo-cli/
 unzip -n TokensTracker.zip -d ./neo-cli/
-unzip -n StateService.zip -d ./neo-cli/
 
 echo "Node Ready!"
