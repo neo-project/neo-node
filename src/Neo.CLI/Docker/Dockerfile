@@ -22,7 +22,6 @@ RUN if [ -z "$PLUGIN_VERSION" ]; then \
 
 RUN apt-get update && apt-get install -y vim
 RUN sed -i 's/"BindAddress":[^,]*/"BindAddress": "0.0.0.0"/' neo-cli/Plugins/RpcServer/RpcServer.json
-# CMD ["sh","start.sh"]
 COPY start.sh .
 RUN chmod -R +x ./neo-cli
 ENTRYPOINT ["sh", "./start.sh"]
