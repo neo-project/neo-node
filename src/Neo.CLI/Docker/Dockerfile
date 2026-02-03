@@ -20,16 +20,9 @@ RUN if [ -z "$PLUGIN_VERSION" ]; then \
         ./prepare-node.sh $CLI_VERSION $PLUGIN_VERSION; \
     fi
 
-# WORKDIR /neo-cli
-#COPY start.sh .
-#RUN chmod +x start.sh
-# RUN ls -a
-# RUN pwd
 RUN apt-get update && apt-get install -y vim
 RUN sed -i 's/"BindAddress":[^,]*/"BindAddress": "0.0.0.0"/' neo-cli/Plugins/RpcServer/RpcServer.json
 # CMD ["sh","start.sh"]
 COPY start.sh .
 RUN chmod -R +x ./neo-cli
 ENTRYPOINT ["sh", "./start.sh"]
-#ENTRYPOINT ["sh", "-c", "./neo-cli/neo-cli & tail -f /dev/null"]
-#ENTRYPOINT ["sh", "-c", "screen -dmS neo bash -c 'dotnet neo-cli/neo-cli.dll > neo.log 2>&1' && tail -f neo.log"]
