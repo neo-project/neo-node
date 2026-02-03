@@ -5,14 +5,14 @@ unzip neo-cli-linux-x64.zip
 
 if [ -z "$2" ]; then
     echo "Downloading plugins $1"
-    wget https://github.com/neo-project/neo/releases/download/$1/ApplicationLogs.zip
-    wget https://github.com/neo-project/neo/releases/download/$1/RpcServer.zip
-    wget https://github.com/neo-project/neo/releases/download/$1/TokensTracker.zip
+    wget https://github.com/neo-project/neo-node/releases/download/$1/ApplicationLogs.zip
+    wget https://github.com/neo-project/neo-node/releases/download/$1/RpcServer.zip
+    wget https://github.com/neo-project/neo-node/releases/download/$1/TokensTracker.zip
 else
     echo "Downloading plugins $2"
-    wget https://github.com/neo-project/neo/releases/download/$2/ApplicationLogs.zip
-    wget https://github.com/neo-project/neo/releases/download/$2/RpcServer.zip
-    wget https://github.com/neo-project/neo/releases/download/$2/TokensTracker.zip
+    wget https://github.com/neo-project/neo-node/releases/download/$2/ApplicationLogs.zip
+    wget https://github.com/neo-project/neo-node/releases/download/$2/RpcServer.zip
+    wget https://github.com/neo-project/neo-node/releases/download/$2/TokensTracker.zip
 fi
 
 unzip -n ApplicationLogs.zip -d ./neo-cli/
