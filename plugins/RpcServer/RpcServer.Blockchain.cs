@@ -9,6 +9,7 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using Neo.Cryptography.ECC;
 using Neo.Extensions;
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
@@ -594,10 +595,10 @@ partial class RpcServer
                     var value = (Array)item;
                     foreach (Struct ele in value)
                     {
-                        var publickey = ele[0].GetSpan().ToHexString();
-                        json["publickey"] = publickey;
+                        var publickey = ECPoint.DecodePoint(ele[0].GetSpan(), ECCurve.Secp256r1);
+                        json["publickey"] = publickey.ToString();
                         json["votes"] = ele[1].GetInteger().ToString();
-                        json["active"] = validators.ToByteArray().ToHexString().Contains(publickey);
+                        json["active"] = validators.Contains(publickey);
                         jArray.Add(json);
                         json = new();
                     }
