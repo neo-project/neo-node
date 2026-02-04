@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 as Build
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS Build
 RUN apt-get update && apt-get install -y \
     net-tools \
     telnet \
