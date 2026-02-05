@@ -131,15 +131,19 @@ jobs:
       run: curl -s -I ${{ format('https://github.com/{0}/releases/tag/{1}', github.repository, steps.get_version.outputs.version) }} | head -n 1 | cut -d$' ' -f2 | xargs printf "statusCode=%s" | xargs echo >> $GITHUB_OUTPUT
     - name: Create release
       if: steps.check_tag.outputs.statusCode == '404'
-      id: create_release
-      uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.get_version.outputs.version }}
-        release_name: ${{ steps.get_version.outputs.version }}
-        draft: true
-        prerelease: ${{ contains(steps.get_version.outputs.version, '-') }}
+      run: |
+        if [[ "${{ steps.get_version.outputs.version }}" == *"-"* ]]; then
+          PRERELEASE_FLAG="--prerelease"
+        else
+          PRERELEASE_FLAG=""
+        fi
+        gh release create ${{ steps.get_version.outputs.version }} \
+          --title "${{ steps.get_version.outputs.version }}" \
+          --notes "Release ${{ steps.get_version.outputs.version }}" \
+          --draft \
+          $PRERELEASE_FLAG || echo "Release may already exist"
     - name: Setup .NET Core
       if: steps.check_tag.outputs.statusCode == '404'
       uses: actions/setup-dotnet@v5
@@ -259,64 +263,17 @@ jobs:
         done
     - name: Upload CLI packages to release
       if: steps.check_tag.outputs.statusCode == '404'
-      uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./neo-cli-portable.zip
-        asset_name: neo-cli-portable.zip
-        asset_content_type: application/zip
-    - name: Upload CLI packages to release - linux-x64
-      if: steps.check_tag.outputs.statusCode == '404'
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./neo-cli-linux-x64.zip
-        asset_name: neo-cli-linux-x64.zip
-        asset_content_type: application/zip
-    - name: Upload CLI packages to release - linux-arm64
-      if: steps.check_tag.outputs.statusCode == '404'
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./neo-cli-linux-arm64.zip
-        asset_name: neo-cli-linux-arm64.zip
-        asset_content_type: application/zip
-    - name: Upload CLI packages to release - win-x64
-      if: steps.check_tag.outputs.statusCode == '404'
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./neo-cli-win-x64.zip
-        asset_name: neo-cli-win-x64.zip
-        asset_content_type: application/zip
-    - name: Upload CLI packages to release - osx-x64
-      if: steps.check_tag.outputs.statusCode == '404'
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./neo-cli-osx-x64.zip
-        asset_name: neo-cli-osx-x64.zip
-        asset_content_type: application/zip
-    - name: Upload CLI packages to release - osx-arm64
-      if: steps.check_tag.outputs.statusCode == '404'
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./neo-cli-osx-arm64.zip
-        asset_name: neo-cli-osx-arm64.zip
-        asset_content_type: application/zip
+      run: |
+        gh release upload ${{ steps.get_version.outputs.version }} \
+          neo-cli-portable.zip \
+          neo-cli-linux-x64.zip \
+          neo-cli-linux-arm64.zip \
+          neo-cli-win-x64.zip \
+          neo-cli-osx-x64.zip \
+          neo-cli-osx-arm64.zip \
+          --clobber || echo "Failed to upload assets, release may not exist yet"
     # - name: Publish to NuGet
     #   if: steps.check_tag.outputs.statusCode == '404'
     #   run: |
