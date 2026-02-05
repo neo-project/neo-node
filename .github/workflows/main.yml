@@ -154,17 +154,23 @@ jobs:
         # Build LevelDBStore plugin to download native libraries for all platforms
         dotnet build plugins/LevelDBStore/LevelDBStore.csproj -c Release
         
-        # Find the actual IntermediateOutputPath by checking where native libs were downloaded
+        # Find the actual native library locations
         echo "Checking native library locations..."
-        find plugins/LevelDBStore -name "libleveldb.*" -type f 2>/dev/null | head -5 || echo "Native libs not found yet"
+        echo "Output directory runtimes:"
+        find plugins/LevelDBStore/bin/Release/net10.0/runtimes -name "libleveldb.*" -type f 2>/dev/null | head -10 || echo "No native libs in output runtimes"
+        echo ""
+        echo "Intermediate directory:"
+        find plugins/LevelDBStore/bin/Release/net10.0/obj -name "libleveldb.*" -type f 2>/dev/null | head -10 || echo "No native libs in obj directory"
     - name: Build and package neo-cli for all platforms
       if: steps.check_tag.outputs.statusCode == '404'
       run: |
         # Define platforms
         platforms=("portable" "linux-x64" "linux-arm64" "win-x64" "osx-x64" "osx-arm64")
         
-        # Find LevelDBStore native library base path
-        LEVELDB_BASE="plugins/LevelDBStore/bin/Release/net10.0/obj/LevelDBStore"
+        # LevelDBStore output directory (where native libs are copied after build)
+        LEVELDB_OUTPUT="plugins/LevelDBStore/bin/Release/net10.0"
+        # LevelDBStore intermediate directory (where native libs are downloaded)
+        LEVELDB_OBJ="plugins/LevelDBStore/bin/Release/net10.0/obj/LevelDBStore"
         
         for platform in "${platforms[@]}"; do
           echo "Building neo-cli for $platform..."
@@ -181,7 +187,7 @@ jobs:
           mkdir -p "./publish/$platform/Plugins/LevelDBStore"
           
           # Copy LevelDBStore.dll
-          LEVELDB_DLL_SOURCE="plugins/LevelDBStore/bin/Release/net10.0/LevelDBStore.dll"
+          LEVELDB_DLL_SOURCE="$LEVELDB_OUTPUT/LevelDBStore.dll"
           if [ -f "$LEVELDB_DLL_SOURCE" ]; then
             cp "$LEVELDB_DLL_SOURCE" "./publish/$platform/Plugins/LevelDBStore/LevelDBStore.dll"
             echo "Copied LevelDBStore.dll for $platform"
@@ -189,68 +195,61 @@ jobs:
             echo "Warning: LevelDBStore.dll not found at $LEVELDB_DLL_SOURCE"
           fi
           
+          # Function to find and copy native library
+          copy_native_lib() {
+            local rid=$1
+            local lib_name=$2
+            local target_dir=$3
+            
+            # Try output directory first (where files are copied after build)
+            local output_path="$LEVELDB_OUTPUT/runtimes/$rid/native/$lib_name"
+            # Try intermediate directory (where files are downloaded)
+            local obj_path="$LEVELDB_OBJ/libleveldb-$rid/runtimes/$rid/native/$lib_name"
+            
+            if [ -f "$output_path" ]; then
+              cp "$output_path" "$target_dir/"
+              echo "Copied $lib_name from output directory to $target_dir"
+              return 0
+            elif [ -f "$obj_path" ]; then
+              cp "$obj_path" "$target_dir/"
+              echo "Copied $lib_name from obj directory to $target_dir"
+              return 0
+            else
+              echo "Warning: $lib_name not found at $output_path or $obj_path"
+              return 1
+            fi
+          }
+          
           # Copy native libraries
           if [ "$platform" == "portable" ]; then
             # Portable: copy linux-x64, win-x64, osx-x64 to runtimes directory
             for portable_rid in "linux-x64" "win-x64" "osx-x64"; do
-              NATIVE_LIB_DIR="$LEVELDB_BASE/libleveldb-$portable_rid/runtimes/$portable_rid/native"
               case "$portable_rid" in
                 "linux-x64")
-                  if [ -f "$NATIVE_LIB_DIR/libleveldb.so" ]; then
-                    mkdir -p "./publish/$platform/runtimes/$portable_rid/native"
-                    cp "$NATIVE_LIB_DIR/libleveldb.so" "./publish/$platform/runtimes/$portable_rid/native/"
-                    echo "Copied libleveldb.so for portable/$portable_rid"
-                  else
-                    echo "Warning: libleveldb.so not found at $NATIVE_LIB_DIR/libleveldb.so"
-                  fi
+                  mkdir -p "./publish/$platform/runtimes/$portable_rid/native"
+                  copy_native_lib "$portable_rid" "libleveldb.so" "./publish/$platform/runtimes/$portable_rid/native"
                   ;;
                 "win-x64")
-                  if [ -f "$NATIVE_LIB_DIR/libleveldb.dll" ]; then
-                    mkdir -p "./publish/$platform/runtimes/$portable_rid/native"
-                    cp "$NATIVE_LIB_DIR/libleveldb.dll" "./publish/$platform/runtimes/$portable_rid/native/"
-                    echo "Copied libleveldb.dll for portable/$portable_rid"
-                  else
-                    echo "Warning: libleveldb.dll not found at $NATIVE_LIB_DIR/libleveldb.dll"
-                  fi
+                  mkdir -p "./publish/$platform/runtimes/$portable_rid/native"
+                  copy_native_lib "$portable_rid" "libleveldb.dll" "./publish/$platform/runtimes/$portable_rid/native"
                   ;;
                 "osx-x64")
-                  if [ -f "$NATIVE_LIB_DIR/libleveldb.dylib" ]; then
-                    mkdir -p "./publish/$platform/runtimes/$portable_rid/native"
-                    cp "$NATIVE_LIB_DIR/libleveldb.dylib" "./publish/$platform/runtimes/$portable_rid/native/"
-                    echo "Copied libleveldb.dylib for portable/$portable_rid"
-                  else
-                    echo "Warning: libleveldb.dylib not found at $NATIVE_LIB_DIR/libleveldb.dylib"
-                  fi
+                  mkdir -p "./publish/$platform/runtimes/$portable_rid/native"
+                  copy_native_lib "$portable_rid" "libleveldb.dylib" "./publish/$platform/runtimes/$portable_rid/native"
                   ;;
               esac
             done
           else
             # Platform-specific: copy corresponding native library to root directory
-            NATIVE_LIB_DIR="$LEVELDB_BASE/libleveldb-$platform/runtimes/$platform/native"
             case "$platform" in
               "linux-x64"|"linux-arm64")
-                if [ -f "$NATIVE_LIB_DIR/libleveldb.so" ]; then
-                  cp "$NATIVE_LIB_DIR/libleveldb.so" "./publish/$platform/"
-                  echo "Copied libleveldb.so for $platform"
-                else
-                  echo "Warning: libleveldb.so not found at $NATIVE_LIB_DIR/libleveldb.so"
-                fi
+                copy_native_lib "$platform" "libleveldb.so" "./publish/$platform"
                 ;;
               "win-x64")
-                if [ -f "$NATIVE_LIB_DIR/libleveldb.dll" ]; then
-                  cp "$NATIVE_LIB_DIR/libleveldb.dll" "./publish/$platform/"
-                  echo "Copied libleveldb.dll for $platform"
-                else
-                  echo "Warning: libleveldb.dll not found at $NATIVE_LIB_DIR/libleveldb.dll"
-                fi
+                copy_native_lib "$platform" "libleveldb.dll" "./publish/$platform"
                 ;;
               "osx-x64"|"osx-arm64")
-                if [ -f "$NATIVE_LIB_DIR/libleveldb.dylib" ]; then
-                  cp "$NATIVE_LIB_DIR/libleveldb.dylib" "./publish/$platform/"
-                  echo "Copied libleveldb.dylib for $platform"
-                else
-                  echo "Warning: libleveldb.dylib not found at $NATIVE_LIB_DIR/libleveldb.dylib"
-                fi
+                copy_native_lib "$platform" "libleveldb.dylib" "./publish/$platform"
                 ;;
             esac
           fi
