@@ -222,20 +222,17 @@ jobs:
           
           # Copy native libraries
           if [ "$platform" == "portable" ]; then
-            # Portable: copy linux-x64, win-x64, osx-x64 to runtimes directory
+            # Portable: copy linux-x64, win-x64, osx-x64 to root directory
             for portable_rid in "linux-x64" "win-x64" "osx-x64"; do
               case "$portable_rid" in
                 "linux-x64")
-                  mkdir -p "./publish/$platform/runtimes/$portable_rid/native"
-                  copy_native_lib "$portable_rid" "libleveldb.so" "./publish/$platform/runtimes/$portable_rid/native"
+                  copy_native_lib "$portable_rid" "libleveldb.so" "./publish/$platform"
                   ;;
                 "win-x64")
-                  mkdir -p "./publish/$platform/runtimes/$portable_rid/native"
-                  copy_native_lib "$portable_rid" "libleveldb.dll" "./publish/$platform/runtimes/$portable_rid/native"
+                  copy_native_lib "$portable_rid" "libleveldb.dll" "./publish/$platform"
                   ;;
                 "osx-x64")
-                  mkdir -p "./publish/$platform/runtimes/$portable_rid/native"
-                  copy_native_lib "$portable_rid" "libleveldb.dylib" "./publish/$platform/runtimes/$portable_rid/native"
+                  copy_native_lib "$portable_rid" "libleveldb.dylib" "./publish/$platform"
                   ;;
               esac
             done
