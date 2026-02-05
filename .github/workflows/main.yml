@@ -205,14 +205,38 @@ jobs:
           
           # Get bottle URL from Homebrew API
           echo "  Fetching bottle URL from Homebrew API..."
+          API_RESPONSE=$(curl -s "https://formulae.brew.sh/api/formula/gperftools.json" 2>&1)
+          
+          if [ $? -ne 0 ] || [ -z "$API_RESPONSE" ]; then
+            echo "  Failed to fetch API response"
+            echo "  API response: $API_RESPONSE"
+            return
+          fi
+          
+          # Check available bottle keys
+          echo "  Available bottle keys:"
+          echo "$API_RESPONSE" | jq -r '.bottles.stable | keys[]' 2>/dev/null | head -5 || echo "  Could not parse bottle keys"
+          
+          # Try to get bottle URL
           if [[ "$rid" == "osx-arm64" ]]; then
-            BOTTLE_URL=$(curl -s "https://formulae.brew.sh/api/formula/gperftools.json" | jq -r '.bottles.stable.arm64_monterey.url // .bottles.stable.arm64_big_sur.url // .bottles.stable.arm64_sonoma.url // empty' 2>/dev/null) || true
+            BOTTLE_URL=$(echo "$API_RESPONSE" | jq -r '.bottles.stable | to_entries[] | select(.key | contains("arm64")) | .value.url' 2>/dev/null | head -1) || true
           else
-            BOTTLE_URL=$(curl -s "https://formulae.brew.sh/api/formula/gperftools.json" | jq -r '.bottles.stable.x86_64_monterey.url // .bottles.stable.x86_64_big_sur.url // .bottles.stable.x86_64_sonoma.url // empty' 2>/dev/null) || true
+            BOTTLE_URL=$(echo "$API_RESPONSE" | jq -r '.bottles.stable | to_entries[] | select(.key | contains("x86_64") or contains("intel")) | .value.url' 2>/dev/null | head -1) || true
           fi
           
           if [ -z "$BOTTLE_URL" ] || [ "$BOTTLE_URL" == "null" ] || [ "$BOTTLE_URL" == "" ]; then
             echo "  Failed to get bottle URL from Homebrew API"
+            echo "  Trying alternative method..."
+            # Alternative: try direct key access
+            if [[ "$rid" == "osx-arm64" ]]; then
+              BOTTLE_URL=$(echo "$API_RESPONSE" | jq -r '.bottles.stable.arm64_monterey.url // .bottles.stable.arm64_big_sur.url // .bottles.stable.arm64_sonoma.url // .bottles.stable.arm64_ventura.url // empty' 2>/dev/null) || true
+            else
+              BOTTLE_URL=$(echo "$API_RESPONSE" | jq -r '.bottles.stable.x86_64_monterey.url // .bottles.stable.x86_64_big_sur.url // .bottles.stable.x86_64_sonoma.url // .bottles.stable.x86_64_ventura.url // empty' 2>/dev/null) || true
+            fi
+          fi
+          
+          if [ -z "$BOTTLE_URL" ] || [ "$BOTTLE_URL" == "null" ] || [ "$BOTTLE_URL" == "" ]; then
+            echo "  Failed to get bottle URL after trying all methods"
             return
           fi
           
