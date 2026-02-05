@@ -214,22 +214,22 @@ jobs:
           
           # Debug: show API structure
           echo "  Checking API structure..."
-          if echo "$API_RESPONSE" | jq -e '.bottles' >/dev/null 2>&1; then
-            echo "  Bottles object exists"
-            if echo "$API_RESPONSE" | jq -e '.bottles.stable' >/dev/null 2>&1; then
-              echo "  Stable bottles exist"
+          if echo "$API_RESPONSE" | jq -e '.bottle' >/dev/null 2>&1; then
+            echo "  Bottle object exists"
+            if echo "$API_RESPONSE" | jq -e '.bottle.stable' >/dev/null 2>&1; then
+              echo "  Stable bottle exists"
               echo "  Available bottle keys:"
-              echo "$API_RESPONSE" | jq -r '.bottles.stable | keys[]' 2>/dev/null | while read -r key; do
+              echo "$API_RESPONSE" | jq -r '.bottle.stable | keys[]' 2>/dev/null | while read -r key; do
                 echo "    - $key"
               done
             else
-              echo "  No stable bottles found, checking all bottle keys:"
-              echo "$API_RESPONSE" | jq -r '.bottles | keys[]' 2>/dev/null | while read -r key; do
+              echo "  No stable bottle found, checking all bottle keys:"
+              echo "$API_RESPONSE" | jq -r '.bottle | keys[]' 2>/dev/null | while read -r key; do
                 echo "    - $key"
               done
             fi
           else
-            echo "  No bottles object found in API response"
+            echo "  No bottle object found in API response"
             echo "  Top-level keys:"
             echo "$API_RESPONSE" | jq -r 'keys[]' 2>/dev/null | head -10
           fi
@@ -237,23 +237,23 @@ jobs:
           # Try to get bottle URL - check multiple possible structures
           BOTTLE_URL=""
           
-          # Method 1: Try stable bottles with dynamic key matching
+          # Method 1: Try stable bottle with dynamic key matching
           if [[ "$rid" == "osx-arm64" ]]; then
-            BOTTLE_URL=$(echo "$API_RESPONSE" | jq -r '.bottles.stable | to_entries[] | select(.key | test("arm64")) | .value.url' 2>/dev/null | head -1) || true
+            BOTTLE_URL=$(echo "$API_RESPONSE" | jq -r '.bottle.stable | to_entries[] | select(.key | test("arm64")) | .value.url' 2>/dev/null | head -1) || true
           else
-            BOTTLE_URL=$(echo "$API_RESPONSE" | jq -r '.bottles.stable | to_entries[] | select(.key | test("x86_64|intel")) | .value.url' 2>/dev/null | head -1) || true
+            BOTTLE_URL=$(echo "$API_RESPONSE" | jq -r '.bottle.stable | to_entries[] | select(.key | test("x86_64|intel")) | .value.url' 2>/dev/null | head -1) || true
           fi
           
           # Method 2: Try direct key access with common names
           if [ -z "$BOTTLE_URL" ] || [ "$BOTTLE_URL" == "null" ]; then
             if [[ "$rid" == "osx-arm64" ]]; then
               for key in arm64_monterey arm64_big_sur arm64_sonoma arm64_ventura arm64_sequoia; do
-                BOTTLE_URL=$(echo "$API_RESPONSE" | jq -r ".bottles.stable.$key.url // empty" 2>/dev/null) || true
+                BOTTLE_URL=$(echo "$API_RESPONSE" | jq -r ".bottle.stable.$key.url // empty" 2>/dev/null) || true
                 [ -n "$BOTTLE_URL" ] && [ "$BOTTLE_URL" != "null" ] && break
               done
             else
               for key in x86_64_monterey x86_64_big_sur x86_64_sonoma x86_64_ventura x86_64_sequoia; do
-                BOTTLE_URL=$(echo "$API_RESPONSE" | jq -r ".bottles.stable.$key.url // empty" 2>/dev/null) || true
+                BOTTLE_URL=$(echo "$API_RESPONSE" | jq -r ".bottle.stable.$key.url // empty" 2>/dev/null) || true
                 [ -n "$BOTTLE_URL" ] && [ "$BOTTLE_URL" != "null" ] && break
               done
             fi
