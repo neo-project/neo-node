@@ -275,58 +275,78 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        set -e  # Exit on error
-        
         RELEASE_TAG="${{ steps.get_version.outputs.version }}"
         
-        # Verify release exists
-        echo "Checking if release $RELEASE_TAG exists..."
-        if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-          echo "Error: Release $RELEASE_TAG does not exist"
+        echo "=== Starting upload process for release $RELEASE_TAG ==="
+        echo ""
+        
+        # Verify release exists (show error if it doesn't)
+        echo "Step 1: Checking if release $RELEASE_TAG exists..."
+        if gh release view "$RELEASE_TAG" 2>&1; then
+          echo "✓ Release $RELEASE_TAG exists"
+        else
+          echo "✗ Error: Release $RELEASE_TAG does not exist or cannot be accessed"
+          echo "Attempting to list all releases..."
+          gh release list --limit 5
           exit 1
         fi
-        echo "Release $RELEASE_TAG exists ✓"
         echo ""
         
         # List all zip files to verify they exist
-        echo "Checking for zip files..."
-        ls -lh neo-cli-*.zip || echo "No zip files found in current directory"
+        echo "Step 2: Checking for zip files in current directory..."
+        echo "Current directory: $(pwd)"
+        echo "Files matching neo-cli-*.zip:"
+        ls -lh neo-cli-*.zip 2>&1 || echo "Warning: No zip files found with ls"
         echo ""
         
         # Verify all required zip files exist
+        echo "Step 3: Verifying all required zip files exist..."
         missing_files=()
+        found_files=()
         for file in neo-cli-portable.zip neo-cli-linux-x64.zip neo-cli-linux-arm64.zip neo-cli-win-x64.zip neo-cli-osx-x64.zip neo-cli-osx-arm64.zip; do
-          if [ ! -f "$file" ]; then
-            missing_files+=("$file")
+          if [ -f "$file" ]; then
+            size=$(du -h "$file" | cut -f1)
+            echo "✓ Found: $file ($size)"
+            found_files+=("$file")
           else
-            echo "Found: $file ($(du -h "$file" | cut -f1))"
+            echo "✗ Missing: $file"
+            missing_files+=("$file")
           fi
         done
+        echo ""
         
         if [ ${#missing_files[@]} -gt 0 ]; then
-          echo "Error: Missing zip files: ${missing_files[*]}"
+          echo "Error: Missing ${#missing_files[@]} zip files: ${missing_files[*]}"
+          echo "Found ${#found_files[@]} files: ${found_files[*]}"
           exit 1
         fi
         
-        echo ""
-        echo "All zip files found. Uploading to release $RELEASE_TAG..."
+        echo "Step 4: Uploading files to release $RELEASE_TAG..."
         echo ""
         
         # Upload all zip files to release (one by one for better error reporting)
         upload_count=0
+        failed_files=()
         for file in neo-cli-portable.zip neo-cli-linux-x64.zip neo-cli-linux-arm64.zip neo-cli-win-x64.zip neo-cli-osx-x64.zip neo-cli-osx-arm64.zip; do
           echo "Uploading $file..."
-          if gh release upload "$RELEASE_TAG" "$file" --clobber; then
+          if gh release upload "$RELEASE_TAG" "$file" --clobber 2>&1; then
             echo "✓ Successfully uploaded $file"
             ((upload_count++))
           else
             echo "✗ Failed to upload $file"
-            exit 1
+            failed_files+=("$file")
           fi
+          echo ""
         done
         
-        echo ""
-        echo "Successfully uploaded $upload_count CLI packages to release $RELEASE_TAG"
+        echo "=== Upload Summary ==="
+        echo "Successfully uploaded: $upload_count files"
+        if [ ${#failed_files[@]} -gt 0 ]; then
+          echo "Failed to upload: ${#failed_files[@]} files: ${failed_files[*]}"
+          exit 1
+        else
+          echo "✓ All files uploaded successfully!"
+        fi
     # - name: Publish to NuGet
     #   if: steps.check_tag.outputs.statusCode == '404'
     #   run: |
