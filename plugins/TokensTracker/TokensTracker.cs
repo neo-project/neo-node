@@ -74,8 +74,15 @@ public class TokensTracker : Plugin
     {
         if (system.Settings.Network != _network) return;
         neoSystem = system;
-        string path = string.Format(_dbPath, neoSystem.Settings.Network.ToString("X8"));
-        _db = neoSystem.LoadStore(GetFullPath(path));
+        // Get path from plugin's own configuration, optionally combined with base path from config.json
+        var networkId = neoSystem.Settings.Network.ToString("X8");
+        // TokensTracker default path format: "TokensBalanceData" or "TokensBalanceData_{0}"
+        string defaultPath = _dbPath.Contains("{0}") ? _dbPath : $"{_dbPath}_{{0}}";
+        var pluginPath = string.Format(defaultPath, networkId);
+        var path = PluginHelper.ApplyUnifiedStoragePath(pluginPath);
+        var fullPath = GetFullPath(path);
+        System.IO.Directory.CreateDirectory(System.IO.Path.GetFullPath(fullPath));
+        _db = neoSystem.LoadStore(fullPath);
         if (_enabledTrackers.Contains("NEP-11"))
             trackers.Add(new Nep11Tracker(_db, _maxResults, _shouldTrackHistory, neoSystem));
         if (_enabledTrackers.Contains("NEP-17"))

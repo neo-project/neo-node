@@ -65,7 +65,10 @@ public class StorageDumper : Plugin
     internal void OnDumpStorage(UInt160? contractHash = null)
     {
         if (_system == null) throw new InvalidOperationException("system doesn't exists");
-        var path = $"dump_{_system.Settings.Network}.json";
+        var networkId = _system.Settings.Network.ToString("X8");
+        // dump file path: plugin default naming, optionally combined with base path from config.json
+        var pluginPath = string.Format("dump_{0}.json", networkId);
+        var path = PluginHelper.ApplyUnifiedStoragePath(pluginPath);
         byte[]? prefix = null;
         if (contractHash is not null)
         {
@@ -176,7 +179,11 @@ public class StorageDumper : Plugin
     private static string GetDirectoryPath(uint network, uint blockIndex)
     {
         uint folder = (blockIndex / StorageSettings.Default!.StoragePerFolder) * StorageSettings.Default.StoragePerFolder;
-        return $"./StorageDumper_{network}/BlockStorage_{folder}";
+        var networkId = network.ToString("X8");
+        // Base folder for StorageDumper, optionally combined with base path from config.json
+        var pluginFolder = string.Format("StorageDumper_{0}", networkId);
+        var baseFolder = PluginHelper.ApplyUnifiedStoragePath(pluginFolder);
+        return System.IO.Path.Combine(baseFolder, $"BlockStorage_{folder}");
     }
 
 }

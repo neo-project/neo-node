@@ -60,7 +60,13 @@ public class StatePlugin : Plugin
     {
         if (system.Settings.Network != StateServiceSettings.Default.Network) return;
         _system = system;
-        Store = _system.ActorSystem.ActorOf(StateStore.Props(this, string.Format(StateServiceSettings.Default.Path, system.Settings.Network.ToString("X8"))));
+        // Get path from plugin's own configuration, optionally combined with base path from config.json
+        var networkId = system.Settings.Network.ToString("X8");
+        var pluginPath = string.Format(StateServiceSettings.Default.Path, networkId);
+        var path = PluginHelper.ApplyUnifiedStoragePath(pluginPath);
+        var fullPath = System.IO.Path.GetFullPath(path);
+        System.IO.Directory.CreateDirectory(fullPath);
+        Store = _system.ActorSystem.ActorOf(StateStore.Props(this, fullPath));
         _system.ServiceAdded += NeoSystem_ServiceAdded_Handler;
         RpcServerPlugin.RegisterMethods(this, StateServiceSettings.Default.Network);
     }

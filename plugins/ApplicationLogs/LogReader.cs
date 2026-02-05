@@ -79,8 +79,14 @@ public class LogReader : Plugin
     {
         if (system.Settings.Network != ApplicationLogsSettings.Default.Network)
             return;
-        string path = string.Format(ApplicationLogsSettings.Default.Path, ApplicationLogsSettings.Default.Network.ToString("X8"));
-        var store = system.LoadStore(GetFullPath(path));
+        // Get path from plugin's own configuration, optionally combined with base path from config.json
+        var networkId = ApplicationLogsSettings.Default.Network.ToString("X8");
+        var pluginPath = string.Format(ApplicationLogsSettings.Default.Path, networkId);
+        var path = PluginHelper.ApplyUnifiedStoragePath(pluginPath);
+        var fullPath = GetFullPath(path);
+        // Ensure directory exists for the underlying storage provider
+        System.IO.Directory.CreateDirectory(System.IO.Path.GetFullPath(fullPath));
+        var store = system.LoadStore(fullPath);
         _neostore = new NeoStore(store);
         _neosystem = system;
         RpcServerPlugin.RegisterMethods(this, ApplicationLogsSettings.Default.Network);

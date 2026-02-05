@@ -117,7 +117,17 @@ public sealed partial class ConsensusContext : IDisposable, ISerializable
         dbftSettings = settings;
 
         if (dbftSettings.IgnoreRecoveryLogs == false)
-            store = neoSystem.LoadStore(settings.RecoveryLogs);
+        {
+            // Get path from plugin's own configuration, optionally combined with base path from config.json
+            var networkId = neoSystem.Settings.Network.ToString("X8");
+            // DBFTPlugin default path format: "ConsensusState" or "ConsensusState_{0}"
+            string defaultPath = settings.RecoveryLogs.Contains("{0}") ? settings.RecoveryLogs : $"{settings.RecoveryLogs}_{{0}}";
+            var pluginPath = string.Format(defaultPath, networkId);
+            var path = PluginHelper.ApplyUnifiedStoragePath(pluginPath);
+            var fullPath = System.IO.Path.GetFullPath(path);
+            System.IO.Directory.CreateDirectory(fullPath);
+            store = neoSystem.LoadStore(fullPath);
+        }
     }
 
     public Block CreateBlock()
