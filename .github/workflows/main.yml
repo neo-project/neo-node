@@ -2,7 +2,7 @@ name: .NET Core Test and Publish
 
 on:
   push:
-    branches: [master-n3]
+    branches: [auto-release]
   pull_request:
 
 env:
@@ -97,19 +97,36 @@ jobs:
       run: expect ./.github/workflows/test-neo-cli-plugins.expect
       
   Release:
-    if: github.ref == 'refs/heads/master-n3' && startsWith(github.repository, 'neo-project/')
+    if: github.ref == 'refs/heads/auto-release' && github.repository == 'superboyiii/neo-node'
     needs: Test
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v5
+    - name: Verify branch
+      run: |
+        if [ "${{ github.ref }}" != "refs/heads/auto-release" ]; then
+          echo "Error: This workflow only runs on auto-release branch"
+          exit 1
+        fi
+        echo "Running on auto-release branch ✓"
     - name: Get version
       id: get_version
       run: |
         sudo apt install xmlstarlet
-        find plugins -name Directory.Build.props | xargs xmlstarlet sel -N i=http://schemas.microsoft.com/developer/msbuild/2003 -t -v "concat('version=v',//i:Version/text())" | xargs echo >> $GITHUB_OUTPUT
+        # Check for Version in src/Directory.Build.props (for official release)
+        VERSION=$(xmlstarlet sel -N i=http://schemas.microsoft.com/developer/msbuild/2003 -t -v "//i:Version/text()" src/Directory.Build.props 2>/dev/null || echo "")
+        if [ -z "$VERSION" ]; then
+          # Fallback to plugins/Directory.Build.props
+          VERSION=$(find plugins -name Directory.Build.props | xargs xmlstarlet sel -N i=http://schemas.microsoft.com/developer/msbuild/2003 -t -v "//i:Version/text()" 2>/dev/null || echo "")
+        fi
+        if [ -n "$VERSION" ]; then
+          echo "version=v$VERSION" >> $GITHUB_OUTPUT
+        else
+          echo "version=" >> $GITHUB_OUTPUT
+        fi
     - name: Check tag
-      if: steps.get_version.outputs.version != 'v' && startsWith(steps.get_version.outputs.version, 'v')
+      if: steps.get_version.outputs.version != '' && startsWith(steps.get_version.outputs.version, 'v')
       id: check_tag
       run: curl -s -I ${{ format('https://github.com/{0}/releases/tag/{1}', github.repository, steps.get_version.outputs.version) }} | head -n 1 | cut -d$' ' -f2 | xargs printf "statusCode=%s" | xargs echo >> $GITHUB_OUTPUT
     - name: Create release
@@ -128,6 +145,182 @@ jobs:
       uses: actions/setup-dotnet@v5
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
+    - name: Install zip tool
+      if: steps.check_tag.outputs.statusCode == '404'
+      run: sudo apt-get update && sudo apt-get install -y zip
+    - name: Build LevelDBStore plugin for all platforms
+      if: steps.check_tag.outputs.statusCode == '404'
+      run: |
+        # Build LevelDBStore plugin to download native libraries for all platforms
+        dotnet build plugins/LevelDBStore/LevelDBStore.csproj -c Release
+        
+        # Find the actual IntermediateOutputPath by checking where native libs were downloaded
+        echo "Checking native library locations..."
+        find plugins/LevelDBStore -name "libleveldb.*" -type f 2>/dev/null | head -5 || echo "Native libs not found yet"
+    - name: Build and package neo-cli for all platforms
+      if: steps.check_tag.outputs.statusCode == '404'
+      run: |
+        # Define platforms
+        platforms=("portable" "linux-x64" "linux-arm64" "win-x64" "osx-x64" "osx-arm64")
+        
+        # Find LevelDBStore native library base path
+        LEVELDB_BASE="plugins/LevelDBStore/bin/Release/net10.0/obj/LevelDBStore"
+        
+        for platform in "${platforms[@]}"; do
+          echo "Building neo-cli for $platform..."
+          
+          if [ "$platform" == "portable" ]; then
+            # Portable version - no RID specified
+            dotnet publish src/Neo.CLI/Neo.CLI.csproj -c Release -o "./publish/$platform" --self-contained false
+          else
+            # Platform-specific versions
+            dotnet publish src/Neo.CLI/Neo.CLI.csproj -c Release -o "./publish/$platform" -r "$platform" --self-contained true
+          fi
+          
+          # Create Plugins/LevelDBStore directory
+          mkdir -p "./publish/$platform/Plugins/LevelDBStore"
+          
+          # Copy LevelDBStore.dll
+          LEVELDB_DLL_SOURCE="plugins/LevelDBStore/bin/Release/net10.0/LevelDBStore.dll"
+          if [ -f "$LEVELDB_DLL_SOURCE" ]; then
+            cp "$LEVELDB_DLL_SOURCE" "./publish/$platform/Plugins/LevelDBStore/LevelDBStore.dll"
+            echo "Copied LevelDBStore.dll for $platform"
+          else
+            echo "Warning: LevelDBStore.dll not found at $LEVELDB_DLL_SOURCE"
+          fi
+          
+          # Copy native libraries
+          if [ "$platform" == "portable" ]; then
+            # Portable: copy linux-x64, win-x64, osx-x64 to runtimes directory
+            for portable_rid in "linux-x64" "win-x64" "osx-x64"; do
+              NATIVE_LIB_DIR="$LEVELDB_BASE/libleveldb-$portable_rid/runtimes/$portable_rid/native"
+              case "$portable_rid" in
+                "linux-x64")
+                  if [ -f "$NATIVE_LIB_DIR/libleveldb.so" ]; then
+                    mkdir -p "./publish/$platform/runtimes/$portable_rid/native"
+                    cp "$NATIVE_LIB_DIR/libleveldb.so" "./publish/$platform/runtimes/$portable_rid/native/"
+                    echo "Copied libleveldb.so for portable/$portable_rid"
+                  else
+                    echo "Warning: libleveldb.so not found at $NATIVE_LIB_DIR/libleveldb.so"
+                  fi
+                  ;;
+                "win-x64")
+                  if [ -f "$NATIVE_LIB_DIR/libleveldb.dll" ]; then
+                    mkdir -p "./publish/$platform/runtimes/$portable_rid/native"
+                    cp "$NATIVE_LIB_DIR/libleveldb.dll" "./publish/$platform/runtimes/$portable_rid/native/"
+                    echo "Copied libleveldb.dll for portable/$portable_rid"
+                  else
+                    echo "Warning: libleveldb.dll not found at $NATIVE_LIB_DIR/libleveldb.dll"
+                  fi
+                  ;;
+                "osx-x64")
+                  if [ -f "$NATIVE_LIB_DIR/libleveldb.dylib" ]; then
+                    mkdir -p "./publish/$platform/runtimes/$portable_rid/native"
+                    cp "$NATIVE_LIB_DIR/libleveldb.dylib" "./publish/$platform/runtimes/$portable_rid/native/"
+                    echo "Copied libleveldb.dylib for portable/$portable_rid"
+                  else
+                    echo "Warning: libleveldb.dylib not found at $NATIVE_LIB_DIR/libleveldb.dylib"
+                  fi
+                  ;;
+              esac
+            done
+          else
+            # Platform-specific: copy corresponding native library to root directory
+            NATIVE_LIB_DIR="$LEVELDB_BASE/libleveldb-$platform/runtimes/$platform/native"
+            case "$platform" in
+              "linux-x64"|"linux-arm64")
+                if [ -f "$NATIVE_LIB_DIR/libleveldb.so" ]; then
+                  cp "$NATIVE_LIB_DIR/libleveldb.so" "./publish/$platform/"
+                  echo "Copied libleveldb.so for $platform"
+                else
+                  echo "Warning: libleveldb.so not found at $NATIVE_LIB_DIR/libleveldb.so"
+                fi
+                ;;
+              "win-x64")
+                if [ -f "$NATIVE_LIB_DIR/libleveldb.dll" ]; then
+                  cp "$NATIVE_LIB_DIR/libleveldb.dll" "./publish/$platform/"
+                  echo "Copied libleveldb.dll for $platform"
+                else
+                  echo "Warning: libleveldb.dll not found at $NATIVE_LIB_DIR/libleveldb.dll"
+                fi
+                ;;
+              "osx-x64"|"osx-arm64")
+                if [ -f "$NATIVE_LIB_DIR/libleveldb.dylib" ]; then
+                  cp "$NATIVE_LIB_DIR/libleveldb.dylib" "./publish/$platform/"
+                  echo "Copied libleveldb.dylib for $platform"
+                else
+                  echo "Warning: libleveldb.dylib not found at $NATIVE_LIB_DIR/libleveldb.dylib"
+                fi
+                ;;
+            esac
+          fi
+          
+          # Create zip package
+          cd "./publish/$platform"
+          zip -r "../../neo-cli-$platform.zip" .
+          cd ../..
+          echo "Created neo-cli-$platform.zip"
+        done
+    - name: Upload CLI packages to release
+      if: steps.check_tag.outputs.statusCode == '404'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./neo-cli-portable.zip
+        asset_name: neo-cli-portable.zip
+        asset_content_type: application/zip
+    - name: Upload CLI packages to release - linux-x64
+      if: steps.check_tag.outputs.statusCode == '404'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./neo-cli-linux-x64.zip
+        asset_name: neo-cli-linux-x64.zip
+        asset_content_type: application/zip
+    - name: Upload CLI packages to release - linux-arm64
+      if: steps.check_tag.outputs.statusCode == '404'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./neo-cli-linux-arm64.zip
+        asset_name: neo-cli-linux-arm64.zip
+        asset_content_type: application/zip
+    - name: Upload CLI packages to release - win-x64
+      if: steps.check_tag.outputs.statusCode == '404'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./neo-cli-win-x64.zip
+        asset_name: neo-cli-win-x64.zip
+        asset_content_type: application/zip
+    - name: Upload CLI packages to release - osx-x64
+      if: steps.check_tag.outputs.statusCode == '404'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./neo-cli-osx-x64.zip
+        asset_name: neo-cli-osx-x64.zip
+        asset_content_type: application/zip
+    - name: Upload CLI packages to release - osx-arm64
+      if: steps.check_tag.outputs.statusCode == '404'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./neo-cli-osx-arm64.zip
+        asset_name: neo-cli-osx-arm64.zip
+        asset_content_type: application/zip
     - name: Publish to NuGet
       if: steps.check_tag.outputs.statusCode == '404'
       run: |
