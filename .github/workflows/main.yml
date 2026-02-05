@@ -103,55 +103,35 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v5
-    - name: Verify branch
-      run: |
-        if [ "${{ github.ref }}" != "refs/heads/auto-release" ]; then
-          echo "Error: This workflow only runs on auto-release branch"
-          exit 1
-        fi
-        echo "Running on auto-release branch ✓"
     - name: Get version
       id: get_version
       run: |
-        sudo apt install xmlstarlet
-        # Check for Version in src/Directory.Build.props (for official release)
+        sudo apt install xmlstarlet -qq
         VERSION=$(xmlstarlet sel -N i=http://schemas.microsoft.com/developer/msbuild/2003 -t -v "//i:Version/text()" src/Directory.Build.props 2>/dev/null || echo "")
-        if [ -z "$VERSION" ]; then
-          # Fallback to plugins/Directory.Build.props
-          VERSION=$(find plugins -name Directory.Build.props | xargs xmlstarlet sel -N i=http://schemas.microsoft.com/developer/msbuild/2003 -t -v "//i:Version/text()" 2>/dev/null || echo "")
-        fi
-        if [ -n "$VERSION" ]; then
-          echo "version=v$VERSION" >> $GITHUB_OUTPUT
-        else
-          echo "version=" >> $GITHUB_OUTPUT
-        fi
+        [ -z "$VERSION" ] && VERSION=$(find plugins -name Directory.Build.props | xargs xmlstarlet sel -N i=http://schemas.microsoft.com/developer/msbuild/2003 -t -v "//i:Version/text()" 2>/dev/null || echo "")
+        [ -n "$VERSION" ] && echo "version=v$VERSION" >> $GITHUB_OUTPUT || echo "version=" >> $GITHUB_OUTPUT
     - name: Check tag
       if: steps.get_version.outputs.version != '' && startsWith(steps.get_version.outputs.version, 'v')
       id: check_tag
       run: curl -s -I ${{ format('https://github.com/{0}/releases/tag/{1}', github.repository, steps.get_version.outputs.version) }} | head -n 1 | cut -d$' ' -f2 | xargs printf "statusCode=%s" | xargs echo >> $GITHUB_OUTPUT
     - name: Create release
       if: steps.check_tag.outputs.statusCode == '404'
-      id: create_release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        if [[ "${{ steps.get_version.outputs.version }}" == *"-"* ]]; then
-          PRERELEASE_FLAG="--prerelease"
-        else
-          PRERELEASE_FLAG=""
-        fi
-        
-        # Create release, or skip if it already exists
-        if gh release view ${{ steps.get_version.outputs.version }} >/dev/null 2>&1; then
-          echo "Release ${{ steps.get_version.outputs.version }} already exists, skipping creation"
-          echo "release_exists=true" >> $GITHUB_OUTPUT
-        else
-          gh release create ${{ steps.get_version.outputs.version }} \
-            --title "${{ steps.get_version.outputs.version }}" \
-            --notes "Release ${{ steps.get_version.outputs.version }}" \
-            --draft \
-            $PRERELEASE_FLAG
-          echo "release_exists=false" >> $GITHUB_OUTPUT
+        if ! gh release view ${{ steps.get_version.outputs.version }} >/dev/null 2>&1; then
+          if [[ "${{ steps.get_version.outputs.version }}" == *"-"* ]]; then
+            gh release create ${{ steps.get_version.outputs.version }} \
+              --title "${{ steps.get_version.outputs.version }}" \
+              --notes "Release ${{ steps.get_version.outputs.version }}" \
+              --draft \
+              --prerelease
+          else
+            gh release create ${{ steps.get_version.outputs.version }} \
+              --title "${{ steps.get_version.outputs.version }}" \
+              --notes "Release ${{ steps.get_version.outputs.version }}" \
+              --draft
+          fi
         fi
     - name: Setup .NET Core
       if: steps.check_tag.outputs.statusCode == '404'
@@ -164,16 +144,7 @@ jobs:
     - name: Build LevelDBStore plugin for all platforms
       if: steps.check_tag.outputs.statusCode == '404'
       run: |
-        # Build LevelDBStore plugin to download native libraries for all platforms
         dotnet build plugins/LevelDBStore/LevelDBStore.csproj -c Release
-        
-        # Find the actual native library locations
-        echo "Checking native library locations..."
-        echo "Output directory runtimes:"
-        find plugins/LevelDBStore/bin/Release/net10.0/runtimes -name "libleveldb.*" -type f 2>/dev/null | head -10 || echo "No native libs in output runtimes"
-        echo ""
-        echo "Intermediate directory:"
-        find plugins/LevelDBStore/bin/Release/net10.0/obj -name "libleveldb.*" -type f 2>/dev/null | head -10 || echo "No native libs in obj directory"
     - name: Build and package neo-cli for all platforms
       if: steps.check_tag.outputs.statusCode == '404'
       run: |
@@ -185,90 +156,43 @@ jobs:
         # LevelDBStore intermediate directory (where native libs are downloaded)
         LEVELDB_OBJ="plugins/LevelDBStore/bin/Release/net10.0/obj/LevelDBStore"
         
-        for platform in "${platforms[@]}"; do
-          echo "Building neo-cli for $platform..."
+        copy_native_lib() {
+          local rid=$1
+          local lib_name=$2
+          local target_dir=$3
+          local output_path="$LEVELDB_OUTPUT/runtimes/$rid/native/$lib_name"
+          local obj_path="$LEVELDB_OBJ/libleveldb-$rid/runtimes/$rid/native/$lib_name"
           
+          if [ -f "$output_path" ]; then
+            cp "$output_path" "$target_dir/"
+          elif [ -f "$obj_path" ]; then
+            cp "$obj_path" "$target_dir/"
+          fi
+        }
+        
+        for platform in "${platforms[@]}"; do
           if [ "$platform" == "portable" ]; then
-            # Portable version - no RID specified
             dotnet publish src/Neo.CLI/Neo.CLI.csproj -c Release -o "./publish/$platform" --self-contained false
           else
-            # Platform-specific versions
             dotnet publish src/Neo.CLI/Neo.CLI.csproj -c Release -o "./publish/$platform" -r "$platform" --self-contained true
           fi
           
-          # Create Plugins/LevelDBStore directory
           mkdir -p "./publish/$platform/Plugins/LevelDBStore"
+          cp "$LEVELDB_OUTPUT/LevelDBStore.dll" "./publish/$platform/Plugins/LevelDBStore/" 2>/dev/null || true
           
-          # Copy LevelDBStore.dll
-          LEVELDB_DLL_SOURCE="$LEVELDB_OUTPUT/LevelDBStore.dll"
-          if [ -f "$LEVELDB_DLL_SOURCE" ]; then
-            cp "$LEVELDB_DLL_SOURCE" "./publish/$platform/Plugins/LevelDBStore/LevelDBStore.dll"
-            echo "Copied LevelDBStore.dll for $platform"
-          else
-            echo "Warning: LevelDBStore.dll not found at $LEVELDB_DLL_SOURCE"
-          fi
-          
-          # Function to find and copy native library
-          copy_native_lib() {
-            local rid=$1
-            local lib_name=$2
-            local target_dir=$3
-            
-            # Try output directory first (where files are copied after build)
-            local output_path="$LEVELDB_OUTPUT/runtimes/$rid/native/$lib_name"
-            # Try intermediate directory (where files are downloaded)
-            local obj_path="$LEVELDB_OBJ/libleveldb-$rid/runtimes/$rid/native/$lib_name"
-            
-            if [ -f "$output_path" ]; then
-              cp "$output_path" "$target_dir/"
-              echo "Copied $lib_name from output directory to $target_dir"
-              return 0
-            elif [ -f "$obj_path" ]; then
-              cp "$obj_path" "$target_dir/"
-              echo "Copied $lib_name from obj directory to $target_dir"
-              return 0
-            else
-              echo "Warning: $lib_name not found at $output_path or $obj_path"
-              return 1
-            fi
-          }
-          
-          # Copy native libraries
           if [ "$platform" == "portable" ]; then
-            # Portable: copy linux-x64, win-x64, osx-x64 to root directory
-            for portable_rid in "linux-x64" "win-x64" "osx-x64"; do
-              case "$portable_rid" in
-                "linux-x64")
-                  copy_native_lib "$portable_rid" "libleveldb.so" "./publish/$platform"
-                  ;;
-                "win-x64")
-                  copy_native_lib "$portable_rid" "libleveldb.dll" "./publish/$platform"
-                  ;;
-                "osx-x64")
-                  copy_native_lib "$portable_rid" "libleveldb.dylib" "./publish/$platform"
-                  ;;
-              esac
-            done
+            copy_native_lib "linux-x64" "libleveldb.so" "./publish/$platform"
+            copy_native_lib "win-x64" "libleveldb.dll" "./publish/$platform"
+            copy_native_lib "osx-x64" "libleveldb.dylib" "./publish/$platform"
           else
-            # Platform-specific: copy corresponding native library to root directory
             case "$platform" in
-              "linux-x64"|"linux-arm64")
-                copy_native_lib "$platform" "libleveldb.so" "./publish/$platform"
-                ;;
-              "win-x64")
-                copy_native_lib "$platform" "libleveldb.dll" "./publish/$platform"
-                ;;
-              "osx-x64"|"osx-arm64")
-                copy_native_lib "$platform" "libleveldb.dylib" "./publish/$platform"
-                ;;
+              "linux-x64"|"linux-arm64") copy_native_lib "$platform" "libleveldb.so" "./publish/$platform" ;;
+              "win-x64") copy_native_lib "$platform" "libleveldb.dll" "./publish/$platform" ;;
+              "osx-x64"|"osx-arm64") copy_native_lib "$platform" "libleveldb.dylib" "./publish/$platform" ;;
             esac
           fi
           
-          # Create zip package
-          cd "./publish/$platform"
-          zip -r "../../neo-cli-$platform.zip" .
-          cd ../..
-          echo "Created neo-cli-$platform.zip"
+          cd "./publish/$platform" && zip -r "../../neo-cli-$platform.zip" . && cd ../..
         done
     - name: Upload CLI packages to release
       if: steps.check_tag.outputs.statusCode == '404'
@@ -277,77 +201,34 @@ jobs:
       run: |
         RELEASE_TAG="${{ steps.get_version.outputs.version }}"
         
-        echo "=== Starting upload process for release $RELEASE_TAG ==="
-        echo ""
-        
-        # Verify release exists (show error if it doesn't)
-        echo "Step 1: Checking if release $RELEASE_TAG exists..."
-        if gh release view "$RELEASE_TAG" 2>&1; then
-          echo "✓ Release $RELEASE_TAG exists"
-        else
-          echo "✗ Error: Release $RELEASE_TAG does not exist or cannot be accessed"
-          echo "Attempting to list all releases..."
-          gh release list --limit 5
+        # Verify release exists
+        if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+          echo "Error: Release $RELEASE_TAG does not exist"
           exit 1
         fi
-        echo ""
-        
-        # List all zip files to verify they exist
-        echo "Step 2: Checking for zip files in current directory..."
-        echo "Current directory: $(pwd)"
-        echo "Files matching neo-cli-*.zip:"
-        ls -lh neo-cli-*.zip 2>&1 || echo "Warning: No zip files found with ls"
-        echo ""
         
         # Verify all required zip files exist
-        echo "Step 3: Verifying all required zip files exist..."
         missing_files=()
-        found_files=()
         for file in neo-cli-portable.zip neo-cli-linux-x64.zip neo-cli-linux-arm64.zip neo-cli-win-x64.zip neo-cli-osx-x64.zip neo-cli-osx-arm64.zip; do
-          if [ -f "$file" ]; then
-            size=$(du -h "$file" | cut -f1)
-            echo "✓ Found: $file ($size)"
-            found_files+=("$file")
-          else
-            echo "✗ Missing: $file"
-            missing_files+=("$file")
-          fi
+          [ ! -f "$file" ] && missing_files+=("$file")
         done
-        echo ""
         
         if [ ${#missing_files[@]} -gt 0 ]; then
-          echo "Error: Missing ${#missing_files[@]} zip files: ${missing_files[*]}"
-          echo "Found ${#found_files[@]} files: ${found_files[*]}"
+          echo "Error: Missing zip files: ${missing_files[*]}"
           exit 1
         fi
         
-        echo "Step 4: Uploading files to release $RELEASE_TAG..."
-        echo ""
-        
-        # Upload all zip files to release (one by one for better error reporting)
-        upload_count=0
+        # Upload all zip files to release
         failed_files=()
         for file in neo-cli-portable.zip neo-cli-linux-x64.zip neo-cli-linux-arm64.zip neo-cli-win-x64.zip neo-cli-osx-x64.zip neo-cli-osx-arm64.zip; do
-          echo "Uploading $file..."
-          # Run upload command - don't exit on error, just capture the result
-          if gh release upload "$RELEASE_TAG" "$file" --clobber; then
-            echo "✓ Successfully uploaded $file"
-            upload_count=$((upload_count + 1))
-          else
-            upload_exit_code=$?
-            echo "✗ Failed to upload $file (exit code: $upload_exit_code)"
+          if ! gh release upload "$RELEASE_TAG" "$file" --clobber; then
             failed_files+=("$file")
           fi
-          echo ""
         done
         
-        echo "=== Upload Summary ==="
-        echo "Successfully uploaded: $upload_count files"
         if [ ${#failed_files[@]} -gt 0 ]; then
-          echo "Failed to upload: ${#failed_files[@]} files: ${failed_files[*]}"
+          echo "Error: Failed to upload: ${failed_files[*]}"
           exit 1
-        else
-          echo "✓ All files uploaded successfully!"
         fi
     # - name: Publish to NuGet
     #   if: steps.check_tag.outputs.statusCode == '404'
