@@ -183,44 +183,84 @@ jobs:
           local rid=$1
           local target_dir=$2
           
+          echo "Checking gperftools for $rid..."
+          
           if [[ "$rid" != osx-* ]]; then
+            echo "  Skipping: not macOS platform"
             return
           fi
           
           # Check if libtcmalloc already exists
-          if [ -f "$target_dir/libtcmalloc"*.dylib ] 2>/dev/null; then
+          if ls "$target_dir"/libtcmalloc*.dylib 1>/dev/null 2>&1; then
+            echo "  libtcmalloc already exists in target directory"
+            ls -lh "$target_dir"/libtcmalloc*.dylib
             return
           fi
           
-          # Try to download from Homebrew bottle API
-          # Use jq if available, otherwise use grep as fallback
-          if command -v jq >/dev/null 2>&1; then
-            if [[ "$rid" == "osx-arm64" ]]; then
-              BOTTLE_URL=$(curl -s "https://formulae.brew.sh/api/formula/gperftools.json" | jq -r '.bottles.stable.arm64_monterey.url // .bottles.stable.arm64_big_sur.url // empty' 2>/dev/null) || true
-            else
-              BOTTLE_URL=$(curl -s "https://formulae.brew.sh/api/formula/gperftools.json" | jq -r '.bottles.stable.x86_64_monterey.url // .bottles.stable.x86_64_big_sur.url // empty' 2>/dev/null) || true
-            fi
-          else
-            # Fallback: install jq or use grep
-            sudo apt-get install -y jq >/dev/null 2>&1 || true
-            if command -v jq >/dev/null 2>&1; then
-              if [[ "$rid" == "osx-arm64" ]]; then
-                BOTTLE_URL=$(curl -s "https://formulae.brew.sh/api/formula/gperftools.json" | jq -r '.bottles.stable.arm64_monterey.url // .bottles.stable.arm64_big_sur.url // empty' 2>/dev/null) || true
-              else
-                BOTTLE_URL=$(curl -s "https://formulae.brew.sh/api/formula/gperftools.json" | jq -r '.bottles.stable.x86_64_monterey.url // .bottles.stable.x86_64_big_sur.url // empty' 2>/dev/null) || true
-              fi
-            fi
+          # Install jq if not available
+          if ! command -v jq >/dev/null 2>&1; then
+            echo "  Installing jq..."
+            sudo apt-get install -y jq >/dev/null 2>&1 || { echo "  Failed to install jq"; return; }
           fi
           
-          if [ -n "$BOTTLE_URL" ] && [ "$BOTTLE_URL" != "null" ]; then
-            mkdir -p /tmp/gperftools-bottle
-            cd /tmp/gperftools-bottle
-            if curl -L -o gperftools.tar.gz "$BOTTLE_URL" 2>/dev/null && tar -xzf gperftools.tar.gz 2>/dev/null; then
-              find . -name "libtcmalloc*.dylib" -type f -exec cp {} "$target_dir/" \; 2>/dev/null || true
-            fi
+          # Get bottle URL from Homebrew API
+          echo "  Fetching bottle URL from Homebrew API..."
+          if [[ "$rid" == "osx-arm64" ]]; then
+            BOTTLE_URL=$(curl -s "https://formulae.brew.sh/api/formula/gperftools.json" | jq -r '.bottles.stable.arm64_monterey.url // .bottles.stable.arm64_big_sur.url // .bottles.stable.arm64_sonoma.url // empty' 2>/dev/null) || true
+          else
+            BOTTLE_URL=$(curl -s "https://formulae.brew.sh/api/formula/gperftools.json" | jq -r '.bottles.stable.x86_64_monterey.url // .bottles.stable.x86_64_big_sur.url // .bottles.stable.x86_64_sonoma.url // empty' 2>/dev/null) || true
+          fi
+          
+          if [ -z "$BOTTLE_URL" ] || [ "$BOTTLE_URL" == "null" ] || [ "$BOTTLE_URL" == "" ]; then
+            echo "  Failed to get bottle URL from Homebrew API"
+            return
+          fi
+          
+          echo "  Bottle URL: $BOTTLE_URL"
+          
+          # Download and extract bottle
+          mkdir -p /tmp/gperftools-bottle
+          cd /tmp/gperftools-bottle
+          echo "  Downloading bottle..."
+          if ! curl -L -f -o gperftools.tar.gz "$BOTTLE_URL" 2>&1; then
+            echo "  Failed to download bottle"
             cd - >/dev/null
             rm -rf /tmp/gperftools-bottle
+            return
           fi
+          
+          echo "  Extracting bottle..."
+          if ! tar -xzf gperftools.tar.gz 2>&1; then
+            echo "  Failed to extract bottle"
+            cd - >/dev/null
+            rm -rf /tmp/gperftools-bottle
+            return
+          fi
+          
+          echo "  Searching for libtcmalloc libraries..."
+          find . -name "libtcmalloc*.dylib" -type f -o -type l | while read -r lib_file; do
+            echo "    Found: $lib_file"
+            if [ -L "$lib_file" ]; then
+              real_file=$(readlink -f "$lib_file" 2>/dev/null || readlink "$lib_file" 2>/dev/null)
+              echo "      Symbolic link -> $real_file"
+              if [ -f "$real_file" ]; then
+                cp "$real_file" "$target_dir/" && echo "      Copied: $(basename "$real_file")" || echo "      Failed to copy: $real_file"
+              fi
+            else
+              cp "$lib_file" "$target_dir/" && echo "      Copied: $(basename "$lib_file")" || echo "      Failed to copy: $lib_file"
+            fi
+          done
+          
+          echo "  Verifying copied files..."
+          if ls "$target_dir"/libtcmalloc*.dylib 1>/dev/null 2>&1; then
+            echo "  Successfully copied libtcmalloc libraries:"
+            ls -lh "$target_dir"/libtcmalloc*.dylib
+          else
+            echo "  Warning: No libtcmalloc libraries found after copy"
+          fi
+          
+          cd - >/dev/null
+          rm -rf /tmp/gperftools-bottle
         }
         
         for platform in "${platforms[@]}"; do
