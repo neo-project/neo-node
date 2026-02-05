@@ -329,11 +329,13 @@ jobs:
         failed_files=()
         for file in neo-cli-portable.zip neo-cli-linux-x64.zip neo-cli-linux-arm64.zip neo-cli-win-x64.zip neo-cli-osx-x64.zip neo-cli-osx-arm64.zip; do
           echo "Uploading $file..."
-          if gh release upload "$RELEASE_TAG" "$file" --clobber 2>&1; then
+          # Run upload command - don't exit on error, just capture the result
+          if gh release upload "$RELEASE_TAG" "$file" --clobber; then
             echo "✓ Successfully uploaded $file"
-            ((upload_count++))
+            upload_count=$((upload_count + 1))
           else
-            echo "✗ Failed to upload $file"
+            upload_exit_code=$?
+            echo "✗ Failed to upload $file (exit code: $upload_exit_code)"
             failed_files+=("$file")
           fi
           echo ""
