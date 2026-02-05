@@ -78,6 +78,8 @@ jobs:
         done
         rm -f ./out/Plugins/TokensTracker/RpcServer.dll
         rm -f ./out/Plugins/StateService/RpcServer.dll
+    - name: Install dependencies
+      run: sudo apt-get install -y libleveldb-dev expect
     - name: Run tests with expect
       run: expect ./.github/workflows/test-neo-cli-plugins.expect
       
