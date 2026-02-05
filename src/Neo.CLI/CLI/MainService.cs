@@ -341,10 +341,9 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         var protocol = ProtocolSettings.Load("config.json");
         CustomProtocolSettings(options, protocol);
         CustomApplicationSettings(options, Settings.Default);
-        var engineConfig = Settings.Default.Storage.Engine;
-        var engine = engineConfig;
+        var engine = Settings.Default.Storage.Engine;
 
-        if (string.IsNullOrWhiteSpace(engineConfig))
+        if (string.IsNullOrWhiteSpace(engine))
         {
             ConsoleHelper.Warning("No persistence engine specified, using MemoryStore now");
             engine = nameof(MemoryStore);
