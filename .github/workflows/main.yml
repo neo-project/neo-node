@@ -321,10 +321,10 @@ jobs:
         asset_path: ./neo-cli-osx-arm64.zip
         asset_name: neo-cli-osx-arm64.zip
         asset_content_type: application/zip
-    - name: Publish to NuGet
-      if: steps.check_tag.outputs.statusCode == '404'
-      run: |
-        dotnet pack -o out -c Release
-        dotnet nuget push out/*.nupkg -s https://api.nuget.org/v3/index.json -k ${NUGET_TOKEN}
-      env:
-        NUGET_TOKEN: ${{ secrets.NUGET_TOKEN }}
+    # - name: Publish to NuGet
+    #   if: steps.check_tag.outputs.statusCode == '404'
+    #   run: |
+    #     dotnet pack -o out -c Release
+    #     dotnet nuget push out/*.nupkg -s https://api.nuget.org/v3/index.json -k ${NUGET_TOKEN}
+    #   env:
+    #     NUGET_TOKEN: ${{ secrets.NUGET_TOKEN }}
