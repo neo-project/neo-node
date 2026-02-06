@@ -54,7 +54,7 @@ public class LedgerController : ControllerBase
     {
         if (skip < 1 || take < 1 || take > RestServerSettings.Current.MaxPageSize)
             throw new InvalidParameterRangeException();
-        var accounts = NativeContract.GAS.ListAccounts(_neoSystem.StoreView, _neoSystem.Settings);
+        var accounts = NativeContract.Governance.ListAccounts(_neoSystem.StoreView, _neoSystem.Settings);
         if (accounts.Any() == false)
             return NoContent();
         var accountsList = accounts.OrderByDescending(o => o.Balance).Skip((skip - 1) * take).Take(take);
