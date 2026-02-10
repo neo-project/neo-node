@@ -10,6 +10,8 @@
 // modifications are permitted.
 
 using Microsoft.Extensions.Configuration;
+using Neo.Ledger;
+using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.Plugins.RpcServer;
 using Neo.Plugins.Trackers;
@@ -38,8 +40,18 @@ public class TokensTracker : Plugin
 
     public TokensTracker()
     {
+        Blockchain.Committing += Blockchain_Committing_Handler;
+        Blockchain.Committed += Blockchain_Committed_Handler;
     }
-
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            Blockchain.Committing -= Blockchain_Committing_Handler;
+            Blockchain.Committed -= Blockchain_Committed_Handler;
+        }
+        base.Dispose(disposing);
+    }
     protected override void Configure()
     {
         IConfigurationSection config = GetConfiguration();
@@ -71,5 +83,33 @@ public class TokensTracker : Plugin
             trackers.Add(new Nep17Tracker(_db, _maxResults, _shouldTrackHistory, neoSystem));
         foreach (TrackerBase tracker in trackers)
             RpcServerPlugin.RegisterMethods(tracker, _network);
+    }
+    private void ResetBatch()
+    {
+        foreach (var tracker in trackers)
+        {
+            tracker.ResetBatch();
+        }
+    }
+
+    void Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
+        IReadOnlyList<Blockchain.ApplicationExecuted> applicationExecutedList)
+    {
+        if (system.Settings.Network != _network) return;
+        // Start freshly with a new DBCache for each block.
+        ResetBatch();
+        foreach (var tracker in trackers)
+        {
+            tracker.OnPersist(system, block, snapshot, applicationExecutedList);
+        }
+    }
+
+    void Blockchain_Committed_Handler(NeoSystem system, Block block)
+    {
+        if (system.Settings.Network != _network) return;
+        foreach (var tracker in trackers)
+        {
+            tracker.Commit();
+        }
     }
 }
