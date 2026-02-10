@@ -1,46 +1,91 @@
-name: .NET Core Test
+name: .NET Core Tests
 
-on: pull_request
+on:
+  pull_request:
 
 env:
   DOTNET_VERSION: 10.0.x
 
 jobs:
+
+  Format:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6.0.1
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5.0.1
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Check Format (*.cs)
+      run: dotnet format --verify-no-changes --verbosity diagnostic
+      
   Test:
+    needs: [Format]
+    timeout-minutes: 15
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout
-      uses: actions/checkout@v5
-    - name: Setup .NET Core
-      uses: actions/setup-dotnet@v5
+      uses: actions/checkout@v6.0.1
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5.0.1
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
-    - name: Check format
-      if: runner.os == 'Linux'
-      run: dotnet format --no-restore --verify-no-changes --verbosity diagnostic
-    - name: Build CLI
-      if: runner.os == 'Linux'
+
+    - name: Test (MacOS)
+      if: matrix.os == 'macos-latest'
       run: |
-        dotnet publish -o ./out -c Release src/Neo.CLI
-        find ./out -name 'config.json' | xargs perl -pi -e 's|LevelDBStore|MemoryStore|g'
-    - name: Install dependencies
-      if: runner.os == 'Linux'
-      run: sudo apt-get install libleveldb-dev expect
-    - name: Run tests with expect
-      if: runner.os == 'Linux'
-      run: expect ./.github/workflows/test-neo-cli.expect
-    - name: Run Unit Tests
-      if: runner.os == 'Windows'
+        brew install leveldb
+        brew install gperftools
+        dotnet build --disable-parallel -m:1 -bl:build-macos.binlog
+        dotnet test --no-build -bl:test-macos.binlog
+
+    - name: Test (windows)
+      if: matrix.os == 'windows-latest'
       run: |
-        forfiles /p tests /m *.csproj /s /c "cmd /c dotnet add @PATH package coverlet.msbuild"
-        dotnet test /p:CollectCoverage=true /p:CoverletOutput='${{ github.workspace }}/TestResults/coverage/' /p:MergeWith='${{ github.workspace }}/TestResults/coverage/coverage.json' /p:CoverletOutputFormat=lcov%2cjson -m:1
+        dotnet build --disable-parallel -m:1 -bl:build-windows.binlog
+        dotnet test --no-build -bl:test-windows.binlog
+
+    - name: Test for coverall
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get --assume-yes install libleveldb-dev librocksdb-dev
+        dotnet build --disable-parallel -m:1 -bl:build-ubuntu.binlog
+        dotnet test --no-build -p:Exclude="[Neo.UnitTests]*" -bl:test-ubuntu.binlog
+
+    - uses: actions/upload-artifact@v6
+      if: always()
+      with:
+        name: binlogs--${{ matrix.os }}
+        path: "*.binlog"
+
     - name: Coveralls
-      if: runner.os == 'Windows'
-      uses: coverallsapp/github-action@v2
+      if: matrix.os == 'ubuntu-latest'
+      uses: coverallsapp/github-action@648a8eb78e6d50909eff900e4ec85cab4524a45b
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
+        debug: false
+        measure: true
+        allow-empty: true
         format: lcov
-        file: ${{ github.workspace }}/TestResults/coverage/coverage.info
+        files:
+          ${{ github.workspace }}/TestResults/Neo.CLI.Tests/coverage.info
+          ${{ github.workspace }}/TestResults/Neo.ConsoleService.Tests/coverage.info
+          ${{ github.workspace }}/TestResults/Neo.Cryptography.MPTTrie.Tests/coverage.info
+          ${{ github.workspace }}/TestResults/Neo.Network.RPC.Tests/coverage.info
+          ${{ github.workspace }}/TestResults/Neo.Plugins.ApplicationLogs.Tests/coverage.info
+          ${{ github.workspace }}/TestResults/Neo.Plugins.DBFTPlugin.Tests/coverage.info
+          ${{ github.workspace }}/TestResults/Neo.Plugins.OracleService.Tests/coverage.info
+          ${{ github.workspace }}/TestResults/Neo.Plugins.RestServer.Tests/coverage.info
+          ${{ github.workspace }}/TestResults/Neo.Plugins.RpcServer.Tests/coverage.info
+          ${{ github.workspace }}/TestResults/Neo.Plugins.SignClient.Tests/coverage.info
+          ${{ github.workspace }}/TestResults/Neo.Plugins.SQLiteWallet.Tests/coverage.info
+          ${{ github.workspace }}/TestResults/Neo.Plugins.StateService.Tests/coverage.info
+          ${{ github.workspace }}/TestResults/Neo.Plugins.Storage.Tests/coverage.info
