@@ -15,6 +15,8 @@ using Neo.Cryptography.MPTTrie;
 using Neo.Extensions;
 using Neo.Extensions.IO;
 using Neo.Json;
+using Neo.Network.P2P.Payloads;
+using Neo.Persistence;
 using Neo.Plugins.RpcServer;
 using Neo.Plugins.StateService.Storage;
 using Neo.Plugins.StateService.Verification;
@@ -22,6 +24,7 @@ using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.Wallets;
 using System.Buffers.Binary;
+using static Neo.Ledger.Blockchain;
 
 namespace Neo.Plugins.StateService;
 
@@ -45,6 +48,8 @@ public class StatePlugin : Plugin
 
     public StatePlugin()
     {
+        Committing += Blockchain_Committing_Handler;
+        Committed += Blockchain_Committed_Handler;
     }
 
     protected override void Configure()
@@ -85,12 +90,30 @@ public class StatePlugin : Plugin
 
     protected override void Dispose(bool disposing)
     {
+        Committing -= Blockchain_Committing_Handler;
+        Committed -= Blockchain_Committed_Handler;
         if (disposing)
         {
             if (Store is not null) _system.EnsureStopped(Store);
             if (Verifier is not null) _system.EnsureStopped(Verifier);
         }
         base.Dispose(disposing);
+    }
+
+    void Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
+        IReadOnlyList<ApplicationExecuted> applicationExecutedList)
+    {
+        if (system.Settings.Network != StateServiceSettings.Default.Network) return;
+        StateStore.Singleton.UpdateLocalStateRootSnapshot(block.Index,
+            snapshot.GetChangeSet()
+                .Where(p => p.Value.State != TrackState.None && p.Key.Id != NativeContract.Ledger.Id)
+                .ToList());
+    }
+
+    void Blockchain_Committed_Handler(NeoSystem system, Block block)
+    {
+        if (system.Settings.Network != StateServiceSettings.Default.Network) return;
+        StateStore.Singleton.UpdateLocalStateRoot(block.Index);
     }
 
     private void CheckNetwork()
