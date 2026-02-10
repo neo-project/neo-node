@@ -47,17 +47,17 @@ partial class ConsensusContext
     }
 
 
-        private RecoveryMessage.PreCommitPayloadCompact GetPreCommitPayloadCompact(ExtensiblePayload payload)
+    private RecoveryMessage.PreCommitPayloadCompact GetPreCommitPayloadCompact(ExtensiblePayload payload)
+    {
+        PreCommit preCommit = GetMessage<PreCommit>(payload);
+        return new RecoveryMessage.PreCommitPayloadCompact
         {
-            PreCommit preCommit = GetMessage<PreCommit>(payload);
-            return new RecoveryMessage.PreCommitPayloadCompact
-            {
-                ViewNumber = preCommit.ViewNumber,
-                ValidatorIndex = preCommit.ValidatorIndex,
-                PreparationHash = preCommit.PreparationHash,
-                InvocationScript = payload.Witness.InvocationScript,
-            };
-        }
+            ViewNumber = preCommit.ViewNumber,
+            ValidatorIndex = preCommit.ValidatorIndex,
+            PreparationHash = preCommit.PreparationHash,
+            InvocationScript = payload.Witness.InvocationScript,
+        };
+    }
 
     private RecoveryMessage.CommitPayloadCompact GetCommitPayloadCompact(ExtensiblePayload payload)
     {
@@ -87,14 +87,14 @@ partial class ConsensusContext
         return p >= 0 ? (byte)p : (byte)(p + Validators.Length);
     }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public byte GetFallbackPrimaryIndex(byte priorityPrimaryIndex)
-        {
-            if (Validators.Length <= 1) return priorityPrimaryIndex;
-            int p = ((int)Block[0].Index + 1) % (Validators.Length - 1);
-            p = p >= 0 ? (byte)p : (byte)(p + Validators.Length);
-            return p < priorityPrimaryIndex ? (byte)p : (byte)(p + 1);
-        }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public byte GetFallbackPrimaryIndex(byte priorityPrimaryIndex)
+    {
+        if (Validators.Length <= 1) return priorityPrimaryIndex;
+        int p = ((int)Block[0].Index + 1) % (Validators.Length - 1);
+        p = p >= 0 ? (byte)p : (byte)(p + Validators.Length);
+        return p < priorityPrimaryIndex ? (byte)p : (byte)(p + 1);
+    }
 
     public UInt160 GetSender(int index)
     {
@@ -115,6 +115,7 @@ partial class ConsensusContext
     /// </summary>
     public long GetExpectedBlockSystemFee(uint pId)
     {
+        // check ! on the original todo
         return Transactions[pId].Values.Sum(u => u.SystemFee);  // Sum Txs
     }
 
