@@ -11,6 +11,8 @@
 
 using Akka.Actor;
 using Neo.ConsoleService;
+using Neo.Network.P2P;
+using Neo.Network.P2P.Payloads;
 using Neo.Plugins.DBFTPlugin.Consensus;
 using Neo.Sign;
 using Neo.Wallets;
@@ -33,8 +35,16 @@ public sealed class DBFTPlugin : Plugin
 
     public DBFTPlugin()
     {
+        RemoteNode.MessageReceived += RemoteNode_MessageReceived_Handler;
     }
-
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            RemoteNode.MessageReceived -= RemoteNode_MessageReceived_Handler;
+        }
+        base.Dispose(disposing);
+    }
     public DBFTPlugin(DbftSettings settings) : this()
     {
         this.settings = settings;
@@ -97,5 +107,16 @@ public sealed class DBFTPlugin : Plugin
         started = true;
         consensus = neoSystem.ActorSystem.ActorOf(ConsensusService.Props(neoSystem, settings, signer));
         consensus.Tell(new ConsensusService.Start());
+    }
+    bool RemoteNode_MessageReceived_Handler(NeoSystem system, Message message)
+    {
+        if (message.Command == MessageCommand.Transaction)
+        {
+            Transaction tx = (Transaction)message.Payload;
+            if (tx.SystemFee > settings.MaxBlockSystemFee)
+                return false;
+            consensus?.Tell(tx);
+        }
+        return true;
     }
 }
