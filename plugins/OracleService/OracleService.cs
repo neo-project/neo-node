@@ -18,6 +18,7 @@ using Neo.Extensions;
 using Neo.Extensions.Collections;
 using Neo.Extensions.IO;
 using Neo.Json;
+using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
@@ -64,6 +65,7 @@ public sealed class OracleService : Plugin
 
     public OracleService()
     {
+        Blockchain.Committing += Blockchain_Committing_Handler;
     }
 
     protected override void Configure()
@@ -108,6 +110,7 @@ public sealed class OracleService : Plugin
     {
         if (disposing)
         {
+            Blockchain.Committing -= Blockchain_Committing_Handler;
             OnStop();
             while (status != OracleStatus.Stopped)
                 Thread.Sleep(100);
@@ -170,7 +173,19 @@ public sealed class OracleService : Plugin
     {
         ConsoleHelper.Info($"Oracle status: ", $"{status}");
     }
+    void Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
+        IReadOnlyList<Blockchain.ApplicationExecuted> applicationExecutedList)
+    {
+        if (system.Settings.Network != OracleSettings.Default.Network) return;
 
+        if (OracleSettings.Default.AutoStart && status == OracleStatus.Unstarted)
+        {
+            OnStart();
+        }
+        if (status != OracleStatus.Running) return;
+        if (!CheckOracleAvailable(snapshot, out ECPoint[] oracles) || !CheckOracleAccount(wallet, oracles))
+            OnStop();
+    }
     private async void OnTimer(object? state)
     {
         try
