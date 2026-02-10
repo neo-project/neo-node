@@ -10,8 +10,6 @@
 // modifications are permitted.
 
 using Microsoft.Extensions.Configuration;
-using Neo.Ledger;
-using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.Plugins.RpcServer;
 using Neo.Plugins.Trackers;
@@ -21,7 +19,7 @@ using static System.IO.Path;
 
 namespace Neo.Plugins;
 
-public class TokensTracker : Plugin, ICommittingHandler, ICommittedHandler
+public class TokensTracker : Plugin
 {
     private string _dbPath = "TokensBalanceData";
     private bool _shouldTrackHistory;
@@ -40,18 +38,6 @@ public class TokensTracker : Plugin, ICommittingHandler, ICommittedHandler
 
     public TokensTracker()
     {
-        Blockchain.Committing += ((ICommittingHandler)this).Blockchain_Committing_Handler;
-        Blockchain.Committed += ((ICommittedHandler)this).Blockchain_Committed_Handler;
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        if (disposing)
-        {
-            Blockchain.Committing -= ((ICommittingHandler)this).Blockchain_Committing_Handler;
-            Blockchain.Committed -= ((ICommittedHandler)this).Blockchain_Committed_Handler;
-        }
-        base.Dispose(disposing);
     }
 
     protected override void Configure()
@@ -85,34 +71,5 @@ public class TokensTracker : Plugin, ICommittingHandler, ICommittedHandler
             trackers.Add(new Nep17Tracker(_db, _maxResults, _shouldTrackHistory, neoSystem));
         foreach (TrackerBase tracker in trackers)
             RpcServerPlugin.RegisterMethods(tracker, _network);
-    }
-
-    private void ResetBatch()
-    {
-        foreach (var tracker in trackers)
-        {
-            tracker.ResetBatch();
-        }
-    }
-
-    void ICommittingHandler.Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
-        IReadOnlyList<Blockchain.ApplicationExecuted> applicationExecutedList)
-    {
-        if (system.Settings.Network != _network) return;
-        // Start freshly with a new DBCache for each block.
-        ResetBatch();
-        foreach (var tracker in trackers)
-        {
-            tracker.OnPersist(system, block, snapshot, applicationExecutedList);
-        }
-    }
-
-    void ICommittedHandler.Blockchain_Committed_Handler(NeoSystem system, Block block)
-    {
-        if (system.Settings.Network != _network) return;
-        foreach (var tracker in trackers)
-        {
-            tracker.Commit();
-        }
     }
 }

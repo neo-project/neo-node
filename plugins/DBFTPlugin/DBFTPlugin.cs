@@ -11,15 +11,13 @@
 
 using Akka.Actor;
 using Neo.ConsoleService;
-using Neo.Network.P2P;
-using Neo.Network.P2P.Payloads;
 using Neo.Plugins.DBFTPlugin.Consensus;
 using Neo.Sign;
 using Neo.Wallets;
 
 namespace Neo.Plugins.DBFTPlugin;
 
-public sealed class DBFTPlugin : Plugin, IMessageReceivedHandler
+public sealed class DBFTPlugin : Plugin
 {
     private IWalletProvider? walletProvider;
     private IActorRef consensus = null!;
@@ -35,19 +33,11 @@ public sealed class DBFTPlugin : Plugin, IMessageReceivedHandler
 
     public DBFTPlugin()
     {
-        RemoteNode.MessageReceived += ((IMessageReceivedHandler)this).RemoteNode_MessageReceived_Handler;
     }
 
     public DBFTPlugin(DbftSettings settings) : this()
     {
         this.settings = settings;
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        if (disposing)
-            RemoteNode.MessageReceived -= ((IMessageReceivedHandler)this).RemoteNode_MessageReceived_Handler;
-        base.Dispose(disposing);
     }
 
     protected override void Configure()
@@ -107,17 +97,5 @@ public sealed class DBFTPlugin : Plugin, IMessageReceivedHandler
         started = true;
         consensus = neoSystem.ActorSystem.ActorOf(ConsensusService.Props(neoSystem, settings, signer));
         consensus.Tell(new ConsensusService.Start());
-    }
-
-    bool IMessageReceivedHandler.RemoteNode_MessageReceived_Handler(NeoSystem system, Message message)
-    {
-        if (message.Command == MessageCommand.Transaction)
-        {
-            Transaction tx = (Transaction)message.Payload!;
-            if (tx.SystemFee > settings.MaxBlockSystemFee)
-                return false;
-            consensus?.Tell(tx);
-        }
-        return true;
     }
 }

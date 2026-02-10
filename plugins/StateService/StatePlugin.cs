@@ -15,8 +15,6 @@ using Neo.Cryptography.MPTTrie;
 using Neo.Extensions;
 using Neo.Extensions.IO;
 using Neo.Json;
-using Neo.Network.P2P.Payloads;
-using Neo.Persistence;
 using Neo.Plugins.RpcServer;
 using Neo.Plugins.StateService.Storage;
 using Neo.Plugins.StateService.Verification;
@@ -24,11 +22,10 @@ using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.Wallets;
 using System.Buffers.Binary;
-using static Neo.Ledger.Blockchain;
 
 namespace Neo.Plugins.StateService;
 
-public class StatePlugin : Plugin, ICommittingHandler, ICommittedHandler
+public class StatePlugin : Plugin
 {
     public const string StatePayloadCategory = "StateService";
     public override string Name => "StateService";
@@ -48,8 +45,6 @@ public class StatePlugin : Plugin, ICommittingHandler, ICommittedHandler
 
     public StatePlugin()
     {
-        Committing += ((ICommittingHandler)this).Blockchain_Committing_Handler;
-        Committed += ((ICommittedHandler)this).Blockchain_Committed_Handler;
     }
 
     protected override void Configure()
@@ -92,28 +87,10 @@ public class StatePlugin : Plugin, ICommittingHandler, ICommittedHandler
     {
         if (disposing)
         {
-            Committing -= ((ICommittingHandler)this).Blockchain_Committing_Handler;
-            Committed -= ((ICommittedHandler)this).Blockchain_Committed_Handler;
             if (Store is not null) _system.EnsureStopped(Store);
             if (Verifier is not null) _system.EnsureStopped(Verifier);
         }
         base.Dispose(disposing);
-    }
-
-    void ICommittingHandler.Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
-        IReadOnlyList<ApplicationExecuted> applicationExecutedList)
-    {
-        if (system.Settings.Network != StateServiceSettings.Default.Network) return;
-        StateStore.Singleton.UpdateLocalStateRootSnapshot(block.Index,
-            snapshot.GetChangeSet()
-                .Where(p => p.Value.State != TrackState.None && p.Key.Id != NativeContract.Ledger.Id)
-                .ToList());
-    }
-
-    void ICommittedHandler.Blockchain_Committed_Handler(NeoSystem system, Block block)
-    {
-        if (system.Settings.Network != StateServiceSettings.Default.Network) return;
-        StateStore.Singleton.UpdateLocalStateRoot(block.Index);
     }
 
     private void CheckNetwork()

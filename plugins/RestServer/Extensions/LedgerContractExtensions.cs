@@ -19,17 +19,8 @@ namespace Neo.Plugins.RestServer.Extensions;
 
 internal static class LedgerContractExtensions
 {
-    public static IEnumerable<AccountDetails> ListAccounts(this GasToken gasToken, DataCache snapshot, ProtocolSettings protocolSettings) =>
-        gasToken
-            .GetAccounts(snapshot)
-            .Select(s =>
-                new AccountDetails
-                {
-                    ScriptHash = s.Address,
-                    Address = s.Address.ToAddress(protocolSettings.AddressVersion),
-                    Balance = s.Balance,
-                    Decimals = gasToken.Decimals,
-                });
+    public static IEnumerable<AccountDetails> ListAccounts(this Governance gasToken, DataCache snapshot, ProtocolSettings protocolSettings) =>
+        gasToken.ListAccounts(snapshot, protocolSettings);
 
     public static IEnumerable<AccountDetails> ListAccounts(this NeoToken neoToken, DataCache snapshot, ProtocolSettings protocolSettings) =>
         neoToken
