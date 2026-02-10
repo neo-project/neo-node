@@ -31,6 +31,7 @@ public class LogReader : Plugin
 
     internal NeoStore _neostore;
     private NeoSystem _neosystem;
+    private readonly List<LogEventArgs> _logEvents;
 
     #endregion
 
@@ -44,6 +45,9 @@ public class LogReader : Plugin
     {
         _neostore = default!;
         _neosystem = default!;
+        _logEvents = new();
+        Blockchain.Committing += Blockchain_Committing_Handler;
+        Blockchain.Committed += Blockchain_Committed_Handler;
     }
 
     #endregion
@@ -51,6 +55,23 @@ public class LogReader : Plugin
     #region Override Methods
 
     public override string ConfigFile => Combine(RootPath, "ApplicationLogs.json");
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            Blockchain.Committing -= Blockchain_Committing_Handler;
+            Blockchain.Committed -= Blockchain_Committed_Handler;
+            if (ApplicationLogsSettings.Default.Debug)
+                ApplicationEngine.InstanceCreated -= ConfigureAppEngine;
+        }
+        base.Dispose(disposing);
+    }
+
+    private void ConfigureAppEngine(ApplicationEngine engine)
+    {
+        engine.Log += ApplicationEngine_Log_Handler;
+    }
 
     protected override void Configure()
     {
@@ -66,6 +87,9 @@ public class LogReader : Plugin
         _neostore = new NeoStore(store);
         _neosystem = system;
         RpcServerPlugin.RegisterMethods(this, ApplicationLogsSettings.Default.Network);
+
+        if (ApplicationLogsSettings.Default.Debug)
+            ApplicationEngine.InstanceCreated -= ConfigureAppEngine;
     }
 
     #endregion
@@ -198,6 +222,55 @@ public class LogReader : Plugin
             PrintEventModelToConsole(txContract);
     }
 
+
+    #endregion
+
+    #region Blockchain Events
+
+    void Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
+        IReadOnlyList<Blockchain.ApplicationExecuted> applicationExecutedList)
+    {
+        if (system.Settings.Network != ApplicationLogsSettings.Default.Network)
+            return;
+
+        if (_neostore is null)
+            return;
+        _neostore.StartBlockLogBatch();
+        _neostore.PutBlockLog(block, applicationExecutedList);
+        if (ApplicationLogsSettings.Default.Debug)
+        {
+            foreach (var appEng in applicationExecutedList.Where(w => w.Transaction != null))
+            {
+                var logs = _logEvents.Where(w => w.ScriptContainer?.Hash == appEng.Transaction!.Hash).ToList();
+                if (logs.Count != 0)
+                    _neostore.PutTransactionEngineLogState(appEng.Transaction!.Hash, logs);
+            }
+            _logEvents.Clear();
+        }
+    }
+
+    void Blockchain_Committed_Handler(NeoSystem system, Block block)
+    {
+        if (system.Settings.Network != ApplicationLogsSettings.Default.Network)
+            return;
+        if (_neostore is null)
+            return;
+        _neostore.CommitBlockLog();
+    }
+
+    void ApplicationEngine_Log_Handler(ApplicationEngine sender, LogEventArgs e)
+    {
+        if (ApplicationLogsSettings.Default.Debug == false)
+            return;
+
+        if (_neosystem.Settings.Network != ApplicationLogsSettings.Default.Network)
+            return;
+
+        if (e.ScriptContainer == null)
+            return;
+
+        _logEvents.Add(e);
+    }
 
     #endregion
 
