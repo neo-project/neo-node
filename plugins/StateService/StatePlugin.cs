@@ -90,10 +90,10 @@ public class StatePlugin : Plugin
 
     protected override void Dispose(bool disposing)
     {
-        Committing -= Blockchain_Committing_Handler;
-        Committed -= Blockchain_Committed_Handler;
         if (disposing)
         {
+            Committing -= Blockchain_Committing_Handler;
+            Committed -= Blockchain_Committed_Handler;
             if (Store is not null) _system.EnsureStopped(Store);
             if (Verifier is not null) _system.EnsureStopped(Verifier);
         }

@@ -52,6 +52,7 @@ internal class Store : IStore
             for (it.SeekForPrev(keyOrPrefix); it.Valid(); it.Prev())
                 yield return (it.Key(), it.Value());
     }
+
     public IEnumerable<(byte[] Key, byte[] Value)> FindRange(byte[] start, byte[] end, SeekDirection direction = SeekDirection.Forward)
     {
         ArgumentNullException.ThrowIfNull(start);

@@ -130,6 +130,7 @@ internal class Store : IStore, IEnumerable<KeyValuePair<byte[], byte[]>>
             }
         }
     }
+
     public IEnumerator<KeyValuePair<byte[], byte[]>> GetEnumerator() =>
         _db.GetEnumerator();
 
