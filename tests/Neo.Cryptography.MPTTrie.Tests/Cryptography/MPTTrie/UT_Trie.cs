@@ -59,6 +59,7 @@ class TestSnapshot : IStoreSnapshot
     {
         throw new NotImplementedException();
     }
+
     public void Dispose() { throw new NotImplementedException(); }
 
     public int Size => _store.Count;
