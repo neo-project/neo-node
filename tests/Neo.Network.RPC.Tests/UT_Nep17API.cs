@@ -110,7 +110,7 @@ public class UT_Nep17API
                 .Verifiable();
             if (test.Request.Params[0]!.AsString() == NativeContract.Governance.Hash.ToString() || test.Request.Params[0]!.AsString().Equals(Governance.GasTokenName, StringComparison.OrdinalIgnoreCase))
             {
-                var result = await nep17API.GetTokenInfoAsync(Governance.GasTokenName.ToLower());
+                var result = await nep17API.GetTokenInfoAsync(NativeContract.Governance.Hash.ToString());
                 Assert.AreEqual(Governance.GasTokenSymbol, result.Symbol);
                 Assert.AreEqual(8, result.Decimals);
                 Assert.AreEqual(1_00000000, (int)result.TotalSupply);
@@ -125,7 +125,7 @@ public class UT_Nep17API
             }
             else if (test.Request.Params[0]!.AsString() == NativeContract.NEO.Hash.ToString() || test.Request.Params[0]!.AsString().Equals(NativeContract.NEO.Name, StringComparison.OrdinalIgnoreCase))
             {
-                var result = await nep17API.GetTokenInfoAsync(NativeContract.NEO.Name.ToLower());
+                var result = await nep17API.GetTokenInfoAsync(NativeContract.NEO.Hash.ToString());
                 Assert.AreEqual(NativeContract.NEO.Symbol, result.Symbol);
                 Assert.AreEqual(0, result.Decimals);
                 Assert.AreEqual(1_00000000, (int)result.TotalSupply);
