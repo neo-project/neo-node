@@ -294,10 +294,10 @@ partial class ConsensusService
                 totalPrepResponses = prepareResponsePayloads.Length;
                 foreach (ExtensiblePayload prepareResponsePayload in prepareResponsePayloads)
                     if (ReverifyAndProcessPayload(prepareResponsePayload)) validPrepResponses++;
-                    ExtensiblePayload[] preCommitPayloads = message.GetPreCommitPayloads(context);
-                    totalPreCommits = preCommitPayloads.Length;
-                    foreach (ExtensiblePayload preCommitPayload in preCommitPayloads)
-                        if (ReverifyAndProcessPayload(preCommitPayload)) validPreCommits++;                    
+                ExtensiblePayload[] preCommitPayloads = message.GetPreCommitPayloads(context);
+                totalPreCommits = preCommitPayloads.Length;
+                foreach (ExtensiblePayload preCommitPayload in preCommitPayloads)
+                    if (ReverifyAndProcessPayload(preCommitPayload)) validPreCommits++;
             }
             if (message.ViewNumber <= context.ViewNumber)
             {
