@@ -2175,7 +2175,7 @@
         {
           "id": -4,
           "updatecounter": 0,
-          "hash": "0xd2a4cff31913016155e38e474a2c06d08be276cf",
+          "hash": "0x4ce7159d05c667940413a58c25bf63063570ca67",
           "nef": {
             "magic": 860243278,
             "compiler": "neo-core-v3.0",
@@ -3517,7 +3517,7 @@
     "Request": {
       "jsonrpc": "2.0",
       "method": "getwalletbalance",
-      "params": [ "0xd2a4cff31913016155e38e474a2c06d08be276cf" ],
+      "params": [ "0x4ce7159d05c667940413a58c25bf63063570ca67" ],
       "id": 1
     },
     "Response": {
