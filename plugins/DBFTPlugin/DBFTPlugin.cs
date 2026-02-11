@@ -37,6 +37,12 @@ public sealed class DBFTPlugin : Plugin
     {
         RemoteNode.MessageReceived += RemoteNode_MessageReceived_Handler;
     }
+
+    public DBFTPlugin(DbftSettings settings) : this()
+    {
+        this.settings = settings;
+    }
+
     protected override void Dispose(bool disposing)
     {
         if (disposing)
@@ -44,10 +50,6 @@ public sealed class DBFTPlugin : Plugin
             RemoteNode.MessageReceived -= RemoteNode_MessageReceived_Handler;
         }
         base.Dispose(disposing);
-    }
-    public DBFTPlugin(DbftSettings settings) : this()
-    {
-        this.settings = settings;
     }
 
     protected override void Configure()

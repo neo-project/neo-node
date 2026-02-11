@@ -89,7 +89,7 @@ public class LogReader : Plugin
         RpcServerPlugin.RegisterMethods(this, ApplicationLogsSettings.Default.Network);
 
         if (ApplicationLogsSettings.Default.Debug)
-            ApplicationEngine.InstanceCreated -= ConfigureAppEngine;
+            ApplicationEngine.InstanceCreated += ConfigureAppEngine;
     }
 
     #endregion

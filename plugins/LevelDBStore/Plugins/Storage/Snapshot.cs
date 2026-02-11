@@ -72,6 +72,7 @@ internal class Snapshot : IStoreSnapshot, IEnumerable<KeyValuePair<byte[], byte[
     {
         return _db.Seek(_readOptions, keyOrPrefix, direction);
     }
+
     public IEnumerable<(byte[] Key, byte[] Value)> FindRange(byte[] start, byte[] end, SeekDirection direction = SeekDirection.Forward)
     {
         ArgumentNullException.ThrowIfNull(start);
@@ -124,6 +125,7 @@ internal class Snapshot : IStoreSnapshot, IEnumerable<KeyValuePair<byte[], byte[
             }
         }
     }
+
     public bool Contains(byte[] key)
     {
         return _db.Contains(_readOptions, key);

@@ -39,6 +39,7 @@ public static class Helper
                 yield return new(it.Key()!, it.Value()!);
         }
     }
+
     public static int CompareLex(byte[] a, byte[] b)
     {
         int n = Math.Min(a.Length, b.Length);
@@ -49,6 +50,7 @@ public static class Helper
         }
         return a.Length.CompareTo(b.Length);
     }
+
     internal static byte[]? ToByteArray(this IntPtr data, UIntPtr length)
     {
         if (data == IntPtr.Zero) return null;
