@@ -9,7 +9,6 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-using Akka.Actor.Dsl;
 using Microsoft.AspNetCore.Http;
 using Neo.Extensions.IO;
 using Neo.Json;
