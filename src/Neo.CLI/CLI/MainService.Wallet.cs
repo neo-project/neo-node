@@ -513,7 +513,7 @@ partial class MainService
     /// </summary>
     /// <param name="message">Message to sign</param>
     [ConsoleCommand("sign message", Category = "Wallet Commands")]
-    private void OnSignMessageCommand(string message)
+    private void OnSignMessageCommand(string message, bool addSignData)
     {
         if (NoWallet()) return;
 
@@ -572,8 +572,12 @@ partial class MainService
         ConsoleHelper.Info("Generated signatures:");
         Console.WriteLine();
 
-        var hash = new UInt256(Crypto.Hash256(payload));
-        var signData = hash.GetSignData(NeoSystem.Settings.Network);
+        var signData = payload;
+        if (addSignData)
+        {
+            var hash = new UInt256(Crypto.Hash256(payload));
+            signData = hash.GetSignData(NeoSystem.Settings.Network);
+        }
 
         foreach (WalletAccount account in CurrentWallet.GetAccounts().Where(p => p.HasKey))
         {

@@ -30,7 +30,7 @@ public class UT_MainService_Wallet
     public void TestOnSignMessageCommand()
     {
         var walletPassword = "test_pwd";
-        var output = CreateWalletAngSignMessage(walletPassword);
+        var output = CreateWalletAngSignMessage(walletPassword, true);
 
         // Basic headers
         Assert.IsFalse(string.IsNullOrWhiteSpace(output), "Output from sign message command should not be empty");
@@ -53,7 +53,7 @@ public class UT_MainService_Wallet
     [TestMethod]
     public void TestOnSignMessageCommandWithoutPassword()
     {
-        var output = CreateWalletAngSignMessage(string.Empty);
+        var output = CreateWalletAngSignMessage(string.Empty, true);
 
         Assert.IsFalse(string.IsNullOrWhiteSpace(output), "Output should not be empty");
         Assert.Contains("Cancelled", output, "Output should contain cancellation message");
@@ -62,7 +62,7 @@ public class UT_MainService_Wallet
     public void TestOnSignMessageCommandWrongPassword()
     {
         var walletPassword = "invalid_pwd";
-        var output = CreateWalletAngSignMessage(walletPassword);
+        var output = CreateWalletAngSignMessage(walletPassword, true);
 
         Assert.IsFalse(string.IsNullOrWhiteSpace(output), "Output should not be empty");
         Assert.Contains("Incorrect password", output, "Output should contain incorrect password");
@@ -73,7 +73,7 @@ public class UT_MainService_Wallet
     public void TestOnSignMessageCommandWithoutAccount()
     {
         var walletPassword = "test_pwd";
-        var output = CreateWalletAngSignMessage(walletPassword, false);
+        var output = CreateWalletAngSignMessage(walletPassword, true, false);
 
         Assert.IsFalse(string.IsNullOrWhiteSpace(output), "Output should not be empty");
         Assert.Contains("Signed Payload", output, "Output should containt signed payload");
@@ -87,7 +87,7 @@ public class UT_MainService_Wallet
     public void TestOnSignMessageCommandWithNullMessage()
     {
         var walletPassword = "test_pwd";
-        var output = CreateWalletAngSignMessage(walletPassword, true, null);
+        var output = CreateWalletAngSignMessage(walletPassword, true, true, null);
         Assert.IsFalse(string.IsNullOrWhiteSpace(output), "Output should not be empty");
         Assert.Contains("Null message", output, "Output should contain null message");
     }
@@ -96,9 +96,9 @@ public class UT_MainService_Wallet
     {
         var walletPassword = "test_pwd";
         string message = "this is a test to sign";
-        var outputWithoutQuotes = CreateWalletAngSignMessage(walletPassword, true, message);
-        var outputWithDoubleQuotes = CreateWalletAngSignMessage(walletPassword, true, $"\"{message}\"");
-        var outputWithSingleQuotes = CreateWalletAngSignMessage(walletPassword, true, $"'{message}'");
+        var outputWithoutQuotes = CreateWalletAngSignMessage(walletPassword, true, true, message);
+        var outputWithDoubleQuotes = CreateWalletAngSignMessage(walletPassword, true, true, $"\"{message}\"");
+        var outputWithSingleQuotes = CreateWalletAngSignMessage(walletPassword, true, true, $"'{message}'");
 
         Assert.IsFalse(string.IsNullOrWhiteSpace(outputWithoutQuotes), "Output without quotes should not be empty");
         Assert.IsFalse(string.IsNullOrWhiteSpace(outputWithDoubleQuotes), "Output with double quotes should not be empty");
@@ -126,7 +126,7 @@ public class UT_MainService_Wallet
         var message = "this is a test to sign";
 
         // 1) First sign a message to obtain (signature, pubkey, salt, address)
-        var signOutput = CreateWalletAngSignMessage(walletPassword, withAccount: true, messageToSign: message);
+        var signOutput = CreateWalletAngSignMessage(walletPassword, true, withAccount: true, messageToSign: message);
 
         var signature = ExtractHexValue(signOutput, "Signature:");
         var publicKey = ExtractHexValue(signOutput, "PublicKey:");
@@ -208,7 +208,7 @@ public class UT_MainService_Wallet
         return outputWriter.ToString();
     }
 
-    private string CreateWalletAngSignMessage(string userPassword, bool withAccount = true, string messageToSign = "this is a test to sign")
+    private string CreateWalletAngSignMessage(string userPassword, bool addSignData, bool withAccount = true, string messageToSign = "this is a test to sign")
     {
         var walletPassword = "test_pwd";
         var message = messageToSign;
@@ -248,7 +248,7 @@ public class UT_MainService_Wallet
 
         try
         {
-            InvokeNonPublic(service, "OnSignMessageCommand", message);
+            InvokeNonPublic(service, "OnSignMessageCommand", message, addSignData);
         }
         finally
         {
