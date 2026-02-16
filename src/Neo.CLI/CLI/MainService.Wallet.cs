@@ -513,7 +513,7 @@ partial class MainService
     /// </summary>
     /// <param name="message">Message to sign</param>
     [ConsoleCommand("sign message", Category = "Wallet Commands")]
-    private void OnSignMessageCommand(string message, bool addSignData)
+    private void OnSignMessageCommand(string message, bool avoidSignatureReplay)
     {
         if (NoWallet()) return;
 
@@ -573,7 +573,7 @@ partial class MainService
         Console.WriteLine();
 
         var signData = payload;
-        if (addSignData)
+        if (avoidSignatureReplay)
         {
             var hash = new UInt256(Crypto.Hash256(payload));
             signData = hash.GetSignData(NeoSystem.Settings.Network);
