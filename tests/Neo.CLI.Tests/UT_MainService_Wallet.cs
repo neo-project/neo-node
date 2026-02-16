@@ -9,7 +9,6 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-using Neo.Wallets;
 using System.Reflection;
 using System.Text;
 
@@ -119,6 +118,7 @@ public class UT_MainService_Wallet
         Assert.AreEqual(msgPayloadWithoutQuotes, msgPayloadWithDoubleQuotes, "Signing a message with surrounding double quotes should produce the same normalized message as a signing without quotes");
         Assert.AreEqual(msgPayloadWithoutQuotes, msgPayloadWithSingleQuotes, "Signing a message with surrounding single quotes should produce the same normalized message as a signing without quotes");
     }
+
     [TestMethod]
     public void TestOnVerifyMessageCommand()
     {
@@ -149,7 +149,7 @@ public class UT_MainService_Wallet
         Assert.AreEqual(32, salt!.Length, "Salt should be 16 bytes (32 hex chars)");
 
         // 2) Verify with the exact message
-        var verifyOutput = CreateServiceAndVerifyMessage(message, signature!, publicKey!, salt!);
+        var verifyOutput = CreateServiceAndVerifyMessage(message, signature!, publicKey!, salt!, true);
         Assert.IsFalse(string.IsNullOrWhiteSpace(verifyOutput), "Verify output should not be empty");
         Assert.Contains("Verification Result", verifyOutput, "Should print verification header");
         Assert.Contains("Status:", verifyOutput, "Should print Status line");
@@ -157,31 +157,93 @@ public class UT_MainService_Wallet
         Assert.Contains(address!, verifyOutput, "Address should match the signer");
 
         // 3) Message normalization: verify with surrounding quotes should still be valid
-        var verifyOutputQuoted = CreateServiceAndVerifyMessage($"\"{message}\"", signature!, publicKey!, salt!);
+        var verifyOutputQuoted = CreateServiceAndVerifyMessage($"\"{message}\"", signature!, publicKey!, salt!, true);
         Assert.Contains("Status:", verifyOutputQuoted, "Should print Status line for quoted message");
         Assert.Contains("Valid", verifyOutputQuoted, "Quoted message should still verify as valid");
 
         // 4) Tampered message: should be invalid and print debug info
-        var verifyOutputInvalid = CreateServiceAndVerifyMessage(message + "!", signature!, publicKey!, salt!);
+        var verifyOutputInvalid = CreateServiceAndVerifyMessage(message + "!", signature!, publicKey!, salt!, true);
         Assert.Contains("Status:", verifyOutputInvalid, "Should print Status line for invalid message");
         Assert.Contains("Invalid", verifyOutputInvalid, "Tampered message should be invalid");
         Assert.Contains("Debug Information", verifyOutputInvalid, "Should print debug information on invalid signature");
         Assert.Contains("Reconstructed Payload", verifyOutputInvalid, "Should print reconstructed payload in debug mode");
 
         // 5) Input validation: invalid public key format
-        var invalidPubKeyOutput = CreateServiceAndVerifyMessage(message, signature!, "zzzz", salt!);
+        var invalidPubKeyOutput = CreateServiceAndVerifyMessage(message, signature!, "zzzz", salt!, true);
         Assert.Contains("Invalid public key format", invalidPubKeyOutput, "Should reject invalid public key");
 
         // 6) Input validation: invalid signature hex
-        var invalidSignatureOutput = CreateServiceAndVerifyMessage(message, "NOT_HEX", publicKey!, salt!);
+        var invalidSignatureOutput = CreateServiceAndVerifyMessage(message, "NOT_HEX", publicKey!, salt!, true);
         Assert.Contains("Invalid signature format", invalidSignatureOutput, "Should reject invalid signature format");
 
         // 7) Input validation: empty salt
-        var emptySaltOutput = CreateServiceAndVerifyMessage(message, signature!, publicKey!, string.Empty);
+        var emptySaltOutput = CreateServiceAndVerifyMessage(message, signature!, publicKey!, string.Empty, true);
         Assert.Contains("Salt cannot be empty", emptySaltOutput, "Should reject empty salt");
     }
 
-    private string CreateServiceAndVerifyMessage(string message, string signature, string publicKey, string salt)
+    [TestMethod]
+    public void TestOnSignOnVerifyMessageWithoutSignatureReplay()
+    {
+        var walletPassword = "test_pwd";
+        var message = "this is a test to sign";
+
+        // 1) First sign a message to obtain (signature, pubkey, salt, address)
+        var signOutput = CreateWalletAngSignMessage(walletPassword, false, withAccount: true, messageToSign: message);
+
+        var signature = ExtractHexValue(signOutput, "Signature:");
+        var publicKey = ExtractHexValue(signOutput, "PublicKey:");
+        var salt = ExtractHexValue(signOutput, "Salt:");
+        var address = ExtractHexValue(signOutput, "Address:");
+
+        Assert.IsFalse(string.IsNullOrWhiteSpace(signOutput), "Sign output should not be empty");
+        Assert.IsNotNull(signature, "Signature should be present in sign output");
+        Assert.IsNotNull(publicKey, "PublicKey should be present in sign output");
+        Assert.IsNotNull(salt, "Salt should be present in sign output");
+        Assert.IsNotNull(address, "Address should be present in sign output");
+
+        Assert.IsTrue(IsHexString(signature!), "Signature should be valid hex");
+        Assert.AreEqual(0, signature!.Length % 2, "Signature hex should have even length");
+
+        Assert.IsTrue(IsHexString(publicKey!), "PublicKey should be valid hex");
+        Assert.AreEqual(0, publicKey!.Length % 2, "PublicKey hex should have even length");
+
+        Assert.IsTrue(IsHexString(salt!), "Salt should be valid hex");
+        Assert.AreEqual(32, salt!.Length, "Salt should be 16 bytes (32 hex chars)");
+
+        // 2) Verify with the exact message
+        var verifyOutput = CreateServiceAndVerifyMessage(message, signature!, publicKey!, salt!, false);
+        Assert.IsFalse(string.IsNullOrWhiteSpace(verifyOutput), "Verify output should not be empty");
+        Assert.Contains("Verification Result", verifyOutput, "Should print verification header");
+        Assert.Contains("Status:", verifyOutput, "Should print Status line");
+        Assert.Contains("Valid", verifyOutput, "Signature should be valid");
+        Assert.Contains(address!, verifyOutput, "Address should match the signer");
+
+        // 3) Message normalization: verify with surrounding quotes should still be valid
+        var verifyOutputQuoted = CreateServiceAndVerifyMessage($"\"{message}\"", signature!, publicKey!, salt!, false);
+        Assert.Contains("Status:", verifyOutputQuoted, "Should print Status line for quoted message");
+        Assert.Contains("Valid", verifyOutputQuoted, "Quoted message should still verify as valid");
+
+        // 4) Tampered message: should be invalid and print debug info
+        var verifyOutputInvalid = CreateServiceAndVerifyMessage(message + "!", signature!, publicKey!, salt!, false);
+        Assert.Contains("Status:", verifyOutputInvalid, "Should print Status line for invalid message");
+        Assert.Contains("Invalid", verifyOutputInvalid, "Tampered message should be invalid");
+        Assert.Contains("Debug Information", verifyOutputInvalid, "Should print debug information on invalid signature");
+        Assert.Contains("Reconstructed Payload", verifyOutputInvalid, "Should print reconstructed payload in debug mode");
+
+        // 5) Input validation: invalid public key format
+        var invalidPubKeyOutput = CreateServiceAndVerifyMessage(message, signature!, "zzzz", salt!, false);
+        Assert.Contains("Invalid public key format", invalidPubKeyOutput, "Should reject invalid public key");
+
+        // 6) Input validation: invalid signature hex
+        var invalidSignatureOutput = CreateServiceAndVerifyMessage(message, "NOT_HEX", publicKey!, salt!, false);
+        Assert.Contains("Invalid signature format", invalidSignatureOutput, "Should reject invalid signature format");
+
+        // 7) Input validation: empty salt
+        var emptySaltOutput = CreateServiceAndVerifyMessage(message, signature!, publicKey!, string.Empty, false);
+        Assert.Contains("Salt cannot be empty", emptySaltOutput, "Should reject empty salt");
+    }
+
+    private string CreateServiceAndVerifyMessage(string message, string signature, string publicKey, string salt, bool avoidSignatureReplay)
     {
         var service = new MainService();
 
@@ -197,7 +259,7 @@ public class UT_MainService_Wallet
 
         try
         {
-            InvokeNonPublic(service, "OnVerifyMessageCommand", message, signature, publicKey, salt);
+            InvokeNonPublic(service, "OnVerifyMessageCommand", message, signature, publicKey, salt, avoidSignatureReplay);
         }
         finally
         {
@@ -257,6 +319,7 @@ public class UT_MainService_Wallet
 
         return outputWriter.ToString();
     }
+
     private static string ExtractHexValue(string output, string label)
     {
         var index = output.IndexOf(label, StringComparison.OrdinalIgnoreCase);
@@ -271,6 +334,7 @@ public class UT_MainService_Wallet
         var value = output[start..endOfLine].Trim();
         return string.IsNullOrEmpty(value) ? null : value;
     }
+
     private static bool IsHexString(string value)
     {
         foreach (var c in value)
@@ -285,6 +349,7 @@ public class UT_MainService_Wallet
 
         return true;
     }
+
     private static void TrySet(object target, string propertyName, object value)
     {
         var prop = target.GetType().GetProperty(
@@ -294,6 +359,7 @@ public class UT_MainService_Wallet
 
         prop?.SetValue(target, value);
     }
+
     private static void TrySetField(object target, string fieldName, object value)
     {
         var field = target.GetType().GetField(
@@ -303,6 +369,7 @@ public class UT_MainService_Wallet
 
         field?.SetValue(target, value);
     }
+
     private static void InvokeNonPublic(object target, string methodName, params object[] args)
     {
         var method = target.GetType().GetMethod(
@@ -313,6 +380,7 @@ public class UT_MainService_Wallet
         Assert.IsNotNull(method, $"Method '{methodName}' not found on type '{target.GetType().FullName}'.");
         method.Invoke(target, args);
     }
+
     private static string ExtractMessageFromSignedPayload(string payloadHex)
     {
         var payloadBytes = HexToBytes(payloadHex);
@@ -343,6 +411,7 @@ public class UT_MainService_Wallet
 
         return message;
     }
+
     private static byte[] HexToBytes(string hex)
     {
         if (hex.Length % 2 != 0)

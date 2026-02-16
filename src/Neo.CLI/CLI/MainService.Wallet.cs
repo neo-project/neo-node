@@ -600,7 +600,7 @@ partial class MainService
     /// <param name="publicKey">Public key in hex format</param>
     /// <param name="salt">Salt in hex format</param>
     [ConsoleCommand("verify message", Category = "Wallet Commands")]
-    private void OnVerifyMessageCommand(string message, string signature, string publicKey, string salt)
+    private void OnVerifyMessageCommand(string message, string signature, string publicKey, string salt, bool avoidSignatureReplay)
     {
         try
         {
@@ -651,8 +651,14 @@ partial class MainService
             }
 
             // Calculate signData: SHA256(network || Hash256(payload))
-            var hash = new UInt256(Crypto.Hash256(payload));
-            var signData = hash.GetSignData(NeoSystem.Settings.Network);
+            var hash = UInt256.Zero;
+            var signData = payload;
+            if (avoidSignatureReplay)
+            {
+                hash = new UInt256(Crypto.Hash256(payload));
+                signData = hash.GetSignData(NeoSystem.Settings.Network);
+            }
+
             bool isValid = Crypto.VerifySignature(signData, signatureBytes, pubKey);
             var contract = Contract.CreateSignatureContract(pubKey);
             var address = contract.ScriptHash.ToAddress(NeoSystem.Settings.AddressVersion);
@@ -675,7 +681,11 @@ partial class MainService
                 ConsoleHelper.Info("  Message bytes: ", Encoding.UTF8.GetBytes(message).ToHexString());
                 ConsoleHelper.Info("  Salt+Message: ", $"{saltHex}{message}");
                 ConsoleHelper.Info("  Reconstructed Payload: ", payload.ToHexString());
-                ConsoleHelper.Info("  Payload Hash256: ", hash.ToString());
+                if (avoidSignatureReplay)
+                {
+                    ConsoleHelper.Info("  Payload Hash256: ", hash.ToString());
+                }
+
                 Console.WriteLine();
                 ConsoleHelper.Warning("Note: The message must match exactly what was signed.");
                 ConsoleHelper.Warning("If you used 'sign message \"Hello world!\"', the actual message signed is 'Hello world!' (without quotes).");
