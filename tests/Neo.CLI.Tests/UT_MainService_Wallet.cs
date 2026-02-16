@@ -182,6 +182,45 @@ public class UT_MainService_Wallet
     }
 
     [TestMethod]
+    public void TestOnSignWithSignatureReplayOnVerifyWithoutSignatureReplay()
+    {
+        var walletPassword = "test_pwd";
+        var message = "this is a test to sign";
+
+        // 1) First sign a message to obtain with signature replay (signature, pubkey, salt, address)
+        var signOutputWithSR = CreateWalletAngSignMessage(walletPassword, true, withAccount: true, messageToSign: message);
+
+        var signatureSR = ExtractHexValue(signOutputWithSR, "Signature:");
+        var publicKeySR = ExtractHexValue(signOutputWithSR, "PublicKey:");
+        var saltSR = ExtractHexValue(signOutputWithSR, "Salt:");
+        var addressSR = ExtractHexValue(signOutputWithSR, "Address:");
+
+        // 2) Verify with the exact message with signature replay
+        var verifyOutput = CreateServiceAndVerifyMessage(message, signatureSR!, publicKeySR!, saltSR!, false);
+        Assert.IsFalse(string.IsNullOrWhiteSpace(verifyOutput), "Verify output should not be empty");
+        Assert.Contains("Verification Result", verifyOutput, "Should print verification header");
+        Assert.Contains("Status:", verifyOutput, "Should print Status line");
+        Assert.Contains("Invalid", verifyOutput, "Signature should be valid");
+        Assert.Contains(addressSR!, verifyOutput, "Address should match the signer");
+
+        // 3) First sign a message to obtain without signature replay (signature, pubkey, salt, address)
+        var signOutputWithoutSR = CreateWalletAngSignMessage(walletPassword, false, withAccount: true, messageToSign: message);
+
+        var signatureWithoutSR = ExtractHexValue(signOutputWithoutSR, "Signature:");
+        var publicKeyWithoutSR = ExtractHexValue(signOutputWithoutSR, "PublicKey:");
+        var saltWithoutSR = ExtractHexValue(signOutputWithoutSR, "Salt:");
+        var addressWithoutSR = ExtractHexValue(signOutputWithoutSR, "Address:");
+
+        // 4) Verify with the exact message without signature replay
+        var verifyWithoutOutput = CreateServiceAndVerifyMessage(message, signatureWithoutSR!, publicKeyWithoutSR!, saltWithoutSR!, true);
+        Assert.IsFalse(string.IsNullOrWhiteSpace(verifyWithoutOutput), "Verify output should not be empty");
+        Assert.Contains("Verification Result", verifyWithoutOutput, "Should print verification header");
+        Assert.Contains("Status:", verifyWithoutOutput, "Should print Status line");
+        Assert.Contains("Invalid", verifyWithoutOutput, "Signature should be valid");
+        Assert.Contains(addressWithoutSR!, verifyWithoutOutput, "Address should match the signer");
+    }
+
+    [TestMethod]
     public void TestOnSignOnVerifyMessageWithoutSignatureReplay()
     {
         var walletPassword = "test_pwd";
