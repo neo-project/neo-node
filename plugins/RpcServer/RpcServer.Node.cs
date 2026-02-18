@@ -148,7 +148,7 @@ partial class RpcServer
     {
         JObject json = new();
         json["tcpport"] = localNode.ListenerTcpPort;
-        // json["nonce"] = LocalNode.Nonce;
+        //json["nonce"] = LocalNode.Nonce;
         json["useragent"] = LocalNode.UserAgent;
         // rpc settings
         JObject rpc = new();
