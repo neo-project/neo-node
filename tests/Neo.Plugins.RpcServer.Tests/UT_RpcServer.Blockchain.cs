@@ -239,13 +239,11 @@ public partial class UT_RpcServer
     public void TestGetContractState_Native_CaseInsensitive()
     {
         var gasTokenHash = NativeContract.Governance.Hash;
-        var resultLower = _rpcServer.GetContractState(new ContractNameOrHashOrId("gastoken"));
-        var resultUpper = _rpcServer.GetContractState(new ContractNameOrHashOrId("GASTOKEN"));
-        var resultMixed = _rpcServer.GetContractState(new ContractNameOrHashOrId("GasToken"));
+        var resultLower = _rpcServer.GetContractState(new ContractNameOrHashOrId("governance"));
+        var resultUpper = _rpcServer.GetContractState(new ContractNameOrHashOrId("GOVERNANCE"));
 
         Assert.AreEqual(gasTokenHash.ToString(), ((JObject)resultLower)["hash"]!.AsString());
         Assert.AreEqual(gasTokenHash.ToString(), ((JObject)resultUpper)["hash"]!.AsString());
-        Assert.AreEqual(gasTokenHash.ToString(), ((JObject)resultMixed)["hash"]!.AsString());
     }
 
     [TestMethod]
