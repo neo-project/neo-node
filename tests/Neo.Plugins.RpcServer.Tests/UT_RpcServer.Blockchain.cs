@@ -174,8 +174,9 @@ public partial class UT_RpcServer
     {
         var snapshot = _neoSystem.GetSnapshotCache();
         var block = TestUtils.CreateBlockWithValidTransactions(snapshot, _wallet, _walletAccount, 3);
-        // TestUtils.BlocksAdd(snapshot, block.Hash, block);
-        // snapshot.Commit();
+        TestUtils.BlocksAdd(snapshot, block.Hash, block);
+        snapshot.Commit();
+
         var reason = _neoSystem.Blockchain.Ask<Blockchain.RelayResult>(block, cancellationToken: CancellationToken.None).Result;
         var expectedHash = block.Hash.ToString();
         var result = _rpcServer.GetBlockHash(block.Index);
