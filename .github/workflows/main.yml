@@ -74,30 +74,18 @@ jobs:
           if [ -d "$build_output" ]; then
             mkdir -p "./out/Plugins/$plugin_name"
             cp -r "$build_output"/* "./out/Plugins/$plugin_name/"
-          else
-            echo "Warning: Build output not found for $plugin_name"
           fi
         done
         # Remove duplicated RpcServer.dll from TokensTracker and StorageDumper (they can't load twice)
         rm -f ./out/Plugins/TokensTracker/RpcServer.dll
         rm -f ./out/Plugins/StateService/RpcServer.dll
     - name: Install dependencies
-      run: sudo apt-get install libleveldb-dev expect
-    - name: Debug - List Plugins folder contents
-      run: |
-        echo "Plugins folder contents:"
-        ls -la ./out/Plugins/ || echo "Plugins folder does not exist"
-        echo ""
-        echo "Plugin directories:"
-        find ./out/Plugins -mindepth 1 -maxdepth 1 -type d | sort || echo "No plugin directories found"
-        echo ""
-        echo "Sample plugin DLLs (ApplicationLogs):"
-        ls -la ./out/Plugins/ApplicationLogs/*.dll 2>/dev/null | head -5 || echo "No DLLs found"
+      run: sudo apt-get install -y libleveldb-dev expect
     - name: Run tests with expect
       run: expect ./.github/workflows/test-neo-cli-plugins.expect
       
   Release:
-    if: github.ref == 'refs/heads/master-n3' && startsWith(github.repository, 'neo-project/')
+    if: github.ref == 'refs/heads/master-n3' && github.repository == 'neo-project/neo-node'
     needs: Test
     runs-on: ubuntu-latest
     steps:
@@ -106,28 +94,138 @@ jobs:
     - name: Get version
       id: get_version
       run: |
-        sudo apt install xmlstarlet
-        find plugins -name Directory.Build.props | xargs xmlstarlet sel -N i=http://schemas.microsoft.com/developer/msbuild/2003 -t -v "concat('version=v',//i:Version/text())" | xargs echo >> $GITHUB_OUTPUT
+        sudo apt install xmlstarlet -qq
+        VERSION=$(xmlstarlet sel -N i=http://schemas.microsoft.com/developer/msbuild/2003 -t -v "//i:Version/text()" src/Directory.Build.props 2>/dev/null || echo "")
+        [ -z "$VERSION" ] && VERSION=$(find plugins -name Directory.Build.props | xargs xmlstarlet sel -N i=http://schemas.microsoft.com/developer/msbuild/2003 -t -v "//i:Version/text()" 2>/dev/null || echo "")
+        [ -n "$VERSION" ] && echo "version=v$VERSION" >> $GITHUB_OUTPUT || echo "version=" >> $GITHUB_OUTPUT
     - name: Check tag
-      if: steps.get_version.outputs.version != 'v' && startsWith(steps.get_version.outputs.version, 'v')
+      if: steps.get_version.outputs.version != '' && startsWith(steps.get_version.outputs.version, 'v')
       id: check_tag
       run: curl -s -I ${{ format('https://github.com/{0}/releases/tag/{1}', github.repository, steps.get_version.outputs.version) }} | head -n 1 | cut -d$' ' -f2 | xargs printf "statusCode=%s" | xargs echo >> $GITHUB_OUTPUT
     - name: Create release
       if: steps.check_tag.outputs.statusCode == '404'
-      id: create_release
-      uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.get_version.outputs.version }}
-        release_name: ${{ steps.get_version.outputs.version }}
-        draft: true
-        prerelease: ${{ contains(steps.get_version.outputs.version, '-') }}
+      run: |
+        if ! gh release view ${{ steps.get_version.outputs.version }} >/dev/null 2>&1; then
+          if [[ "${{ steps.get_version.outputs.version }}" == *"-"* ]]; then
+            gh release create ${{ steps.get_version.outputs.version }} \
+              --title "${{ steps.get_version.outputs.version }}" \
+              --notes "Release ${{ steps.get_version.outputs.version }}" \
+              --draft \
+              --prerelease
+          else
+            gh release create ${{ steps.get_version.outputs.version }} \
+              --title "${{ steps.get_version.outputs.version }}" \
+              --notes "Release ${{ steps.get_version.outputs.version }}" \
+              --draft
+          fi
+        fi
     - name: Setup .NET Core
       if: steps.check_tag.outputs.statusCode == '404'
       uses: actions/setup-dotnet@v5
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
+    - name: Install zip tool
+      if: steps.check_tag.outputs.statusCode == '404'
+      run: sudo apt-get update && sudo apt-get install -y zip
+    - name: Build LevelDBStore plugin for all platforms
+      if: steps.check_tag.outputs.statusCode == '404'
+      run: |
+        dotnet build plugins/LevelDBStore/LevelDBStore.csproj -c Release
+    - name: Build and package neo-cli for all platforms
+      if: steps.check_tag.outputs.statusCode == '404'
+      run: |
+        # Define platforms
+        platforms=("portable" "linux-x64" "linux-arm64" "win-x64" "osx-x64" "osx-arm64")
+        
+        # LevelDBStore output directory (where native libs are copied after build)
+        LEVELDB_OUTPUT="plugins/LevelDBStore/bin/Release/net10.0"
+        # LevelDBStore intermediate directory (where native libs are downloaded)
+        LEVELDB_OBJ="plugins/LevelDBStore/bin/Release/net10.0/obj/LevelDBStore"
+        
+        copy_native_lib() {
+          local rid=$1
+          local lib_name=$2
+          local target_dir=$3
+          local output_path="$LEVELDB_OUTPUT/runtimes/$rid/native/$lib_name"
+          local obj_path="$LEVELDB_OBJ/libleveldb-$rid/runtimes/$rid/native/$lib_name"
+          local zip_dir="$LEVELDB_OBJ/libleveldb-$rid"
+          
+          if [ -f "$output_path" ]; then
+            cp "$output_path" "$target_dir/"
+          elif [ -f "$obj_path" ]; then
+            cp "$obj_path" "$target_dir/"
+          else
+            return
+          fi
+          
+          # For macOS, also copy any extra .dylib files from the LevelDB package (best-effort)
+          if [[ "$rid" == osx-* ]] && [ -d "$zip_dir" ]; then
+            find "$zip_dir" -name "*.dylib" -type f -exec cp {} "$target_dir/" \; 2>/dev/null || true
+          fi
+        }
+        
+        for platform in "${platforms[@]}"; do
+          if [ "$platform" == "portable" ]; then
+            dotnet publish src/Neo.CLI/Neo.CLI.csproj -c Release -o "./publish/$platform" --self-contained false
+          else
+            dotnet publish src/Neo.CLI/Neo.CLI.csproj -c Release -o "./publish/$platform" -r "$platform" --self-contained true
+          fi
+          
+          mkdir -p "./publish/$platform/Plugins/LevelDBStore"
+          cp "$LEVELDB_OUTPUT/LevelDBStore.dll" "./publish/$platform/Plugins/LevelDBStore/" 2>/dev/null || true
+          
+          if [ "$platform" == "portable" ]; then
+            copy_native_lib "linux-x64" "libleveldb.so" "./publish/$platform"
+            copy_native_lib "win-x64" "libleveldb.dll" "./publish/$platform"
+            copy_native_lib "osx-x64" "libleveldb.dylib" "./publish/$platform"
+          else
+            case "$platform" in
+              "linux-x64"|"linux-arm64") copy_native_lib "$platform" "libleveldb.so" "./publish/$platform" ;;
+              "win-x64") copy_native_lib "$platform" "libleveldb.dll" "./publish/$platform" ;;
+              "osx-x64"|"osx-arm64") copy_native_lib "$platform" "libleveldb.dylib" "./publish/$platform" ;;
+            esac
+          fi
+          
+          cd "./publish/$platform" && zip -r "../../neo-cli-$platform.zip" . && cd ../..
+        done
+    - name: Upload CLI packages to release
+      if: steps.check_tag.outputs.statusCode == '404'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        RELEASE_TAG="${{ steps.get_version.outputs.version }}"
+        
+        # Verify release exists
+        if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+          echo "Error: Release $RELEASE_TAG does not exist"
+          exit 1
+        fi
+        
+        # Verify all required zip files exist
+        missing_files=()
+        for file in neo-cli-portable.zip neo-cli-linux-x64.zip neo-cli-linux-arm64.zip neo-cli-win-x64.zip neo-cli-osx-x64.zip neo-cli-osx-arm64.zip; do
+          [ ! -f "$file" ] && missing_files+=("$file")
+        done
+        
+        if [ ${#missing_files[@]} -gt 0 ]; then
+          echo "Error: Missing zip files: ${missing_files[*]}"
+          exit 1
+        fi
+        
+        # Upload all zip files to release
+        failed_files=()
+        for file in neo-cli-portable.zip neo-cli-linux-x64.zip neo-cli-linux-arm64.zip neo-cli-win-x64.zip neo-cli-osx-x64.zip neo-cli-osx-arm64.zip; do
+          if ! gh release upload "$RELEASE_TAG" "$file" --clobber; then
+            failed_files+=("$file")
+          fi
+        done
+        
+        if [ ${#failed_files[@]} -gt 0 ]; then
+          echo "Error: Failed to upload: ${failed_files[*]}"
+          exit 1
+        fi
     - name: Publish to NuGet
       if: steps.check_tag.outputs.statusCode == '404'
       run: |
