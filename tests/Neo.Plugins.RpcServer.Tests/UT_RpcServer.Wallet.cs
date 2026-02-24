@@ -307,7 +307,7 @@ partial class UT_RpcServer
     {
         TestUtilOpenWallet();
 
-        var assetId = NativeContract.Governance.Hash;
+        var assetId = NativeContract.Governance.GasTokenId;
         var from = new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion);
         var to = new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion);
         var amount = "1";
@@ -333,7 +333,7 @@ partial class UT_RpcServer
     {
         var from = _walletAccount.Address;
         var to = new JArray {
-            new JObject { ["asset"] = NativeContract.Governance.Hash.ToString(), ["value"] = "1", ["address"] = _walletAccount.Address }
+            new JObject { ["asset"] = NativeContract.Governance.GasTokenId.ToString(), ["value"] = "1", ["address"] = _walletAccount.Address }
         };
 
         var exception = Assert.ThrowsExactly<RpcException>(
