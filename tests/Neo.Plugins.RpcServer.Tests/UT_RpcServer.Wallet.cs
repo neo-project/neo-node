@@ -356,7 +356,7 @@ partial class UT_RpcServer
     [TestMethod]
     public void TestSendToAddress()
     {
-        var assetId = NativeContract.Governance.Hash;
+        var assetId = NativeContract.Governance.GasTokenId;
         var to = new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion);
         var amount = "1";
         var exception = Assert.ThrowsExactly<RpcException>(
@@ -395,7 +395,7 @@ partial class UT_RpcServer
     public void TestSendToAddress_InvalidToAddress()
     {
         TestUtilOpenWallet();
-        var assetId = NativeContract.Governance.Hash;
+        var assetId = NativeContract.Governance.GasTokenId;
         var invalidToAddress = "NotAnAddress";
         var amount = "1";
 
@@ -411,7 +411,7 @@ partial class UT_RpcServer
     public void TestSendToAddress_NegativeAmount()
     {
         TestUtilOpenWallet();
-        var assetId = NativeContract.Governance.Hash;
+        var assetId = NativeContract.Governance.GasTokenId;
         var to = new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion);
         var amount = "-1";
 
@@ -424,7 +424,7 @@ partial class UT_RpcServer
     public void TestSendToAddress_ZeroAmount()
     {
         TestUtilOpenWallet();
-        var assetId = NativeContract.Governance.Hash;
+        var assetId = NativeContract.Governance.GasTokenId;
         var to = new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion);
         var amount = "0";
 
@@ -438,7 +438,7 @@ partial class UT_RpcServer
     public void TestSendToAddress_InsufficientFunds()
     {
         TestUtilOpenWallet();
-        var assetId = NativeContract.Governance.Hash;
+        var assetId = NativeContract.Governance.GasTokenId;
 
         var to = new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion);
         var hugeAmount = "100000000000000000"; // Exceeds likely balance

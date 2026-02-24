@@ -528,8 +528,8 @@ partial class RpcServer
         var wallet = CheckWallet();
 
         using var snapshot = system.GetSnapshotCache();
-        var descriptor = new AssetDescriptor(snapshot, system.Settings, assetId);
-        var amountDecimal = new BigDecimal(BigInteger.Parse(amount), descriptor.Decimals);
+        var descriptor = NativeContract.TokenManagement.GetTokenInfo(snapshot, assetId);
+        var amountDecimal = new BigDecimal(BigInteger.Parse(amount), descriptor!.Decimals);
         (amountDecimal.Sign > 0).True_Or(RpcErrorFactory.InvalidParams("Amount can't be negative."));
 
         var tx = wallet.MakeTransaction(snapshot, [new() { AssetId = assetId, Value = amountDecimal, ScriptHash = to.ScriptHash }])
