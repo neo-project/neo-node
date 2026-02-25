@@ -559,66 +559,6 @@ partial class UT_RpcServer
     }
 
     [TestMethod]
-    [Obsolete]
-    public void TestCancelTransaction()
-    {
-        TestUtilOpenWallet();
-
-        var snapshot = _neoSystem.GetSnapshotCache();
-        var tx = TestUtils.CreateValidTx(snapshot, _wallet, _walletAccount);
-        snapshot.Commit();
-
-        var address = new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion);
-        var exception = Assert.ThrowsExactly<RpcException>(
-            () => _ = _rpcServer.CancelTransaction(tx.Hash, [address]),
-            "Should throw RpcException for non-existing transaction");
-        Assert.AreEqual(RpcError.InsufficientFunds.Code, exception.HResult);
-
-        // Test with invalid transaction id
-        var invalidTxHash = "invalid_txid";
-        exception = Assert.ThrowsExactly<RpcException>(
-            () => _ = _rpcServer.CancelTransaction(new JString(invalidTxHash).AsParameter<UInt256>(), [address]),
-            "Should throw RpcException for invalid txid");
-        Assert.AreEqual(exception.HResult, RpcError.InvalidParams.Code);
-
-        // Test with no signer
-        exception = Assert.ThrowsExactly<RpcException>(
-            () => _ = _rpcServer.CancelTransaction(tx.Hash, []),
-            "Should throw RpcException for invalid txid");
-        Assert.AreEqual(exception.HResult, RpcError.BadRequest.Code);
-
-        // Test with null wallet
-        _rpcServer.wallet = null;
-        exception = Assert.ThrowsExactly<RpcException>(
-            () => _ = _rpcServer.CancelTransaction(tx.Hash, [address]),
-            "Should throw RpcException for no opened wallet");
-        Assert.AreEqual(exception.HResult, RpcError.NoOpenedWallet.Code);
-        TestUtilCloseWallet();
-
-        // Test valid cancel
-        _rpcServer.wallet = _wallet;
-        var resp = (JObject)_rpcServer.SendFrom(
-            NativeContract.Governance.Hash,
-            new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion),
-            new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion),
-            "1"
-        );
-
-        var txHash = resp["hash"]!;
-        resp = (JObject)_rpcServer.CancelTransaction(
-            txHash.AsParameter<UInt256>(), new JArray(ValidatorAddress).AsParameter<Address[]>(), "1");
-        Assert.AreEqual(12, resp.Count);
-        Assert.AreEqual(resp["sender"], ValidatorAddress);
-
-        var signers = (JArray)resp["signers"]!;
-        Assert.HasCount(1, signers);
-        Assert.AreEqual(signers[0]!["account"], ValidatorScriptHash.ToString());
-        Assert.AreEqual(nameof(WitnessScope.None), signers[0]!["scopes"]);
-        Assert.AreEqual(nameof(TransactionAttributeType.Conflicts), resp["attributes"]![0]!["type"]);
-        _rpcServer.wallet = null;
-    }
-
-    [TestMethod]
     public void TestInvokeContractVerify()
     {
         var scriptHash = UInt160.Parse("0x70cde1619e405cdef363ab66a1e8dce430d798d5");
