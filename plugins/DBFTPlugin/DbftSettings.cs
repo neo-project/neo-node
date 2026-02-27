@@ -30,7 +30,7 @@ public class DbftSettings : IPluginSettings
         IgnoreRecoveryLogs = false;
         AutoStart = false;
         Network = 5195086u;
-        MaxBlockSystemFee = 150000000000L;
+        MaxBlockSystemFee = 2000000000L;
         ExceptionPolicy = UnhandledExceptionPolicy.StopNode;
     }
 
@@ -41,7 +41,7 @@ public class DbftSettings : IPluginSettings
         AutoStart = section.GetValue("AutoStart", false);
         Network = section.GetValue("Network", 5195086u);
         MaxBlockSize = section.GetValue("MaxBlockSize", 262144u);
-        MaxBlockSystemFee = section.GetValue("MaxBlockSystemFee", 150000000000L);
+        MaxBlockSystemFee = section.GetValue("MaxBlockSystemFee", 2000000000L);
         ExceptionPolicy = section.GetValue("UnhandledExceptionPolicy", UnhandledExceptionPolicy.StopNode);
     }
 }
