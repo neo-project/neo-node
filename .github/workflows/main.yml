@@ -43,7 +43,7 @@ jobs:
         dotnet test /p:CollectCoverage=true /p:CoverletOutput='${{ github.workspace }}/TestResults/coverage/' /p:MergeWith='${{ github.workspace }}/TestResults/coverage/coverage.json' /p:CoverletOutputFormat=lcov%2cjson -m:1
     - name: Codecov
       if: runner.os == 'Windows'
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: ${{ github.workspace }}/TestResults/coverage/coverage.info
