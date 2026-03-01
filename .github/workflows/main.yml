@@ -41,13 +41,13 @@ jobs:
       run: |
         forfiles /p tests /m *.csproj /s /c "cmd /c dotnet add @PATH package coverlet.msbuild"
         dotnet test /p:CollectCoverage=true /p:CoverletOutput='${{ github.workspace }}/TestResults/coverage/' /p:MergeWith='${{ github.workspace }}/TestResults/coverage/coverage.json' /p:CoverletOutputFormat=lcov%2cjson -m:1
-    - name: Coveralls
+    - name: Codecov
       if: runner.os == 'Windows'
-      uses: coverallsapp/github-action@v2
+      uses: codecov/codecov-action@v5
       with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        format: lcov
-        file: ${{ github.workspace }}/TestResults/coverage/coverage.info
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ${{ github.workspace }}/TestResults/coverage/coverage.info
+        fail_ci_if_error: false
 
   Test-with-plugins:
     strategy:
