@@ -17,6 +17,7 @@ using Neo.SmartContract.Native;
 using Neo.Wallets;
 
 namespace Neo.Plugins.RestServer.Extensions;
+
 internal static class GovernanceTokenExtensions
 {
     private const byte Prefix_AccountState = 12;
