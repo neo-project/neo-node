@@ -43,6 +43,7 @@ public class TokensTracker : Plugin
         Blockchain.Committing += Blockchain_Committing_Handler;
         Blockchain.Committed += Blockchain_Committed_Handler;
     }
+
     protected override void Dispose(bool disposing)
     {
         if (disposing)
@@ -52,6 +53,7 @@ public class TokensTracker : Plugin
         }
         base.Dispose(disposing);
     }
+
     protected override void Configure()
     {
         IConfigurationSection config = GetConfiguration();
@@ -84,6 +86,7 @@ public class TokensTracker : Plugin
         foreach (TrackerBase tracker in trackers)
             RpcServerPlugin.RegisterMethods(tracker, _network);
     }
+
     private void ResetBatch()
     {
         foreach (var tracker in trackers)
