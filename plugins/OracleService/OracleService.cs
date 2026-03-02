@@ -83,7 +83,6 @@ public sealed class OracleService : Plugin
         RpcServerPlugin.RegisterMethods(this, OracleSettings.Default.Network);
     }
 
-
     void NeoSystem_ServiceAdded_Handler(object? sender, object service)
     {
         if (service is IWalletProvider provider)
@@ -173,6 +172,7 @@ public sealed class OracleService : Plugin
     {
         ConsoleHelper.Info($"Oracle status: ", $"{status}");
     }
+
     void Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
         IReadOnlyList<Blockchain.ApplicationExecuted> applicationExecutedList)
     {
@@ -186,6 +186,7 @@ public sealed class OracleService : Plugin
         if (!CheckOracleAvailable(snapshot, out ECPoint[] oracles) || !CheckOracleAccount(wallet, oracles))
             OnStop();
     }
+
     private async void OnTimer(object? state)
     {
         try
@@ -360,7 +361,6 @@ public sealed class OracleService : Plugin
 
         status = OracleStatus.Stopped;
     }
-
 
     private void SyncPendingQueue(DataCache snapshot)
     {
