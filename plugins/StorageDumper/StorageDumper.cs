@@ -40,6 +40,7 @@ public class StorageDumper : Plugin
         Blockchain.Committing += Blockchain_Committing_Handler;
         Blockchain.Committed += Blockchain_Committed_Handler;
     }
+
     protected override void Dispose(bool disposing)
     {
         if (disposing)
@@ -49,6 +50,7 @@ public class StorageDumper : Plugin
         }
         base.Dispose(disposing);
     }
+
     protected override void Configure()
     {
         StorageSettings.Load(GetConfiguration());
@@ -131,10 +133,12 @@ public class StorageDumper : Plugin
             };
         }
     }
+
     void Blockchain_Committed_Handler(NeoSystem system, Block block)
     {
         OnCommitStorage(system.Settings.Network);
     }
+
     void OnCommitStorage(uint network)
     {
         if (_currentBlock != null && _writer != null)
