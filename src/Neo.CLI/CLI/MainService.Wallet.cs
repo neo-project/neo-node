@@ -438,15 +438,15 @@ partial class MainService
         foreach (UInt160 account in CurrentWallet!.GetAccounts().Select(p => p.ScriptHash))
         {
             Console.WriteLine(account.ToAddress(NeoSystem.Settings.AddressVersion));
-            ConsoleHelper.Info("NEO: ", $"{CurrentWallet.GetBalance(snapshot, NativeContract.NEO.Hash, account)}");
+            ConsoleHelper.Info("NEO: ", $"{CurrentWallet.GetBalance(snapshot, NativeContract.Governance.NeoTokenId, account)}");
             ConsoleHelper.Info("GAS: ", $"{CurrentWallet.GetBalance(snapshot, NativeContract.Governance.Hash, account)}");
             Console.WriteLine();
         }
         Console.WriteLine("----------------------------------------------------");
-        ConsoleHelper.Info("Total:   NEO: ", $"{CurrentWallet.GetAvailable(snapshot, NativeContract.NEO.Hash),10}     ",
+        ConsoleHelper.Info("Total:   NEO: ", $"{CurrentWallet.GetAvailable(snapshot, NativeContract.Governance.NeoTokenId),10}     ",
             "GAS: ", $"{CurrentWallet.GetAvailable(snapshot, NativeContract.Governance.Hash),18}");
         Console.WriteLine();
-        ConsoleHelper.Info("NEO hash: ", NativeContract.NEO.Hash.ToString());
+        ConsoleHelper.Info("NEO hash: ", NativeContract.Governance.NeoTokenId.ToString());
         ConsoleHelper.Info("GAS hash: ", NativeContract.Governance.Hash.ToString());
     }
 
@@ -505,14 +505,14 @@ partial class MainService
     /// <summary>
     /// Process "send" command
     /// </summary>
-    /// <param name="asset">Asset id</param>
+    /// <param name="tokenId">Token Id</param>
     /// <param name="to">To</param>
     /// <param name="amount">Amount</param>
     /// <param name="from">From</param>
     /// <param name="data">Data</param>
     /// <param name="signerAccounts">Signer's accounts</param>
     [ConsoleCommand("send", Category = "Wallet Commands")]
-    private void OnSendCommand(UInt160 asset, UInt160 to, string amount, UInt160? from = null, string? data = null, UInt160[]? signerAccounts = null)
+    private void OnSendCommand(UInt160 tokenId, UInt160 to, string amount, UInt160? from = null, string? data = null, UInt160[]? signerAccounts = null)
     {
         if (NoWallet()) return;
         string password = ConsoleHelper.ReadUserInput("password", true);
@@ -528,8 +528,15 @@ partial class MainService
         }
 
         var snapshot = NeoSystem.StoreView;
+        var descriptor = NativeContract.TokenManagement.GetTokenInfo(snapshot, tokenId);
+
+        if (descriptor == null)
+        {
+            ConsoleHelper.Error($"No token found for token id {tokenId}");
+            return;
+        }
+
         Transaction tx;
-        AssetDescriptor descriptor = new(snapshot, NeoSystem.Settings, asset);
         if (!BigDecimal.TryParse(amount, descriptor.Decimals, out BigDecimal decimalAmount) || decimalAmount.Sign <= 0)
         {
             ConsoleHelper.Error("Incorrect Amount Format");
@@ -541,7 +548,7 @@ partial class MainService
             {
                 new TransferOutput
                 {
-                    AssetId = asset,
+                    AssetId = tokenId,
                     Value = decimalAmount,
                     ScriptHash = to,
                     Data = data
@@ -639,10 +646,8 @@ partial class MainService
         }
         else
         {
-            var snapshot = NeoSystem.StoreView;
-            AssetDescriptor descriptor = new(snapshot, NeoSystem.Settings, NativeContract.Governance.Hash);
             string extracFee = ConsoleHelper.ReadUserInput("This tx is not in mempool, please input extra fee (datoshi) manually");
-            if (!BigDecimal.TryParse(extracFee, descriptor.Decimals, out BigDecimal decimalExtraFee) || decimalExtraFee.Sign <= 0)
+            if (!BigDecimal.TryParse(extracFee, Governance.GasTokenDecimals, out BigDecimal decimalExtraFee) || decimalExtraFee.Sign <= 0)
             {
                 ConsoleHelper.Error("Incorrect Amount Format");
                 return;
@@ -669,10 +674,11 @@ partial class MainService
     {
         if (NoWallet()) return;
         BigInteger gas = BigInteger.Zero;
-        var snapshot = NeoSystem.StoreView;
+        using var snapshot = NeoSystem.GetSnapshotCache();
+        using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot);
         uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
         foreach (UInt160 account in CurrentWallet!.GetAccounts().Select(p => p.ScriptHash))
-            gas += NativeContract.NEO.UnclaimedGas(snapshot, account, height);
+            gas += NativeContract.Governance.UnclaimedGas(engine, account, height);
         ConsoleHelper.Info("Unclaimed gas: ", new BigDecimal(gas, Governance.GasTokenDecimals).ToString());
     }
 

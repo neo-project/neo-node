@@ -98,7 +98,7 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
     {
         switch (input.ToLowerInvariant())
         {
-            case "neo": return NativeContract.NEO.Hash;
+            case "neo": return NativeContract.Governance.NeoTokenId;
             case "gas": return NativeContract.Governance.Hash;
         }
 
