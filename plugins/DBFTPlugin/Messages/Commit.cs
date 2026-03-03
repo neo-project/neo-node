@@ -18,7 +18,10 @@ public class Commit : ConsensusMessage
 {
     public ReadOnlyMemory<byte> Signature;
 
-    public override int Size => base.Size + Signature.Length;
+    // priority or fallback
+    public uint PId;
+
+    public override int Size => base.Size + Signature.Length + sizeof(uint);
 
     public Commit() : base(ConsensusMessageType.Commit) { }
 
@@ -26,11 +29,13 @@ public class Commit : ConsensusMessage
     {
         base.Deserialize(ref reader);
         Signature = reader.ReadMemory(64);
+        PId = reader.ReadUInt32();
     }
 
     public override void Serialize(BinaryWriter writer)
     {
         base.Serialize(writer);
         writer.Write(Signature.Span);
+        writer.Write(PId);
     }
 }

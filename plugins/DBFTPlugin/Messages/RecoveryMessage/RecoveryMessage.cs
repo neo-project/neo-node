@@ -21,12 +21,14 @@ namespace Neo.Plugins.DBFTPlugin.Messages;
 
 public partial class RecoveryMessage : ConsensusMessage
 {
+    public uint PId;
     public required Dictionary<byte, ChangeViewPayloadCompact> ChangeViewMessages;
     public PrepareRequest? PrepareRequestMessage;
     /// The PreparationHash in case the PrepareRequest hasn't been received yet.
     /// This can be null if the PrepareRequest information is present, since it can be derived in that case.
     public UInt256? PreparationHash;
     public required Dictionary<byte, PreparationPayloadCompact> PreparationMessages;
+    public required Dictionary<byte, PreCommitPayloadCompact> PreCommitMessages;
     public required Dictionary<byte, CommitPayloadCompact> CommitMessages;
 
     public override int Size => base.Size
@@ -41,6 +43,7 @@ public partial class RecoveryMessage : ConsensusMessage
     public override void Deserialize(ref MemoryReader reader)
     {
         base.Deserialize(ref reader);
+        PId = reader.ReadUInt32();
         ChangeViewMessages = reader.ReadSerializableArray<ChangeViewPayloadCompact>(byte.MaxValue).ToDictionary(p => p.ValidatorIndex);
         if (reader.ReadBoolean())
         {
@@ -54,6 +57,7 @@ public partial class RecoveryMessage : ConsensusMessage
         }
 
         PreparationMessages = reader.ReadSerializableArray<PreparationPayloadCompact>(byte.MaxValue).ToDictionary(p => p.ValidatorIndex);
+        PreCommitMessages = reader.ReadSerializableArray<PreCommitPayloadCompact>(byte.MaxValue).ToDictionary(p => p.ValidatorIndex);
         CommitMessages = reader.ReadSerializableArray<CommitPayloadCompact>(byte.MaxValue).ToDictionary(p => p.ValidatorIndex);
     }
 
@@ -73,6 +77,7 @@ public partial class RecoveryMessage : ConsensusMessage
             BlockIndex = BlockIndex,
             ValidatorIndex = p.ValidatorIndex,
             ViewNumber = p.OriginalViewNumber,
+            PId = PId,
             Timestamp = p.Timestamp
         }, p.InvocationScript)).ToArray();
     }
@@ -91,27 +96,42 @@ public partial class RecoveryMessage : ConsensusMessage
     internal ExtensiblePayload? GetPrepareRequestPayload(ConsensusContext context)
     {
         if (PrepareRequestMessage == null) return null;
-        if (!PreparationMessages.TryGetValue(context.Block.PrimaryIndex, out PreparationPayloadCompact? compact))
+        if (!PreparationMessages.TryGetValue(context.Block[PId].PrimaryIndex, out PreparationPayloadCompact? compact))
             return null;
         return context.CreatePayload(PrepareRequestMessage, compact.InvocationScript);
     }
 
     internal ExtensiblePayload[] GetPrepareResponsePayloads(ConsensusContext context)
     {
-        UInt256? preparationHash = PreparationHash ?? context.PreparationPayloads[context.Block.PrimaryIndex]?.Hash;
+        UInt256? preparationHash = PreparationHash ?? context.PreparationPayloads[context.Block[PId].PrimaryIndex]?.Hash;
         if (preparationHash is null) return Array.Empty<ExtensiblePayload>();
-        return PreparationMessages.Values.Where(p => p.ValidatorIndex != context.Block.PrimaryIndex).Select(p => context.CreatePayload(new PrepareResponse
+        return PreparationMessages.Values.Where(p => p.ValidatorIndex != context.Block[0].PrimaryIndex).Select(p => context.CreatePayload(new PrepareResponse
         {
             BlockIndex = BlockIndex,
             ValidatorIndex = p.ValidatorIndex,
             ViewNumber = ViewNumber,
+            PId = PId,
             PreparationHash = preparationHash
         }, p.InvocationScript)).ToArray();
     }
 
+    internal ExtensiblePayload[] GetPreCommitPayloads(ConsensusContext context)
+    {
+        return PreCommitMessages.Values.Select(p => context.CreatePayload(new PreCommit
+        {
+            BlockIndex = BlockIndex,
+            ViewNumber = p.ViewNumber,
+            ValidatorIndex = p.ValidatorIndex,
+            PreparationHash = p.PreparationHash,
+            PId = PId,
+        }, p.InvocationScript)).ToArray();
+    }
+
+
     public override void Serialize(BinaryWriter writer)
     {
         base.Serialize(writer);
+        writer.Write(PId);
         writer.Write(ChangeViewMessages.Values.ToArray());
         if (PrepareRequestMessage != null)
         {
@@ -128,6 +148,7 @@ public partial class RecoveryMessage : ConsensusMessage
         }
 
         writer.Write(PreparationMessages.Values.ToArray());
+        writer.Write(PreCommitMessages.Values.ToArray());
         writer.Write(CommitMessages.Values.ToArray());
     }
 }
