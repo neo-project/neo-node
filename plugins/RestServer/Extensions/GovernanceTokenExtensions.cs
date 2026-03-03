@@ -22,26 +22,15 @@ internal static class GovernanceTokenExtensions
 {
     private const byte Prefix_AccountState = 12;
 
-    public static IEnumerable<AccountDetails> ListAccounts(this NeoToken neoToken, DataCache snapshot, ProtocolSettings protocolSettings) =>
-    neoToken
-        .GetAccounts(snapshot)
-            .Select(s =>
-                new AccountDetails
-                {
-                    ScriptHash = s.Address,
-                    Address = s.Address.ToAddress(protocolSettings.AddressVersion),
-                    Balance = s.Balance,
-                    Decimals = neoToken.Decimals,
-                });
-    //public static IEnumerable<AccountDetails> ListNeoAccounts(
-    //    this Governance governance,
-    //    DataCache snapshot,
-    //    ProtocolSettings protocolSettings)
-    //    => ListAccountsCore(
-    //        snapshot,
-    //        protocolSettings,
-    //        assetId: governance.NeoTokenId,
-    //        decimals: governance.NeoTokenDecimals);
+    public static IEnumerable<AccountDetails> ListNeoAccounts(
+        this Governance governance,
+        DataCache snapshot,
+        ProtocolSettings protocolSettings)
+        => ListAccountsCore(
+            snapshot,
+            protocolSettings,
+            assetId: governance.NeoTokenId,
+            decimals: Governance.NeoTokenDecimals);
 
     public static IEnumerable<AccountDetails> ListGasAccounts(
         this Governance governance,

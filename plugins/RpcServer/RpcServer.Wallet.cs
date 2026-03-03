@@ -10,6 +10,7 @@
 // modifications are permitted.
 
 using Akka.Actor;
+using Akka.Configuration.Hocon;
 using Neo.Extensions;
 using Neo.Extensions.IO;
 using Neo.Extensions.VM;
@@ -154,9 +155,10 @@ partial class RpcServer
         var datoshi = BigInteger.Zero;
         using (var snapshot = system.GetSnapshotCache())
         {
+            using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot);
             uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
             foreach (var account in wallet.GetAccounts().Select(p => p.ScriptHash))
-                datoshi += NativeContract.NEO.UnclaimedGas(snapshot, account, height);
+                datoshi += NativeContract.Governance.UnclaimedGas(engine, account, height);
         }
         return datoshi.ToString();
     }
@@ -357,7 +359,7 @@ partial class RpcServer
         var wallet = CheckWallet();
 
         using var snapshot = system.GetSnapshotCache();
-        var descriptor = new AssetDescriptor(snapshot, system.Settings, assetId);
+        var descriptor = NativeContract.TokenManagement.GetTokenInfo(snapshot, assetId).NotNull_Or(RpcError.UnknownContract);
 
         var amountDecimal = new BigDecimal(BigInteger.Parse(amount), descriptor.Decimals);
         (amountDecimal.Sign > 0).True_Or(RpcErrorFactory.InvalidParams("Amount can't be negative."));
@@ -467,7 +469,8 @@ partial class RpcServer
             var address = item["address"].NotNull_Or(RpcErrorFactory.InvalidParams($"no 'address' parameter at 'to[{i}]'."));
 
             var assetId = UInt160.Parse(asset.AsString());
-            var descriptor = new AssetDescriptor(snapshot, system.Settings, assetId);
+            var descriptor = NativeContract.TokenManagement.GetTokenInfo(snapshot, assetId).NotNull_Or(RpcError.UnknownContract);
+
             outputs[i] = new TransferOutput
             {
                 AssetId = assetId,
@@ -620,8 +623,7 @@ partial class RpcServer
         }
         else if (extraFee is not null)
         {
-            var descriptor = new AssetDescriptor(system.StoreView, system.Settings, NativeContract.Governance.Hash);
-            (BigDecimal.TryParse(extraFee, descriptor.Decimals, out var decimalExtraFee) && decimalExtraFee.Sign > 0)
+            (BigDecimal.TryParse(extraFee, Governance.GasTokenDecimals, out var decimalExtraFee) && decimalExtraFee.Sign > 0)
                 .True_Or(RpcErrorFactory.InvalidParams("Incorrect amount format."));
 
             tx.NetworkFee += (long)decimalExtraFee.Value;
