@@ -28,7 +28,7 @@ public class DbftSettings : IPluginSettings
     {
         RecoveryLogs = "ConsensusState";
         IgnoreRecoveryLogs = false;
-        AutoStart = false;
+        AutoStart = true;
         Network = 5195086u;
         MaxBlockSystemFee = 2000000000L;
         ExceptionPolicy = UnhandledExceptionPolicy.StopNode;
@@ -38,7 +38,7 @@ public class DbftSettings : IPluginSettings
     {
         RecoveryLogs = section.GetValue("RecoveryLogs", "ConsensusState");
         IgnoreRecoveryLogs = section.GetValue("IgnoreRecoveryLogs", false);
-        AutoStart = section.GetValue("AutoStart", false);
+        AutoStart = section.GetValue("AutoStart", true);
         Network = section.GetValue("Network", 5195086u);
         MaxBlockSize = section.GetValue("MaxBlockSize", 262144u);
         MaxBlockSystemFee = section.GetValue("MaxBlockSystemFee", 2000000000L);
