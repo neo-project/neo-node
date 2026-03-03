@@ -2,7 +2,7 @@
   "PluginConfiguration": {
     "RecoveryLogs": "ConsensusState",
     "IgnoreRecoveryLogs": false,
-    "AutoStart": false,
+    "AutoStart": true,
     "Network": 860833102,
     "MaxBlockSize": 2097152,
     "MaxBlockSystemFee": 2000000000,
