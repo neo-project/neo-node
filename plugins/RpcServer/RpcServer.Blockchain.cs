@@ -9,6 +9,7 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using Neo.Cryptography.ECC;
 using Neo.Extensions.Collections;
 using Neo.Extensions.IO;
 using Neo.Extensions.SmartContract;
@@ -598,12 +599,12 @@ partial class RpcServer
             var result = new JArray();
             foreach (Struct ele in candidates)
             {
-                var publickey = ele[0].GetSpan().ToHexString();
+                var publickey = ECPoint.DecodePoint(ele[0].GetSpan(), ECCurve.Secp256r1);
                 result.Add(new JObject()
                 {
-                    ["publickey"] = publickey,
+                    ["publickey"] = publickey.ToString(),
                     ["votes"] = ele[1].GetInteger().ToString(),
-                    ["active"] = validators.ToByteArray().ToHexString().Contains(publickey),
+                    ["active"] = validators.Contains(publickey),
                 });
             }
             return result;
