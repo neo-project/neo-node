@@ -10,7 +10,6 @@
 // modifications are permitted.
 
 using Microsoft.Extensions.Configuration;
-using Neo.IEventHandlers;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
@@ -22,7 +21,7 @@ using static System.IO.Path;
 
 namespace Neo.Plugins;
 
-public class TokensTracker : Plugin, ICommittingHandler, ICommittedHandler
+public class TokensTracker : Plugin
 {
     private string _dbPath = "TokensBalanceData";
     private bool _shouldTrackHistory;
@@ -41,16 +40,16 @@ public class TokensTracker : Plugin, ICommittingHandler, ICommittedHandler
 
     public TokensTracker()
     {
-        Blockchain.Committing += ((ICommittingHandler)this).Blockchain_Committing_Handler;
-        Blockchain.Committed += ((ICommittedHandler)this).Blockchain_Committed_Handler;
+        Blockchain.Committing += Blockchain_Committing_Handler;
+        Blockchain.Committed += Blockchain_Committed_Handler;
     }
 
     protected override void Dispose(bool disposing)
     {
         if (disposing)
         {
-            Blockchain.Committing -= ((ICommittingHandler)this).Blockchain_Committing_Handler;
-            Blockchain.Committed -= ((ICommittedHandler)this).Blockchain_Committed_Handler;
+            Blockchain.Committing -= Blockchain_Committing_Handler;
+            Blockchain.Committed -= Blockchain_Committed_Handler;
         }
         base.Dispose(disposing);
     }
@@ -96,7 +95,7 @@ public class TokensTracker : Plugin, ICommittingHandler, ICommittedHandler
         }
     }
 
-    void ICommittingHandler.Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
+    void Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
         IReadOnlyList<Blockchain.ApplicationExecuted> applicationExecutedList)
     {
         if (system.Settings.Network != _network) return;
@@ -108,7 +107,7 @@ public class TokensTracker : Plugin, ICommittingHandler, ICommittedHandler
         }
     }
 
-    void ICommittedHandler.Blockchain_Committed_Handler(NeoSystem system, Block block)
+    void Blockchain_Committed_Handler(NeoSystem system, Block block)
     {
         if (system.Settings.Network != _network) return;
         foreach (var tracker in trackers)

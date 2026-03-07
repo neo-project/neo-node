@@ -42,7 +42,8 @@ public partial class UT_RpcServer
     static readonly string MultisigAddress = MultisigScriptHash.ToAddress(ProtocolSettings.Default.AddressVersion);
 
     static readonly string s_neoHash = NativeContract.NEO.Hash.ToString();
-    static readonly string s_gasHash = NativeContract.GAS.Hash.ToString();
+    static readonly string s_gasHash = NativeContract.Governance.Hash.ToString();
+    static readonly string s_tokenManagmentHash = NativeContract.TokenManagement.Hash.ToString();
 
     static readonly JArray validatorSigner = [new JObject()
     {
@@ -120,8 +121,8 @@ public partial class UT_RpcServer
         Assert.AreEqual(notifications[0]!["contract"]!.AsString(), s_neoHash);
         Assert.AreEqual("1", notifications[0]!["state"]!["value"]![2]!["value"]);
         Assert.AreEqual("Transfer", notifications[1]!["eventname"]!.AsString());
-        Assert.AreEqual(notifications[1]!["contract"]!.AsString(), s_gasHash);
-        Assert.AreEqual("50000000", notifications[1]!["state"]!["value"]![2]!["value"]);
+        Assert.AreEqual(notifications[1]!["contract"]!.AsString(), s_tokenManagmentHash);
+        Assert.AreEqual("50000000", notifications[1]!["state"]!["value"]![3]!["value"]);
 
         _rpcServer.wallet = null;
     }

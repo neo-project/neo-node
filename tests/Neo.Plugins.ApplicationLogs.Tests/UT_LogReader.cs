@@ -146,11 +146,11 @@ public class UT_LogReader
 
         JArray notifications = (JArray)executions[1]!["notifications"]!;
         Assert.HasCount(1, notifications);
-        Assert.AreEqual(notifications[0]!["contract"], GasToken.GAS.Hash.ToString());
+        Assert.AreEqual(notifications[0]!["contract"], NativeContract.TokenManagement.Hash.ToString());
         Assert.AreEqual("Transfer", notifications[0]!["eventname"]);  // from null to Validator
-        Assert.AreEqual(nameof(ContractParameterType.Any), notifications[0]!["state"]!["value"]![0]!["type"]);
-        CollectionAssert.AreEqual(Convert.FromBase64String(notifications[0]!["state"]!["value"]![1]!["value"]!.AsString()), ValidatorScriptHash.ToArray());
-        Assert.AreEqual("50000000", notifications[0]!["state"]!["value"]![2]!["value"]);
+        Assert.AreEqual(nameof(ContractParameterType.Any), notifications[0]!["state"]!["value"]![1]!["type"]);
+        CollectionAssert.AreEqual(Convert.FromBase64String(notifications[0]!["state"]!["value"]![2]!["value"]!.AsString()), ValidatorScriptHash.ToArray());
+        Assert.AreEqual("50000000", notifications[0]!["state"]!["value"]![3]!["value"]);
 
         blockJson = (JObject)s_neoSystemFixture.logReader.GetApplicationLog(block.Hash, "PostPersist");
         executions = (JArray)blockJson["executions"]!;
@@ -169,8 +169,8 @@ public class UT_LogReader
         Assert.AreEqual(notifications[0]!["contract"]!.AsString(), NeoToken.NEO.Hash.ToString());
         Assert.AreEqual("1", notifications[0]!["state"]!["value"]![2]!["value"]);
         Assert.AreEqual("Transfer", notifications[1]!["eventname"]!.AsString());
-        Assert.AreEqual(notifications[1]!["contract"]!.AsString(), GasToken.GAS.Hash.ToString());
-        Assert.AreEqual("50000000", notifications[1]!["state"]!["value"]![2]!["value"]);
+        Assert.AreEqual(notifications[1]!["contract"]!.AsString(), NativeContract.TokenManagement.Hash.ToString());
+        Assert.AreEqual("50000000", notifications[1]!["state"]!["value"]![3]!["value"]);
     }
 
     [TestMethod]
@@ -196,8 +196,8 @@ public class UT_LogReader
             Assert.AreEqual(log.Notifications[0].ScriptHash, NativeContract.NEO.Hash);
             Assert.AreEqual(1, log.Notifications[0].State[2]);
             Assert.AreEqual("Transfer", log.Notifications[1].EventName);
-            Assert.AreEqual(log.Notifications[1].ScriptHash, NativeContract.GAS.Hash);
-            Assert.AreEqual(50000000, log.Notifications[1].State[2]);
+            Assert.AreEqual(log.Notifications[1].ScriptHash, NativeContract.TokenManagement.Hash);
+            Assert.AreEqual(50000000, log.Notifications[1].State[3]);
         }
 
         List<(BlockchainEventModel eventLog, UInt256 txHash)> neoLogs = s_neoSystemFixture

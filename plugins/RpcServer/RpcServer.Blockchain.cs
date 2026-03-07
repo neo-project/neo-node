@@ -539,12 +539,12 @@ partial class RpcServer
     protected internal virtual JToken GetNextBlockValidators()
     {
         using var snapshot = system.GetSnapshotCache();
-        var validators = NativeContract.NEO.GetNextBlockValidators(snapshot, system.Settings.ValidatorsCount);
+        var validators = NativeContract.Governance.GetNextBlockValidators(snapshot, system.Settings.ValidatorsCount);
         return validators.Select(p =>
         {
             JObject validator = new();
             validator["publickey"] = p.ToString();
-            validator["votes"] = (int)NativeContract.NEO.GetCandidateVote(snapshot, p);
+            validator["votes"] = (int)NativeContract.Governance.GetCandidateVote(snapshot, p);
             return validator;
         }).ToArray();
     }
@@ -571,7 +571,7 @@ partial class RpcServer
         byte[] script;
         using (ScriptBuilder sb = new())
         {
-            script = sb.EmitDynamicCall(NativeContract.NEO.Hash, "getCandidates").ToArray();
+            script = sb.EmitDynamicCall(NativeContract.Governance.NeoTokenId, "getCandidates").ToArray();
         }
 
         StackItem[] resultStack;
@@ -592,7 +592,7 @@ partial class RpcServer
 
         try
         {
-            var validators = NativeContract.NEO.GetNextBlockValidators(snapshot, system.Settings.ValidatorsCount)
+            var validators = NativeContract.Governance.GetNextBlockValidators(snapshot, system.Settings.ValidatorsCount)
                 ?? throw new RpcException(RpcError.InternalServerError.WithData("Can't get next block validators."));
 
             var candidates = (Array)resultStack[0];
@@ -626,7 +626,7 @@ partial class RpcServer
     [RpcMethod]
     protected internal virtual JToken GetCommittee()
     {
-        return new JArray(NativeContract.NEO.GetCommittee(system.StoreView).Select(p => (JToken)p.ToString()));
+        return new JArray(NativeContract.Governance.GetCommittee(system.StoreView).Select(p => (JToken)p.ToString()));
     }
 
     /// <summary>

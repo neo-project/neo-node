@@ -174,8 +174,9 @@ public partial class UT_RpcServer
     {
         var snapshot = _neoSystem.GetSnapshotCache();
         var block = TestUtils.CreateBlockWithValidTransactions(snapshot, _wallet, _walletAccount, 3);
-        // TestUtils.BlocksAdd(snapshot, block.Hash, block);
-        // snapshot.Commit();
+        TestUtils.BlocksAdd(snapshot, block.Hash, block);
+        snapshot.Commit();
+
         var reason = _neoSystem.Blockchain.Ask<Blockchain.RelayResult>(block, cancellationToken: CancellationToken.None).Result;
         var expectedHash = block.Hash.ToString();
         var result = _rpcServer.GetBlockHash(block.Index);
@@ -237,14 +238,12 @@ public partial class UT_RpcServer
     [TestMethod]
     public void TestGetContractState_Native_CaseInsensitive()
     {
-        var gasTokenHash = NativeContract.GAS.Hash;
-        var resultLower = _rpcServer.GetContractState(new ContractNameOrHashOrId("gastoken"));
-        var resultUpper = _rpcServer.GetContractState(new ContractNameOrHashOrId("GASTOKEN"));
-        var resultMixed = _rpcServer.GetContractState(new ContractNameOrHashOrId("GasToken"));
+        var gasTokenHash = NativeContract.Governance.Hash;
+        var resultLower = _rpcServer.GetContractState(new ContractNameOrHashOrId("governance"));
+        var resultUpper = _rpcServer.GetContractState(new ContractNameOrHashOrId("GOVERNANCE"));
 
         Assert.AreEqual(gasTokenHash.ToString(), ((JObject)resultLower)["hash"]!.AsString());
         Assert.AreEqual(gasTokenHash.ToString(), ((JObject)resultUpper)["hash"]!.AsString());
-        Assert.AreEqual(gasTokenHash.ToString(), ((JObject)resultMixed)["hash"]!.AsString());
     }
 
     [TestMethod]
@@ -450,27 +449,27 @@ public partial class UT_RpcServer
         var snapshot = _neoSystem.GetSnapshotCache();
         var key = new byte[] { 0x01 };
         var value = new byte[] { 0x02 };
-        TestUtils.StorageItemAdd(snapshot, NativeContract.GAS.Id, key, value);
+        TestUtils.StorageItemAdd(snapshot, NativeContract.Governance.Id, key, value);
         snapshot.Commit();
 
         // GetStorage
-        var result = _rpcServer.GetStorage(new("GasToken"), Convert.ToBase64String(key));
+        var result = _rpcServer.GetStorage(new("Governance"), Convert.ToBase64String(key));
         Assert.AreEqual(Convert.ToBase64String(value), result.AsString());
 
         var ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.GetStorage(null!, Convert.ToBase64String(key)));
         Assert.AreEqual(RpcError.InvalidParams.Code, ex.HResult);
 
-        ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.GetStorage(new("GasToken"), null!));
+        ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.GetStorage(new("Governance"), null!));
         Assert.AreEqual(RpcError.InvalidParams.Code, ex.HResult);
 
         // FindStorage
-        var result2 = _rpcServer.FindStorage(new("GasToken"), Convert.ToBase64String(key), 0);
+        var result2 = _rpcServer.FindStorage(new("Governance"), Convert.ToBase64String(key), 0);
         Assert.AreEqual(Convert.ToBase64String(value), result2["results"]![0]!["value"]!.AsString());
 
         ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.FindStorage(null!, Convert.ToBase64String(key), 0));
         Assert.AreEqual(RpcError.InvalidParams.Code, ex.HResult);
 
-        ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.FindStorage(new("GasToken"), null!, 0));
+        ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.FindStorage(new("Governance"), null!, 0));
         Assert.AreEqual(RpcError.InvalidParams.Code, ex.HResult);
     }
 

@@ -42,7 +42,7 @@ partial class MainService
     [ConsoleCommand("register candidate", Category = "Vote Commands")]
     private void OnRegisterCandidateCommand(UInt160 account)
     {
-        var testGas = NativeContract.NEO.GetRegisterPrice(NeoSystem.StoreView) + (BigInteger)Math.Pow(10, NativeContract.GAS.Decimals) * 10;
+        var testGas = NativeContract.Governance.GetRegisterPrice(NeoSystem.StoreView) + (BigInteger)Math.Pow(10, Governance.GasTokenDecimals) * 10;
         if (NoWallet()) return;
 
         var currentAccount = GetValidAccountOrWarn(account);
@@ -103,7 +103,7 @@ partial class MainService
     [ConsoleCommand("get candidates", Category = "Vote Commands")]
     private void OnGetCandidatesCommand()
     {
-        if (!OnInvokeWithResult(NativeContract.NEO.Hash, VoteMethods.GetCandidates, out var result, null, null, false)) return;
+        if (!OnInvokeWithResult(NativeContract.Governance.NeoTokenId, VoteMethods.GetCandidates, out var result, null, null, false)) return;
 
         var resJArray = (Array)result;
 
@@ -129,7 +129,7 @@ partial class MainService
     [ConsoleCommand("get committee", Category = "Vote Commands")]
     private void OnGetCommitteeCommand()
     {
-        if (!OnInvokeWithResult(NativeContract.NEO.Hash, VoteMethods.GetCommittee, out StackItem result, null, null, false)) return;
+        if (!OnInvokeWithResult(NativeContract.Governance.NeoTokenId, VoteMethods.GetCommittee, out StackItem result, null, null, false)) return;
 
         var resJArray = (Array)result;
 
@@ -151,7 +151,7 @@ partial class MainService
     [ConsoleCommand("get next validators", Category = "Vote Commands")]
     private void OnGetNextBlockValidatorsCommand()
     {
-        if (!OnInvokeWithResult(NativeContract.NEO.Hash, VoteMethods.GetNextBlockValidators, out var result, null, null, false)) return;
+        if (!OnInvokeWithResult(NativeContract.Governance.NeoTokenId, VoteMethods.GetNextBlockValidators, out var result, null, null, false)) return;
 
         var resJArray = (Array)result;
 
@@ -180,7 +180,7 @@ partial class MainService
             ["value"] = address.ToString()
         };
 
-        if (!OnInvokeWithResult(NativeContract.NEO.Hash, VoteMethods.GetAccountState, out var result, null, new JArray(arg))) return;
+        if (!OnInvokeWithResult(NativeContract.Governance.NeoTokenId, VoteMethods.GetAccountState, out var result, null, new JArray(arg))) return;
         Console.WriteLine();
         if (result.IsNull)
         {
@@ -213,7 +213,7 @@ partial class MainService
         if (ECPoint.TryParse(hexPubKey, ECCurve.Secp256r1, out var publickey))
         {
             ConsoleHelper.Info("Voted: ", Contract.CreateSignatureRedeemScript(publickey).ToScriptHash().ToAddress(NeoSystem.Settings.AddressVersion));
-            ConsoleHelper.Info("Amount: ", new BigDecimal(((Integer)resJArray[0]).GetInteger(), NativeContract.NEO.Decimals).ToString());
+            ConsoleHelper.Info("Amount: ", new BigDecimal(((Integer)resJArray[0]).GetInteger(), Governance.NeoTokenDecimals).ToString());
             ConsoleHelper.Info("Block: ", ((Integer)resJArray[1]).GetInteger().ToString());
         }
         else
@@ -243,5 +243,5 @@ partial class MainService
     }
 
     private byte[] BuildNeoScript(string method, params object?[] args)
-        => NativeContract.NEO.Hash.MakeScript(method, args);
+        => NativeContract.Governance.NeoTokenId.MakeScript(method, args);
 }
