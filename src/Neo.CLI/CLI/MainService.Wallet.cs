@@ -476,7 +476,7 @@ partial class MainService
     /// Process "sign" command
     /// </summary>
     /// <param name="jsonObjectToSign">The json string that records the transaction information</param>
-    [ConsoleCommand("sign transaction", Category = "Wallet Commands")]
+    [ConsoleCommand("sign", Category = "Wallet Commands")]
     private void OnSignCommand(JObject jsonObjectToSign)
     {
         if (NoWallet()) return;
@@ -565,7 +565,9 @@ partial class MainService
         Console.WriteLine();
         ConsoleHelper.Info("    Curve: ", "secp256r1");
         ConsoleHelper.Info("Algorithm: ", "payload = 010001f0 + VarBytes(Salt + Message) + 0000");
-        ConsoleHelper.Info("Algorithm: ", "Sign(SHA256(network || Hash256(payload)))");
+        ConsoleHelper.Info("Algorithm: ", avoidSignatureReplay
+            ? "Sign(SHA256(network || Hash256(payload)))"
+            : "Sign(payload)");
         ConsoleHelper.Info("           ", "See the online documentation for details on how to verify this signature.");
         ConsoleHelper.Info("           ", "https://developers.neo.org/docs/n3/node/cli/cli#sign_message");
         Console.WriteLine();
@@ -650,7 +652,7 @@ partial class MainService
                 payload = ms.ToArray();
             }
 
-            // Calculate signData: SHA256(network || Hash256(payload))
+            // signData = payload, or SHA256(network || Hash256(payload)) depends on avoidSignatureReplay
             var hash = UInt256.Zero;
             var signData = payload;
             if (avoidSignatureReplay)
