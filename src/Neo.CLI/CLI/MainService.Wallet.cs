@@ -439,15 +439,15 @@ partial class MainService
         {
             Console.WriteLine(account.ToAddress(NeoSystem.Settings.AddressVersion));
             ConsoleHelper.Info("NEO: ", $"{CurrentWallet.GetBalance(snapshot, NativeContract.Governance.NeoTokenId, account)}");
-            ConsoleHelper.Info("GAS: ", $"{CurrentWallet.GetBalance(snapshot, NativeContract.Governance.Hash, account)}");
+            ConsoleHelper.Info("GAS: ", $"{CurrentWallet.GetBalance(snapshot, NativeContract.Governance.GasTokenId, account)}");
             Console.WriteLine();
         }
         Console.WriteLine("----------------------------------------------------");
         ConsoleHelper.Info("Total:   NEO: ", $"{CurrentWallet.GetAvailable(snapshot, NativeContract.Governance.NeoTokenId),10}     ",
-            "GAS: ", $"{CurrentWallet.GetAvailable(snapshot, NativeContract.Governance.Hash),18}");
+            "GAS: ", $"{CurrentWallet.GetAvailable(snapshot, NativeContract.Governance.GasTokenId),18}");
         Console.WriteLine();
         ConsoleHelper.Info("NEO hash: ", NativeContract.Governance.NeoTokenId.ToString());
-        ConsoleHelper.Info("GAS hash: ", NativeContract.Governance.Hash.ToString());
+        ConsoleHelper.Info("GAS hash: ", NativeContract.Governance.GasTokenId.ToString());
     }
 
     /// <summary>

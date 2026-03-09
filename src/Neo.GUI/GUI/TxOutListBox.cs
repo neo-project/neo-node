@@ -9,6 +9,7 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using Neo.SmartContract.Native;
 using Neo.Wallets;
 using System.ComponentModel;
 
@@ -20,7 +21,7 @@ internal partial class TxOutListBox : UserControl
     public event EventHandler ItemsChanged;
 
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public AssetDescriptor Asset { get; set; }
+    public TokenState Asset { get; set; }
 
     public int ItemCount => listBox1.Items.Count;
 

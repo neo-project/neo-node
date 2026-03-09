@@ -103,7 +103,7 @@ partial class MainService
     [ConsoleCommand("get candidates", Category = "Vote Commands")]
     private void OnGetCandidatesCommand()
     {
-        if (!OnInvokeWithResult(NativeContract.Governance.NeoTokenId, VoteMethods.GetCandidates, out var result, null, null, false)) return;
+        if (!OnInvokeWithResult(NativeContract.Governance.Hash, VoteMethods.GetCandidates, out var result, null, null, false)) return;
 
         var resJArray = (Array)result;
 
@@ -129,7 +129,7 @@ partial class MainService
     [ConsoleCommand("get committee", Category = "Vote Commands")]
     private void OnGetCommitteeCommand()
     {
-        if (!OnInvokeWithResult(NativeContract.Governance.NeoTokenId, VoteMethods.GetCommittee, out StackItem result, null, null, false)) return;
+        if (!OnInvokeWithResult(NativeContract.Governance.Hash, VoteMethods.GetCommittee, out StackItem result, null, null, false)) return;
 
         var resJArray = (Array)result;
 
@@ -151,7 +151,7 @@ partial class MainService
     [ConsoleCommand("get next validators", Category = "Vote Commands")]
     private void OnGetNextBlockValidatorsCommand()
     {
-        if (!OnInvokeWithResult(NativeContract.Governance.NeoTokenId, VoteMethods.GetNextBlockValidators, out var result, null, null, false)) return;
+        if (!OnInvokeWithResult(NativeContract.Governance.Hash, VoteMethods.GetNextBlockValidators, out var result, null, null, false)) return;
 
         var resJArray = (Array)result;
 
@@ -180,7 +180,7 @@ partial class MainService
             ["value"] = address.ToString()
         };
 
-        if (!OnInvokeWithResult(NativeContract.Governance.NeoTokenId, VoteMethods.GetAccountState, out var result, null, new JArray(arg))) return;
+        if (!OnInvokeWithResult(NativeContract.Governance.Hash, VoteMethods.GetAccountState, out var result, null, new JArray(arg))) return;
         Console.WriteLine();
         if (result.IsNull)
         {
@@ -243,5 +243,5 @@ partial class MainService
     }
 
     private byte[] BuildNeoScript(string method, params object?[] args)
-        => NativeContract.Governance.NeoTokenId.MakeScript(method, args);
+        => NativeContract.Governance.Hash.MakeScript(method, args);
 }

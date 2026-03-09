@@ -56,7 +56,7 @@ public class WalletAPI
     /// <returns></returns>
     public async Task<decimal> GetUnclaimedGasAsync(UInt160 account)
     {
-        UInt160 scriptHash = NativeContract.Governance.NeoTokenId; // NativeContract.NEO.Hash;
+        UInt160 scriptHash = NativeContract.Governance.Hash;
         var blockCount = await rpcClient.GetBlockCountAsync().ConfigureAwait(false);
         var result = await nep17API.TestInvokeAsync(scriptHash, "unclaimedGas", account, blockCount - 1).ConfigureAwait(false);
         BigInteger balance = result.Stack.Single().GetInteger();
@@ -84,7 +84,7 @@ public class WalletAPI
     /// <returns></returns>
     public async Task<decimal> GetGasBalanceAsync(string account)
     {
-        BigInteger balance = await GetTokenBalanceAsync(NativeContract.Governance.Hash.ToString(), account).ConfigureAwait(false);
+        BigInteger balance = await GetTokenBalanceAsync(NativeContract.Governance.NeoTokenId.ToString(), account).ConfigureAwait(false);
         return ((decimal)balance) / (long)Governance.GasTokenFactor;
     }
 

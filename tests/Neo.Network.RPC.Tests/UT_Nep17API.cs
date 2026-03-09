@@ -80,24 +80,24 @@ public class UT_Nep17API
     [TestMethod]
     public async Task TestGetTokenInfo()
     {
-        UInt160 scriptHash = NativeContract.Governance.Hash;
+        UInt160 gasTokenId = NativeContract.Governance.GasTokenId;
         byte[] testScript = [
-            .. scriptHash.MakeScript("symbol"),
-            .. scriptHash.MakeScript("decimals"),
-            .. scriptHash.MakeScript("totalSupply")];
+            .. gasTokenId.MakeScript("symbol"),
+            .. gasTokenId.MakeScript("decimals"),
+            .. gasTokenId.MakeScript("totalSupply")];
         UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript,
             new ContractParameter { Type = ContractParameterType.String, Value = Governance.GasTokenSymbol },
             new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(Governance.GasTokenDecimals) },
             new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(1_00000000) });
 
-        scriptHash = NativeContract.NEO.Hash;
+        UInt160 neoTokenId = NativeContract.Governance.NeoTokenId;
         testScript = [
-            .. scriptHash.MakeScript("symbol"),
-            .. scriptHash.MakeScript("decimals"),
-            .. scriptHash.MakeScript("totalSupply")];
+            .. neoTokenId.MakeScript("symbol"),
+            .. neoTokenId.MakeScript("decimals"),
+            .. neoTokenId.MakeScript("totalSupply")];
         UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript,
-            new ContractParameter { Type = ContractParameterType.String, Value = NativeContract.NEO.Symbol },
-            new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(NativeContract.NEO.Decimals) },
+            new ContractParameter { Type = ContractParameterType.String, Value = Governance.NeoTokenSymbol },
+            new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(Governance.NeoTokenDecimals) },
             new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(1_00000000) });
 
         var tests = TestUtils.RpcTestCases.Where(p => p.Name == "getcontractstateasync");
@@ -105,37 +105,45 @@ public class UT_Nep17API
         var haveNeoTokenUT = false;
         foreach (var test in tests)
         {
-            rpcClientMock.Setup(p => p.RpcSendAsync("getcontractstate", It.Is<JToken?[]>(u => true)))
+            rpcClientMock
+                .Setup(p => p.RpcSendAsync("getcontractstate", It.Is<JToken?[]>(u => true)))
                 .ReturnsAsync(test.Response.Result!)
                 .Verifiable();
-            if (test.Request.Params[0]!.AsString() == NativeContract.Governance.Hash.ToString() || test.Request.Params[0]!.AsString().Equals(Governance.GasTokenName, StringComparison.OrdinalIgnoreCase))
-            {
-                var result = await nep17API.GetTokenInfoAsync(NativeContract.Governance.Name.ToLower());
-                Assert.AreEqual(Governance.GasTokenSymbol, result.Symbol);
-                Assert.AreEqual(8, result.Decimals);
-                Assert.AreEqual(1_00000000, (int)result.TotalSupply);
-                Assert.AreEqual("GasToken", result.Name);
 
-                result = await nep17API.GetTokenInfoAsync(NativeContract.Governance.Hash);
+            var requested = test.Request.Params[0]!.AsString();
+
+            if (requested == gasTokenId.ToString() ||
+                requested.Equals(Governance.GasTokenName, StringComparison.OrdinalIgnoreCase))
+            {
+                var result = await nep17API.GetTokenInfoAsync(Governance.GasTokenName.ToLowerInvariant());
                 Assert.AreEqual(Governance.GasTokenSymbol, result.Symbol);
-                Assert.AreEqual(8, result.Decimals);
+                Assert.AreEqual(Governance.GasTokenDecimals, result.Decimals);
                 Assert.AreEqual(1_00000000, (int)result.TotalSupply);
-                Assert.AreEqual("GasToken", result.Name);
+                Assert.AreEqual(Governance.GasTokenName, result.Name);
+
+                result = await nep17API.GetTokenInfoAsync(gasTokenId);
+                Assert.AreEqual(Governance.GasTokenSymbol, result.Symbol);
+                Assert.AreEqual(Governance.GasTokenDecimals, result.Decimals);
+                Assert.AreEqual(1_00000000, (int)result.TotalSupply);
+                Assert.AreEqual(Governance.GasTokenName, result.Name);
+
                 haveGasTokenUT = true;
             }
-            else if (test.Request.Params[0]!.AsString() == NativeContract.NEO.Hash.ToString() || test.Request.Params[0]!.AsString().Equals(NativeContract.NEO.Name, StringComparison.OrdinalIgnoreCase))
+            else if (requested == neoTokenId.ToString() ||
+                     requested.Equals(Governance.NeoTokenName, StringComparison.OrdinalIgnoreCase))
             {
-                var result = await nep17API.GetTokenInfoAsync(NativeContract.NEO.Name.ToLower());
-                Assert.AreEqual(NativeContract.NEO.Symbol, result.Symbol);
-                Assert.AreEqual(0, result.Decimals);
+                var result = await nep17API.GetTokenInfoAsync(Governance.NeoTokenName.ToLowerInvariant());
+                Assert.AreEqual(Governance.NeoTokenSymbol, result.Symbol);
+                Assert.AreEqual(Governance.NeoTokenDecimals, result.Decimals);
                 Assert.AreEqual(1_00000000, (int)result.TotalSupply);
-                Assert.AreEqual("NeoToken", result.Name);
+                Assert.AreEqual(Governance.NeoTokenName, result.Name);
 
-                result = await nep17API.GetTokenInfoAsync(NativeContract.NEO.Hash);
-                Assert.AreEqual(NativeContract.NEO.Symbol, result.Symbol);
-                Assert.AreEqual(0, result.Decimals);
+                result = await nep17API.GetTokenInfoAsync(neoTokenId);
+                Assert.AreEqual(Governance.NeoTokenSymbol, result.Symbol);
+                Assert.AreEqual(Governance.NeoTokenDecimals, result.Decimals);
                 Assert.AreEqual(1_00000000, (int)result.TotalSupply);
-                Assert.AreEqual("NeoToken", result.Name);
+                Assert.AreEqual(Governance.NeoTokenName, result.Name);
+
                 haveNeoTokenUT = true;
             }
         }

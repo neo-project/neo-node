@@ -81,7 +81,7 @@ internal partial class MainForm : Form
                 },
                 new ListViewItem.ListViewSubItem
                 {
-                    Name = NativeContract.NEO.Symbol
+                    Name = Governance.NeoTokenSymbol
                 },
                 new ListViewItem.ListViewSubItem
                 {
@@ -181,85 +181,124 @@ internal partial class MainForm : Form
 
         lbl_height.Text = $"{height}/{headerHeight}";
         lbl_count_node.Text = Service.LocalNode.ConnectedCount.ToString();
-        TimeSpan persistence_span = DateTime.UtcNow - persistence_time;
-        if (persistence_span < TimeSpan.Zero) persistence_span = TimeSpan.Zero;
-        if (persistence_span > Service.NeoSystem.Settings.TimePerBlock)
+
+        TimeSpan persistenceSpan = DateTime.UtcNow - persistence_time;
+        if (persistenceSpan < TimeSpan.Zero) persistenceSpan = TimeSpan.Zero;
+
+        if (persistenceSpan > Service.NeoSystem.Settings.TimePerBlock)
         {
             toolStripProgressBar1.Style = ProgressBarStyle.Marquee;
         }
         else
         {
-            toolStripProgressBar1.Value = persistence_span.Seconds;
+            toolStripProgressBar1.Value = Math.Min(
+                toolStripProgressBar1.Maximum,
+                persistenceSpan.Seconds);
+
             toolStripProgressBar1.Style = ProgressBarStyle.Blocks;
         }
+
         if (Service.CurrentWallet is null) return;
-        if (!check_nep5_balance || persistence_span < TimeSpan.FromSeconds(2)) return;
+        if (!check_nep5_balance || persistenceSpan < TimeSpan.FromSeconds(2)) return;
+
         check_nep5_balance = false;
-        UInt160[] addresses = Service.CurrentWallet.GetAccounts().Select(p => p.ScriptHash).ToArray();
+
+        UInt160[] addresses = Service.CurrentWallet.GetAccounts()
+            .Select(p => p.ScriptHash)
+            .ToArray();
+
         if (addresses.Length == 0) return;
+
         using var snapshot = Service.NeoSystem.GetSnapshotCache();
+
         foreach (UInt160 assetId in NEP5Watched)
         {
             byte[] script;
-            using (ScriptBuilder sb = new ScriptBuilder())
+
+            using (var sb = new ScriptBuilder())
             {
                 for (int i = addresses.Length - 1; i >= 0; i--)
                     sb.EmitDynamicCall(assetId, "balanceOf", addresses[i]);
+
                 sb.Emit(OpCode.DEPTH, OpCode.PACK);
+
                 sb.EmitDynamicCall(assetId, "decimals");
+                sb.EmitDynamicCall(assetId, "symbol");
                 sb.EmitDynamicCall(assetId, "name");
+
                 script = sb.ToArray();
             }
-            using ApplicationEngine engine = ApplicationEngine.Run(script, snapshot, gas: 0_20000000L * addresses.Length);
-            if (engine.State.HasFlag(VMState.FAULT)) continue;
+
+            using var engine = ApplicationEngine.Run(
+                script,
+                snapshot,
+                gas: 0_20000000L * addresses.Length);
+
+            if (engine.State.HasFlag(VMState.FAULT))
+                continue;
+
             string name = engine.ResultStack.Pop().GetString();
+            string symbol = engine.ResultStack.Pop().GetString();
             byte decimals = (byte)engine.ResultStack.Pop().GetInteger();
-            BigInteger[] balances = ((VMArray)engine.ResultStack.Pop()).Select(p => p.GetInteger()).ToArray();
-            string symbol = null;
-            if (assetId.Equals(NativeContract.NEO.Hash))
-                symbol = NativeContract.NEO.Symbol;
-            else if (assetId.Equals(NativeContract.Governance.Hash))
-                symbol = Governance.GasTokenSymbol;
-            if (symbol != null)
+            BigInteger[] balances = ((VMArray)engine.ResultStack.Pop())
+                .Select(p => p.GetInteger())
+                .ToArray();
+
+            if (!string.IsNullOrEmpty(symbol))
+            {
                 for (int i = 0; i < addresses.Length; i++)
-                    listView1.Items[addresses[i].ToAddress(Service.NeoSystem.Settings.AddressVersion)].SubItems[symbol].Text = new BigDecimal(balances[i], decimals).ToString();
+                {
+                    string addressText = addresses[i].ToAddress(Service.NeoSystem.Settings.AddressVersion);
+                    var item = listView1.Items[addressText];
+                    if (item is not null && item.SubItems.ContainsKey(symbol))
+                    {
+                        item.SubItems[symbol].Text = new BigDecimal(balances[i], decimals).ToString();
+                    }
+                }
+            }
+
             BigInteger amount = balances.Sum();
             if (amount == 0)
             {
                 listView2.Items.RemoveByKey(assetId.ToString());
                 continue;
             }
+
             BigDecimal balance = new BigDecimal(amount, decimals);
+
             if (listView2.Items.ContainsKey(assetId.ToString()))
             {
-                listView2.Items[assetId.ToString()].SubItems["value"].Text = balance.ToString();
+                var item = listView2.Items[assetId.ToString()];
+                item.SubItems["value"].Text = balance.ToString();
+                item.SubItems["name"].Text = name;
+                item.SubItems["type"].Text = "NEP-17";
             }
             else
             {
                 listView2.Items.Add(new ListViewItem(new[]
                 {
-                    new ListViewItem.ListViewSubItem
-                    {
-                        Name = "name",
-                        Text = name
-                    },
-                    new ListViewItem.ListViewSubItem
-                    {
-                        Name = "type",
-                        Text = "NEP-5"
-                    },
-                    new ListViewItem.ListViewSubItem
-                    {
-                        Name = "value",
-                        Text = balance.ToString()
-                    },
-                    new ListViewItem.ListViewSubItem
-                    {
-                        ForeColor = Color.Gray,
-                        Name = "issuer",
-                        Text = $"ScriptHash:{assetId}"
-                    }
-                }, -1)
+                new ListViewItem.ListViewSubItem
+                {
+                    Name = "name",
+                    Text = name
+                },
+                new ListViewItem.ListViewSubItem
+                {
+                    Name = "type",
+                    Text = "NEP-17"
+                },
+                new ListViewItem.ListViewSubItem
+                {
+                    Name = "value",
+                    Text = balance.ToString()
+                },
+                new ListViewItem.ListViewSubItem
+                {
+                    ForeColor = Color.Gray,
+                    Name = "issuer",
+                    Text = $"ScriptHash:{assetId}"
+                }
+            }, -1)
                 {
                     Name = assetId.ToString(),
                     UseItemStyleForSubItems = false
@@ -426,8 +465,8 @@ internal partial class MainForm : Form
         voteToolStripMenuItem.Enabled =
             listView1.SelectedIndices.Count == 1 &&
             !((WalletAccount)listView1.SelectedItems[0].Tag).WatchOnly &&
-            !string.IsNullOrEmpty(listView1.SelectedItems[0].SubItems[NativeContract.NEO.Symbol].Text) &&
-            decimal.Parse(listView1.SelectedItems[0].SubItems[NativeContract.NEO.Symbol].Text) > 0;
+            !string.IsNullOrEmpty(listView1.SelectedItems[0].SubItems[Governance.NeoTokenSymbol].Text) &&
+            decimal.Parse(listView1.SelectedItems[0].SubItems[Governance.NeoTokenSymbol].Text) > 0;
         复制到剪贴板CToolStripMenuItem.Enabled = listView1.SelectedIndices.Count == 1;
         删除DToolStripMenuItem.Enabled = listView1.SelectedIndices.Count > 0;
     }

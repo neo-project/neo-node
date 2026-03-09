@@ -49,7 +49,7 @@ public class UT_WalletAPI
     [TestMethod]
     public async Task TestGetUnclaimedGas()
     {
-        byte[] testScript = NativeContract.NEO.Hash.MakeScript("unclaimedGas", sender, 99);
+        byte[] testScript = NativeContract.Governance.Hash.MakeScript("unclaimedGas", sender, 99);
         UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript, new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(1_10000000) });
 
         var balance = await walletAPI.GetUnclaimedGasAsync(address1);
@@ -59,7 +59,7 @@ public class UT_WalletAPI
     [TestMethod]
     public async Task TestGetNeoBalance()
     {
-        byte[] testScript = NativeContract.NEO.Hash.MakeScript("balanceOf", sender);
+        byte[] testScript = NativeContract.Governance.NeoTokenId.MakeScript("balanceOf", sender);
         UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript, new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(1_00000000) });
 
         var balance = await walletAPI.GetNeoBalanceAsync(address1);
@@ -89,10 +89,10 @@ public class UT_WalletAPI
     [TestMethod]
     public async Task TestClaimGas()
     {
-        byte[] balanceScript = NativeContract.NEO.Hash.MakeScript("balanceOf", sender);
+        byte[] balanceScript = NativeContract.Governance.NeoTokenId.MakeScript("balanceOf", sender);
         UT_TransactionManager.MockInvokeScript(rpcClientMock, balanceScript, new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(1_00000000) });
 
-        byte[] testScript = NativeContract.NEO.Hash.MakeScript("transfer", sender, sender, new BigInteger(1_00000000), null);
+        byte[] testScript = NativeContract.Governance.NeoTokenId.MakeScript("transfer", sender, sender, new BigInteger(1_00000000), null);
         UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript, new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(1_10000000) });
 
         var json = new JObject() { ["hash"] = UInt256.Zero.ToString() };

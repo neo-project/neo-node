@@ -571,7 +571,7 @@ partial class RpcServer
         byte[] script;
         using (ScriptBuilder sb = new())
         {
-            script = sb.EmitDynamicCall(NativeContract.Governance.NeoTokenId, "getCandidates").ToArray();
+            script = sb.EmitDynamicCall(NativeContract.Governance.Hash, "getCandidates").ToArray();
         }
 
         StackItem[] resultStack;

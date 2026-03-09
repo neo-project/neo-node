@@ -29,7 +29,7 @@ public partial class ElectionDialog : Form
     {
         ECPoint pubkey = (ECPoint)comboBox1.SelectedItem;
         using ScriptBuilder sb = new ScriptBuilder();
-        sb.EmitDynamicCall(NativeContract.NEO.Hash, "registerValidator", pubkey);
+        sb.EmitDynamicCall(NativeContract.Governance.Hash, "registerValidator", pubkey);
         return sb.ToArray();
     }
 

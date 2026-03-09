@@ -99,7 +99,7 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         switch (input.ToLowerInvariant())
         {
             case "neo": return NativeContract.Governance.NeoTokenId;
-            case "gas": return NativeContract.Governance.Hash;
+            case "gas": return NativeContract.Governance.GasTokenId;
         }
 
         if (input.IndexOf('.') > 0 && input.LastIndexOf('.') < input.Length)

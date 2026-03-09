@@ -9,7 +9,6 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-using Neo.Extensions.SmartContract;
 using Neo.Persistence;
 using Neo.Plugins.RestServer.Models.Blockchain;
 using Neo.SmartContract;
@@ -18,28 +17,28 @@ using Neo.Wallets;
 
 namespace Neo.Plugins.RestServer.Extensions;
 
-internal static class GovernanceTokenExtensions
+internal static class TokenManagementExtensions
 {
     private const byte Prefix_AccountState = 12;
 
     public static IEnumerable<AccountDetails> ListNeoAccounts(
-        this Governance governance,
+        this TokenManagement tokenManagement,
         DataCache snapshot,
         ProtocolSettings protocolSettings)
         => ListAccountsCore(
             snapshot,
             protocolSettings,
-            assetId: governance.NeoTokenId,
+            assetId: NativeContract.Governance.NeoTokenId,
             decimals: Governance.NeoTokenDecimals);
 
     public static IEnumerable<AccountDetails> ListGasAccounts(
-        this Governance governance,
+        this TokenManagement tokenManagement,
         DataCache snapshot,
         ProtocolSettings protocolSettings)
         => ListAccountsCore(
             snapshot,
             protocolSettings,
-            assetId: governance.GasTokenId,
+            assetId: NativeContract.Governance.GasTokenId,
             decimals: Governance.GasTokenDecimals);
 
     private static IEnumerable<AccountDetails> ListAccountsCore(

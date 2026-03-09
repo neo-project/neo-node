@@ -148,7 +148,7 @@ partial class UT_RpcServer
     public void TestGetWalletBalance()
     {
         TestUtilOpenWallet();
-        var assetId = NativeContract.NEO.Hash;
+        var assetId = NativeContract.Governance.GasTokenId;
         var result = _rpcServer.GetWalletBalance(assetId);
         Assert.IsInstanceOfType(result, typeof(JObject));
 
@@ -509,7 +509,7 @@ partial class UT_RpcServer
     {
         _rpcServer.wallet = null;
         var exception = Assert.ThrowsExactly<RpcException>(
-            () => _ = _rpcServer.GetWalletBalance(NativeContract.NEO.Hash),
+            () => _ = _rpcServer.GetWalletBalance(NativeContract.Governance.NeoTokenId),
             "Should throw RpcException for no opened wallet");
         Assert.AreEqual(exception.HResult, RpcError.NoOpenedWallet.Code);
     }
