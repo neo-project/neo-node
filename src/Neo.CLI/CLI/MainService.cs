@@ -154,6 +154,7 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         }
         wallet.Save();
 
+        if (CurrentWallet is not null) SignerManager.UnregisterSigner(CurrentWallet.Name);
         CurrentWallet = wallet;
         SignerManager.RegisterSigner(wallet.Name, wallet);
     }
@@ -271,9 +272,7 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         void DisplayError(string primaryMessage, string? secondaryMessage = null)
         {
             ConsoleHelper.Error(primaryMessage + Environment.NewLine +
-                                (secondaryMessage != null ? secondaryMessage + Environment.NewLine : "") +
-                                "Press any key to exit.");
-            Console.ReadKey();
+                                (secondaryMessage != null ? secondaryMessage + Environment.NewLine : ""));
             Environment.Exit(-1);
         }
 
