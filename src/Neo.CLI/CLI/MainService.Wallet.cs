@@ -583,6 +583,8 @@ partial class MainService
 
         foreach (WalletAccount account in CurrentWallet.GetAccounts().Where(p => p.HasKey))
         {
+            if (account.Contract == null || IsMultiSigContract(account.Contract.Script))
+                continue;
             var key = account.GetKey();
             var signature = Crypto.Sign(signData, key!.PrivateKey, ECCurve.Secp256r1);
 
