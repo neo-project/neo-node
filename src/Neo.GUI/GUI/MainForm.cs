@@ -181,68 +181,45 @@ internal partial class MainForm : Form
 
         lbl_height.Text = $"{height}/{headerHeight}";
         lbl_count_node.Text = Service.LocalNode.ConnectedCount.ToString();
-
         TimeSpan persistence_span = DateTime.UtcNow - persistence_time;
         if (persistence_span < TimeSpan.Zero) persistence_span = TimeSpan.Zero;
-
         if (persistence_span > Service.NeoSystem.Settings.TimePerBlock)
         {
             toolStripProgressBar1.Style = ProgressBarStyle.Marquee;
         }
         else
         {
-            toolStripProgressBar1.Value = Math.Min(
-                toolStripProgressBar1.Maximum,
-                persistence_span.Seconds);
-
+            toolStripProgressBar1.Value = persistence_span.Seconds;
             toolStripProgressBar1.Style = ProgressBarStyle.Blocks;
         }
-
         if (Service.CurrentWallet is null) return;
         if (!check_nep5_balance || persistence_span < TimeSpan.FromSeconds(2)) return;
 
         check_nep5_balance = false;
 
-        UInt160[] addresses = Service.CurrentWallet.GetAccounts()
-            .Select(p => p.ScriptHash)
-            .ToArray();
-
+        UInt160[] addresses = Service.CurrentWallet.GetAccounts().Select(p => p.ScriptHash).ToArray();
         if (addresses.Length == 0) return;
-
         using var snapshot = Service.NeoSystem.GetSnapshotCache();
-
         foreach (UInt160 assetId in NEP5Watched)
         {
             byte[] script;
-
-            using (var sb = new ScriptBuilder())
+            using (ScriptBuilder sb = new ScriptBuilder())
             {
                 for (int i = addresses.Length - 1; i >= 0; i--)
                     sb.EmitDynamicCall(assetId, "balanceOf", addresses[i]);
-
                 sb.Emit(OpCode.DEPTH, OpCode.PACK);
-
                 sb.EmitDynamicCall(assetId, "decimals");
                 sb.EmitDynamicCall(assetId, "symbol");
                 sb.EmitDynamicCall(assetId, "name");
-
                 script = sb.ToArray();
             }
 
-            using var engine = ApplicationEngine.Run(
-                script,
-                snapshot,
-                gas: 0_20000000L * addresses.Length);
-
-            if (engine.State.HasFlag(VMState.FAULT))
-                continue;
-
+            using ApplicationEngine engine = ApplicationEngine.Run(script, snapshot, gas: 0_20000000L * addresses.Length);
+            if (engine.State.HasFlag(VMState.FAULT)) continue;
             string name = engine.ResultStack.Pop().GetString();
             string symbol = engine.ResultStack.Pop().GetString();
             byte decimals = (byte)engine.ResultStack.Pop().GetInteger();
-            BigInteger[] balances = ((VMArray)engine.ResultStack.Pop())
-                .Select(p => p.GetInteger())
-                .ToArray();
+            BigInteger[] balances = ((VMArray)engine.ResultStack.Pop()).Select(p => p.GetInteger()).ToArray();
 
             if (!string.IsNullOrEmpty(symbol))
             {
@@ -256,16 +233,13 @@ internal partial class MainForm : Form
                     }
                 }
             }
-
             BigInteger amount = balances.Sum();
             if (amount == 0)
             {
                 listView2.Items.RemoveByKey(assetId.ToString());
                 continue;
             }
-
             BigDecimal balance = new BigDecimal(amount, decimals);
-
             if (listView2.Items.ContainsKey(assetId.ToString()))
             {
                 listView2.Items[assetId.ToString()].SubItems["value"].Text = balance.ToString();
