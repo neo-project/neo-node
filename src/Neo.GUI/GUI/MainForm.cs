@@ -182,10 +182,10 @@ internal partial class MainForm : Form
         lbl_height.Text = $"{height}/{headerHeight}";
         lbl_count_node.Text = Service.LocalNode.ConnectedCount.ToString();
 
-        TimeSpan persistenceSpan = DateTime.UtcNow - persistence_time;
-        if (persistenceSpan < TimeSpan.Zero) persistenceSpan = TimeSpan.Zero;
+        TimeSpan persistence_span = DateTime.UtcNow - persistence_time;
+        if (persistence_span < TimeSpan.Zero) persistence_span = TimeSpan.Zero;
 
-        if (persistenceSpan > Service.NeoSystem.Settings.TimePerBlock)
+        if (persistence_span > Service.NeoSystem.Settings.TimePerBlock)
         {
             toolStripProgressBar1.Style = ProgressBarStyle.Marquee;
         }
@@ -193,13 +193,13 @@ internal partial class MainForm : Form
         {
             toolStripProgressBar1.Value = Math.Min(
                 toolStripProgressBar1.Maximum,
-                persistenceSpan.Seconds);
+                persistence_span.Seconds);
 
             toolStripProgressBar1.Style = ProgressBarStyle.Blocks;
         }
 
         if (Service.CurrentWallet is null) return;
-        if (!check_nep5_balance || persistenceSpan < TimeSpan.FromSeconds(2)) return;
+        if (!check_nep5_balance || persistence_span < TimeSpan.FromSeconds(2)) return;
 
         check_nep5_balance = false;
 
@@ -268,10 +268,7 @@ internal partial class MainForm : Form
 
             if (listView2.Items.ContainsKey(assetId.ToString()))
             {
-                var item = listView2.Items[assetId.ToString()];
-                item.SubItems["value"].Text = balance.ToString();
-                item.SubItems["name"].Text = name;
-                item.SubItems["type"].Text = "NEP-17";
+                listView2.Items[assetId.ToString()].SubItems["value"].Text = balance.ToString();
             }
             else
             {
@@ -285,7 +282,7 @@ internal partial class MainForm : Form
                 new ListViewItem.ListViewSubItem
                 {
                     Name = "type",
-                    Text = "NEP-17"
+                    Text = "NEP-5"
                 },
                 new ListViewItem.ListViewSubItem
                 {

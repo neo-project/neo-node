@@ -59,7 +59,7 @@ public class UT_WalletAPI
     [TestMethod]
     public async Task TestGetNeoBalance()
     {
-        byte[] testScript = NativeContract.Governance.NeoTokenId.MakeScript("balanceOf", sender);
+        byte[] testScript = NativeContract.TokenManagement.Hash.MakeScript("balanceOf", NativeContract.Governance.NeoTokenId, sender);
         UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript, new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(1_00000000) });
 
         var balance = await walletAPI.GetNeoBalanceAsync(address1);
@@ -69,7 +69,7 @@ public class UT_WalletAPI
     [TestMethod]
     public async Task TestGetGasBalance()
     {
-        byte[] testScript = NativeContract.Governance.Hash.MakeScript("balanceOf", sender);
+        byte[] testScript = NativeContract.TokenManagement.Hash.MakeScript("balanceOf", NativeContract.Governance.GasTokenId, sender);
         UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript, new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(1_10000000) });
 
         var balance = await walletAPI.GetGasBalanceAsync(address1);
