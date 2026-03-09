@@ -89,10 +89,10 @@ public class UT_WalletAPI
     [TestMethod]
     public async Task TestClaimGas()
     {
-        byte[] balanceScript = NativeContract.Governance.NeoTokenId.MakeScript("balanceOf", sender);
+        byte[] balanceScript = NativeContract.TokenManagement.Hash.MakeScript("balanceOf", NativeContract.Governance.NeoTokenId, sender);
         UT_TransactionManager.MockInvokeScript(rpcClientMock, balanceScript, new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(1_00000000) });
 
-        byte[] testScript = NativeContract.Governance.NeoTokenId.MakeScript("transfer", sender, sender, new BigInteger(1_00000000), null);
+        byte[] testScript = NativeContract.TokenManagement.Hash.MakeScript("transfer", NativeContract.Governance.NeoTokenId, sender, sender, new BigInteger(1_00000000), null);
         UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript, new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(1_10000000) });
 
         var json = new JObject() { ["hash"] = UInt256.Zero.ToString() };
@@ -108,7 +108,7 @@ public class UT_WalletAPI
         byte[] decimalsScript = NativeContract.Governance.Hash.MakeScript("decimals");
         UT_TransactionManager.MockInvokeScript(rpcClientMock, decimalsScript, new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(8) });
 
-        byte[] testScript = NativeContract.Governance.Hash.MakeScript("transfer", sender, UInt160.Zero, Governance.GasTokenFactor * 100, null)
+        byte[] testScript = NativeContract.TokenManagement.Hash.MakeScript("transfer", NativeContract.Governance.GasTokenId, sender, UInt160.Zero, Governance.GasTokenFactor * 100, null)
             .Concat([(byte)OpCode.ASSERT])
             .ToArray();
         UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript, new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(1_10000000) });
