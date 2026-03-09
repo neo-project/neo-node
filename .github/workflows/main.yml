@@ -210,15 +210,20 @@ jobs:
         declare -A cli_dll_set
         for f in "${cli_dlls[@]}"; do cli_dll_set["$f"]=1; done
 
-        # Package every plugin project under plugins/*/*.csproj
+        # Package every plugin project under plugins/*/*.csproj (stage only, zip after all are staged)
         for csproj in plugins/*/*.csproj; do
           plugin_dir="$(dirname "$csproj")"
           plugin_name="$(basename "$plugin_dir")"
-
           # Publish plugin (framework-dependent) to get a clean dependency set
           plugin_out="./plugin-publish/$plugin_name"
           rm -rf "$plugin_out"
           dotnet publish "$csproj" -c Release -o "$plugin_out" --self-contained false
+
+          # MPTTrie is only used as a dependency (by StateService). We publish it so that MPTTrie.dll
+          # exists under plugin-publish/, but we don't stage or zip it as a standalone plugin.
+          if [ "$plugin_name" == "MPTTrie" ]; then
+            continue
+          fi
 
           plugin_json="$plugin_dir/$plugin_name.json"
 
@@ -257,8 +262,24 @@ jobs:
             done
             shopt -u nullglob
           fi
+        done
 
-          (cd "$stage_root" && zip -r "../../$plugin_name.zip" "Plugins")
+        # After all plugins are published, ensure StateService staging includes its MPTTrie dependency.
+        mpt_trie_dll="./plugin-publish/MPTTrie/MPTTrie.dll"
+        state_stage="./plugin-zip/StateService/Plugins/StateService"
+        if [ -f "$mpt_trie_dll" ] && [ -d "$state_stage" ]; then
+          cp "$mpt_trie_dll" "$state_stage/"
+        fi
+
+        # Finally, create zip per plugin from staged directories (excluding MPTTrie by design)
+        for csproj in plugins/*/*.csproj; do
+          plugin_dir="$(dirname "$csproj")"
+          plugin_name="$(basename "$plugin_dir")"
+          [ "$plugin_name" == "MPTTrie" ] && continue
+          stage_root="./plugin-zip/$plugin_name"
+          if [ -d "$stage_root" ]; then
+            (cd "$stage_root" && zip -r "../../$plugin_name.zip" "Plugins")
+          fi
         done
     - name: Upload CLI packages to release
       if: steps.check_tag.outputs.statusCode == '404'
@@ -279,10 +300,11 @@ jobs:
           [ ! -f "$file" ] && missing_files+=("$file")
         done
 
-        # Verify plugin zip files exist (one per plugins/*/*.csproj)
+        # Verify plugin zip files exist (one per plugins/*/*.csproj, except MPTTrie which is only a dependency)
         for csproj in plugins/*/*.csproj; do
           plugin_dir="$(dirname "$csproj")"
           plugin_name="$(basename "$plugin_dir")"
+          [ "$plugin_name" == "MPTTrie" ] && continue
           [ ! -f "$plugin_name.zip" ] && missing_files+=("$plugin_name.zip")
         done
         
@@ -299,10 +321,11 @@ jobs:
           fi
         done
 
-        # Upload plugin zip files to release
+        # Upload plugin zip files to release (excluding MPTTrie)
         for csproj in plugins/*/*.csproj; do
           plugin_dir="$(dirname "$csproj")"
           plugin_name="$(basename "$plugin_dir")"
+          [ "$plugin_name" == "MPTTrie" ] && continue
           if ! gh release upload "$RELEASE_TAG" "$plugin_name.zip" --clobber; then
             failed_files+=("$plugin_name.zip")
           fi
