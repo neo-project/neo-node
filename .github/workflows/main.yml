@@ -95,6 +95,7 @@ jobs:
       id: get_version
       run: |
         sudo apt install xmlstarlet -qq
+        # Only release when <Version> is explicitly set (dev builds keep <VersionPrefix> and should not release).
         VERSION=$(xmlstarlet sel -N i=http://schemas.microsoft.com/developer/msbuild/2003 -t -v "//i:Version/text()" src/Directory.Build.props 2>/dev/null || echo "")
         [ -z "$VERSION" ] && VERSION=$(find plugins -name Directory.Build.props | xargs xmlstarlet sel -N i=http://schemas.microsoft.com/developer/msbuild/2003 -t -v "//i:Version/text()" 2>/dev/null || echo "")
         [ -n "$VERSION" ] && echo "version=v$VERSION" >> $GITHUB_OUTPUT || echo "version=" >> $GITHUB_OUTPUT
@@ -190,6 +191,75 @@ jobs:
           
           cd "./publish/$platform" && zip -r "../../neo-cli-$platform.zip" . && cd ../..
         done
+
+    - name: Build and package plugins (zip per plugin)
+      if: steps.check_tag.outputs.statusCode == '404'
+      run: |
+        set -euo pipefail
+
+        # Use neo-cli portable publish output as the baseline set of assemblies
+        if [ ! -d "./publish/portable" ]; then
+          echo "Error: ./publish/portable not found. neo-cli portable must be published first."
+          exit 1
+        fi
+
+        mkdir -p "./plugin-publish" "./plugin-zip"
+
+        # Collect baseline DLL filenames shipped with neo-cli portable
+        mapfile -t cli_dlls < <(find "./publish/portable" -maxdepth 1 -type f -name "*.dll" -printf "%f\n" | sort -u)
+        declare -A cli_dll_set
+        for f in "${cli_dlls[@]}"; do cli_dll_set["$f"]=1; done
+
+        # Package every plugin project under plugins/*/*.csproj
+        for csproj in plugins/*/*.csproj; do
+          plugin_dir="$(dirname "$csproj")"
+          plugin_name="$(basename "$plugin_dir")"
+
+          # Publish plugin (framework-dependent) to get a clean dependency set
+          plugin_out="./plugin-publish/$plugin_name"
+          rm -rf "$plugin_out"
+          dotnet publish "$csproj" -c Release -o "$plugin_out" --self-contained false
+
+          plugin_json="$plugin_dir/$plugin_name.json"
+
+          # Staging layout required by release consumers:
+          # Plugins/<PluginName>/{PluginName}.dll (+ optional {PluginName}.json) + only required extra dependency dlls
+          stage_root="./plugin-zip/$plugin_name"
+          stage_dir="$stage_root/Plugins/$plugin_name"
+          rm -rf "$stage_root"
+          mkdir -p "$stage_dir"
+
+          # Always include the plugin's own assembly
+          if [ ! -f "$plugin_out/$plugin_name.dll" ]; then
+            echo "Error: Missing published plugin dll: $plugin_out/$plugin_name.dll"
+            exit 1
+          fi
+          cp "$plugin_out/$plugin_name.dll" "$stage_dir/"
+
+          # Include plugin json if present
+          if [ -f "$plugin_json" ]; then
+            cp "$plugin_json" "$stage_dir/"
+          fi
+
+          # Only include extra dependency DLLs for plugins that explicitly reference NuGet packages.
+          # This keeps "pure" project-reference plugins (e.g. DBFTPlugin) minimal: {Plugin}.dll (+ optional json).
+          if grep -q "<PackageReference" "$csproj"; then
+            # Include only dlls that neo-cli portable does NOT already ship
+            shopt -s nullglob
+            for dep in "$plugin_out"/*.dll; do
+              dep_name="$(basename "$dep")"
+              if [ "$dep_name" == "$plugin_name.dll" ]; then
+                continue
+              fi
+              if [ -z "${cli_dll_set["$dep_name"]+x}" ]; then
+                cp "$dep" "$stage_dir/"
+              fi
+            done
+            shopt -u nullglob
+          fi
+
+          (cd "$stage_root" && zip -r "../../$plugin_name.zip" "Plugins")
+        done
     - name: Upload CLI packages to release
       if: steps.check_tag.outputs.statusCode == '404'
       env:
@@ -208,6 +278,13 @@ jobs:
         for file in neo-cli-portable.zip neo-cli-linux-x64.zip neo-cli-linux-arm64.zip neo-cli-win-x64.zip neo-cli-osx-x64.zip neo-cli-osx-arm64.zip; do
           [ ! -f "$file" ] && missing_files+=("$file")
         done
+
+        # Verify plugin zip files exist (one per plugins/*/*.csproj)
+        for csproj in plugins/*/*.csproj; do
+          plugin_dir="$(dirname "$csproj")"
+          plugin_name="$(basename "$plugin_dir")"
+          [ ! -f "$plugin_name.zip" ] && missing_files+=("$plugin_name.zip")
+        done
         
         if [ ${#missing_files[@]} -gt 0 ]; then
           echo "Error: Missing zip files: ${missing_files[*]}"
@@ -221,15 +298,48 @@ jobs:
             failed_files+=("$file")
           fi
         done
+
+        # Upload plugin zip files to release
+        for csproj in plugins/*/*.csproj; do
+          plugin_dir="$(dirname "$csproj")"
+          plugin_name="$(basename "$plugin_dir")"
+          if ! gh release upload "$RELEASE_TAG" "$plugin_name.zip" --clobber; then
+            failed_files+=("$plugin_name.zip")
+          fi
+        done
         
         if [ ${#failed_files[@]} -gt 0 ]; then
           echo "Error: Failed to upload: ${failed_files[*]}"
           exit 1
         fi
-    - name: Publish to NuGet
+    - name: Publish core packages to NuGet
       if: steps.check_tag.outputs.statusCode == '404'
       run: |
         dotnet pack -o out -c Release
-        dotnet nuget push out/*.nupkg -s https://api.nuget.org/v3/index.json -k ${NUGET_TOKEN}
+
+        # Push only non-plugin packages here (plugins handled in a separate step)
+        for pkg in out/*.nupkg; do
+          name="$(basename "$pkg")"
+          case "$name" in
+            Neo.Plugins.*) continue ;;
+          esac
+          dotnet nuget push "$pkg" -s https://api.nuget.org/v3/index.json -k "${NUGET_TOKEN}" --skip-duplicate
+        done
+      env:
+        NUGET_TOKEN: ${{ secrets.NUGET_TOKEN }}
+
+    - name: Publish plugin packages to NuGet
+      if: steps.check_tag.outputs.statusCode == '404'
+      run: |
+        # Ensure plugin packages are packed (reuse existing 'out' folder to avoid rebuilding everything)
+        for csproj in plugins/*/*.csproj; do
+          dotnet pack "$csproj" -c Release -o out
+        done
+
+        # Push all Neo.Plugins.* packages to NuGet.org
+        for pkg in out/Neo.Plugins.*.nupkg; do
+          [ -f "$pkg" ] || continue
+          dotnet nuget push "$pkg" -s https://api.nuget.org/v3/index.json -k "${NUGET_TOKEN}" --skip-duplicate
+        done
       env:
         NUGET_TOKEN: ${{ secrets.NUGET_TOKEN }}
