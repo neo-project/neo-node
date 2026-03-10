@@ -37,11 +37,11 @@ partial class ConsensusService
         }
 
         if (!message.Verify(neoSystem.Settings)) return;
-        if (message.BlockIndex != context.Block.Index)
+        if (message.BlockIndex != context.Block[0].Index)
         {
-            if (context.Block.Index < message.BlockIndex)
+            if (context.Block[0].Index < message.BlockIndex)
             {
-                Log($"Chain is behind: expected={message.BlockIndex} current={context.Block.Index - 1}", LogLevel.Warning);
+                Log($"Chain is behind: expected={message.BlockIndex} current={context.Block[0].Index - 1}", LogLevel.Warning);
             }
             return;
         }
@@ -59,6 +59,9 @@ partial class ConsensusService
             case ChangeView view:
                 OnChangeViewReceived(payload, view);
                 break;
+            case PreCommit precommit:
+                OnPreCommitReceived(payload, precommit);
+                break;
             case Commit commit:
                 OnCommitReceived(payload, commit);
                 break;
@@ -74,10 +77,11 @@ partial class ConsensusService
     private void OnPrepareRequestReceived(ExtensiblePayload payload, PrepareRequest message)
     {
         if (context.RequestSentOrReceived || context.NotAcceptingPayloadsDueToViewChanging) return;
-        if (message.ValidatorIndex != context.Block.PrimaryIndex || message.ViewNumber != context.ViewNumber) return;
-        if (message.Version != context.Block.Version || message.PrevHash != context.Block.PrevHash) return;
+        uint pId = context.ViewNumber > 0 || message.ValidatorIndex == context.GetPriorityPrimaryIndex(context.ViewNumber) ? 0u : 1u;
+        if (message.ValidatorIndex != context.Block[pId].PrimaryIndex || message.ViewNumber != context.ViewNumber) return;
+        if (message.Version != context.Block[pId].Version || message.PrevHash != context.Block[pId].PrevHash) return;
         if (message.TransactionHashes.Length > neoSystem.Settings.MaxTransactionsPerBlock) return;
-        Log($"{nameof(OnPrepareRequestReceived)}: height={message.BlockIndex} view={message.ViewNumber} index={message.ValidatorIndex} tx={message.TransactionHashes.Length}");
+        Log($"{nameof(OnPrepareRequestReceived)}: height={message.BlockIndex} view={message.ViewNumber} index={message.ValidatorIndex} tx={message.TransactionHashes.Length} priority={message.ValidatorIndex == context.Block[0].PrimaryIndex} fallback={context.ViewNumber == 0 && message.ValidatorIndex == context.Block[1].PrimaryIndex}");
         if (message.Timestamp <= context.PrevHeader.Timestamp || message.Timestamp > TimeProvider.Current.UtcNow.AddMilliseconds(8 * context.TimePerBlock.TotalMilliseconds).ToTimestampMS())
         {
             Log($"Timestamp incorrect: {message.Timestamp}", LogLevel.Warning);
@@ -97,34 +101,35 @@ partial class ConsensusService
         prepareRequestReceivedTime = TimeProvider.Current.UtcNow;
         prepareRequestReceivedBlockIndex = message.BlockIndex;
 
-        context.Block.Header.Timestamp = message.Timestamp;
-        context.Block.Header.Nonce = message.Nonce;
-        context.TransactionHashes = message.TransactionHashes;
+        context.Block[pId].Header.Timestamp = message.Timestamp;
+        context.Block[pId].Header.Nonce = message.Nonce;
+        context.TransactionHashes[pId] = message.TransactionHashes;
+        context.LastProposal = message.TransactionHashes;
 
-        context.Transactions = new Dictionary<UInt256, Transaction>();
-        context.VerificationContext = new TransactionVerificationContext();
-        for (int i = 0; i < context.PreparationPayloads.Length; i++)
-            if (context.PreparationPayloads[i] != null)
-                if (!context.GetMessage<PrepareResponse>(context.PreparationPayloads[i]!).PreparationHash.Equals(payload.Hash))
-                    context.PreparationPayloads[i] = null;
-        context.PreparationPayloads[message.ValidatorIndex] = payload;
-        byte[] hashData = context.EnsureHeader()!.GetSignData(neoSystem.Settings.Network);
-        for (int i = 0; i < context.CommitPayloads.Length; i++)
-            if (context.GetMessage(context.CommitPayloads[i])?.ViewNumber == context.ViewNumber)
-                if (!Crypto.VerifySignature(hashData, context.GetMessage<Commit>(context.CommitPayloads[i]!).Signature.Span, context.Validators[i]))
-                    context.CommitPayloads[i] = null;
+        context.Transactions[pId] = new Dictionary<UInt256, Transaction>();
+        context.VerificationContext[pId] = new TransactionVerificationContext();
+        for (int i = 0; i < context.PreparationPayloads[pId].Length; i++)
+            if (context.PreparationPayloads[pId][i] != null)
+                if (!context.GetMessage<PrepareResponse>(context.PreparationPayloads[pId][i]!).PreparationHash.Equals(payload.Hash))
+                    context.PreparationPayloads[pId][i] = null;
+        context.PreparationPayloads[pId][message.ValidatorIndex] = payload;
+        byte[] hashData = context.EnsureHeader(pId)!.GetSignData(neoSystem.Settings.Network);
+        for (int i = 0; i < context.CommitPayloads[pId].Length; i++)
+            if (context.GetMessage(context.CommitPayloads[pId][i])?.ViewNumber == context.ViewNumber)
+                if (!Crypto.VerifySignature(hashData, context.GetMessage<Commit>(context.CommitPayloads[pId][i]!).Signature.Span, context.Validators[i]))
+                    context.CommitPayloads[pId][i] = null;
 
-        if (context.TransactionHashes.Length == 0)
+        if (context.TransactionHashes[pId].Length == 0)
         {
             // There are no tx so we should act like if all the transactions were filled
-            CheckPrepareResponse();
+            CheckPrepareResponse(pId);
             return;
         }
 
         Dictionary<UInt256, Transaction> mempoolVerified = neoSystem.MemPool.GetVerifiedTransactions().ToDictionary(p => p.Hash);
         var unverified = new List<Transaction>();
         var mtb = neoSystem.Settings.MaxTraceableBlocks;
-        foreach (UInt256 hash in context.TransactionHashes)
+        foreach (UInt256 hash in context.TransactionHashes[pId])
         {
             if (mempoolVerified.TryGetValue(hash, out Transaction? tx))
             {
@@ -153,9 +158,9 @@ partial class ConsensusService
         foreach (Transaction tx in unverified)
             if (!AddTransaction(tx, true))
                 return;
-        if (context.Transactions.Count < context.TransactionHashes.Length)
+        if (context.Transactions[pId].Count < context.TransactionHashes[pId].Length)
         {
-            UInt256[] hashes = context.TransactionHashes.Where(i => !context.Transactions.ContainsKey(i)).ToArray();
+            UInt256[] hashes = context.TransactionHashes[pId].Where(i => !context.Transactions[pId].ContainsKey(i)).ToArray();
             taskManager.Tell(new TaskManager.RestartTasks(InvPayload.Create(InventoryType.TX, hashes)));
         }
     }
@@ -163,19 +168,38 @@ partial class ConsensusService
     private void OnPrepareResponseReceived(ExtensiblePayload payload, PrepareResponse message)
     {
         if (message.ViewNumber != context.ViewNumber) return;
-        if (context.PreparationPayloads[message.ValidatorIndex] != null || context.NotAcceptingPayloadsDueToViewChanging) return;
-        if (context.PreparationPayloads[context.Block.PrimaryIndex] != null && !message.PreparationHash.Equals(context.PreparationPayloads[context.Block.PrimaryIndex]!.Hash))
+        if (context.PreparationPayloads[message.PId][message.ValidatorIndex] != null || context.NotAcceptingPayloadsDueToViewChanging) return;
+        if (context.PreparationPayloads[message.PId][context.Block.PrimaryIndex] != null && !message.PreparationHash.Equals(context.PreparationPayloads[message.PId][context.Block[message.PId].PrimaryIndex]!.Hash))
             return;
 
         // Timeout extension: prepare response has been received with success
         // around 2*15/M=30.0/5 ~ 40% block time (for M=5)
         ExtendTimerByFactor(2);
 
-        Log($"{nameof(OnPrepareResponseReceived)}: height={message.BlockIndex} view={message.ViewNumber} index={message.ValidatorIndex}");
-        context.PreparationPayloads[message.ValidatorIndex] = payload;
+        Log($"{nameof(OnPrepareResponseReceived)}: height={message.BlockIndex} view={message.ViewNumber} index={message.ValidatorIndex} pId={message.PId}");
+        context.PreparationPayloads[message.PId][message.ValidatorIndex] = payload;
         if (context.WatchOnly || context.CommitSent) return;
         if (context.RequestSentOrReceived)
-            CheckPreparations();
+            CheckPreparations(message.PId);
+    }
+
+    private void OnPreCommitReceived(ExtensiblePayload payload, PreCommit message)
+    {
+        if (message.ViewNumber != context.ViewNumber) return;
+        if (context.PreCommitPayloads[message.PId][message.ValidatorIndex] != null || context.NotAcceptingPayloadsDueToViewChanging) return;
+        if (context.RequestSentOrReceived)
+        {
+            // Check if we have joined another consensus process
+            if (context.PreparationPayloads[message.PId][context.Block[message.PId].PrimaryIndex] == null) return;
+            if (!message.PreparationHash.Equals(context.PreparationPayloads[message.PId][context.Block[message.PId].PrimaryIndex].Hash))
+                return;
+        }
+
+        Log($"{nameof(OnPreCommitReceived)}: height={message.BlockIndex} view={message.ViewNumber} index={message.ValidatorIndex} pId={message.PId}");
+        context.PreCommitPayloads[message.PId][message.ValidatorIndex] = payload;
+        if (context.WatchOnly || context.CommitSent) return;
+        if (context.RequestSentOrReceived)
+            CheckPreCommits(message.PId);
     }
 
     private void OnChangeViewReceived(ExtensiblePayload payload, ChangeView message)
@@ -196,11 +220,11 @@ partial class ConsensusService
 
     private void OnCommitReceived(ExtensiblePayload payload, Commit commit)
     {
-        ref ExtensiblePayload? existingCommitPayload = ref context.CommitPayloads[commit.ValidatorIndex];
+        ref ExtensiblePayload? existingCommitPayload = ref context.CommitPayloads[commit.PId][commit.ValidatorIndex];
         if (existingCommitPayload != null)
         {
             if (existingCommitPayload.Hash != payload.Hash)
-                Log($"Rejected {nameof(Commit)}: height={commit.BlockIndex} index={commit.ValidatorIndex} view={commit.ViewNumber} existingView={context.GetMessage(existingCommitPayload).ViewNumber}", LogLevel.Warning);
+                Log($"Rejected {nameof(Commit)}: height={commit.BlockIndex} index={commit.ValidatorIndex} view={commit.ViewNumber} existingView={context.GetMessage(existingCommitPayload).ViewNumber} pId={commit.PId}", LogLevel.Warning);
             return;
         }
 
@@ -212,7 +236,7 @@ partial class ConsensusService
 
             Log($"{nameof(OnCommitReceived)}: height={commit.BlockIndex} view={commit.ViewNumber} index={commit.ValidatorIndex} nc={context.CountCommitted} nf={context.CountFailed}");
 
-            byte[]? hashData = context.EnsureHeader()?.GetSignData(neoSystem.Settings.Network);
+            byte[]? hashData = context.EnsureHeader(commit.PId)?.GetSignData(neoSystem.Settings.Network);
             if (hashData == null)
             {
                 existingCommitPayload = payload;
@@ -220,7 +244,7 @@ partial class ConsensusService
             else if (Crypto.VerifySignature(hashData, commit.Signature.Span, context.Validators[commit.ValidatorIndex]))
             {
                 existingCommitPayload = payload;
-                CheckCommits();
+                CheckCommits(commit.PId);
             }
             return;
         }
@@ -237,8 +261,9 @@ partial class ConsensusService
         isRecovering = true;
         int validChangeViews = 0, totalChangeViews = 0, validPrepReq = 0, totalPrepReq = 0;
         int validPrepResponses = 0, totalPrepResponses = 0, validCommits = 0, totalCommits = 0;
+        int validPreCommits = 0, totalPreCommits = 0;
 
-        Log($"{nameof(OnRecoveryMessageReceived)}: height={message.BlockIndex} view={message.ViewNumber} index={message.ValidatorIndex}");
+        Log($"{nameof(OnRecoveryMessageReceived)}: height={message.BlockIndex} view={message.ViewNumber} index={message.ValidatorIndex} pId={message.PId}");
         try
         {
             if (message.ViewNumber > context.ViewNumber)
@@ -248,6 +273,11 @@ partial class ConsensusService
                 totalChangeViews = changeViewPayloads.Length;
                 foreach (ExtensiblePayload changeViewPayload in changeViewPayloads)
                     if (ReverifyAndProcessPayload(changeViewPayload)) validChangeViews++;
+            }
+            else if (context.IsAPrimary)
+            {
+                uint pId = Convert.ToUInt32(!context.IsPriorityPrimary);
+                SendPrepareRequest(pId);
             }
             if (message.ViewNumber == context.ViewNumber && !context.NotAcceptingPayloadsDueToViewChanging && !context.CommitSent)
             {
@@ -264,6 +294,10 @@ partial class ConsensusService
                 totalPrepResponses = prepareResponsePayloads.Length;
                 foreach (ExtensiblePayload prepareResponsePayload in prepareResponsePayloads)
                     if (ReverifyAndProcessPayload(prepareResponsePayload)) validPrepResponses++;
+                ExtensiblePayload[] preCommitPayloads = message.GetPreCommitPayloads(context);
+                totalPreCommits = preCommitPayloads.Length;
+                foreach (ExtensiblePayload preCommitPayload in preCommitPayloads)
+                    if (ReverifyAndProcessPayload(preCommitPayload)) validPreCommits++;
             }
             if (message.ViewNumber <= context.ViewNumber)
             {
@@ -276,7 +310,7 @@ partial class ConsensusService
         }
         finally
         {
-            Log($"Recovery finished: (valid/total) ChgView: {validChangeViews}/{totalChangeViews} PrepReq: {validPrepReq}/{totalPrepReq} PrepResp: {validPrepResponses}/{totalPrepResponses} Commits: {validCommits}/{totalCommits}");
+            Log($"Recovery finished: (valid/total) ChgView: {validChangeViews}/{totalChangeViews} PrepReq: {validPrepReq}/{totalPrepReq} PrepResp: {validPrepResponses}/{totalPrepResponses} PreCommits: {validPreCommits}/{totalPreCommits} Commits: {validCommits}/{totalCommits}");
             isRecovering = false;
         }
     }

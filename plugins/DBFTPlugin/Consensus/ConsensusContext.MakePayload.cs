@@ -29,22 +29,22 @@ partial class ConsensusContext
         });
     }
 
-    public ExtensiblePayload MakeCommit()
+    public ExtensiblePayload MakeCommit(uint pId)
     {
-        if (CommitPayloads[MyIndex] is ExtensiblePayload payload)
+        if (CommitPayloads[pId][MyIndex] is ExtensiblePayload payload)
             return payload;
 
-        var block = EnsureHeader()!;
-        CommitPayloads[MyIndex] = MakeSignedPayload(new Commit
+        var block = EnsureHeader(pId)!;
+        CommitPayloads[pId][MyIndex] = MakeSignedPayload(new Commit
         {
             Signature = _signer.SignBlock(block, _myPublicKey!, dbftSettings.Network)
         });
-        return CommitPayloads[MyIndex]!;
+        return CommitPayloads[pId][MyIndex]!;
     }
 
     private ExtensiblePayload MakeSignedPayload(ConsensusMessage message)
     {
-        message.BlockIndex = Block.Index;
+        message.BlockIndex = Block[0].Index;
         message.ValidatorIndex = (byte)MyIndex;
         message.ViewNumber = ViewNumber;
         ExtensiblePayload payload = CreatePayload(message, null);
@@ -69,11 +69,11 @@ partial class ConsensusContext
     /// Prevent that block exceed the max size
     /// </summary>
     /// <param name="txs">Ordered transactions</param>
-    internal void EnsureMaxBlockLimitation(Transaction[] txs)
+    internal void EnsureMaxBlockLimitation(Transaction[] txs, uint pId)
     {
         var hashes = new List<UInt256>();
-        Transactions = new Dictionary<UInt256, Transaction>();
-        VerificationContext = new TransactionVerificationContext();
+        Transactions[pId] = new Dictionary<UInt256, Transaction>();
+        VerificationContext[pId] = new TransactionVerificationContext();
 
         // Expected block size
         var blockSize = GetExpectedBlockSizeWithoutTransactions(txs.Length);
@@ -91,27 +91,41 @@ partial class ConsensusContext
             if (blockSystemFee > dbftSettings.MaxBlockSystemFee) break;
 
             hashes.Add(tx.Hash);
-            Transactions.Add(tx.Hash, tx);
-            VerificationContext.AddTransaction(tx);
+            Transactions[pId].Add(tx.Hash, tx);
+            VerificationContext[pId].AddTransaction(tx);
         }
 
-        TransactionHashes = hashes.ToArray();
+        TransactionHashes[pId] = hashes.ToArray();
     }
 
-    public ExtensiblePayload MakePrepareRequest()
+    internal IEnumerable<Transaction> PickTransactions()
     {
         var maxTransactionsPerBlock = neoSystem.Settings.MaxTransactionsPerBlock;
-        // Limit Speaker proposal to the limit `MaxTransactionsPerBlock` or all available transactions of the mempool
-        EnsureMaxBlockLimitation(neoSystem.MemPool.GetSortedVerifiedTransactions((int)maxTransactionsPerBlock));
-        Block.Header.Timestamp = Math.Max(TimeProvider.Current.UtcNow.ToTimestampMS(), PrevHeader.Timestamp + 1);
-        Block.Header.Nonce = GetNonce();
-        return PreparationPayloads[MyIndex] = MakeSignedPayload(new PrepareRequest
+        var verifiedTxes = neoSystem.MemPool.GetSortedVerifiedTransactions((int)maxTransactionsPerBlock));
+        if (ViewNumber > 0 && LastProposal.Length > 0)
         {
-            Version = Block.Version,
-            PrevHash = Block.PrevHash,
-            Timestamp = Block.Timestamp,
-            Nonce = Block.Nonce,
-            TransactionHashes = TransactionHashes!
+            var txes = verifiedTxes.Where(p => LastProposal.Contains(p.Hash));
+            if (txes.Count() > LastProposal.Length / 2)
+                return txes;
+        }
+        return verifiedTxes;
+
+    }
+    public ExtensiblePayload MakePrepareRequest(uint pId)
+    {
+
+        EnsureMaxBlockLimitation(PickTransactions(), pId);
+        // Limit Speaker proposal to the limit `MaxTransactionsPerBlock` or all available transactions of the mempool
+
+        Block[pId].Header.Timestamp = Math.Max(TimeProvider.Current.UtcNow.ToTimestampMS(), PrevHeader.Timestamp + 1);
+        Block[pId].Header.Nonce = GetNonce();
+        return PreparationPayloads[pId][MyIndex] = MakeSignedPayload(new PrepareRequest
+        {
+            Version = Block[pId].Version,
+            PrevHash = Block[pId].PrevHash,
+            Timestamp = Block[pId].Timestamp,
+            Nonce = Block[pId].Nonce,
+            TransactionHashes = TransactionHashes![pId]
         });
     }
 
@@ -126,52 +140,64 @@ partial class ConsensusContext
     public ExtensiblePayload MakeRecoveryMessage()
     {
         PrepareRequest? prepareRequestMessage = null;
-        if (TransactionHashes != null)
+        uint pId = TransactionHashes[0] != null ? 0u : (TransactionHashes[1] != null ? 1u : 0u);
+        if (TransactionHashes[pId] != null)
         {
             prepareRequestMessage = new PrepareRequest
             {
-                Version = Block.Version,
-                PrevHash = Block.PrevHash,
+                Version = Block[pId].Version,
+                PrevHash = Block[pId].PrevHash,
                 ViewNumber = ViewNumber,
-                Timestamp = Block.Timestamp,
-                Nonce = Block.Nonce,
-                BlockIndex = Block.Index,
-                ValidatorIndex = Block.PrimaryIndex,
-                TransactionHashes = TransactionHashes
+                Timestamp = Block[pId].Timestamp,
+                Nonce = Block[pId].Nonce,
+                BlockIndex = Block[pId].Index,
+                ValidatorIndex = Block[pId].PrimaryIndex,
+                TransactionHashes = TransactionHashes[pId]
             };
         }
         return MakeSignedPayload(new RecoveryMessage
         {
+            PId = pId,
             ChangeViewMessages = LastChangeViewPayloads.Where(p => p != null)
                 .Select(p => GetChangeViewPayloadCompact(p!))
                 .Take(M)
                 .ToDictionary(p => p.ValidatorIndex),
             PrepareRequestMessage = prepareRequestMessage,
             // We only need a PreparationHash set if we don't have the PrepareRequest information.
-            PreparationHash = TransactionHashes == null
-                ? PreparationPayloads.Where(p => p != null)
+            PreparationHash = TransactionHashes[pId] == null
+                ? PreparationPayloads[pId].Where(p => p != null)
                     .GroupBy(p => GetMessage<PrepareResponse>(p!).PreparationHash, (k, g) => new { Hash = k, Count = g.Count() })
                     .OrderByDescending(p => p.Count)
                     .Select(p => p.Hash)
                     .FirstOrDefault()
                 : null,
-            PreparationMessages = PreparationPayloads.Where(p => p != null)
+            PreparationMessages = PreparationPayloads[pId].Where(p => p != null)
                 .Select(p => GetPreparationPayloadCompact(p!))
                 .ToDictionary(p => p.ValidatorIndex),
+            PreCommitMessages = PreCommitPayloads[pId].Where(p => p != null).Select(p => GetPreCommitPayloadCompact(p)).ToDictionary(p => p.ValidatorIndex),
             CommitMessages = CommitSent
-                ? CommitPayloads.Where(p => p != null).Select(p => GetCommitPayloadCompact(p!)).ToDictionary(p => p.ValidatorIndex)
+                ? CommitPayloads[pId].Where(p => p != null).Select(p => GetCommitPayloadCompact(p!)).ToDictionary(p => p.ValidatorIndex)
                 : new Dictionary<byte, RecoveryMessage.CommitPayloadCompact>()
         });
     }
 
-    public ExtensiblePayload MakePrepareResponse()
+    public ExtensiblePayload MakePrepareResponse(uint pId)
     {
-        return PreparationPayloads[MyIndex] = MakeSignedPayload(new PrepareResponse
+        return PreparationPayloads[pId][MyIndex] = MakeSignedPayload(new PrepareResponse
         {
-            PreparationHash = PreparationPayloads[Block.PrimaryIndex]!.Hash
+            PreparationHash = PreparationPayloads[Block[pId].PrimaryIndex]!.Hash,
+            PId = pId
         });
     }
 
+    public ExtensiblePayload MakePreCommit(uint pId)
+    {
+        return PreCommitPayloads[pId][MyIndex] = MakeSignedPayload(new PreCommit
+        {
+            PreparationHash = PreparationPayloads[pId][Block[pId].PrimaryIndex].Hash,
+            PId = pId
+        });
+    }
     // Related to issue https://github.com/neo-project/neo/issues/3431
     // Ref. https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography.randomnumbergenerator?view=net-8.0
     //
