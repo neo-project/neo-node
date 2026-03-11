@@ -49,10 +49,10 @@ public partial class UT_RpcServer
         };
         _rpcServer = new RpcServer(_neoSystem, _rpcServerSettings);
         _walletAccount = _wallet.Import("KxuRSsHgJMb3AMSN6B9P3JHNGMFtxmuimqgR9MmXPcv3CLLfusTd");
-        var key = new KeyBuilder(NativeContract.GAS.Id, 20).Add(_walletAccount.ScriptHash);
+        var key = new KeyBuilder(NativeContract.TokenManagement.Id, 20).Add(_walletAccount.ScriptHash).Add(NativeContract.Governance.GasTokenId);
         var snapshot = _neoSystem.GetSnapshotCache();
         var entry = snapshot.GetAndChange(key, () => new StorageItem(new AccountState()));
-        entry.GetInteroperable<AccountState>().Balance = 100_000_000 * NativeContract.GAS.Factor;
+        entry.GetInteroperable<AccountState>().Balance = 100_000_000 * Governance.GasTokenFactor;
         snapshot.Commit();
     }
 
@@ -63,9 +63,9 @@ public partial class UT_RpcServer
         _neoSystem.MemPool.Clear();
         _memoryStore.Reset();
         var snapshot = _neoSystem.GetSnapshotCache();
-        var key = new KeyBuilder(NativeContract.GAS.Id, 20).Add(_walletAccount.ScriptHash);
+        var key = new KeyBuilder(NativeContract.TokenManagement.Id, 20).Add(_walletAccount.ScriptHash).Add(NativeContract.Governance.GasTokenId);
         var entry = snapshot.GetAndChange(key, () => new StorageItem(new AccountState()));
-        entry.GetInteroperable<AccountState>().Balance = 100_000_000 * NativeContract.GAS.Factor;
+        entry.GetInteroperable<AccountState>().Balance = 100_000_000 * Governance.GasTokenFactor;
         snapshot.Commit();
     }
 

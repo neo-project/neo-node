@@ -11,7 +11,6 @@
 
 using Neo.ConsoleService;
 using Neo.Extensions.VM;
-using Neo.IEventHandlers;
 using Neo.Json;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
@@ -26,7 +25,7 @@ using static System.IO.Path;
 
 namespace Neo.Plugins.ApplicationLogs;
 
-public class LogReader : Plugin, ICommittingHandler, ICommittedHandler, ILogHandler
+public class LogReader : Plugin
 {
     #region Globals
 
@@ -47,8 +46,8 @@ public class LogReader : Plugin, ICommittingHandler, ICommittedHandler, ILogHand
         _neostore = default!;
         _neosystem = default!;
         _logEvents = new();
-        Blockchain.Committing += ((ICommittingHandler)this).Blockchain_Committing_Handler;
-        Blockchain.Committed += ((ICommittedHandler)this).Blockchain_Committed_Handler;
+        Blockchain.Committing += Blockchain_Committing_Handler;
+        Blockchain.Committed += Blockchain_Committed_Handler;
     }
 
     #endregion
@@ -61,8 +60,8 @@ public class LogReader : Plugin, ICommittingHandler, ICommittedHandler, ILogHand
     {
         if (disposing)
         {
-            Blockchain.Committing -= ((ICommittingHandler)this).Blockchain_Committing_Handler;
-            Blockchain.Committed -= ((ICommittedHandler)this).Blockchain_Committed_Handler;
+            Blockchain.Committing -= Blockchain_Committing_Handler;
+            Blockchain.Committed -= Blockchain_Committed_Handler;
             if (ApplicationLogsSettings.Default.Debug)
                 ApplicationEngine.InstanceCreated -= ConfigureAppEngine;
         }
@@ -71,7 +70,7 @@ public class LogReader : Plugin, ICommittingHandler, ICommittedHandler, ILogHand
 
     private void ConfigureAppEngine(ApplicationEngine engine)
     {
-        engine.Log += ((ILogHandler)this).ApplicationEngine_Log_Handler;
+        engine.Log += ApplicationEngine_Log_Handler;
     }
 
     protected override void Configure()
@@ -228,7 +227,7 @@ public class LogReader : Plugin, ICommittingHandler, ICommittedHandler, ILogHand
 
     #region Blockchain Events
 
-    void ICommittingHandler.Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
+    void Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
         IReadOnlyList<Blockchain.ApplicationExecuted> applicationExecutedList)
     {
         if (system.Settings.Network != ApplicationLogsSettings.Default.Network)
@@ -250,7 +249,7 @@ public class LogReader : Plugin, ICommittingHandler, ICommittedHandler, ILogHand
         }
     }
 
-    void ICommittedHandler.Blockchain_Committed_Handler(NeoSystem system, Block block)
+    void Blockchain_Committed_Handler(NeoSystem system, Block block)
     {
         if (system.Settings.Network != ApplicationLogsSettings.Default.Network)
             return;
@@ -259,7 +258,7 @@ public class LogReader : Plugin, ICommittingHandler, ICommittedHandler, ILogHand
         _neostore.CommitBlockLog();
     }
 
-    void ILogHandler.ApplicationEngine_Log_Handler(ApplicationEngine sender, LogEventArgs e)
+    void ApplicationEngine_Log_Handler(ApplicationEngine sender, LogEventArgs e)
     {
         if (ApplicationLogsSettings.Default.Debug == false)
             return;
@@ -285,7 +284,7 @@ public class LogReader : Plugin, ICommittingHandler, ICommittedHandler, ILogHand
             ConsoleHelper.Error($"Exception: {model.Exception}");
         else
             ConsoleHelper.Info("Exception: ", "null");
-        ConsoleHelper.Info("Gas Consumed: ", $"{new BigDecimal((BigInteger)model.GasConsumed, NativeContract.GAS.Decimals)}");
+        ConsoleHelper.Info("Gas Consumed: ", $"{new BigDecimal((BigInteger)model.GasConsumed, Governance.GasTokenDecimals)}");
         if (model.Stack.Length == 0)
             ConsoleHelper.Info("Stack: ", "[]");
         else

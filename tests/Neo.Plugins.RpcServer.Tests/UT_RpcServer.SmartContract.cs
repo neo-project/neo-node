@@ -41,14 +41,16 @@ public partial class UT_RpcServer
 
     static readonly string MultisigAddress = MultisigScriptHash.ToAddress(ProtocolSettings.Default.AddressVersion);
 
-    static readonly string s_neoHash = NativeContract.NEO.Hash.ToString();
-    static readonly string s_gasHash = NativeContract.GAS.Hash.ToString();
+    static readonly string s_governanceHash = NativeContract.Governance.Hash.ToString();
+    static readonly string s_neoHash = NativeContract.Governance.NeoTokenId.ToString();
+    static readonly string s_gasHash = NativeContract.Governance.GasTokenId.ToString();
+    static readonly string s_tokenManagementHash = NativeContract.TokenManagement.Hash.ToString();
 
     static readonly JArray validatorSigner = [new JObject()
     {
         ["account"] = ValidatorScriptHash.ToString(),
         ["scopes"] = nameof(WitnessScope.CalledByEntry),
-        ["allowedcontracts"] = new JArray([s_neoHash, s_gasHash]),
+        ["allowedcontracts"] = new JArray([s_tokenManagementHash]),
         ["allowedgroups"] = new JArray([TestProtocolSettings.SoleNode.StandbyCommittee[0].ToString()]),
         ["rules"] = new JArray([
             new JObject()
@@ -120,8 +122,8 @@ public partial class UT_RpcServer
         Assert.AreEqual(notifications[0]!["contract"]!.AsString(), s_neoHash);
         Assert.AreEqual("1", notifications[0]!["state"]!["value"]![2]!["value"]);
         Assert.AreEqual("Transfer", notifications[1]!["eventname"]!.AsString());
-        Assert.AreEqual(notifications[1]!["contract"]!.AsString(), s_gasHash);
-        Assert.AreEqual("50000000", notifications[1]!["state"]!["value"]![2]!["value"]);
+        Assert.AreEqual(notifications[1]!["contract"]!.AsString(), s_tokenManagementHash);
+        Assert.AreEqual("50000000", notifications[1]!["state"]!["value"]![3]!["value"]);
 
         _rpcServer.wallet = null;
     }
@@ -179,7 +181,7 @@ public partial class UT_RpcServer
     {
         // Attempt to call a non-existent method
         var functionName = "nonExistentMethod";
-        var resp = (JObject)_rpcServer.InvokeFunction(s_neoHash, functionName, []);
+        var resp = (JObject)_rpcServer.InvokeFunction(s_tokenManagementHash, functionName, []);
 
         Assert.AreEqual(nameof(VMState.FAULT), resp["state"]!.AsString());
         Assert.IsNotNull(resp["exception"]!.AsString());
@@ -374,7 +376,7 @@ public partial class UT_RpcServer
     public void TestTraverseIterator()
     {
         // GetAllCandidates that should return 0 candidates
-        var resp = (JObject)_rpcServer.InvokeFunction(s_neoHash, "getAllCandidates", [], validatorSigner.AsParameter<SignersAndWitnesses>(), true);
+        var resp = (JObject)_rpcServer.InvokeFunction(s_governanceHash, "getAllCandidates", [], validatorSigner.AsParameter<SignersAndWitnesses>(), true);
         var sessionId = resp["session"]!;
         var iteratorId = resp["stack"]![0]!["id"]!;
         var respArray = (JArray)_rpcServer.TraverseIterator(sessionId.AsParameter<Guid>(), iteratorId.AsParameter<Guid>(), 100);
@@ -386,7 +388,7 @@ public partial class UT_RpcServer
 
         // register candidate in snapshot
         resp = (JObject)_rpcServer.InvokeFunction(
-            s_neoHash,
+            s_governanceHash,
             "registerCandidate",
             [
                 new(ContractParameterType.PublicKey) { Value = TestProtocolSettings.SoleNode.StandbyCommittee[0] },

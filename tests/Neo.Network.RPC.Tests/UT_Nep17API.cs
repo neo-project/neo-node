@@ -40,64 +40,64 @@ public class UT_Nep17API
     [TestMethod]
     public async Task TestBalanceOf()
     {
-        byte[] testScript = NativeContract.GAS.Hash.MakeScript("balanceOf", UInt160.Zero);
+        byte[] testScript = NativeContract.Governance.Hash.MakeScript("balanceOf", UInt160.Zero);
         UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript, new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(10000) });
 
-        var balance = await nep17API.BalanceOfAsync(NativeContract.GAS.Hash, UInt160.Zero);
+        var balance = await nep17API.BalanceOfAsync(NativeContract.Governance.Hash, UInt160.Zero);
         Assert.AreEqual(10000, (int)balance);
     }
 
     [TestMethod]
     public async Task TestGetSymbol()
     {
-        byte[] testScript = NativeContract.GAS.Hash.MakeScript("symbol");
-        UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript, new ContractParameter { Type = ContractParameterType.String, Value = NativeContract.GAS.Symbol });
+        byte[] testScript = NativeContract.Governance.Hash.MakeScript("symbol");
+        UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript, new ContractParameter { Type = ContractParameterType.String, Value = Governance.GasTokenSymbol });
 
-        var result = await nep17API.SymbolAsync(NativeContract.GAS.Hash);
-        Assert.AreEqual(NativeContract.GAS.Symbol, result);
+        var result = await nep17API.SymbolAsync(NativeContract.Governance.Hash);
+        Assert.AreEqual(Governance.GasTokenSymbol, result);
     }
 
     [TestMethod]
     public async Task TestGetDecimals()
     {
-        byte[] testScript = NativeContract.GAS.Hash.MakeScript("decimals");
-        UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript, new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(NativeContract.GAS.Decimals) });
+        byte[] testScript = NativeContract.Governance.Hash.MakeScript("decimals");
+        UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript, new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(Governance.GasTokenDecimals) });
 
-        var result = await nep17API.DecimalsAsync(NativeContract.GAS.Hash);
-        Assert.AreEqual(NativeContract.GAS.Decimals, result);
+        var result = await nep17API.DecimalsAsync(NativeContract.Governance.Hash);
+        Assert.AreEqual(Governance.GasTokenDecimals, result);
     }
 
     [TestMethod]
     public async Task TestGetTotalSupply()
     {
-        byte[] testScript = NativeContract.GAS.Hash.MakeScript("totalSupply");
+        byte[] testScript = NativeContract.Governance.Hash.MakeScript("totalSupply");
         UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript, new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(1_00000000) });
 
-        var result = await nep17API.TotalSupplyAsync(NativeContract.GAS.Hash);
+        var result = await nep17API.TotalSupplyAsync(NativeContract.Governance.Hash);
         Assert.AreEqual(1_00000000, (int)result);
     }
 
     [TestMethod]
     public async Task TestGetTokenInfo()
     {
-        UInt160 scriptHash = NativeContract.GAS.Hash;
+        UInt160 gasTokenId = NativeContract.Governance.GasTokenId;
         byte[] testScript = [
-            .. scriptHash.MakeScript("symbol"),
-            .. scriptHash.MakeScript("decimals"),
-            .. scriptHash.MakeScript("totalSupply")];
+            .. gasTokenId.MakeScript("symbol"),
+            .. gasTokenId.MakeScript("decimals"),
+            .. gasTokenId.MakeScript("totalSupply")];
         UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript,
-            new ContractParameter { Type = ContractParameterType.String, Value = NativeContract.GAS.Symbol },
-            new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(NativeContract.GAS.Decimals) },
+            new ContractParameter { Type = ContractParameterType.String, Value = Governance.GasTokenSymbol },
+            new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(Governance.GasTokenDecimals) },
             new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(1_00000000) });
 
-        scriptHash = NativeContract.NEO.Hash;
+        UInt160 neoTokenId = NativeContract.Governance.NeoTokenId;
         testScript = [
-            .. scriptHash.MakeScript("symbol"),
-            .. scriptHash.MakeScript("decimals"),
-            .. scriptHash.MakeScript("totalSupply")];
+            .. neoTokenId.MakeScript("symbol"),
+            .. neoTokenId.MakeScript("decimals"),
+            .. neoTokenId.MakeScript("totalSupply")];
         UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript,
-            new ContractParameter { Type = ContractParameterType.String, Value = NativeContract.NEO.Symbol },
-            new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(NativeContract.NEO.Decimals) },
+            new ContractParameter { Type = ContractParameterType.String, Value = Governance.NeoTokenSymbol },
+            new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(Governance.NeoTokenDecimals) },
             new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(1_00000000) });
 
         var tests = TestUtils.RpcTestCases.Where(p => p.Name == "getcontractstateasync");
@@ -105,37 +105,45 @@ public class UT_Nep17API
         var haveNeoTokenUT = false;
         foreach (var test in tests)
         {
-            rpcClientMock.Setup(p => p.RpcSendAsync("getcontractstate", It.Is<JToken?[]>(u => true)))
+            rpcClientMock
+                .Setup(p => p.RpcSendAsync("getcontractstate", It.Is<JToken?[]>(u => true)))
                 .ReturnsAsync(test.Response.Result!)
                 .Verifiable();
-            if (test.Request.Params[0]!.AsString() == NativeContract.GAS.Hash.ToString() || test.Request.Params[0]!.AsString().Equals(NativeContract.GAS.Name, StringComparison.OrdinalIgnoreCase))
-            {
-                var result = await nep17API.GetTokenInfoAsync(NativeContract.GAS.Name.ToLower());
-                Assert.AreEqual(NativeContract.GAS.Symbol, result.Symbol);
-                Assert.AreEqual(8, result.Decimals);
-                Assert.AreEqual(1_00000000, (int)result.TotalSupply);
-                Assert.AreEqual("GasToken", result.Name);
 
-                result = await nep17API.GetTokenInfoAsync(NativeContract.GAS.Hash);
-                Assert.AreEqual(NativeContract.GAS.Symbol, result.Symbol);
-                Assert.AreEqual(8, result.Decimals);
+            var requested = test.Request.Params[0]!.AsString();
+
+            if (requested == gasTokenId.ToString() ||
+                requested.Equals(Governance.GasTokenName, StringComparison.OrdinalIgnoreCase))
+            {
+                var result = await nep17API.GetTokenInfoAsync(Governance.GasTokenName.ToLowerInvariant());
+                Assert.AreEqual(Governance.GasTokenSymbol, result.Symbol);
+                Assert.AreEqual(Governance.GasTokenDecimals, result.Decimals);
                 Assert.AreEqual(1_00000000, (int)result.TotalSupply);
-                Assert.AreEqual("GasToken", result.Name);
+                Assert.AreEqual(Governance.GasTokenName, result.Name);
+
+                result = await nep17API.GetTokenInfoAsync(gasTokenId);
+                Assert.AreEqual(Governance.GasTokenSymbol, result.Symbol);
+                Assert.AreEqual(Governance.GasTokenDecimals, result.Decimals);
+                Assert.AreEqual(1_00000000, (int)result.TotalSupply);
+                Assert.AreEqual(Governance.GasTokenName, result.Name);
+
                 haveGasTokenUT = true;
             }
-            else if (test.Request.Params[0]!.AsString() == NativeContract.NEO.Hash.ToString() || test.Request.Params[0]!.AsString().Equals(NativeContract.NEO.Name, StringComparison.OrdinalIgnoreCase))
+            else if (requested == neoTokenId.ToString() ||
+                     requested.Equals(Governance.NeoTokenName, StringComparison.OrdinalIgnoreCase))
             {
-                var result = await nep17API.GetTokenInfoAsync(NativeContract.NEO.Name.ToLower());
-                Assert.AreEqual(NativeContract.NEO.Symbol, result.Symbol);
-                Assert.AreEqual(0, result.Decimals);
+                var result = await nep17API.GetTokenInfoAsync(Governance.NeoTokenName.ToLowerInvariant());
+                Assert.AreEqual(Governance.NeoTokenSymbol, result.Symbol);
+                Assert.AreEqual(Governance.NeoTokenDecimals, result.Decimals);
                 Assert.AreEqual(1_00000000, (int)result.TotalSupply);
-                Assert.AreEqual("NeoToken", result.Name);
+                Assert.AreEqual(Governance.NeoTokenName, result.Name);
 
-                result = await nep17API.GetTokenInfoAsync(NativeContract.NEO.Hash);
-                Assert.AreEqual(NativeContract.NEO.Symbol, result.Symbol);
-                Assert.AreEqual(0, result.Decimals);
+                result = await nep17API.GetTokenInfoAsync(neoTokenId);
+                Assert.AreEqual(Governance.NeoTokenSymbol, result.Symbol);
+                Assert.AreEqual(Governance.NeoTokenDecimals, result.Decimals);
                 Assert.AreEqual(1_00000000, (int)result.TotalSupply);
-                Assert.AreEqual("NeoToken", result.Name);
+                Assert.AreEqual(Governance.NeoTokenName, result.Name);
+
                 haveNeoTokenUT = true;
             }
         }
@@ -145,20 +153,20 @@ public class UT_Nep17API
     [TestMethod]
     public async Task TestTransfer()
     {
-        byte[] testScript = NativeContract.GAS.Hash.MakeScript("transfer", sender, UInt160.Zero, new BigInteger(1_00000000), null)
+        byte[] testScript = NativeContract.Governance.Hash.MakeScript("transfer", sender, UInt160.Zero, new BigInteger(1_00000000), null)
             .Concat([(byte)OpCode.ASSERT])
             .ToArray();
         UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript, new ContractParameter());
 
         var client = rpcClientMock.Object;
-        var result = await nep17API.CreateTransferTxAsync(NativeContract.GAS.Hash, keyPair1, UInt160.Zero, new BigInteger(1_00000000), null, true);
+        var result = await nep17API.CreateTransferTxAsync(NativeContract.Governance.Hash, keyPair1, UInt160.Zero, new BigInteger(1_00000000), null, true);
 
-        testScript = NativeContract.GAS.Hash.MakeScript("transfer", sender, UInt160.Zero, new BigInteger(1_00000000), string.Empty)
+        testScript = NativeContract.Governance.Hash.MakeScript("transfer", sender, UInt160.Zero, new BigInteger(1_00000000), string.Empty)
             .Concat([(byte)OpCode.ASSERT])
             .ToArray();
         UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript, new ContractParameter());
 
-        result = await nep17API.CreateTransferTxAsync(NativeContract.GAS.Hash, keyPair1, UInt160.Zero, new BigInteger(1_00000000), string.Empty, true);
+        result = await nep17API.CreateTransferTxAsync(NativeContract.Governance.Hash, keyPair1, UInt160.Zero, new BigInteger(1_00000000), string.Empty, true);
         Assert.IsNotNull(result);
     }
 }
