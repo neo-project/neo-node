@@ -160,6 +160,20 @@ public class UT_TransactionManager
             }
         };
 
+        byte[] gasBalanceScript = NativeContract.TokenManagement.Hash.MakeScript(
+                "balanceOf",
+                NativeContract.Governance.GasTokenId,
+                sender);
+
+        MockInvokeScript(
+            rpcClientMock,
+            gasBalanceScript,
+            new ContractParameter
+            {
+                Type = ContractParameterType.Integer,
+                Value = BigInteger.Parse("10000000000000000")
+            });
+
         byte[] script = new byte[1];
         TransactionManager txManager = await TransactionManager.MakeTransactionAsync(client, script, signers);
         await txManager
@@ -219,6 +233,20 @@ public class UT_TransactionManager
             }
         };
 
+        byte[] gasBalanceScript = NativeContract.TokenManagement.Hash.MakeScript(
+                "balanceOf",
+                NativeContract.Governance.GasTokenId,
+                multiHash);
+
+        MockInvokeScript(
+            multiSigMock,
+            gasBalanceScript,
+            new ContractParameter
+            {
+                Type = ContractParameterType.Integer,
+                Value = BigInteger.Parse("10000000000000000")
+            });
+
         byte[] script = new byte[1];
         TransactionManager txManager = await TransactionManager.MakeTransactionAsync(multiSigMock.Object, script, signers);
         await txManager
@@ -244,6 +272,20 @@ public class UT_TransactionManager
                 Scopes = WitnessScope.Global
             }
         };
+
+        byte[] gasBalanceScript = NativeContract.TokenManagement.Hash.MakeScript(
+                "balanceOf",
+                NativeContract.Governance.GasTokenId,
+                sender);
+
+        MockInvokeScript(
+            rpcClientMock,
+            gasBalanceScript,
+            new ContractParameter
+            {
+                Type = ContractParameterType.Integer,
+                Value = BigInteger.Parse("10000000000000000")
+            });
 
         byte[] script = new byte[1];
         TransactionManager txManager = await TransactionManager.MakeTransactionAsync(rpcClientMock.Object, script, signers);

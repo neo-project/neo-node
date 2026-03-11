@@ -36,9 +36,9 @@ public class UT_Utility
     [TestMethod]
     public void TestAsScriptHash()
     {
-        var scriptHash1 = Utility.AsScriptHash(NativeContract.Governance.NeoTokenId.ToString());
-        var scriptHash2 = Utility.AsScriptHash(NativeContract.Governance.NeoTokenId.ToString());
-        var scriptHash3 = Utility.AsScriptHash(Governance.NeoTokenName);
+        var scriptHash1 = Utility.AsScriptHash(NativeContract.TokenManagement.Hash.ToString());
+        var scriptHash2 = Utility.AsScriptHash(NativeContract.TokenManagement.Id.ToString());
+        var scriptHash3 = Utility.AsScriptHash(NativeContract.TokenManagement.Name);
 
         Assert.AreEqual(scriptHash1, scriptHash2);
         Assert.AreEqual(scriptHash1, scriptHash3);

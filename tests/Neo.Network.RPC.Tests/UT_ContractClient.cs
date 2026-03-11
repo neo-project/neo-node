@@ -17,6 +17,7 @@ using Neo.SmartContract.Manifest;
 using Neo.SmartContract.Native;
 using Neo.VM;
 using Neo.Wallets;
+using System.Numerics;
 
 namespace Neo.Network.RPC.Tests;
 
@@ -68,6 +69,20 @@ public class UT_ContractClient
         }
 
         UT_TransactionManager.MockInvokeScript(rpcClientMock, script, new ContractParameter());
+
+        byte[] gasBalanceScript = NativeContract.TokenManagement.Hash.MakeScript(
+            "balanceOf",
+            NativeContract.Governance.GasTokenId,
+            sender);
+
+        UT_TransactionManager.MockInvokeScript(
+            rpcClientMock,
+            gasBalanceScript,
+            new ContractParameter
+            {
+                Type = ContractParameterType.Integer,
+                Value = BigInteger.Parse("10000000000000000")
+            });
 
         ContractClient contractClient = new ContractClient(rpcClientMock.Object);
         var result = await contractClient.CreateDeployContractTxAsync(new byte[1], manifest, keyPair1);

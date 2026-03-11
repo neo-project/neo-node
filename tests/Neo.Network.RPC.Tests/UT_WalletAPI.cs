@@ -79,21 +79,62 @@ public class UT_WalletAPI
     [TestMethod]
     public async Task TestGetTokenBalance()
     {
-        byte[] testScript = UInt160.Zero.MakeScript("balanceOf", sender);
-        UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript, new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(1_10000000) });
+        byte[] testScript = NativeContract.TokenManagement.Hash.MakeScript("balanceOf", UInt160.Zero, sender);
 
-        var balance = await walletAPI.GetTokenBalanceAsync(UInt160.Zero.ToString(), address1);
-        Assert.AreEqual(1_10000000, balance);
+        UT_TransactionManager.MockInvokeScript(
+            rpcClientMock,
+            testScript,
+            new ContractParameter
+            {
+                Type = ContractParameterType.Integer,
+                Value = new BigInteger(1_10000000)
+            });
+
+        var balance = await walletAPI.GetTokenBalanceAsync(UInt160.Zero, address1);
+        Assert.AreEqual(new BigInteger(1_10000000), balance);
     }
 
     [TestMethod]
     public async Task TestClaimGas()
     {
-        byte[] balanceScript = NativeContract.TokenManagement.Hash.MakeScript("balanceOf", NativeContract.Governance.NeoTokenId, sender);
-        UT_TransactionManager.MockInvokeScript(rpcClientMock, balanceScript, new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(1_00000000) });
+        byte[] neoBalanceScript = NativeContract.TokenManagement.Hash.MakeScript("balanceOf", NativeContract.Governance.NeoTokenId, sender);
 
-        byte[] testScript = NativeContract.TokenManagement.Hash.MakeScript("transfer", NativeContract.Governance.NeoTokenId, sender, sender, new BigInteger(1_00000000), null);
-        UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript, new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(1_10000000) });
+        UT_TransactionManager.MockInvokeScript(
+            rpcClientMock,
+            neoBalanceScript,
+            new ContractParameter
+            {
+                Type = ContractParameterType.Integer,
+                Value = new BigInteger(1_00000000)
+            });
+
+        byte[] gasBalanceScript = NativeContract.TokenManagement.Hash.MakeScript("balanceOf", NativeContract.Governance.GasTokenId, sender);
+
+        UT_TransactionManager.MockInvokeScript(
+            rpcClientMock,
+            gasBalanceScript,
+            new ContractParameter
+            {
+                Type = ContractParameterType.Integer,
+                Value = BigInteger.Parse("10000000000000000")
+            });
+
+        byte[] testScript = NativeContract.TokenManagement.Hash.MakeScript(
+            "transfer",
+            NativeContract.Governance.NeoTokenId,
+            sender,
+            sender,
+            new BigInteger(1_00000000),
+            null);
+
+        UT_TransactionManager.MockInvokeScript(
+            rpcClientMock,
+            testScript,
+            new ContractParameter
+            {
+                Type = ContractParameterType.Integer,
+                Value = new BigInteger(1_10000000)
+            });
 
         var json = new JObject() { ["hash"] = UInt256.Zero.ToString() };
         rpcClientMock.Setup(p => p.RpcSendAsync("sendrawtransaction", It.IsAny<JToken>())).ReturnsAsync(json);
@@ -105,59 +146,153 @@ public class UT_WalletAPI
     [TestMethod]
     public async Task TestTransfer()
     {
-        byte[] decimalsScript = NativeContract.Governance.Hash.MakeScript("decimals");
-        UT_TransactionManager.MockInvokeScript(rpcClientMock, decimalsScript, new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(8) });
+        byte[] gasBalanceScript = NativeContract.TokenManagement.Hash.MakeScript(
+            "balanceOf",
+            NativeContract.Governance.GasTokenId,
+            sender);
 
-        byte[] testScript = NativeContract.TokenManagement.Hash.MakeScript("transfer", NativeContract.Governance.GasTokenId, sender, UInt160.Zero, Governance.GasTokenFactor * 100, null)
+        UT_TransactionManager.MockInvokeScript(
+        rpcClientMock,
+        gasBalanceScript,
+        new ContractParameter
+        {
+            Type = ContractParameterType.Integer,
+            Value = BigInteger.Parse("10000000000000000")
+        });
+
+        byte[] testScript = NativeContract.TokenManagement.Hash.MakeScript(
+            "transfer",
+            NativeContract.Governance.GasTokenId,
+            sender,
+            UInt160.Zero,
+            Governance.GasTokenFactor * 100,
+            null)
             .Concat([(byte)OpCode.ASSERT])
             .ToArray();
-        UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript, new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(1_10000000) });
+
+        UT_TransactionManager.MockInvokeScript(
+            rpcClientMock,
+            testScript,
+            new ContractParameter
+            {
+                Type = ContractParameterType.Integer,
+                Value = new BigInteger(1_10000000)
+            });
 
         var json = new JObject() { ["hash"] = UInt256.Zero.ToString() };
-        rpcClientMock.Setup(p => p.RpcSendAsync("sendrawtransaction", It.IsAny<JToken>())).ReturnsAsync(json);
+        rpcClientMock.Setup(p => p.RpcSendAsync("sendrawtransaction", It.IsAny<JToken>()))
+            .ReturnsAsync(json);
 
-        var tranaction = await walletAPI.TransferAsync(NativeContract.Governance.Hash.ToString(), keyPair1.Export(), UInt160.Zero.ToAddress(client.protocolSettings.AddressVersion), 100, null, true);
+        var tranaction = await walletAPI.TransferAsync(
+            NativeContract.Governance.GasTokenId,
+            keyPair1.Export(),
+            UInt160.Zero.ToAddress(client.protocolSettings.AddressVersion),
+            Governance.GasTokenFactor * 100,
+            null,
+            true);
+
         Assert.AreEqual(testScript.ToHexString(), tranaction.Script.Span.ToHexString());
     }
 
     [TestMethod]
     public async Task TestTransferfromMultiSigAccount()
     {
-        byte[] balanceScript = NativeContract.Governance.Hash.MakeScript("balanceOf", multiSender);
-        var balanceResult = new ContractParameter() { Type = ContractParameterType.Integer, Value = BigInteger.Parse("10000000000000000") };
+        byte[] gasBalanceScript = NativeContract.TokenManagement.Hash.MakeScript(
+            "balanceOf",
+            NativeContract.Governance.GasTokenId,
+            multiSender);
 
-        UT_TransactionManager.MockInvokeScript(rpcClientMock, balanceScript, balanceResult);
+        UT_TransactionManager.MockInvokeScript(
+                rpcClientMock,
+                gasBalanceScript,
+                new ContractParameter
+                {
+                    Type = ContractParameterType.Integer,
+                    Value = BigInteger.Parse("10000000000000000")
+                });
 
-        byte[] decimalsScript = NativeContract.Governance.Hash.MakeScript("decimals");
-        UT_TransactionManager.MockInvokeScript(rpcClientMock, decimalsScript, new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(8) });
-
-        byte[] testScript = NativeContract.Governance.Hash.MakeScript("transfer", multiSender, UInt160.Zero, Governance.GasTokenFactor * 100, null)
+        byte[] testScript = NativeContract.TokenManagement.Hash.MakeScript(
+            "transfer",
+            NativeContract.Governance.GasTokenId,
+            multiSender,
+            UInt160.Zero,
+            Governance.GasTokenFactor * 100,
+            null)
             .Concat(new[] { (byte)OpCode.ASSERT })
             .ToArray();
-        UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript, new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(1_10000000) });
+
+        UT_TransactionManager.MockInvokeScript(
+            rpcClientMock,
+            testScript,
+            new ContractParameter
+            {
+                Type = ContractParameterType.Integer,
+                Value = new BigInteger(1_10000000)
+            });
 
         var json = new JObject() { ["hash"] = UInt256.Zero.ToString() };
-        rpcClientMock.Setup(p => p.RpcSendAsync("sendrawtransaction", It.IsAny<JToken>())).ReturnsAsync(json);
+        rpcClientMock.Setup(p => p.RpcSendAsync("sendrawtransaction", It.IsAny<JToken>()))
+            .ReturnsAsync(json);
 
-        var tranaction = await walletAPI.TransferAsync(NativeContract.Governance.Hash, 1, new[] { keyPair1.PublicKey }, new[] { keyPair1 }, UInt160.Zero, Governance.GasTokenFactor * 100, null, true);
+        var tranaction = await walletAPI.TransferAsync(
+            NativeContract.Governance.GasTokenId,
+            1,
+            new[] { keyPair1.PublicKey },
+            new[] { keyPair1 },
+            UInt160.Zero,
+            Governance.GasTokenFactor * 100,
+            null,
+            true);
+
         Assert.AreEqual(testScript.ToHexString(), tranaction.Script.Span.ToHexString());
 
         try
         {
-            tranaction = await walletAPI.TransferAsync(NativeContract.Governance.Hash, 2, new[] { keyPair1.PublicKey }, new[] { keyPair1 }, UInt160.Zero, Governance.GasTokenFactor * 100, null, true);
+            tranaction = await walletAPI.TransferAsync(
+                NativeContract.Governance.GasTokenId,
+                2,
+                new[] { keyPair1.PublicKey },
+                new[] { keyPair1 },
+                UInt160.Zero,
+                Governance.GasTokenFactor * 100,
+                null,
+                true);
             Assert.Fail();
         }
         catch (Exception e)
         {
-            Assert.AreEqual($"Need at least 2 KeyPairs for signing!", e.Message);
+            Assert.AreEqual("Need at least 2 KeyPairs for signing!", e.Message);
         }
 
-        testScript = NativeContract.Governance.Hash.MakeScript("transfer", multiSender, UInt160.Zero, Governance.GasTokenFactor * 100, string.Empty)
+        testScript = NativeContract.TokenManagement.Hash.MakeScript(
+            "transfer",
+            NativeContract.Governance.GasTokenId,
+            multiSender,
+            UInt160.Zero,
+            Governance.GasTokenFactor * 100,
+            string.Empty)
             .Concat(new[] { (byte)OpCode.ASSERT })
             .ToArray();
-        UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript, new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(1_10000000) });
 
-        tranaction = await walletAPI.TransferAsync(NativeContract.Governance.Hash, 1, new[] { keyPair1.PublicKey }, new[] { keyPair1 }, UInt160.Zero, Governance.GasTokenFactor * 100, string.Empty, true);
+        UT_TransactionManager.MockInvokeScript(
+            rpcClientMock,
+            testScript,
+            new ContractParameter
+            {
+                Type = ContractParameterType.Integer,
+                Value = new BigInteger(1_10000000)
+            });
+
+        tranaction = await walletAPI.TransferAsync(
+            NativeContract.Governance.GasTokenId,
+            1,
+            new[] { keyPair1.PublicKey },
+            new[] { keyPair1 },
+            UInt160.Zero,
+            Governance.GasTokenFactor * 100,
+            string.Empty,
+            true);
+
         Assert.AreEqual(testScript.ToHexString(), tranaction.Script.Span.ToHexString());
     }
 

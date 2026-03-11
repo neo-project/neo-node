@@ -61,8 +61,9 @@ public class UT_LogReader
 
         public static byte[] CreateNeoTransferScript()
         {
-            return NativeContract.Governance.NeoTokenId.MakeScript(
+            return NativeContract.TokenManagement.Hash.MakeScript(
                 "transfer",
+                NativeContract.Governance.NeoTokenId,
                 MultisigScriptHash,
                 ValidatorScriptHash,
                 new BigInteger(1),
@@ -87,8 +88,8 @@ public class UT_LogReader
                     Signers = [new Signer() { Account = MultisigScriptHash, Scopes = WitnessScope.CalledByEntry }],
                     Attributes = Array.Empty<TransactionAttribute>(),
                     Script = CreateNeoTransferScript(), //Convert.FromBase64String(NeoTransferScript),
-                    NetworkFee = 1000_0000,
-                    SystemFee = 1000_0000,
+                    NetworkFee = 0, //1000_0000,
+                    SystemFee = 0, //1000_0000,
                     Witnesses = []
                 }
             ];
@@ -191,11 +192,13 @@ public class UT_LogReader
         Assert.HasCount(2, notifications);
 
         Assert.AreEqual("Transfer", notifications[0]!["eventname"]!.AsString());
-        Assert.AreEqual(neoTokenId.ToString(), notifications[0]!["contract"]!.AsString());
-        Assert.AreEqual("1", notifications[0]!["state"]!["value"]![2]!["value"]);
+        Assert.AreEqual(tokenContractHash.ToString(), notifications[0]!["contract"]!.AsString());
+        Assert.AreEqual(neoTokenId.ToString(), notifications[0]!["state"]!["value"]![0]!["value"]!.AsString());
+        Assert.AreEqual("1", notifications[0]!["state"]!["value"]![3]!["value"]);
 
         Assert.AreEqual("Transfer", notifications[1]!["eventname"]!.AsString());
-        Assert.AreEqual(gasTokenId.ToString(), notifications[1]!["contract"]!.AsString());
+        Assert.AreEqual(tokenContractHash.ToString(), notifications[1]!["contract"]!.AsString());
+        Assert.AreEqual(gasTokenId.ToString(), notifications[1]!["state"]!["value"]![0]!["value"]!.AsString());
         Assert.AreEqual("50000000", notifications[1]!["state"]!["value"]![3]!["value"]);
     }
 
