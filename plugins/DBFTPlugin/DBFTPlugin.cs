@@ -16,6 +16,7 @@ using Neo.Network.P2P.Payloads;
 using Neo.Plugins.DBFTPlugin.Consensus;
 using Neo.Sign;
 using Neo.Wallets;
+using Serilog;
 
 namespace Neo.Plugins.DBFTPlugin;
 
@@ -32,6 +33,8 @@ public sealed class DBFTPlugin : Plugin
     public override string ConfigFile => System.IO.Path.Combine(RootPath, "DBFTPlugin.json");
 
     protected override UnhandledExceptionPolicy ExceptionPolicy => settings.ExceptionPolicy;
+
+    internal static ILogger PluginLogger { get; private set; }
 
     public DBFTPlugin()
     {
@@ -59,6 +62,7 @@ public sealed class DBFTPlugin : Plugin
         if (system.Settings.Network != settings.Network) return;
         neoSystem = system;
         neoSystem.ServiceAdded += NeoSystem_ServiceAdded_Handler;
+        PluginLogger ??= Logger;
     }
 
     void NeoSystem_ServiceAdded_Handler(object sender, object service)

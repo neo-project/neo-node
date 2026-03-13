@@ -35,7 +35,7 @@ partial class ConsensusService
         }
         catch (Exception ex)
         {
-            Utility.Log(nameof(ConsensusService), LogLevel.Debug, ex.ToString());
+            DBFTPlugin.PluginLogger?.Information("Error getting message {Exception}", ex.ToString());
             return;
         }
 
@@ -44,7 +44,7 @@ partial class ConsensusService
         {
             if (context.Block.Index < message.BlockIndex)
             {
-                Log($"Chain is behind: expected={message.BlockIndex} current={context.Block.Index - 1}", LogLevel.Warning);
+                DBFTPlugin.PluginLogger?.Warning("Chain is behind: expected={Expected} current={Current}", message.BlockIndex, context.Block.Index - 1);
             }
             return;
         }
@@ -80,16 +80,19 @@ partial class ConsensusService
         if (message.ValidatorIndex != context.Block.PrimaryIndex || message.ViewNumber != context.ViewNumber) return;
         if (message.Version != context.Block.Version || message.PrevHash != context.Block.PrevHash) return;
         if (message.TransactionHashes.Length > neoSystem.Settings.MaxTransactionsPerBlock) return;
-        Log($"{nameof(OnPrepareRequestReceived)}: height={message.BlockIndex} view={message.ViewNumber} index={message.ValidatorIndex} tx={message.TransactionHashes.Length}");
-        if (message.Timestamp <= context.PrevHeader.Timestamp || message.Timestamp > TimeProvider.Current.UtcNow.AddMilliseconds(8 * context.TimePerBlock.TotalMilliseconds).ToTimestampMS())
+
+        DBFTPlugin.PluginLogger?.Information("OnPrepareRequestReceived: height={BlockIndex} view={ViewNumber} index={ValidatorIndex} tx={TransactionHashesLength}",
+            message.BlockIndex, message.ViewNumber, message.ValidatorIndex, message.TransactionHashes.Length);
+        if (message.Timestamp <= context.PrevHeader.Timestamp
+            || message.Timestamp > TimeProvider.Current.UtcNow.AddMilliseconds(8 * context.TimePerBlock.TotalMilliseconds).ToTimestampMS())
         {
-            Log($"Timestamp incorrect: {message.Timestamp}", LogLevel.Warning);
+            DBFTPlugin.PluginLogger?.Warning("Timestamp incorrect: {Timestamp}", message.Timestamp);
             return;
         }
 
         if (message.TransactionHashes.Any(p => NativeContract.Ledger.ContainsTransaction(context.Snapshot, p)))
         {
-            Log($"Invalid request: transaction already exists", LogLevel.Warning);
+            DBFTPlugin.PluginLogger?.Warning("Invalid request: transaction already exists");
             return;
         }
 
@@ -107,15 +110,24 @@ partial class ConsensusService
         context.Transactions = new Dictionary<UInt256, Transaction>();
         context.VerificationContext = new TransactionVerificationContext();
         for (int i = 0; i < context.PreparationPayloads.Length; i++)
+        {
             if (context.PreparationPayloads[i] != null)
+            {
                 if (!context.GetMessage<PrepareResponse>(context.PreparationPayloads[i]).PreparationHash.Equals(payload.Hash))
                     context.PreparationPayloads[i] = null;
+            }
+        }
+
         context.PreparationPayloads[message.ValidatorIndex] = payload;
         byte[] hashData = context.EnsureHeader().GetSignData(neoSystem.Settings.Network);
         for (int i = 0; i < context.CommitPayloads.Length; i++)
+        {
             if (context.GetMessage(context.CommitPayloads[i])?.ViewNumber == context.ViewNumber)
+            {
                 if (!Crypto.VerifySignature(hashData, context.GetMessage<Commit>(context.CommitPayloads[i]).Signature.Span, context.Validators[i]))
                     context.CommitPayloads[i] = null;
+            }
+        }
 
         if (context.TransactionHashes.Length == 0)
         {
@@ -133,7 +145,7 @@ partial class ConsensusService
             {
                 if (NativeContract.Ledger.ContainsConflictHash(context.Snapshot, hash, tx.Signers.Select(s => s.Account), mtb))
                 {
-                    Log($"Invalid request: transaction has on-chain conflict", LogLevel.Warning);
+                    DBFTPlugin.PluginLogger?.Warning("Invalid request: transaction has on-chain conflict");
                     return;
                 }
 
@@ -146,16 +158,19 @@ partial class ConsensusService
                 {
                     if (NativeContract.Ledger.ContainsConflictHash(context.Snapshot, hash, tx.Signers.Select(s => s.Account), mtb))
                     {
-                        Log($"Invalid request: transaction has on-chain conflict", LogLevel.Warning);
+                        DBFTPlugin.PluginLogger?.Warning("Invalid request: transaction has on-chain conflict");
                         return;
                     }
                     unverified.Add(tx);
                 }
             }
         }
+
         foreach (Transaction tx in unverified)
+        {
             if (!AddTransaction(tx, true))
                 return;
+        }
         if (context.Transactions.Count < context.TransactionHashes.Length)
         {
             UInt256[] hashes = context.TransactionHashes.Where(i => !context.Transactions.ContainsKey(i)).ToArray();
@@ -167,14 +182,18 @@ partial class ConsensusService
     {
         if (message.ViewNumber != context.ViewNumber) return;
         if (context.PreparationPayloads[message.ValidatorIndex] != null || context.NotAcceptingPayloadsDueToViewChanging) return;
-        if (context.PreparationPayloads[context.Block.PrimaryIndex] != null && !message.PreparationHash.Equals(context.PreparationPayloads[context.Block.PrimaryIndex].Hash))
+        if (context.PreparationPayloads[context.Block.PrimaryIndex] != null
+            && !message.PreparationHash.Equals(context.PreparationPayloads[context.Block.PrimaryIndex].Hash))
+        {
             return;
+        }
 
         // Timeout extension: prepare response has been received with success
         // around 2*15/M=30.0/5 ~ 40% block time (for M=5)
         ExtendTimerByFactor(2);
 
-        Log($"{nameof(OnPrepareResponseReceived)}: height={message.BlockIndex} view={message.ViewNumber} index={message.ValidatorIndex}");
+        DBFTPlugin.PluginLogger?.Information("OnPrepareResponseReceived: height={BlockIndex} view={ViewNumber} index={ValidatorIndex}",
+            message.BlockIndex, message.ViewNumber, message.ValidatorIndex);
         context.PreparationPayloads[message.ValidatorIndex] = payload;
         if (context.WatchOnly || context.CommitSent) return;
         if (context.RequestSentOrReceived)
@@ -192,7 +211,8 @@ partial class ConsensusService
         if (message.NewViewNumber <= expectedView)
             return;
 
-        Log($"{nameof(OnChangeViewReceived)}: height={message.BlockIndex} view={message.ViewNumber} index={message.ValidatorIndex} nv={message.NewViewNumber} reason={message.Reason}");
+        DBFTPlugin.PluginLogger?.Information("OnChangeViewReceived: height={BlockIndex} view={ViewNumber} index={ValidatorIndex} nv={NewViewNumber} reason={Reason}",
+            message.BlockIndex, message.ViewNumber, message.ValidatorIndex, message.NewViewNumber, message.Reason);
         context.ChangeViewPayloads[message.ValidatorIndex] = payload;
         switch (message.Reason)
         {
@@ -217,7 +237,8 @@ partial class ConsensusService
         if (existingCommitPayload != null)
         {
             if (existingCommitPayload.Hash != payload.Hash)
-                Log($"Rejected {nameof(Commit)}: height={commit.BlockIndex} index={commit.ValidatorIndex} view={commit.ViewNumber} existingView={context.GetMessage(existingCommitPayload).ViewNumber}", LogLevel.Warning);
+                DBFTPlugin.PluginLogger?.Warning("Rejected Commit: height={BlockIndex} index={ValidatorIndex} view={ViewNumber} existingView={ExistingView}",
+                    commit.BlockIndex, commit.ValidatorIndex, commit.ViewNumber, context.GetMessage(existingCommitPayload).ViewNumber);
             return;
         }
 
@@ -227,7 +248,8 @@ partial class ConsensusService
             // around 4*15s/M=60.0s/5=12.0s ~ 80% block time (for M=5)
             ExtendTimerByFactor(4);
 
-            Log($"{nameof(OnCommitReceived)}: height={commit.BlockIndex} view={commit.ViewNumber} index={commit.ValidatorIndex} nc={context.CountCommitted} nf={context.CountFailed}");
+            DBFTPlugin.PluginLogger?.Information("OnCommitReceived: height={BlockIndex} view={ViewNumber} index={ValidatorIndex} committed={CountCommitted} failed={CountFailed}",
+                commit.BlockIndex, commit.ViewNumber, commit.ValidatorIndex, context.CountCommitted, context.CountFailed);
 
             byte[] hashData = context.EnsureHeader()?.GetSignData(neoSystem.Settings.Network);
             if (hashData == null)
@@ -255,7 +277,8 @@ partial class ConsensusService
         int validChangeViews = 0, totalChangeViews = 0, validPrepReq = 0, totalPrepReq = 0;
         int validPrepResponses = 0, totalPrepResponses = 0, validCommits = 0, totalCommits = 0;
 
-        Log($"{nameof(OnRecoveryMessageReceived)}: height={message.BlockIndex} view={message.ViewNumber} index={message.ValidatorIndex}");
+        DBFTPlugin.PluginLogger?.Information("OnRecoveryMessageReceived: height={BlockIndex} view={ViewNumber} index={ValidatorIndex}",
+            message.BlockIndex, message.ViewNumber, message.ValidatorIndex);
         try
         {
             if (message.ViewNumber > context.ViewNumber)
@@ -293,7 +316,9 @@ partial class ConsensusService
         }
         finally
         {
-            Log($"Recovery finished: (valid/total) ChgView: {validChangeViews}/{totalChangeViews} PrepReq: {validPrepReq}/{totalPrepReq} PrepResp: {validPrepResponses}/{totalPrepResponses} Commits: {validCommits}/{totalCommits}");
+            DBFTPlugin.PluginLogger?.Information("Recovery finished: (valid/total) ChangeViews: {ValidChangeViews}/{TotalChangeViews} " +
+                "PrepRequests: {ValidPrepReq}/{TotalPrepReq} PrepResponses: {ValidPrepResponses}/{TotalPrepResponses} Commits: {ValidCommits}/{TotalCommits}",
+                validChangeViews, totalChangeViews, validPrepReq, totalPrepReq, validPrepResponses, totalPrepResponses, validCommits, totalCommits);
             isRecovering = false;
         }
     }
@@ -308,7 +333,8 @@ partial class ConsensusService
         // additional recovery message response.
         if (!knownHashes.Add(payload.Hash)) return;
 
-        Log($"{nameof(OnRecoveryRequestReceived)}: height={message.BlockIndex} index={message.ValidatorIndex} view={message.ViewNumber}");
+        DBFTPlugin.PluginLogger?.Information("OnRecoveryRequestReceived: height={BlockIndex} index={ValidatorIndex} view={ViewNumber}",
+            message.BlockIndex, message.ValidatorIndex, message.ViewNumber);
         if (context.WatchOnly) return;
         if (!context.CommitSent)
         {

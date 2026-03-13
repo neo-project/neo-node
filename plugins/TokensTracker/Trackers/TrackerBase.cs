@@ -145,11 +145,6 @@ abstract class TrackerBase : IDisposable
         return transfer;
     }
 
-    public void Log(string message, LogLevel level = LogLevel.Info)
-    {
-        Utility.Log(TrackName, level, message);
-    }
-
     public void Dispose()
     {
         Dispose(true);
