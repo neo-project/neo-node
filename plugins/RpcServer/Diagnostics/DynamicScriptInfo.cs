@@ -22,7 +22,7 @@ class DynamicScriptInfo : DiagnosticNode, ICanReturn, IParentNode
     public StackItem? ReturnValue { get; set; }
     public required IParentNode Caller { get; init; }
     public List<DiagnosticNode> Calls { get; } = [];
-    public int ContextLoadedCount { get; set; }
+    int IParentNode.ContextLoadedCount { get; set; }
 
     public override JObject ToJson()
     {

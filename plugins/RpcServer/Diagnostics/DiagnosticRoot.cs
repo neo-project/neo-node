@@ -17,7 +17,7 @@ class DiagnosticRoot : IParentNode
 {
     public required UInt160 ScriptHash { get; init; }
     public List<DiagnosticNode> Calls { get; } = [];
-    public int ContextLoadedCount { get; set; }
+    int IParentNode.ContextLoadedCount { get; set; }
 
     public JObject ToJson()
     {
