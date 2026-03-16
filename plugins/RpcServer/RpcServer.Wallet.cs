@@ -32,6 +32,7 @@ partial class RpcServer
     {
         public DummyWallet(ProtocolSettings settings) : base(null!, settings) { }
         public override string Name => "";
+        public override bool IsUnlocked => true;
         public override Version Version => new();
 
         public override bool ChangePassword(string oldPassword, string newPassword) => false;
