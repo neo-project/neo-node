@@ -16,7 +16,7 @@ namespace Neo.Plugins.RpcServer.Diagnostics;
 
 abstract class DiagnosticNode
 {
-    public required Instruction Instruction { get; init; }
+    public Instruction? Instruction { get; init; }
 
     public abstract JObject ToJson();
 }

@@ -94,6 +94,20 @@ class Diagnostic : IDiagnostic
         }
     }
 
+    public void CallFromNative(UInt160 hash, string method, StackItem[] args)
+    {
+        var call = new InvocationInfo
+        {
+            ScriptHash = hash,
+            Method = method,
+            Caller = currentNode!
+        };
+        foreach (var item in args)
+            call.Arguments.Add(item.DeepCopy(true));
+        currentNode!.Calls.Add(call);
+        currentNode = call;
+    }
+
     void OnCall(Instruction instruction, int position)
     {
         var call = new InternalCallInfo
