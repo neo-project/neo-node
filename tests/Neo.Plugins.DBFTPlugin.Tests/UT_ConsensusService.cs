@@ -18,8 +18,10 @@ using Neo.Network.P2P.Payloads;
 using Neo.Persistence.Providers;
 using Neo.Plugins.DBFTPlugin.Consensus;
 using Neo.Plugins.DBFTPlugin.Messages;
+using Neo.Plugins.DBFTPlugin.Types;
 using Neo.SmartContract;
 using Neo.VM;
+using System.Reflection;
 
 namespace Neo.Plugins.DBFTPlugin.Tests;
 
@@ -248,5 +250,144 @@ public class UT_ConsensusService : TestKit
         // Verify the actor is still alive and responsive
         Watch(consensusService);
         ExpectNoMsg(TimeSpan.FromMilliseconds(100), cancellationToken: CancellationToken.None);
+    }
+
+    [TestMethod]
+    public void TestConsensusServiceRoutesConsensusMessagesIntoContextState()
+    {
+        var settings = MockBlockchain.CreateDefaultSettings();
+        var consensusServiceRef = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, settings, testWallet));
+        var actor = consensusServiceRef.UnderlyingActor;
+
+        InvokeConsensusMethod(actor, "InitializeConsensus", (byte)0);
+        var context = GetConsensusContext(actor);
+        var blockIndex = context.Block.Index;
+        var viewNumber = context.ViewNumber;
+        var primaryIndex = context.Block.PrimaryIndex;
+        var validTimestamp = Math.Max(context.PrevHeader.Timestamp + 1, TimeProvider.Current.UtcNow.ToTimestampMS());
+
+        var prepareRequest = new PrepareRequest
+        {
+            BlockIndex = blockIndex,
+            ValidatorIndex = primaryIndex,
+            ViewNumber = viewNumber,
+            Version = context.Block.Version,
+            PrevHash = context.Block.PrevHash,
+            Timestamp = validTimestamp,
+            Nonce = 7,
+            TransactionHashes = Array.Empty<UInt256>()
+        };
+        var prepareRequestPayload = context.CreatePayload(prepareRequest);
+
+        InvokeConsensusMethod(actor, "OnConsensusPayload", prepareRequestPayload);
+
+        Assert.AreSame(prepareRequestPayload, context.PreparationPayloads[primaryIndex]);
+        Assert.IsTrue(context.RequestSentOrReceived);
+        Assert.AreEqual(validTimestamp, context.Block.Timestamp);
+        Assert.IsEmpty(context.TransactionHashes);
+
+        var responseValidatorIndex = primaryIndex == 0 ? 1 : 0;
+        var prepareResponse = new PrepareResponse
+        {
+            BlockIndex = blockIndex,
+            ValidatorIndex = (byte)responseValidatorIndex,
+            ViewNumber = viewNumber,
+            PreparationHash = prepareRequestPayload.Hash
+        };
+        var prepareResponsePayload = context.CreatePayload(prepareResponse);
+
+        InvokeConsensusMethod(actor, "OnConsensusPayload", prepareResponsePayload);
+
+        Assert.AreSame(prepareResponsePayload, context.PreparationPayloads[responseValidatorIndex]);
+
+        var rejectedHash = UInt256.Parse("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
+        var changeView = new ChangeView
+        {
+            BlockIndex = blockIndex,
+            ValidatorIndex = 2,
+            ViewNumber = viewNumber,
+            Timestamp = validTimestamp + 1,
+            Reason = ChangeViewReason.TxInvalid,
+            RejectedHashes = [rejectedHash]
+        };
+        var changeViewPayload = context.CreatePayload(changeView);
+
+        InvokeConsensusMethod(actor, "OnConsensusPayload", changeViewPayload);
+
+        Assert.AreSame(changeViewPayload, context.ChangeViewPayloads[2]);
+        CollectionAssert.Contains(context.InvalidTransactions[rejectedHash].ToArray(), context.Validators[2]);
+
+        context.TransactionHashes = null;
+        var commit = new Commit
+        {
+            BlockIndex = blockIndex,
+            ValidatorIndex = 3,
+            ViewNumber = viewNumber,
+            Signature = new byte[64]
+        };
+        var commitPayload = context.CreatePayload(commit);
+
+        InvokeConsensusMethod(actor, "OnConsensusPayload", commitPayload);
+
+        Assert.AreSame(commitPayload, context.CommitPayloads[3]);
+
+        var recoveryRequest = new RecoveryRequest
+        {
+            BlockIndex = blockIndex,
+            ValidatorIndex = 0,
+            ViewNumber = viewNumber,
+            Timestamp = validTimestamp + 2
+        };
+        var recoveryRequestPayload = context.CreatePayload(recoveryRequest);
+
+        var originalMyIndex = context.MyIndex;
+        context.MyIndex = -1;
+        InvokeConsensusMethod(actor, "OnConsensusPayload", recoveryRequestPayload);
+        context.MyIndex = originalMyIndex;
+
+        CollectionAssert.Contains(GetKnownHashes(actor).ToArray(), recoveryRequestPayload.Hash);
+
+        var recoveryMessage = new RecoveryMessage
+        {
+            BlockIndex = blockIndex,
+            ValidatorIndex = 4,
+            ViewNumber = viewNumber,
+            ChangeViewMessages = new Dictionary<byte, RecoveryMessage.ChangeViewPayloadCompact>(),
+            PreparationMessages = new Dictionary<byte, RecoveryMessage.PreparationPayloadCompact>(),
+            CommitMessages = new Dictionary<byte, RecoveryMessage.CommitPayloadCompact>()
+        };
+        var recoveryMessagePayload = context.CreatePayload(recoveryMessage);
+
+        InvokeConsensusMethod(actor, "OnConsensusPayload", recoveryMessagePayload);
+
+        Assert.IsFalse(GetBooleanField(actor, "isRecovering"));
+    }
+
+    private static ConsensusContext GetConsensusContext(ConsensusService actor)
+    {
+        return (ConsensusContext)typeof(ConsensusService)
+            .GetField("context", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(actor)!;
+    }
+
+    private static HashSet<UInt256> GetKnownHashes(ConsensusService actor)
+    {
+        return (HashSet<UInt256>)typeof(ConsensusService)
+            .GetField("knownHashes", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(actor)!;
+    }
+
+    private static bool GetBooleanField(ConsensusService actor, string fieldName)
+    {
+        return (bool)typeof(ConsensusService)
+            .GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(actor)!;
+    }
+
+    private static object InvokeConsensusMethod(ConsensusService actor, string methodName, params object[] args)
+    {
+        return typeof(ConsensusService)
+            .GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(actor, args);
     }
 }
