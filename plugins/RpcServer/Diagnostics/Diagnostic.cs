@@ -194,6 +194,7 @@ class Diagnostic : IDiagnostic
 
     void OnRet(Instruction instruction)
     {
+        if (engine.CurrentContext!.RVCount == 0) return;
         if (currentNode is ICanReturn call)
         {
             var stack = engine.CurrentContext!.EvaluationStack;
