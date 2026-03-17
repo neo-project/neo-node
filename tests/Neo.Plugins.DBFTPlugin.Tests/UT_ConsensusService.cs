@@ -452,6 +452,8 @@ public class UT_ConsensusService : TestKit
         serviceRef.Tell(new ConsensusService.Start());
 
         var context = GetConsensusContext(actor);
+        context.ChangeViewPayloads ??= new ExtensiblePayload[context.Validators.Length];
+        context.LastChangeViewPayloads ??= new ExtensiblePayload[context.Validators.Length];
 
         InvokeConsensusMethod(actor, "InitializeConsensus", (byte)1);
         Assert.AreEqual(1, context.ViewNumber);
