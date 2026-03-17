@@ -12,13 +12,17 @@
 using Akka.Actor;
 using Akka.TestKit;
 using Akka.TestKit.MsTest;
+using Microsoft.Extensions.Configuration;
+using Neo.Cryptography.ECC;
 using Neo.Extensions;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
+using Neo.Persistence;
 using Neo.Persistence.Providers;
 using Neo.Plugins.DBFTPlugin.Consensus;
 using Neo.Plugins.DBFTPlugin.Messages;
 using Neo.Plugins.DBFTPlugin.Types;
+using Neo.Sign;
 using Neo.SmartContract;
 using Neo.VM;
 using System.Reflection;
@@ -363,6 +367,81 @@ public class UT_ConsensusService : TestKit
         Assert.IsFalse(GetBooleanField(actor, "isRecovering"));
     }
 
+    [TestMethod]
+    public void TestConsensusServiceExecutesSendAndCheckPaths()
+    {
+        var settings = CreateCompatibleSettings();
+
+        var primaryServiceRef = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, settings, new TestSigner()));
+        var primaryActor = primaryServiceRef.UnderlyingActor;
+
+        primaryServiceRef.Tell(new ConsensusService.Start());
+
+        Assert.IsTrue(GetBooleanField(primaryActor, "started"));
+
+        var primaryContext = GetConsensusContext(primaryActor);
+        primaryContext.MyIndex = primaryContext.Block.PrimaryIndex;
+
+        InvokeConsensusMethod(primaryActor, "SendPrepareRequest");
+
+        var prepareRequestPayload = primaryContext.PreparationPayloads[primaryContext.MyIndex];
+        Assert.IsNotNull(prepareRequestPayload);
+        Assert.IsNotNull(primaryContext.TransactionHashes);
+
+        InvokeConsensusMethod(primaryActor, "RequestChangeView", ChangeViewReason.Timeout, null);
+
+        Assert.IsNotNull(primaryContext.ChangeViewPayloads[primaryContext.MyIndex]);
+
+        var backupServiceRef = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, settings, new TestSigner()));
+        var backupActor = backupServiceRef.UnderlyingActor;
+
+        InvokeConsensusMethod(backupActor, "InitializeConsensus", (byte)0);
+
+        var backupContext = GetConsensusContext(backupActor);
+        backupContext.TransactionHashes = Array.Empty<UInt256>();
+        backupContext.Transactions = new Dictionary<UInt256, Transaction>();
+        backupContext.PreparationPayloads[backupContext.Block.PrimaryIndex] = prepareRequestPayload;
+
+        Assert.IsTrue((bool)InvokeConsensusMethod(backupActor, "CheckPrepareResponse"));
+        Assert.IsNotNull(backupContext.PreparationPayloads[backupContext.MyIndex]);
+
+        var extraPreparationValidators = Enumerable.Range(0, backupContext.Validators.Length)
+            .Where(index => index != backupContext.Block.PrimaryIndex && index != backupContext.MyIndex)
+            .Take(backupContext.M - 2);
+        foreach (var validatorIndex in extraPreparationValidators)
+        {
+            backupContext.PreparationPayloads[validatorIndex] = WithWitness(backupContext.CreatePayload(new PrepareResponse
+            {
+                BlockIndex = backupContext.Block.Index,
+                ValidatorIndex = (byte)validatorIndex,
+                ViewNumber = backupContext.ViewNumber,
+                PreparationHash = prepareRequestPayload.Hash
+            }));
+        }
+
+        InvokeConsensusMethod(backupActor, "CheckPreparations");
+
+        Assert.IsNotNull(backupContext.CommitPayloads[backupContext.MyIndex]);
+
+        var extraCommitValidators = Enumerable.Range(0, backupContext.Validators.Length)
+            .Where(index => index != backupContext.MyIndex)
+            .Take(backupContext.M - 1);
+        foreach (var validatorIndex in extraCommitValidators)
+        {
+            backupContext.CommitPayloads[validatorIndex] = WithWitness(backupContext.CreatePayload(new Commit
+            {
+                BlockIndex = backupContext.Block.Index,
+                ValidatorIndex = (byte)validatorIndex,
+                ViewNumber = backupContext.ViewNumber,
+                Signature = new byte[64]
+            }));
+        }
+
+        InvokeConsensusMethod(backupActor, "CheckCommits");
+
+        Assert.IsTrue(backupContext.BlockSent);
+    }
+
     private static ConsensusContext GetConsensusContext(ConsensusService actor)
     {
         return (ConsensusContext)typeof(ConsensusService)
@@ -389,5 +468,54 @@ public class UT_ConsensusService : TestKit
         return typeof(ConsensusService)
             .GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic)!
             .Invoke(actor, args);
+    }
+
+    private static ExtensiblePayload WithWitness(ExtensiblePayload payload)
+    {
+        payload.Witness ??= new Witness
+        {
+            InvocationScript = new byte[] { (byte)OpCode.PUSH1 },
+            VerificationScript = new byte[] { (byte)OpCode.PUSH1 }
+        };
+        return payload;
+    }
+
+    private DbftSettings CreateCompatibleSettings()
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string>
+            {
+                ["ApplicationConfiguration:DBFTPlugin:RecoveryLogs"] = "ConsensusState",
+                ["ApplicationConfiguration:DBFTPlugin:IgnoreRecoveryLogs"] = "false",
+                ["ApplicationConfiguration:DBFTPlugin:AutoStart"] = "false",
+                ["ApplicationConfiguration:DBFTPlugin:Network"] = neoSystem.Settings.Network.ToString(),
+                ["ApplicationConfiguration:DBFTPlugin:MaxBlockSize"] = "262144",
+                ["ApplicationConfiguration:DBFTPlugin:MaxBlockSystemFee"] = "150000000000"
+            })
+            .Build();
+
+        return new DbftSettings(config.GetSection("ApplicationConfiguration:DBFTPlugin"));
+    }
+
+    private sealed class TestSigner : ISigner
+    {
+        private static readonly byte[] SignatureBytes = new byte[64];
+        private static readonly byte[] InvocationScript = [(byte)OpCode.PUSH1];
+
+        public bool ContainsSignable(ECPoint publicKey) => true;
+
+        public Witness SignExtensiblePayload(ExtensiblePayload payload, DataCache dataCache, uint network)
+        {
+            return new Witness
+            {
+                InvocationScript = InvocationScript,
+                VerificationScript = InvocationScript
+            };
+        }
+
+        public ReadOnlyMemory<byte> SignBlock(Block block, ECPoint publicKey, uint network)
+        {
+            return SignatureBytes;
+        }
     }
 }
