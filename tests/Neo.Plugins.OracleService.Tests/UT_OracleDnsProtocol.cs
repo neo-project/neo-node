@@ -905,6 +905,7 @@ public class UT_OracleDnsProtocol
     [TestCategory("Integration")]
     public async Task Integration_UserSpecifiedAuthority_GoogleDoH()
     {
+        if (!ShouldRunLiveDoHTests()) return;
         LoadSettingsWithEndpoint("https://cloudflare-dns.com/dns-query"); // Configure Cloudflare as default
         using var protocol = new OracleDnsProtocol();
 
@@ -923,6 +924,7 @@ public class UT_OracleDnsProtocol
     [TestCategory("Integration")]
     public async Task Integration_UserSpecifiedAuthority_CloudflareDoH()
     {
+        if (!ShouldRunLiveDoHTests()) return;
         LoadSettingsWithEndpoint("https://dns.google/dns-query"); // Configure Google as default
         using var protocol = new OracleDnsProtocol();
 
@@ -1001,6 +1003,7 @@ public class UT_OracleDnsProtocol
     [TestCategory("Integration")]
     public async Task Integration_CloudflareDoH_ReturnsNotFoundForNxDomain()
     {
+        if (!ShouldRunLiveDoHTests()) return;
         LoadSettingsWithEndpoint("https://cloudflare-dns.com/dns-query");
         using var protocol = new OracleDnsProtocol();
         (OracleResponseCode code, _) = await protocol.ProcessAsync(
@@ -1012,6 +1015,7 @@ public class UT_OracleDnsProtocol
 
     private static async Task TestRealDoHEndpoint(string endpoint, string domain, string recordType)
     {
+        if (!ShouldRunLiveDoHTests()) return;
         LoadSettingsWithEndpoint(endpoint);
         using var protocol = new OracleDnsProtocol();
         (OracleResponseCode code, string payload) = await protocol.ProcessAsync(
@@ -1027,6 +1031,11 @@ public class UT_OracleDnsProtocol
         Assert.IsGreaterThan(0, answers.Count, $"Expected at least one answer for {domain}");
     }
 
+    private static bool ShouldRunLiveDoHTests()
+    {
+        return string.Equals(Environment.GetEnvironmentVariable("NEO_RUN_LIVE_DOH_TESTS"), "1", StringComparison.Ordinal);
+    }
+
     private static void LoadSettingsWithEndpoint(string dnsEndpoint)
     {
         var values = new Dictionary<string, string>
@@ -1038,7 +1047,7 @@ public class UT_OracleDnsProtocol
             ["PluginConfiguration:NeoFS:EndPoint"] = "http://127.0.0.1:8080",
             ["PluginConfiguration:NeoFS:Timeout"] = "15000",
             ["PluginConfiguration:Dns:EndPoint"] = dnsEndpoint,
-            ["PluginConfiguration:Dns:TimeoutMilliseconds"] = "10000"
+            ["PluginConfiguration:Dns:Timeout"] = "10000"
         };
         IConfigurationSection section = new ConfigurationBuilder()
             .AddInMemoryCollection(values)
@@ -1060,7 +1069,7 @@ public class UT_OracleDnsProtocol
             ["PluginConfiguration:NeoFS:EndPoint"] = "http://127.0.0.1:8080",
             ["PluginConfiguration:NeoFS:Timeout"] = "15000",
             ["PluginConfiguration:Dns:EndPoint"] = "https://example.com/dns-query",
-            ["PluginConfiguration:Dns:TimeoutMilliseconds"] = "3000"
+            ["PluginConfiguration:Dns:Timeout"] = "3000"
         };
         IConfigurationSection section = new ConfigurationBuilder()
             .AddInMemoryCollection(values)

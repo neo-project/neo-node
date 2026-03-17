@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // RpcRequest.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -15,22 +15,22 @@ namespace Neo.Network.RPC.Models;
 
 public class RpcRequest
 {
-    public JToken Id { get; set; }
+    public JToken? Id { get; set; }
 
-    public string JsonRpc { get; set; }
+    public required string JsonRpc { get; set; }
 
-    public string Method { get; set; }
+    public required string Method { get; set; }
 
-    public JToken[] Params { get; set; }
+    public required JToken?[] Params { get; set; }
 
     public static RpcRequest FromJson(JObject json)
     {
         return new RpcRequest
         {
             Id = json["id"],
-            JsonRpc = json["jsonrpc"].AsString(),
-            Method = json["method"].AsString(),
-            Params = ((JArray)json["params"]).ToArray()
+            JsonRpc = json["jsonrpc"]!.AsString(),
+            Method = json["method"]!.AsString(),
+            Params = ((JArray)json["params"]!).ToArray()
         };
     }
 

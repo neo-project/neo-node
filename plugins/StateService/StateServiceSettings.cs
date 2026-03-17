@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // StateServiceSettings.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -21,7 +21,7 @@ internal class StateServiceSettings : IPluginSettings
     public bool AutoVerify { get; }
     public int MaxFindResultItems { get; }
 
-    public static StateServiceSettings Default { get; private set; }
+    public static StateServiceSettings Default { get; private set; } = null!;
 
     public UnhandledExceptionPolicy ExceptionPolicy { get; }
 

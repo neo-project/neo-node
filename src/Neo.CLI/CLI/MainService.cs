@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // MainService.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -154,6 +154,7 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         }
         wallet.Save();
 
+        if (CurrentWallet is not null) SignerManager.UnregisterSigner(CurrentWallet.Name);
         CurrentWallet = wallet;
         SignerManager.RegisterSigner(wallet.Name, wallet);
     }
@@ -271,9 +272,7 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         void DisplayError(string primaryMessage, string? secondaryMessage = null)
         {
             ConsoleHelper.Error(primaryMessage + Environment.NewLine +
-                                (secondaryMessage != null ? secondaryMessage + Environment.NewLine : "") +
-                                "Press any key to exit.");
-            Console.ReadKey();
+                                (secondaryMessage != null ? secondaryMessage + Environment.NewLine : ""));
             Environment.Exit(-1);
         }
 
@@ -342,10 +341,9 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         var protocol = ProtocolSettings.Load("config.json");
         CustomProtocolSettings(options, protocol);
         CustomApplicationSettings(options, Settings.Default);
-        var engineConfig = Settings.Default.Storage.Engine;
-        var engine = engineConfig;
+        var engine = Settings.Default.Storage.Engine;
 
-        if (string.IsNullOrWhiteSpace(engineConfig))
+        if (string.IsNullOrWhiteSpace(engine))
         {
             ConsoleHelper.Warning("No persistence engine specified, using MemoryStore now");
             engine = nameof(MemoryStore);

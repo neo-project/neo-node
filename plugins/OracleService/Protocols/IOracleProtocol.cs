@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // IOracleProtocol.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -16,5 +16,5 @@ namespace Neo.Plugins.OracleService.Protocols;
 interface IOracleProtocol : IDisposable
 {
     void Configure();
-    Task<(OracleResponseCode, string)> ProcessAsync(Uri uri, CancellationToken cancellation);
+    Task<(OracleResponseCode, string?)> ProcessAsync(Uri uri, CancellationToken cancellation);
 }

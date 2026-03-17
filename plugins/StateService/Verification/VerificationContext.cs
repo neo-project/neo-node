@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // VerificationContext.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -27,11 +27,9 @@ namespace Neo.Plugins.StateService.Verification;
 class VerificationContext
 {
     private const uint MaxValidUntilBlockIncrement = 100;
-    private StateRoot root;
-    private ExtensiblePayload rootPayload;
-    private ExtensiblePayload votePayload;
+    private ExtensiblePayload? rootPayload;
     private readonly Wallet wallet;
-    private readonly KeyPair keyPair;
+    private readonly KeyPair? keyPair;
     private readonly int myIndex;
     private readonly uint rootIndex;
     private readonly ECPoint[] verifiers;
@@ -54,32 +52,24 @@ class VerificationContext
     }
 
     public bool IsSender => myIndex == Sender;
-    public ICancelable Timer;
+    public ICancelable? Timer;
 
-    public StateRoot StateRoot
+    public StateRoot? StateRoot
     {
         get
         {
-            if (root is null)
+            if (field is null)
             {
                 using var snapshot = StateStore.Singleton.GetSnapshot();
-                root = snapshot.GetStateRoot(rootIndex);
+                field = snapshot.GetStateRoot(rootIndex);
             }
-            return root;
+            return field;
         }
     }
 
-    public ExtensiblePayload StateRootMessage => rootPayload;
+    public ExtensiblePayload? StateRootMessage => rootPayload;
 
-    public ExtensiblePayload VoteMessage
-    {
-        get
-        {
-            if (votePayload is null)
-                votePayload = CreateVoteMessage();
-            return votePayload;
-        }
-    }
+    public ExtensiblePayload? VoteMessage => field ??= CreateVoteMessage();
 
     public VerificationContext(Wallet wallet, uint index)
     {
@@ -91,20 +81,20 @@ class VerificationContext
         if (wallet is null) return;
         for (int i = 0; i < verifiers.Length; i++)
         {
-            WalletAccount account = wallet.GetAccount(verifiers[i]);
+            WalletAccount? account = wallet.GetAccount(verifiers[i]);
             if (account?.HasKey != true) continue;
             myIndex = i;
-            keyPair = account.GetKey();
+            keyPair = account.GetKey()!;
             break;
         }
     }
 
-    private ExtensiblePayload CreateVoteMessage()
+    private ExtensiblePayload? CreateVoteMessage()
     {
         if (StateRoot is null) return null;
         if (!signatures.TryGetValue(myIndex, out var sig))
         {
-            sig = StateRoot.Sign(keyPair, StatePlugin.NeoSystem.Settings.Network);
+            sig = StateRoot.Sign(keyPair!, StatePlugin.NeoSystem.Settings.Network);
             signatures[myIndex] = sig;
         }
         return CreatePayload(MessageType.Vote, new Vote
@@ -143,7 +133,7 @@ class VerificationContext
             var sc = new ContractParametersContext(StatePlugin.NeoSystem.StoreView, StateRoot, StatePlugin.NeoSystem.Settings.Network);
             for (int i = 0, j = 0; i < verifiers.Length && j < M; i++)
             {
-                if (!signatures.TryGetValue(i, out byte[] sig)) continue;
+                if (!signatures.TryGetValue(i, out byte[]? sig)) continue;
                 sc.AddSignature(contract, verifiers[i], sig);
                 j++;
             }
@@ -170,7 +160,7 @@ class VerificationContext
         var msg = new ExtensiblePayload
         {
             Category = StatePlugin.StatePayloadCategory,
-            ValidBlockStart = StateRoot.Index,
+            ValidBlockStart = StateRoot!.Index,
             ValidBlockEnd = StateRoot.Index + validBlockEndThreshold,
             Sender = Contract.CreateSignatureRedeemScript(verifiers[MyIndex]).ToScriptHash(),
             Data = data,

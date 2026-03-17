@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // Nep17API.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -52,7 +52,7 @@ public class Nep17API : ContractClient
     public async Task<string> SymbolAsync(UInt160 scriptHash)
     {
         var result = await TestInvokeAsync(scriptHash, "symbol").ConfigureAwait(false);
-        return result.Stack.Single().GetString();
+        return result.Stack.Single().GetString()!;
     }
 
     /// <summary>
@@ -96,7 +96,7 @@ public class Nep17API : ContractClient
         return new RpcNep17TokenInfo
         {
             Name = name,
-            Symbol = stack[0].GetString(),
+            Symbol = stack[0].GetString()!,
             Decimals = (byte)stack[1].GetInteger(),
             TotalSupply = stack[2].GetInteger()
         };
@@ -116,7 +116,7 @@ public class Nep17API : ContractClient
         return new RpcNep17TokenInfo
         {
             Name = name,
-            Symbol = stack[0].GetString(),
+            Symbol = stack[0].GetString()!,
             Decimals = (byte)stack[1].GetInteger(),
             TotalSupply = stack[2].GetInteger()
         };
@@ -132,7 +132,7 @@ public class Nep17API : ContractClient
     /// <param name="data">onPayment data</param>
     /// <param name="addAssert">Add assert at the end of the script</param>
     /// <returns></returns>
-    public async Task<Transaction> CreateTransferTxAsync(UInt160 scriptHash, KeyPair fromKey, UInt160 to, BigInteger amount, object data = null, bool addAssert = true)
+    public async Task<Transaction> CreateTransferTxAsync(UInt160 scriptHash, KeyPair fromKey, UInt160 to, BigInteger amount, object? data = null, bool addAssert = true)
     {
         var sender = Contract.CreateSignatureRedeemScript(fromKey.PublicKey).ToScriptHash();
         Signer[] signers = new[] { new Signer { Scopes = WitnessScope.CalledByEntry, Account = sender } };
@@ -159,7 +159,7 @@ public class Nep17API : ContractClient
     /// <param name="data">onPayment data</param>
     /// <param name="addAssert">Add assert at the end of the script</param>
     /// <returns></returns>
-    public async Task<Transaction> CreateTransferTxAsync(UInt160 scriptHash, int m, ECPoint[] pubKeys, KeyPair[] fromKeys, UInt160 to, BigInteger amount, object data = null, bool addAssert = true)
+    public async Task<Transaction> CreateTransferTxAsync(UInt160 scriptHash, int m, ECPoint[] pubKeys, KeyPair[] fromKeys, UInt160 to, BigInteger amount, object? data = null, bool addAssert = true)
     {
         if (m > fromKeys.Length)
             throw new ArgumentException($"Need at least {m} KeyPairs for signing!");

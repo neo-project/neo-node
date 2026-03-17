@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // RpcValidateAddressResult.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -15,7 +15,7 @@ namespace Neo.Network.RPC.Models;
 
 public class RpcValidateAddressResult
 {
-    public string Address { get; set; }
+    public required string Address { get; set; }
 
     public bool IsValid { get; set; }
 
@@ -25,8 +25,8 @@ public class RpcValidateAddressResult
     {
         return new RpcValidateAddressResult
         {
-            Address = json["address"].AsString(),
-            IsValid = json["isvalid"].AsBoolean()
+            Address = json["address"]!.AsString(),
+            IsValid = json["isvalid"]!.AsBoolean()
         };
     }
 }

@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // StateStore.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -31,7 +31,7 @@ class StateStore : UntypedActor
     private readonly Dictionary<uint, StateRoot> _cache = [];
     private StateSnapshot _currentSnapshot;
     private StateSnapshot? _stateSnapshot;
-    public UInt256 CurrentLocalRootHash => _currentSnapshot.CurrentLocalRootHash();
+    public UInt256? CurrentLocalRootHash => _currentSnapshot.CurrentLocalRootHash();
     public uint? LocalRootIndex => _currentSnapshot.CurrentLocalRootIndex();
     public uint? ValidatedRootIndex => _currentSnapshot.CurrentValidatedRootIndex();
 

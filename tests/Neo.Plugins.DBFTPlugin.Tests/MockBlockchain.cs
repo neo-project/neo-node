@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // MockBlockchain.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -20,14 +20,13 @@ namespace Neo.Plugins.DBFTPlugin.Tests;
 public static class MockBlockchain
 {
     public static readonly NeoSystem TheNeoSystem;
-    public static readonly UInt160[] DefaultExtensibleWitnessWhiteList;
     private static readonly MemoryStore Store = new();
 
     internal class StoreProvider : IStoreProvider
     {
         public string Name => "TestProvider";
 
-        public IStore GetStore(string path) => Store;
+        public IStore GetStore(string? path) => Store;
     }
 
     static MockBlockchain()
@@ -45,7 +44,7 @@ public static class MockBlockchain
     internal static DbftSettings CreateDefaultSettings()
     {
         var config = new Microsoft.Extensions.Configuration.ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string>
+            .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ApplicationConfiguration:DBFTPlugin:RecoveryLogs"] = "ConsensusState",
                 ["ApplicationConfiguration:DBFTPlugin:IgnoreRecoveryLogs"] = "false",

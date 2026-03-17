@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // ConsensusContext.MakePayload.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -9,7 +9,6 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-using Neo.Extensions;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
 using Neo.Plugins.DBFTPlugin.Messages;
@@ -32,15 +31,15 @@ partial class ConsensusContext
 
     public ExtensiblePayload MakeCommit()
     {
-        if (CommitPayloads[MyIndex] is not null)
-            return CommitPayloads[MyIndex];
+        if (CommitPayloads[MyIndex] is ExtensiblePayload payload)
+            return payload;
 
-        var block = EnsureHeader();
+        var block = EnsureHeader()!;
         CommitPayloads[MyIndex] = MakeSignedPayload(new Commit
         {
-            Signature = _signer.SignBlock(block, _myPublicKey, dbftSettings.Network)
+            Signature = _signer.SignBlock(block, _myPublicKey!, dbftSettings.Network)
         });
-        return CommitPayloads[MyIndex];
+        return CommitPayloads[MyIndex]!;
     }
 
     private ExtensiblePayload MakeSignedPayload(ConsensusMessage message)
@@ -112,7 +111,7 @@ partial class ConsensusContext
             PrevHash = Block.PrevHash,
             Timestamp = Block.Timestamp,
             Nonce = Block.Nonce,
-            TransactionHashes = TransactionHashes
+            TransactionHashes = TransactionHashes!
         });
     }
 
@@ -126,7 +125,7 @@ partial class ConsensusContext
 
     public ExtensiblePayload MakeRecoveryMessage()
     {
-        PrepareRequest prepareRequestMessage = null;
+        PrepareRequest? prepareRequestMessage = null;
         if (TransactionHashes != null)
         {
             prepareRequestMessage = new PrepareRequest
@@ -144,23 +143,23 @@ partial class ConsensusContext
         return MakeSignedPayload(new RecoveryMessage
         {
             ChangeViewMessages = LastChangeViewPayloads.Where(p => p != null)
-                .Select(p => GetChangeViewPayloadCompact(p))
+                .Select(p => GetChangeViewPayloadCompact(p!))
                 .Take(M)
                 .ToDictionary(p => p.ValidatorIndex),
             PrepareRequestMessage = prepareRequestMessage,
             // We only need a PreparationHash set if we don't have the PrepareRequest information.
             PreparationHash = TransactionHashes == null
                 ? PreparationPayloads.Where(p => p != null)
-                    .GroupBy(p => GetMessage<PrepareResponse>(p).PreparationHash, (k, g) => new { Hash = k, Count = g.Count() })
+                    .GroupBy(p => GetMessage<PrepareResponse>(p!).PreparationHash, (k, g) => new { Hash = k, Count = g.Count() })
                     .OrderByDescending(p => p.Count)
                     .Select(p => p.Hash)
                     .FirstOrDefault()
                 : null,
             PreparationMessages = PreparationPayloads.Where(p => p != null)
-                .Select(p => GetPreparationPayloadCompact(p))
+                .Select(p => GetPreparationPayloadCompact(p!))
                 .ToDictionary(p => p.ValidatorIndex),
             CommitMessages = CommitSent
-                ? CommitPayloads.Where(p => p != null).Select(p => GetCommitPayloadCompact(p)).ToDictionary(p => p.ValidatorIndex)
+                ? CommitPayloads.Where(p => p != null).Select(p => GetCommitPayloadCompact(p!)).ToDictionary(p => p.ValidatorIndex)
                 : new Dictionary<byte, RecoveryMessage.CommitPayloadCompact>()
         });
     }
@@ -169,7 +168,7 @@ partial class ConsensusContext
     {
         return PreparationPayloads[MyIndex] = MakeSignedPayload(new PrepareResponse
         {
-            PreparationHash = PreparationPayloads[Block.PrimaryIndex].Hash
+            PreparationHash = PreparationPayloads[Block.PrimaryIndex]!.Hash
         });
     }
 

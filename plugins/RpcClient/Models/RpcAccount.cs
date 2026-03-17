@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // RpcAccount.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -15,11 +15,11 @@ namespace Neo.Network.RPC.Models;
 
 public class RpcAccount
 {
-    public string Address { get; set; }
+    public required string Address { get; set; }
 
     public bool HasKey { get; set; }
 
-    public string Label { get; set; }
+    public string? Label { get; set; }
 
     public bool WatchOnly { get; set; }
 
@@ -38,10 +38,10 @@ public class RpcAccount
     {
         return new RpcAccount
         {
-            Address = json["address"].AsString(),
-            HasKey = json["haskey"].AsBoolean(),
+            Address = json["address"]!.AsString(),
+            HasKey = json["haskey"]!.AsBoolean(),
             Label = json["label"]?.AsString(),
-            WatchOnly = json["watchonly"].AsBoolean(),
+            WatchOnly = json["watchonly"]!.AsBoolean(),
         };
     }
 }

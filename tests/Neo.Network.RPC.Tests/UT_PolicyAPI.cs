@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // UT_PolicyAPI.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -21,10 +21,10 @@ namespace Neo.Network.RPC.Tests;
 [TestClass]
 public class UT_PolicyAPI
 {
-    Mock<RpcClient> rpcClientMock;
-    KeyPair keyPair1;
-    UInt160 sender;
-    PolicyAPI policyAPI;
+    Mock<RpcClient> rpcClientMock = null!;
+    KeyPair keyPair1 = null!;
+    UInt160 sender = null!;
+    PolicyAPI policyAPI = null!;
 
     [TestInitialize]
     public void TestSetup()

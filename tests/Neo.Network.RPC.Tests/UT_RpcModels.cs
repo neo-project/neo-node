@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // UT_RpcModels.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -19,8 +19,8 @@ namespace Neo.Network.RPC.Tests;
 [TestClass()]
 public class UT_RpcModels
 {
-    RpcClient rpc;
-    Mock<HttpMessageHandler> handlerMock;
+    RpcClient rpc = null!;
+    Mock<HttpMessageHandler> handlerMock = null!;
 
     [TestInitialize]
     public void TestSetup()
@@ -36,9 +36,9 @@ public class UT_RpcModels
     public void TestRpcAccount()
     {
         var json = TestUtils.RpcTestCases
-            .Find(p => p.Name.Equals(nameof(RpcClient.ImportPrivKeyAsync), StringComparison.CurrentCultureIgnoreCase))
+            .Find(p => p.Name.Equals(nameof(RpcClient.ImportPrivKeyAsync), StringComparison.CurrentCultureIgnoreCase))!
             .Response
-            .Result;
+            .Result!;
         var item = RpcAccount.FromJson((JObject)json);
         Assert.AreEqual(json.ToString(), item.ToJson().ToString());
     }
@@ -47,9 +47,9 @@ public class UT_RpcModels
     public void TestRpcApplicationLog()
     {
         var json = TestUtils.RpcTestCases
-            .Find(p => p.Name.Equals(nameof(RpcClient.GetApplicationLogAsync), StringComparison.CurrentCultureIgnoreCase))
+            .Find(p => p.Name.Equals(nameof(RpcClient.GetApplicationLogAsync), StringComparison.CurrentCultureIgnoreCase))!
             .Response
-            .Result;
+            .Result!;
         var item = RpcApplicationLog.FromJson((JObject)json, rpc.protocolSettings);
         Assert.AreEqual(json.ToString(), item.ToJson().ToString());
     }
@@ -58,9 +58,9 @@ public class UT_RpcModels
     public void TestRpcBlock()
     {
         var json = TestUtils.RpcTestCases
-            .Find(p => p.Name.Equals(nameof(RpcClient.GetBlockAsync), StringComparison.CurrentCultureIgnoreCase))
+            .Find(p => p.Name.Equals(nameof(RpcClient.GetBlockAsync), StringComparison.CurrentCultureIgnoreCase))!
             .Response
-            .Result;
+            .Result!;
         var item = RpcBlock.FromJson((JObject)json, rpc.protocolSettings);
         Assert.AreEqual(json.ToString(), item.ToJson(rpc.protocolSettings).ToString());
     }
@@ -69,9 +69,9 @@ public class UT_RpcModels
     public void TestRpcBlockHeader()
     {
         var json = TestUtils.RpcTestCases
-            .Find(p => p.Name.Equals(nameof(RpcClient.GetBlockHeaderAsync), StringComparison.CurrentCultureIgnoreCase))
+            .Find(p => p.Name.Equals(nameof(RpcClient.GetBlockHeaderAsync), StringComparison.CurrentCultureIgnoreCase))!
             .Response
-            .Result;
+            .Result!;
         var item = RpcBlockHeader.FromJson((JObject)json, rpc.protocolSettings);
         Assert.AreEqual(json.ToString(), item.ToJson(rpc.protocolSettings).ToString());
     }
@@ -80,23 +80,23 @@ public class UT_RpcModels
     public void TestGetContractState()
     {
         var json = TestUtils.RpcTestCases
-            .Find(p => p.Name.Equals(nameof(RpcClient.GetContractStateAsync), StringComparison.CurrentCultureIgnoreCase))
+            .Find(p => p.Name.Equals(nameof(RpcClient.GetContractStateAsync), StringComparison.CurrentCultureIgnoreCase))!
             .Response
-            .Result;
+            .Result!;
         var item = RpcContractState.FromJson((JObject)json);
         Assert.AreEqual(json.ToString(), item.ToJson().ToString());
 
-        var nef = RpcNefFile.FromJson((JObject)json["nef"]);
-        Assert.AreEqual(json["nef"].ToString(), nef.ToJson().ToString());
+        var nef = RpcNefFile.FromJson((JObject)json["nef"]!);
+        Assert.AreEqual(json["nef"]!.ToString(), nef.ToJson().ToString());
     }
 
     [TestMethod()]
     public void TestRpcInvokeResult()
     {
         var json = TestUtils.RpcTestCases
-            .Find(p => p.Name.Equals(nameof(RpcClient.InvokeFunctionAsync), StringComparison.CurrentCultureIgnoreCase))
+            .Find(p => p.Name.Equals(nameof(RpcClient.InvokeFunctionAsync), StringComparison.CurrentCultureIgnoreCase))!
             .Response
-            .Result;
+            .Result!;
         var item = RpcInvokeResult.FromJson((JObject)json);
         Assert.AreEqual(json.ToString(), item.ToJson().ToString());
     }
@@ -105,7 +105,7 @@ public class UT_RpcModels
     public void TestRpcMethodToken()
     {
         var json = """{"hash":"0x0e1b9bfaa44e60311f6f3c96cfcd6d12c2fc3add","method":"test","paramcount":1,"hasreturnvalue":true,"callflags":"All"}""";
-        var item = RpcMethodToken.FromJson((JObject)JToken.Parse(json));
+        var item = RpcMethodToken.FromJson((JObject)JToken.Parse(json)!);
         Assert.AreEqual("0x0e1b9bfaa44e60311f6f3c96cfcd6d12c2fc3add", item.Hash.ToString());
         Assert.AreEqual("test", item.Method);
         Assert.AreEqual(1, item.ParametersCount);
@@ -118,9 +118,9 @@ public class UT_RpcModels
     public void TestRpcNep17Balances()
     {
         var json = TestUtils.RpcTestCases
-            .Find(p => p.Name.Equals(nameof(RpcClient.GetNep17BalancesAsync), StringComparison.CurrentCultureIgnoreCase))
+            .Find(p => p.Name.Equals(nameof(RpcClient.GetNep17BalancesAsync), StringComparison.CurrentCultureIgnoreCase))!
             .Response
-            .Result;
+            .Result!;
         var item = RpcNep17Balances.FromJson((JObject)json, rpc.protocolSettings);
         Assert.AreEqual(json.ToString(), item.ToJson(rpc.protocolSettings).ToString());
     }
@@ -129,9 +129,9 @@ public class UT_RpcModels
     public void TestRpcNep17Transfers()
     {
         var json = TestUtils.RpcTestCases
-            .Find(p => p.Name.Equals(nameof(RpcClient.GetNep17TransfersAsync), StringComparison.CurrentCultureIgnoreCase))
+            .Find(p => p.Name.Equals(nameof(RpcClient.GetNep17TransfersAsync), StringComparison.CurrentCultureIgnoreCase))!
             .Response
-            .Result;
+            .Result!;
         var item = RpcNep17Transfers.FromJson((JObject)json, rpc.protocolSettings);
         Assert.AreEqual(json.ToString(), item.ToJson(rpc.protocolSettings).ToString());
     }
@@ -140,9 +140,9 @@ public class UT_RpcModels
     public void TestRpcPeers()
     {
         var json = TestUtils.RpcTestCases
-            .Find(p => p.Name.Equals(nameof(RpcClient.GetPeersAsync), StringComparison.CurrentCultureIgnoreCase))
+            .Find(p => p.Name.Equals(nameof(RpcClient.GetPeersAsync), StringComparison.CurrentCultureIgnoreCase))!
             .Response
-            .Result;
+            .Result!;
         var item = RpcPeers.FromJson((JObject)json);
         Assert.AreEqual(json.ToString(), item.ToJson().ToString());
     }
@@ -151,10 +151,10 @@ public class UT_RpcModels
     public void TestRpcPlugin()
     {
         var json = TestUtils.RpcTestCases
-            .Find(p => p.Name.Equals(nameof(RpcClient.ListPluginsAsync), StringComparison.CurrentCultureIgnoreCase))
+            .Find(p => p.Name.Equals(nameof(RpcClient.ListPluginsAsync), StringComparison.CurrentCultureIgnoreCase))!
             .Response
-            .Result;
-        var item = ((JArray)json).Select(p => RpcPlugin.FromJson((JObject)p));
+            .Result!;
+        var item = ((JArray)json).Select(p => RpcPlugin.FromJson((JObject)p!));
         Assert.AreEqual(json.ToString(), ((JArray)item.Select(p => p.ToJson()).ToArray()).ToString());
     }
 
@@ -162,9 +162,9 @@ public class UT_RpcModels
     public void TestRpcRawMemPool()
     {
         var json = TestUtils.RpcTestCases
-            .Find(p => p.Name.Equals(nameof(RpcClient.GetRawMempoolBothAsync), StringComparison.CurrentCultureIgnoreCase))
+            .Find(p => p.Name.Equals(nameof(RpcClient.GetRawMempoolBothAsync), StringComparison.CurrentCultureIgnoreCase))!
             .Response
-            .Result;
+            .Result!;
         var item = RpcRawMemPool.FromJson((JObject)json);
         Assert.AreEqual(json.ToString(), item.ToJson().ToString());
     }
@@ -173,9 +173,9 @@ public class UT_RpcModels
     public void TestRpcTransaction()
     {
         var json = TestUtils.RpcTestCases
-            .Find(p => p.Name.Equals(nameof(RpcClient.GetRawTransactionAsync), StringComparison.CurrentCultureIgnoreCase))
+            .Find(p => p.Name.Equals(nameof(RpcClient.GetRawTransactionAsync), StringComparison.CurrentCultureIgnoreCase))!
             .Response
-            .Result;
+            .Result!;
         var item = RpcTransaction.FromJson((JObject)json, rpc.protocolSettings);
         Assert.AreEqual(json.ToString(), item.ToJson(rpc.protocolSettings).ToString());
     }
@@ -184,8 +184,8 @@ public class UT_RpcModels
     public void TestRpcTransferOut()
     {
         var json = TestUtils.RpcTestCases
-            .Find(p => p.Name.Equals(nameof(RpcClient.SendManyAsync), StringComparison.CurrentCultureIgnoreCase)).Request.Params[1];
-        var item = ((JArray)json).Select(p => RpcTransferOut.FromJson((JObject)p, rpc.protocolSettings));
+            .Find(p => p.Name.Equals(nameof(RpcClient.SendManyAsync), StringComparison.CurrentCultureIgnoreCase))!.Request.Params[1]!;
+        var item = ((JArray)json).Select(p => RpcTransferOut.FromJson((JObject)p!, rpc.protocolSettings));
         Assert.AreEqual(json.ToString(), ((JArray)item.Select(p => p.ToJson(rpc.protocolSettings)).ToArray()).ToString());
     }
 
@@ -193,9 +193,9 @@ public class UT_RpcModels
     public void TestRpcValidateAddressResult()
     {
         var json = TestUtils.RpcTestCases
-            .Find(p => p.Name.Equals(nameof(RpcClient.ValidateAddressAsync), StringComparison.CurrentCultureIgnoreCase))
+            .Find(p => p.Name.Equals(nameof(RpcClient.ValidateAddressAsync), StringComparison.CurrentCultureIgnoreCase))!
             .Response
-            .Result;
+            .Result!;
         var item = RpcValidateAddressResult.FromJson((JObject)json);
         Assert.AreEqual(json.ToString(), item.ToJson().ToString());
     }
@@ -204,10 +204,10 @@ public class UT_RpcModels
     public void TestRpcValidator()
     {
         var json = TestUtils.RpcTestCases
-            .Find(p => p.Name.Equals(nameof(RpcClient.GetNextBlockValidatorsAsync), StringComparison.CurrentCultureIgnoreCase))
+            .Find(p => p.Name.Equals(nameof(RpcClient.GetNextBlockValidatorsAsync), StringComparison.CurrentCultureIgnoreCase))!
             .Response
-            .Result;
-        var item = ((JArray)json).Select(p => RpcValidator.FromJson((JObject)p));
+            .Result!;
+        var item = ((JArray)json).Select(p => RpcValidator.FromJson((JObject)p!));
         Assert.AreEqual(json.ToString(), ((JArray)item.Select(p => p.ToJson()).ToArray()).ToString());
     }
 
@@ -215,9 +215,9 @@ public class UT_RpcModels
     public void TestRpcVersion()
     {
         var json = TestUtils.RpcTestCases
-            .Find(p => p.Name.Equals(nameof(RpcClient.GetVersionAsync), StringComparison.CurrentCultureIgnoreCase))
+            .Find(p => p.Name.Equals(nameof(RpcClient.GetVersionAsync), StringComparison.CurrentCultureIgnoreCase))!
             .Response
-            .Result;
+            .Result!;
         var item = RpcVersion.FromJson((JObject)json);
         Assert.AreEqual(json.ToString(), item.ToJson().ToString());
     }

@@ -16,14 +16,14 @@ The Oracle plugin resolves RFC 4501 `dns:` URIs through a DNS-over-HTTPS (DoH) g
     // ...
     "Dns": {
       "EndPoint": "https://cloudflare-dns.com/dns-query",
-      "TimeoutMilliseconds": 5000
+      "Timeout": 5000
     }
   }
 }
 ```
 
 - `EndPoint` must point to a DoH resolver that supports [RFC 8484](https://www.rfc-editor.org/rfc/rfc8484.html) with `application/dns-message` format.
-- `TimeoutMilliseconds` is the maximum milliseconds the oracle will wait for a DoH response before returning `OracleResponseCode.Timeout` (falls back to `Timeout` for backward compatibility).
+- `Timeout` is the maximum milliseconds the oracle will wait for a DoH response before returning `OracleResponseCode.Timeout` (`TimeoutMilliseconds` is still accepted for backward compatibility).
 
 > You can run your own DoH gateway and point the oracle to it if you need custom trust anchors or strict egress controls.
 
@@ -112,9 +112,14 @@ Tips:
 Use the same resolver the oracle will contact to inspect responses:
 
 ```bash
-curl -s \
-  -H 'accept: application/dns-json' \
-  'https://cloudflare-dns.com/dns-query?name=1alhai._domainkey.icloud.com&type=TXT'
+printf 'bR4BAAABAAAAAAAABjFhbGhhaQpfZG9tYWlua2V5BmljbG91ZANjb20AAAEAAQ==' | \
+  base64 -d | \
+  curl -s \
+    -X POST \
+    -H 'accept: application/dns-message' \
+    -H 'content-type: application/dns-message' \
+    --data-binary @- \
+    'https://cloudflare-dns.com/dns-query'
 ```
 
 Compare the DNS answer content with `Answer[3]` returned by your contract callback (after `StdLib.Deserialize`).

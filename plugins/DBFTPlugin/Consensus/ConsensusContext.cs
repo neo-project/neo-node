@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // ConsensusContext.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -11,7 +11,6 @@
 
 using Neo.Cryptography;
 using Neo.Cryptography.ECC;
-using Neo.Extensions;
 using Neo.Extensions.IO;
 using Neo.IO;
 using Neo.Ledger;
@@ -32,41 +31,41 @@ public sealed partial class ConsensusContext : IDisposable, ISerializable
     /// </summary>
     private static readonly byte[] ConsensusStateKey = { 0xf4 };
 
-    public Block Block;
+    public Block Block = null!;
     public byte ViewNumber;
     public TimeSpan TimePerBlock;
-    public ECPoint[] Validators;
+    public ECPoint[] Validators = null!;
     public int MyIndex;
-    public UInt256[] TransactionHashes;
-    public Dictionary<UInt256, Transaction> Transactions;
-    public ExtensiblePayload[] PreparationPayloads;
-    public ExtensiblePayload[] CommitPayloads;
-    public ExtensiblePayload[] ChangeViewPayloads;
-    public ExtensiblePayload[] LastChangeViewPayloads;
+    public UInt256[]? TransactionHashes;
+    public Dictionary<UInt256, Transaction>? Transactions;
+    public ExtensiblePayload?[] PreparationPayloads = null!;
+    public ExtensiblePayload?[] CommitPayloads = null!;
+    public ExtensiblePayload?[] ChangeViewPayloads = null!;
+    public ExtensiblePayload?[] LastChangeViewPayloads = null!;
     // LastSeenMessage array stores the height of the last seen message, for each validator.
     // if this node never heard from validator i, LastSeenMessage[i] will be -1.
-    public Dictionary<ECPoint, uint> LastSeenMessage { get; private set; }
+    public Dictionary<ECPoint, uint>? LastSeenMessage { get; private set; }
 
     /// <summary>
     /// Store all verified unsorted transactions' senders' fee currently in the consensus context.
     /// </summary>
     public TransactionVerificationContext VerificationContext = new();
 
-    public StoreCache Snapshot { get; private set; }
-    private ECPoint _myPublicKey;
+    public StoreCache Snapshot { get; private set; } = null!;
+    private ECPoint? _myPublicKey;
     private int _witnessSize;
     private readonly NeoSystem neoSystem;
     private readonly DbftSettings dbftSettings;
     private readonly ISigner _signer;
-    private readonly IStore store;
-    private Dictionary<UInt256, ConsensusMessage> cachedMessages;
+    private readonly IStore? store;
+    private Dictionary<UInt256, ConsensusMessage> cachedMessages = null!;
 
     public int F => (Validators.Length - 1) / 3;
     public int M => Validators.Length - F;
     public bool IsPrimary => MyIndex == Block.PrimaryIndex;
     public bool IsBackup => MyIndex >= 0 && MyIndex != Block.PrimaryIndex;
     public bool WatchOnly => MyIndex < 0;
-    public Header PrevHeader => NativeContract.Ledger.GetHeader(Snapshot, Block.PrevHash);
+    public Header PrevHeader => NativeContract.Ledger.GetHeader(Snapshot, Block.PrevHash)!;
     public int CountCommitted => CommitPayloads.Count(p => p != null);
     public int CountFailed
     {
@@ -82,8 +81,8 @@ public sealed partial class ConsensusContext : IDisposable, ISerializable
         {
             if (NativeContract.Ledger.CurrentIndex(Snapshot) == 0) return false;
             UInt256 hash = NativeContract.Ledger.CurrentHash(Snapshot);
-            TrimmedBlock currentBlock = NativeContract.Ledger.GetTrimmedBlock(Snapshot, hash);
-            TrimmedBlock previousBlock = NativeContract.Ledger.GetTrimmedBlock(Snapshot, currentBlock.Header.PrevHash);
+            TrimmedBlock currentBlock = NativeContract.Ledger.GetTrimmedBlock(Snapshot, hash)!;
+            TrimmedBlock previousBlock = NativeContract.Ledger.GetTrimmedBlock(Snapshot, currentBlock.Header.PrevHash)!;
             return currentBlock.Header.NextConsensus != previousBlock.Header.NextConsensus;
         }
     }
@@ -128,11 +127,11 @@ public sealed partial class ConsensusContext : IDisposable, ISerializable
         for (int i = 0, j = 0; i < Validators.Length && j < M; i++)
         {
             if (GetMessage(CommitPayloads[i])?.ViewNumber != ViewNumber) continue;
-            sc.AddSignature(contract, Validators[i], GetMessage<Commit>(CommitPayloads[i]).Signature.ToArray());
+            sc.AddSignature(contract, Validators[i], GetMessage<Commit>(CommitPayloads[i]!).Signature.ToArray());
             j++;
         }
         Block.Header.Witness = sc.GetWitnesses()[0];
-        Block.Transactions = TransactionHashes.Select(p => Transactions[p]).ToArray();
+        Block.Transactions = TransactionHashes!.Select(p => Transactions![p]).ToArray();
         return Block;
     }
 
@@ -145,7 +144,7 @@ public sealed partial class ConsensusContext : IDisposable, ISerializable
             ValidBlockEnd = message.BlockIndex,
             Sender = GetSender(message.ValidatorIndex),
             Data = message.ToArray(),
-            Witness = invocationScript.IsEmpty ? null : new Witness
+            Witness = invocationScript.IsEmpty ? null! : new Witness
             {
                 InvocationScript = invocationScript,
                 VerificationScript = Contract.CreateSignatureRedeemScript(Validators[message.ValidatorIndex])
@@ -160,7 +159,7 @@ public sealed partial class ConsensusContext : IDisposable, ISerializable
         Snapshot?.Dispose();
     }
 
-    public Block EnsureHeader()
+    public Block? EnsureHeader()
     {
         if (TransactionHashes == null) return null;
         Block.Header.MerkleRoot ??= MerkleTree.ComputeRoot(TransactionHashes);
@@ -267,13 +266,13 @@ public sealed partial class ConsensusContext : IDisposable, ISerializable
         }
         ViewNumber = viewNumber;
         Block.Header.PrimaryIndex = GetPrimaryIndex(viewNumber);
-        Block.Header.MerkleRoot = null;
+        Block.Header.MerkleRoot = null!;
         Block.Header.Timestamp = 0;
         Block.Header.Nonce = 0;
-        Block.Transactions = null;
+        Block.Transactions = null!;
         TransactionHashes = null;
         PreparationPayloads = new ExtensiblePayload[Validators.Length];
-        if (MyIndex >= 0) LastSeenMessage[Validators[MyIndex]] = Block.Index;
+        if (MyIndex >= 0) LastSeenMessage![Validators[MyIndex]] = Block.Index;
     }
 
     public void Save()
@@ -295,7 +294,7 @@ public sealed partial class ConsensusContext : IDisposable, ISerializable
         Block.Header.PrimaryIndex = reader.ReadByte();
         Block.Header.NextConsensus = reader.ReadSerializable<UInt160>();
         if (Block.NextConsensus.Equals(UInt160.Zero))
-            Block.Header.NextConsensus = null;
+            Block.Header.NextConsensus = null!;
         ViewNumber = reader.ReadByte();
         TransactionHashes = reader.ReadSerializableArray<UInt256>(ushort.MaxValue);
         Transaction[] transactions = reader.ReadSerializableArray<Transaction>(ushort.MaxValue);

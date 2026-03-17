@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // RpcRawMemPool.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -17,9 +17,9 @@ public class RpcRawMemPool
 {
     public uint Height { get; set; }
 
-    public List<UInt256> Verified { get; set; }
+    public required List<UInt256> Verified { get; set; }
 
-    public List<UInt256> UnVerified { get; set; }
+    public required List<UInt256> UnVerified { get; set; }
 
     public JObject ToJson()
     {
@@ -35,9 +35,9 @@ public class RpcRawMemPool
     {
         return new RpcRawMemPool
         {
-            Height = uint.Parse(json["height"].AsString()),
-            Verified = ((JArray)json["verified"]).Select(p => UInt256.Parse(p.AsString())).ToList(),
-            UnVerified = ((JArray)json["unverified"]).Select(p => UInt256.Parse(p.AsString())).ToList()
+            Height = uint.Parse(json["height"]!.AsString()),
+            Verified = ((JArray)json["verified"]!).Select(p => UInt256.Parse(p!.AsString())).ToList(),
+            UnVerified = ((JArray)json["unverified"]!).Select(p => UInt256.Parse(p!.AsString())).ToList()
         };
     }
 }

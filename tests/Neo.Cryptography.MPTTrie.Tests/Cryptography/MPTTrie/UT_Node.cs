@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // UT_Node.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -35,10 +35,10 @@ public class UT_Node
         int raised = 0;
         Utility.Logging += (a, b, c) => raised++;
 
-        Utility.Log("a", LogLevel.Warning, null);
+        Utility.Log("a", LogLevel.Warning, "null");
         Assert.AreEqual(1, raised);
         Utility.LogLevel = LogLevel.Fatal;
-        Utility.Log("a", LogLevel.Warning, null);
+        Utility.Log("a", LogLevel.Warning, "null");
         Assert.AreEqual(1, raised);
     }
 
@@ -153,7 +153,7 @@ public class UT_Node
         var n = Node.NewExtension(new byte[] { 0x01 }, new Node());
         var n1 = n.Clone();
         n1.Next = l;
-        Assert.IsTrue(n.Next.IsEmpty);
+        Assert.IsTrue(n.Next!.IsEmpty);
     }
 
     [TestMethod]
@@ -168,21 +168,7 @@ public class UT_Node
     [TestMethod]
     public void TestNewExtensionException()
     {
-        Assert.ThrowsExactly<ArgumentNullException>(() => _ = Node.NewExtension(null, new Node()));
-        Assert.ThrowsExactly<ArgumentNullException>(() => _ = Node.NewExtension(new byte[] { 0x01 }, null));
         Assert.ThrowsExactly<InvalidOperationException>(() => _ = Node.NewExtension(Array.Empty<byte>(), new Node()));
-    }
-
-    [TestMethod]
-    public void TestNewHashException()
-    {
-        Assert.ThrowsExactly<ArgumentNullException>(() => _ = Node.NewHash(null));
-    }
-
-    [TestMethod]
-    public void TestNewLeafException()
-    {
-        Assert.ThrowsExactly<ArgumentNullException>(() => _ = Node.NewLeaf(null));
     }
 
     [TestMethod]

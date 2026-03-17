@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // RpcNefFile.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -20,11 +20,11 @@ class RpcNefFile
     {
         return new NefFile
         {
-            Compiler = json["compiler"].AsString(),
-            Source = json["source"].AsString(),
-            Tokens = ((JArray)json["tokens"]).Select(p => RpcMethodToken.FromJson((JObject)p)).ToArray(),
-            Script = Convert.FromBase64String(json["script"].AsString()),
-            CheckSum = (uint)json["checksum"].AsNumber()
+            Compiler = json["compiler"]!.AsString(),
+            Source = json["source"]!.AsString(),
+            Tokens = ((JArray)json["tokens"]!).Select(p => RpcMethodToken.FromJson((JObject)p!)).ToArray(),
+            Script = Convert.FromBase64String(json["script"]!.AsString()),
+            CheckSum = (uint)json["checksum"]!.AsNumber()
         };
     }
 }

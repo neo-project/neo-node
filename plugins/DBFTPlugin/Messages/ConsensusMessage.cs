@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // ConsensusMessage.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -49,7 +49,7 @@ public abstract class ConsensusMessage : ISerializable
     {
         ConsensusMessageType type = (ConsensusMessageType)data.Span[0];
         Type t = typeof(ConsensusMessage);
-        t = t.Assembly.GetType($"{t.Namespace}.{type}", false);
+        t = t.Assembly.GetType($"{t.Namespace}.{type}", false)!;
         if (t is null) throw new FormatException($"Invalid consensus message type: {type}");
         return (ConsensusMessage)data.AsSerializable(t);
     }

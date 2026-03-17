@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2025 The Neo Project.
+// Copyright (C) 2015-2026 The Neo Project.
 //
 // TestBlockchain.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
@@ -19,14 +19,13 @@ namespace Neo.Plugins.RpcServer.Tests;
 public static class TestBlockchain
 {
     public static readonly NeoSystem TheNeoSystem;
-    public static readonly UInt160[] DefaultExtensibleWitnessWhiteList;
     private static readonly MemoryStore Store = new();
 
     internal class StoreProvider : IStoreProvider
     {
         public string Name => "TestProvider";
 
-        public IStore GetStore(string path) => Store;
+        public IStore GetStore(string? path) => Store;
     }
 
     static TestBlockchain()
