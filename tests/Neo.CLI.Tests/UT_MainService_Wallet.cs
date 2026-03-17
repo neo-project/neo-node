@@ -9,9 +9,9 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using Neo.Persistence.Providers;
 using System.Reflection;
 using System.Text;
-using Neo.Persistence.Providers;
 
 namespace Neo.CLI.Tests;
 
