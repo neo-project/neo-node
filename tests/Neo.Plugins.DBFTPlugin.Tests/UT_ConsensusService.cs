@@ -442,6 +442,138 @@ public class UT_ConsensusService : TestKit
         Assert.IsTrue(backupContext.BlockSent);
     }
 
+    [TestMethod]
+    public void TestConsensusServiceExecutesWarningAndLifecyclePaths()
+    {
+        var settings = CreateCompatibleSettings();
+        var serviceRef = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, settings, new TestSigner()));
+        var actor = serviceRef.UnderlyingActor;
+
+        serviceRef.Tell(new ConsensusService.Start());
+
+        var context = GetConsensusContext(actor);
+
+        InvokeConsensusMethod(actor, "InitializeConsensus", (byte)1);
+        Assert.AreEqual(1, context.ViewNumber);
+
+        var invalidPayload = WithWitness(new ExtensiblePayload
+        {
+            Category = "dBFT",
+            ValidBlockStart = 0,
+            ValidBlockEnd = context.Block.Index,
+            Sender = context.GetSender(context.MyIndex),
+            Data = new byte[] { 0xff },
+            Witness = new Witness
+            {
+                InvocationScript = ReadOnlyMemory<byte>.Empty,
+                VerificationScript = new byte[] { (byte)OpCode.PUSH1 }
+            }
+        });
+
+        InvokeConsensusMethod(actor, "OnConsensusPayload", invalidPayload);
+
+        var futurePrepareRequest = WithWitness(context.CreatePayload(new PrepareRequest
+        {
+            BlockIndex = context.Block.Index + 1,
+            ValidatorIndex = (byte)context.MyIndex,
+            ViewNumber = context.ViewNumber,
+            Version = context.Block.Version,
+            PrevHash = context.Block.PrevHash,
+            Timestamp = Math.Max(context.PrevHeader.Timestamp + 1, TimeProvider.Current.UtcNow.ToTimestampMS()),
+            Nonce = 1,
+            TransactionHashes = Array.Empty<UInt256>()
+        }));
+
+        InvokeConsensusMethod(actor, "OnConsensusPayload", futurePrepareRequest);
+
+        InvokeConsensusMethod(actor, "InitializeConsensus", (byte)0);
+
+        context = GetConsensusContext(actor);
+
+        var invalidTimestampRequest = WithWitness(context.CreatePayload(new PrepareRequest
+        {
+            BlockIndex = context.Block.Index,
+            ValidatorIndex = context.Block.PrimaryIndex,
+            ViewNumber = context.ViewNumber,
+            Version = context.Block.Version,
+            PrevHash = context.Block.PrevHash,
+            Timestamp = context.PrevHeader.Timestamp,
+            Nonce = 2,
+            TransactionHashes = Array.Empty<UInt256>()
+        }));
+
+        InvokeConsensusMethod(actor, "OnConsensusPayload", invalidTimestampRequest);
+
+        Assert.IsNull(context.PreparationPayloads[context.Block.PrimaryIndex]);
+
+        var existingCommit = WithWitness(context.CreatePayload(new Commit
+        {
+            BlockIndex = context.Block.Index,
+            ValidatorIndex = 2,
+            ViewNumber = context.ViewNumber,
+            Signature = new byte[64]
+        }));
+        context.CommitPayloads[2] = existingCommit;
+
+        var conflictingCommit = WithWitness(context.CreatePayload(new Commit
+        {
+            BlockIndex = context.Block.Index,
+            ValidatorIndex = 2,
+            ViewNumber = context.ViewNumber,
+            Signature = Enumerable.Repeat((byte)1, 64).ToArray()
+        }));
+
+        InvokeConsensusMethod(actor, "OnConsensusPayload", conflictingCommit);
+
+        Assert.AreSame(existingCommit, context.CommitPayloads[2]);
+
+        context.TransactionHashes = Array.Empty<UInt256>();
+        context.Transactions = new Dictionary<UInt256, Transaction>();
+
+        var validPrepareRequest = WithWitness(context.CreatePayload(new PrepareRequest
+        {
+            BlockIndex = context.Block.Index,
+            ValidatorIndex = context.Block.PrimaryIndex,
+            ViewNumber = context.ViewNumber,
+            Version = context.Block.Version,
+            PrevHash = context.Block.PrevHash,
+            Timestamp = Math.Max(context.PrevHeader.Timestamp + 1, TimeProvider.Current.UtcNow.ToTimestampMS()),
+            Nonce = 3,
+            TransactionHashes = Array.Empty<UInt256>()
+        }));
+        context.PreparationPayloads[context.Block.PrimaryIndex] = validPrepareRequest;
+        context.CommitPayloads[context.MyIndex] = WithWitness(context.CreatePayload(new Commit
+        {
+            BlockIndex = context.Block.Index,
+            ValidatorIndex = (byte)context.MyIndex,
+            ViewNumber = context.ViewNumber,
+            Signature = new byte[64]
+        }));
+
+        var recoveryRequest = WithWitness(context.CreatePayload(new RecoveryRequest
+        {
+            BlockIndex = context.Block.Index,
+            ValidatorIndex = (byte)(context.Validators.Length - 1),
+            ViewNumber = context.ViewNumber,
+            Timestamp = TimeProvider.Current.UtcNow.ToTimestampMS()
+        }));
+
+        InvokeConsensusMethod(actor, "OnConsensusPayload", recoveryRequest);
+
+        CollectionAssert.Contains(GetKnownHashes(actor).ToArray(), recoveryRequest.Hash);
+
+        InvokeConsensusMethod(actor, "OnTimer", CreateTimer(context.Block.Index, context.ViewNumber));
+
+        GetKnownHashes(actor).Add(UInt256.Zero);
+
+        InvokeConsensusMethod(actor, "OnPersistCompleted", CreatePersistedBlock(context));
+
+        Assert.IsEmpty(GetKnownHashes(actor));
+
+        InvokeConsensusMethod(actor, "PostStop");
+        Assert.IsFalse(GetBooleanField(actor, "started"));
+    }
+
     private static ConsensusContext GetConsensusContext(ConsensusService actor)
     {
         return (ConsensusContext)typeof(ConsensusService)
@@ -478,6 +610,38 @@ public class UT_ConsensusService : TestKit
             VerificationScript = new byte[] { (byte)OpCode.PUSH1 }
         };
         return payload;
+    }
+
+    private static object CreateTimer(uint height, byte viewNumber)
+    {
+        var timerType = typeof(ConsensusService).GetNestedType("Timer", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var timer = Activator.CreateInstance(timerType)!;
+        timerType.GetField("Height", BindingFlags.Instance | BindingFlags.Public)!.SetValue(timer, height);
+        timerType.GetField("ViewNumber", BindingFlags.Instance | BindingFlags.Public)!.SetValue(timer, viewNumber);
+        return timer;
+    }
+
+    private static Block CreatePersistedBlock(ConsensusContext context)
+    {
+        return new Block
+        {
+            Header = new Header
+            {
+                Index = context.Block.Index,
+                PrimaryIndex = context.Block.PrimaryIndex,
+                Timestamp = Math.Max(context.PrevHeader.Timestamp + 1, TimeProvider.Current.UtcNow.ToTimestampMS()),
+                Nonce = 42,
+                NextConsensus = context.Block.NextConsensus,
+                PrevHash = context.Block.PrevHash,
+                MerkleRoot = UInt256.Zero,
+                Witness = new Witness
+                {
+                    InvocationScript = ReadOnlyMemory<byte>.Empty,
+                    VerificationScript = new byte[] { (byte)OpCode.PUSH1 }
+                }
+            },
+            Transactions = Array.Empty<Transaction>()
+        };
     }
 
     private DbftSettings CreateCompatibleSettings()
