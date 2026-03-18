@@ -9,5 +9,6 @@ RUN apt-get update && \
     librocksdb-dev \
     libsnappy-dev \
     libunwind8-dev \
+    jq \
     && rm -rf /var/lib/apt/lists/*
 
