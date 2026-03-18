@@ -46,7 +46,7 @@ class OracleNeoFSProtocol : IOracleProtocol
 
     public async Task<(OracleResponseCode, string)> ProcessAsync(Uri uri, CancellationToken cancellation)
     {
-        OracleService.PluginLogger?.Information("Request: {Uri}", uri.AbsoluteUri);
+        OracleService.PluginLogger?.Information("NeoFS request: {Uri}", uri.AbsoluteUri);
         try
         {
             (OracleResponseCode code, string data) = await GetAsync(uri, OracleSettings.Default.NeoFS.EndPoint, cancellation);
