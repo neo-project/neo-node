@@ -371,6 +371,41 @@ public partial class UT_RpcServer
     }
 
     [TestMethod]
+    public void TestInvokeScript_WithDiagnostics_SequentialNativeCallsRemainSiblings()
+    {
+        byte[] script;
+        using (var sb = new ScriptBuilder())
+        {
+            sb.EmitDynamicCall(NativeContract.NEO.Hash, "symbol");
+            sb.Emit(OpCode.DROP);
+            sb.EmitDynamicCall(NativeContract.GAS.Hash, "symbol");
+            script = sb.ToArray();
+        }
+
+        var resp = (JObject)_rpcServer.InvokeScript(script, useDiagnostic: true);
+        var traces = (JObject)resp["diagnostics"]["traces"];
+        var calls = (JArray)traces["calls"];
+
+        Assert.HasCount(2, calls);
+
+        var neoCall = (JObject)calls[0];
+        Assert.AreEqual("invocation", neoCall["type"].AsString());
+        Assert.AreEqual(s_neoHash, neoCall["hash"].AsString());
+        Assert.IsTrue(neoCall["isNative"].AsBoolean());
+        Assert.AreEqual("symbol", neoCall["method"].AsString());
+        Assert.IsNotNull(neoCall["return"]);
+        Assert.IsFalse(neoCall.ContainsProperty("calls") && ((JArray)neoCall["calls"]).Count > 0);
+
+        var gasCall = (JObject)calls[1];
+        Assert.AreEqual("invocation", gasCall["type"].AsString());
+        Assert.AreEqual(s_gasHash, gasCall["hash"].AsString());
+        Assert.IsTrue(gasCall["isNative"].AsBoolean());
+        Assert.AreEqual("symbol", gasCall["method"].AsString());
+        Assert.IsNotNull(gasCall["return"]);
+        Assert.IsFalse(gasCall.ContainsProperty("calls") && ((JArray)gasCall["calls"]).Count > 0);
+    }
+
+    [TestMethod]
     public void TestTraverseIterator()
     {
         // GetAllCandidates that should return 0 candidates
