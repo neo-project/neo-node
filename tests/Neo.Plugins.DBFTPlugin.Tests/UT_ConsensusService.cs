@@ -12,14 +12,20 @@
 using Akka.Actor;
 using Akka.TestKit;
 using Akka.TestKit.MsTest;
+using Microsoft.Extensions.Configuration;
+using Neo.Cryptography.ECC;
 using Neo.Extensions;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
+using Neo.Persistence;
 using Neo.Persistence.Providers;
 using Neo.Plugins.DBFTPlugin.Consensus;
 using Neo.Plugins.DBFTPlugin.Messages;
+using Neo.Plugins.DBFTPlugin.Types;
+using Neo.Sign;
 using Neo.SmartContract;
 using Neo.VM;
+using System.Reflection;
 
 namespace Neo.Plugins.DBFTPlugin.Tests;
 
@@ -248,5 +254,434 @@ public class UT_ConsensusService : TestKit
         // Verify the actor is still alive and responsive
         Watch(consensusService);
         ExpectNoMsg(TimeSpan.FromMilliseconds(100), cancellationToken: CancellationToken.None);
+    }
+
+    [TestMethod]
+    public void TestConsensusServiceRoutesConsensusMessagesIntoContextState()
+    {
+        var settings = MockBlockchain.CreateDefaultSettings();
+        var consensusServiceRef = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, settings, testWallet));
+        var actor = consensusServiceRef.UnderlyingActor;
+
+        InvokeConsensusMethod(actor, "InitializeConsensus", (byte)0);
+        var context = GetConsensusContext(actor);
+        var blockIndex = context.Block.Index;
+        var viewNumber = context.ViewNumber;
+        var primaryIndex = context.Block.PrimaryIndex;
+        var validTimestamp = Math.Max(context.PrevHeader.Timestamp + 1, TimeProvider.Current.UtcNow.ToTimestampMS());
+
+        var prepareRequest = new PrepareRequest
+        {
+            BlockIndex = blockIndex,
+            ValidatorIndex = primaryIndex,
+            ViewNumber = viewNumber,
+            Version = context.Block.Version,
+            PrevHash = context.Block.PrevHash,
+            Timestamp = validTimestamp,
+            Nonce = 7,
+            TransactionHashes = Array.Empty<UInt256>()
+        };
+        var prepareRequestPayload = context.CreatePayload(prepareRequest);
+
+        InvokeConsensusMethod(actor, "OnConsensusPayload", prepareRequestPayload);
+
+        Assert.AreSame(prepareRequestPayload, context.PreparationPayloads[primaryIndex]);
+        Assert.IsTrue(context.RequestSentOrReceived);
+        Assert.AreEqual(validTimestamp, context.Block.Timestamp);
+        Assert.IsEmpty(context.TransactionHashes);
+
+        var responseValidatorIndex = primaryIndex == 0 ? 1 : 0;
+        var prepareResponse = new PrepareResponse
+        {
+            BlockIndex = blockIndex,
+            ValidatorIndex = (byte)responseValidatorIndex,
+            ViewNumber = viewNumber,
+            PreparationHash = prepareRequestPayload.Hash
+        };
+        var prepareResponsePayload = context.CreatePayload(prepareResponse);
+
+        InvokeConsensusMethod(actor, "OnConsensusPayload", prepareResponsePayload);
+
+        Assert.AreSame(prepareResponsePayload, context.PreparationPayloads[responseValidatorIndex]);
+
+        var rejectedHash = UInt256.Parse("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
+        var changeView = new ChangeView
+        {
+            BlockIndex = blockIndex,
+            ValidatorIndex = 2,
+            ViewNumber = viewNumber,
+            Timestamp = validTimestamp + 1,
+            Reason = ChangeViewReason.TxInvalid,
+            RejectedHashes = [rejectedHash]
+        };
+        var changeViewPayload = context.CreatePayload(changeView);
+
+        InvokeConsensusMethod(actor, "OnConsensusPayload", changeViewPayload);
+
+        Assert.AreSame(changeViewPayload, context.ChangeViewPayloads[2]);
+        CollectionAssert.Contains(context.InvalidTransactions[rejectedHash].ToArray(), context.Validators[2]);
+
+        context.TransactionHashes = null;
+        var commit = new Commit
+        {
+            BlockIndex = blockIndex,
+            ValidatorIndex = 3,
+            ViewNumber = viewNumber,
+            Signature = new byte[64]
+        };
+        var commitPayload = context.CreatePayload(commit);
+
+        InvokeConsensusMethod(actor, "OnConsensusPayload", commitPayload);
+
+        Assert.AreSame(commitPayload, context.CommitPayloads[3]);
+
+        var recoveryRequest = new RecoveryRequest
+        {
+            BlockIndex = blockIndex,
+            ValidatorIndex = 0,
+            ViewNumber = viewNumber,
+            Timestamp = validTimestamp + 2
+        };
+        var recoveryRequestPayload = context.CreatePayload(recoveryRequest);
+
+        var originalMyIndex = context.MyIndex;
+        context.MyIndex = -1;
+        InvokeConsensusMethod(actor, "OnConsensusPayload", recoveryRequestPayload);
+        context.MyIndex = originalMyIndex;
+
+        CollectionAssert.Contains(GetKnownHashes(actor).ToArray(), recoveryRequestPayload.Hash);
+
+        var recoveryMessage = new RecoveryMessage
+        {
+            BlockIndex = blockIndex,
+            ValidatorIndex = 4,
+            ViewNumber = viewNumber,
+            ChangeViewMessages = new Dictionary<byte, RecoveryMessage.ChangeViewPayloadCompact>(),
+            PreparationMessages = new Dictionary<byte, RecoveryMessage.PreparationPayloadCompact>(),
+            CommitMessages = new Dictionary<byte, RecoveryMessage.CommitPayloadCompact>()
+        };
+        var recoveryMessagePayload = context.CreatePayload(recoveryMessage);
+
+        InvokeConsensusMethod(actor, "OnConsensusPayload", recoveryMessagePayload);
+
+        Assert.IsFalse(GetBooleanField(actor, "isRecovering"));
+    }
+
+    [TestMethod]
+    public void TestConsensusServiceExecutesSendAndCheckPaths()
+    {
+        var settings = CreateCompatibleSettings();
+
+        var primaryServiceRef = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, settings, new TestSigner()));
+        var primaryActor = primaryServiceRef.UnderlyingActor;
+
+        primaryServiceRef.Tell(new ConsensusService.Start());
+
+        Assert.IsTrue(GetBooleanField(primaryActor, "started"));
+
+        var primaryContext = GetConsensusContext(primaryActor);
+        primaryContext.MyIndex = primaryContext.Block.PrimaryIndex;
+
+        InvokeConsensusMethod(primaryActor, "SendPrepareRequest");
+
+        var prepareRequestPayload = primaryContext.PreparationPayloads[primaryContext.MyIndex];
+        Assert.IsNotNull(prepareRequestPayload);
+        Assert.IsNotNull(primaryContext.TransactionHashes);
+
+        InvokeConsensusMethod(primaryActor, "RequestChangeView", ChangeViewReason.Timeout, null);
+
+        Assert.IsNotNull(primaryContext.ChangeViewPayloads[primaryContext.MyIndex]);
+
+        var backupServiceRef = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, settings, new TestSigner()));
+        var backupActor = backupServiceRef.UnderlyingActor;
+
+        InvokeConsensusMethod(backupActor, "InitializeConsensus", (byte)0);
+
+        var backupContext = GetConsensusContext(backupActor);
+        backupContext.TransactionHashes = Array.Empty<UInt256>();
+        backupContext.Transactions = new Dictionary<UInt256, Transaction>();
+        backupContext.PreparationPayloads[backupContext.Block.PrimaryIndex] = prepareRequestPayload;
+
+        Assert.IsTrue((bool)InvokeConsensusMethod(backupActor, "CheckPrepareResponse"));
+        Assert.IsNotNull(backupContext.PreparationPayloads[backupContext.MyIndex]);
+
+        var extraPreparationValidators = Enumerable.Range(0, backupContext.Validators.Length)
+            .Where(index => index != backupContext.Block.PrimaryIndex && index != backupContext.MyIndex)
+            .Take(backupContext.M - 2);
+        foreach (var validatorIndex in extraPreparationValidators)
+        {
+            backupContext.PreparationPayloads[validatorIndex] = WithWitness(backupContext.CreatePayload(new PrepareResponse
+            {
+                BlockIndex = backupContext.Block.Index,
+                ValidatorIndex = (byte)validatorIndex,
+                ViewNumber = backupContext.ViewNumber,
+                PreparationHash = prepareRequestPayload.Hash
+            }));
+        }
+
+        InvokeConsensusMethod(backupActor, "CheckPreparations");
+
+        Assert.IsNotNull(backupContext.CommitPayloads[backupContext.MyIndex]);
+
+        var extraCommitValidators = Enumerable.Range(0, backupContext.Validators.Length)
+            .Where(index => index != backupContext.MyIndex)
+            .Take(backupContext.M - 1);
+        foreach (var validatorIndex in extraCommitValidators)
+        {
+            backupContext.CommitPayloads[validatorIndex] = WithWitness(backupContext.CreatePayload(new Commit
+            {
+                BlockIndex = backupContext.Block.Index,
+                ValidatorIndex = (byte)validatorIndex,
+                ViewNumber = backupContext.ViewNumber,
+                Signature = new byte[64]
+            }));
+        }
+
+        InvokeConsensusMethod(backupActor, "CheckCommits");
+
+        Assert.IsTrue(backupContext.BlockSent);
+    }
+
+    [TestMethod]
+    public void TestConsensusServiceExecutesWarningAndLifecyclePaths()
+    {
+        var settings = CreateCompatibleSettings();
+        var serviceRef = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, settings, new TestSigner()));
+        var actor = serviceRef.UnderlyingActor;
+
+        serviceRef.Tell(new ConsensusService.Start());
+
+        var context = GetConsensusContext(actor);
+        context.ChangeViewPayloads ??= new ExtensiblePayload[context.Validators.Length];
+        context.LastChangeViewPayloads ??= new ExtensiblePayload[context.Validators.Length];
+
+        InvokeConsensusMethod(actor, "InitializeConsensus", (byte)1);
+        Assert.AreEqual(1, context.ViewNumber);
+
+        var invalidPayload = WithWitness(new ExtensiblePayload
+        {
+            Category = "dBFT",
+            ValidBlockStart = 0,
+            ValidBlockEnd = context.Block.Index,
+            Sender = context.GetSender(context.MyIndex),
+            Data = new byte[] { 0xff },
+            Witness = new Witness
+            {
+                InvocationScript = ReadOnlyMemory<byte>.Empty,
+                VerificationScript = new byte[] { (byte)OpCode.PUSH1 }
+            }
+        });
+
+        InvokeConsensusMethod(actor, "OnConsensusPayload", invalidPayload);
+
+        var futurePrepareRequest = WithWitness(context.CreatePayload(new PrepareRequest
+        {
+            BlockIndex = context.Block.Index + 1,
+            ValidatorIndex = (byte)context.MyIndex,
+            ViewNumber = context.ViewNumber,
+            Version = context.Block.Version,
+            PrevHash = context.Block.PrevHash,
+            Timestamp = Math.Max(context.PrevHeader.Timestamp + 1, TimeProvider.Current.UtcNow.ToTimestampMS()),
+            Nonce = 1,
+            TransactionHashes = Array.Empty<UInt256>()
+        }));
+
+        InvokeConsensusMethod(actor, "OnConsensusPayload", futurePrepareRequest);
+
+        InvokeConsensusMethod(actor, "InitializeConsensus", (byte)0);
+
+        context = GetConsensusContext(actor);
+
+        var invalidTimestampRequest = WithWitness(context.CreatePayload(new PrepareRequest
+        {
+            BlockIndex = context.Block.Index,
+            ValidatorIndex = context.Block.PrimaryIndex,
+            ViewNumber = context.ViewNumber,
+            Version = context.Block.Version,
+            PrevHash = context.Block.PrevHash,
+            Timestamp = context.PrevHeader.Timestamp,
+            Nonce = 2,
+            TransactionHashes = Array.Empty<UInt256>()
+        }));
+
+        InvokeConsensusMethod(actor, "OnConsensusPayload", invalidTimestampRequest);
+
+        Assert.IsNull(context.PreparationPayloads[context.Block.PrimaryIndex]);
+
+        var existingCommit = WithWitness(context.CreatePayload(new Commit
+        {
+            BlockIndex = context.Block.Index,
+            ValidatorIndex = 2,
+            ViewNumber = context.ViewNumber,
+            Signature = new byte[64]
+        }));
+        context.CommitPayloads[2] = existingCommit;
+
+        var conflictingCommit = WithWitness(context.CreatePayload(new Commit
+        {
+            BlockIndex = context.Block.Index,
+            ValidatorIndex = 2,
+            ViewNumber = context.ViewNumber,
+            Signature = Enumerable.Repeat((byte)1, 64).ToArray()
+        }));
+
+        InvokeConsensusMethod(actor, "OnConsensusPayload", conflictingCommit);
+
+        Assert.AreSame(existingCommit, context.CommitPayloads[2]);
+
+        context.TransactionHashes = Array.Empty<UInt256>();
+        context.Transactions = new Dictionary<UInt256, Transaction>();
+
+        var validPrepareRequest = WithWitness(context.CreatePayload(new PrepareRequest
+        {
+            BlockIndex = context.Block.Index,
+            ValidatorIndex = context.Block.PrimaryIndex,
+            ViewNumber = context.ViewNumber,
+            Version = context.Block.Version,
+            PrevHash = context.Block.PrevHash,
+            Timestamp = Math.Max(context.PrevHeader.Timestamp + 1, TimeProvider.Current.UtcNow.ToTimestampMS()),
+            Nonce = 3,
+            TransactionHashes = Array.Empty<UInt256>()
+        }));
+        context.PreparationPayloads[context.Block.PrimaryIndex] = validPrepareRequest;
+        context.CommitPayloads[context.MyIndex] = WithWitness(context.CreatePayload(new Commit
+        {
+            BlockIndex = context.Block.Index,
+            ValidatorIndex = (byte)context.MyIndex,
+            ViewNumber = context.ViewNumber,
+            Signature = new byte[64]
+        }));
+
+        var recoveryRequest = WithWitness(context.CreatePayload(new RecoveryRequest
+        {
+            BlockIndex = context.Block.Index,
+            ValidatorIndex = (byte)(context.Validators.Length - 1),
+            ViewNumber = context.ViewNumber,
+            Timestamp = TimeProvider.Current.UtcNow.ToTimestampMS()
+        }));
+
+        InvokeConsensusMethod(actor, "OnConsensusPayload", recoveryRequest);
+
+        CollectionAssert.Contains(GetKnownHashes(actor).ToArray(), recoveryRequest.Hash);
+
+        InvokeConsensusMethod(actor, "OnTimer", CreateTimer(context.Block.Index, context.ViewNumber));
+
+        GetKnownHashes(actor).Add(UInt256.Zero);
+
+        InvokeConsensusMethod(actor, "OnPersistCompleted", CreatePersistedBlock(context));
+
+        Assert.IsEmpty(GetKnownHashes(actor));
+
+        InvokeConsensusMethod(actor, "PostStop");
+        Assert.IsFalse(GetBooleanField(actor, "started"));
+    }
+
+    private static ConsensusContext GetConsensusContext(ConsensusService actor)
+    {
+        return (ConsensusContext)typeof(ConsensusService)
+            .GetField("context", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(actor)!;
+    }
+
+    private static HashSet<UInt256> GetKnownHashes(ConsensusService actor)
+    {
+        return (HashSet<UInt256>)typeof(ConsensusService)
+            .GetField("knownHashes", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(actor)!;
+    }
+
+    private static bool GetBooleanField(ConsensusService actor, string fieldName)
+    {
+        return (bool)typeof(ConsensusService)
+            .GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(actor)!;
+    }
+
+    private static object InvokeConsensusMethod(ConsensusService actor, string methodName, params object[] args)
+    {
+        return typeof(ConsensusService)
+            .GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(actor, args);
+    }
+
+    private static ExtensiblePayload WithWitness(ExtensiblePayload payload)
+    {
+        payload.Witness ??= new Witness
+        {
+            InvocationScript = new byte[] { (byte)OpCode.PUSH1 },
+            VerificationScript = new byte[] { (byte)OpCode.PUSH1 }
+        };
+        return payload;
+    }
+
+    private static object CreateTimer(uint height, byte viewNumber)
+    {
+        var timerType = typeof(ConsensusService).GetNestedType("Timer", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var timer = Activator.CreateInstance(timerType)!;
+        timerType.GetField("Height", BindingFlags.Instance | BindingFlags.Public)!.SetValue(timer, height);
+        timerType.GetField("ViewNumber", BindingFlags.Instance | BindingFlags.Public)!.SetValue(timer, viewNumber);
+        return timer;
+    }
+
+    private static Block CreatePersistedBlock(ConsensusContext context)
+    {
+        return new Block
+        {
+            Header = new Header
+            {
+                Index = context.Block.Index,
+                PrimaryIndex = context.Block.PrimaryIndex,
+                Timestamp = Math.Max(context.PrevHeader.Timestamp + 1, TimeProvider.Current.UtcNow.ToTimestampMS()),
+                Nonce = 42,
+                NextConsensus = context.Block.NextConsensus,
+                PrevHash = context.Block.PrevHash,
+                MerkleRoot = UInt256.Zero,
+                Witness = new Witness
+                {
+                    InvocationScript = ReadOnlyMemory<byte>.Empty,
+                    VerificationScript = new byte[] { (byte)OpCode.PUSH1 }
+                }
+            },
+            Transactions = Array.Empty<Transaction>()
+        };
+    }
+
+    private DbftSettings CreateCompatibleSettings()
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string>
+            {
+                ["ApplicationConfiguration:DBFTPlugin:RecoveryLogs"] = "ConsensusState",
+                ["ApplicationConfiguration:DBFTPlugin:IgnoreRecoveryLogs"] = "false",
+                ["ApplicationConfiguration:DBFTPlugin:AutoStart"] = "false",
+                ["ApplicationConfiguration:DBFTPlugin:Network"] = neoSystem.Settings.Network.ToString(),
+                ["ApplicationConfiguration:DBFTPlugin:MaxBlockSize"] = "262144",
+                ["ApplicationConfiguration:DBFTPlugin:MaxBlockSystemFee"] = "150000000000"
+            })
+            .Build();
+
+        return new DbftSettings(config.GetSection("ApplicationConfiguration:DBFTPlugin"));
+    }
+
+    private sealed class TestSigner : ISigner
+    {
+        private static readonly byte[] SignatureBytes = new byte[64];
+        private static readonly byte[] InvocationScript = [(byte)OpCode.PUSH1];
+
+        public bool ContainsSignable(ECPoint publicKey) => true;
+
+        public Witness SignExtensiblePayload(ExtensiblePayload payload, DataCache dataCache, uint network)
+        {
+            return new Witness
+            {
+                InvocationScript = InvocationScript,
+                VerificationScript = InvocationScript
+            };
+        }
+
+        public ReadOnlyMemory<byte> SignBlock(Block block, ECPoint publicKey, uint network)
+        {
+            return SignatureBytes;
+        }
     }
 }

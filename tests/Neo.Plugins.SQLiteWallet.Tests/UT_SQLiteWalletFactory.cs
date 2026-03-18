@@ -109,4 +109,28 @@ public class UT_SQLiteWalletFactory
         factory.CreateWallet("TestWallet", path, TestPassword, TestSettings);
         Assert.ThrowsExactly<CryptographicException>(() => factory.OpenWallet(path, "wrong_password", TestSettings));
     }
+
+    [TestMethod]
+    public void TestOpenWalletWithNullPassword()
+    {
+        var factory = new SQLiteWalletFactory();
+        var path = GetTestWalletPath();
+        factory.CreateWallet("TestWallet", path, TestPassword, TestSettings);
+
+        var exception = Assert.ThrowsExactly<ArgumentException>(() => factory.OpenWallet(path, null, TestSettings));
+
+        Assert.AreEqual("Password cannot be null or empty for SQLiteWallet.", exception.Message);
+    }
+
+    [TestMethod]
+    public void TestOpenWalletWithEmptyPassword()
+    {
+        var factory = new SQLiteWalletFactory();
+        var path = GetTestWalletPath();
+        factory.CreateWallet("TestWallet", path, TestPassword, TestSettings);
+
+        var exception = Assert.ThrowsExactly<ArgumentException>(() => factory.OpenWallet(path, string.Empty, TestSettings));
+
+        Assert.AreEqual("Password cannot be null or empty for SQLiteWallet.", exception.Message);
+    }
 }

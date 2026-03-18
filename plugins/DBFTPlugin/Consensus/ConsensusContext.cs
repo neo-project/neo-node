@@ -124,8 +124,8 @@ public sealed partial class ConsensusContext : IDisposable, ISerializable
             string defaultPath = settings.RecoveryLogs.Contains("{0}") ? settings.RecoveryLogs : $"{settings.RecoveryLogs}_{{0}}";
             var pluginPath = string.Format(defaultPath, networkId);
             var path = PluginHelper.ApplyUnifiedStoragePath(pluginPath);
-            var fullPath = System.IO.Path.GetFullPath(path);
-            System.IO.Directory.CreateDirectory(fullPath);
+            var fullPath = Path.GetFullPath(path);
+            Directory.CreateDirectory(fullPath);
             store = neoSystem.LoadStore(fullPath);
         }
     }
@@ -193,7 +193,7 @@ public sealed partial class ConsensusContext : IDisposable, ISerializable
         }
         catch (Exception exception)
         {
-            Utility.Log(nameof(ConsensusContext), LogLevel.Debug, exception.ToString());
+            DBFTPlugin.PluginLogger?.Information("Error loading consensus context {Exception}", exception.ToString());
             return false;
         }
         return true;

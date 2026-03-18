@@ -39,7 +39,7 @@ public class VerificationService : UntypedActor
     private void SendVote(VerificationContext context)
     {
         if (context.VoteMessage is null) return;
-        Utility.Log(nameof(VerificationService), LogLevel.Info, $"relay vote, height={context.RootIndex}, retry={context.Retries}");
+        StatePlugin.PluginLogger?.Information("Relay vote, height={RootIndex}, retry={Retries}", context.RootIndex, context.Retries);
         StatePlugin.NeoSystem.Blockchain.Tell(context.VoteMessage);
     }
 
@@ -56,7 +56,7 @@ public class VerificationService : UntypedActor
         if (context.IsSender && context.CheckSignatures())
         {
             if (context.StateRootMessage is null) return;
-            Utility.Log(nameof(VerificationService), LogLevel.Info, $"relay state root, height={context.StateRoot.Index}, root={context.StateRoot.RootHash}");
+            StatePlugin.PluginLogger?.Information("Relay state root, height={Index}, root={RootHash}", context.StateRoot.Index, context.StateRoot.RootHash);
             StatePlugin.NeoSystem.Blockchain.Tell(context.StateRootMessage);
         }
     }
@@ -80,13 +80,14 @@ public class VerificationService : UntypedActor
             {
                 Index = index,
             }, ActorRefs.NoSender);
-            Utility.Log(nameof(VerificationContext), LogLevel.Info, $"new validate process, height={index}, index={p.MyIndex}, ongoing={contexts.Count}");
+            StatePlugin.PluginLogger?.Information("New validate process, height={Index}, index={MyIndex}, ongoing={Ongoing}",
+                index, p.MyIndex, contexts.Count);
         }
     }
 
     private void OnValidatedRootPersisted(uint index)
     {
-        Utility.Log(nameof(VerificationService), LogLevel.Info, $"persisted state root, height={index}");
+        StatePlugin.PluginLogger?.Information("Persisted state root, height={Index}", index);
         foreach (var i in contexts.Where(i => i.Key <= index))
         {
             if (contexts.TryRemove(i.Key, out var value))
