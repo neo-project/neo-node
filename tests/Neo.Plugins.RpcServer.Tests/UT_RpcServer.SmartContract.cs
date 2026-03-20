@@ -166,12 +166,13 @@ public partial class UT_RpcServer
         Assert.AreEqual(7, resp.Count);
         Assert.IsTrue(resp.ContainsProperty("gasconsumed"));
         Assert.IsTrue(resp.ContainsProperty("diagnostics"));
-        Assert.AreEqual(resp["diagnostics"]!["invokedcontracts"]!["call"]![0]!["hash"], s_neoHash);
+        Assert.AreEqual(resp["diagnostics"]!["invokedcontracts"]!["call"]![0]!["hash"], s_tokenManagementHash);
         Assert.AreEqual(nameof(VMState.HALT), resp["state"]);
         Assert.IsNull(resp["exception"]);
         Assert.IsEmpty((JArray)resp["notifications"]!);
-        Assert.AreEqual(nameof(Integer), resp["stack"]![0]!["type"]);
-        Assert.AreEqual("100000000", resp["stack"]![0]!["value"]);
+        Assert.AreEqual(nameof(Struct), resp["stack"]![0]!["type"]);
+        JArray tokenInfo = (JArray)resp["stack"]![0]!["value"]!;
+        Assert.AreEqual("100000000", tokenInfo[5]!["value"]!.AsString());
 
         resp = (JObject)_rpcServer.InvokeScript(Convert.FromBase64String(NeoTransferScript));
         Assert.AreEqual(6, resp.Count);
