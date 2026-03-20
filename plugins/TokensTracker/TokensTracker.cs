@@ -16,7 +16,6 @@ using Neo.Persistence;
 using Neo.Plugins.RpcServer;
 using Neo.Plugins.Trackers;
 using Neo.Plugins.Trackers.NEP_11;
-using Neo.Plugins.Trackers.NEP_17;
 using static System.IO.Path;
 
 namespace Neo.Plugins;
@@ -81,8 +80,6 @@ public class TokensTracker : Plugin
         _db = neoSystem.LoadStore(GetFullPath(path));
         if (_enabledTrackers.Contains("NEP-11"))
             trackers.Add(new Nep11Tracker(_db, _maxResults, _shouldTrackHistory, neoSystem));
-        if (_enabledTrackers.Contains("NEP-17"))
-            trackers.Add(new Nep17Tracker(_db, _maxResults, _shouldTrackHistory, neoSystem));
         foreach (TrackerBase tracker in trackers)
             RpcServerPlugin.RegisterMethods(tracker, _network);
     }
