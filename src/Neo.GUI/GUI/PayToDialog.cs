@@ -28,7 +28,7 @@ internal partial class PayToDialog : Form
                 try
                 {
                     var descriptor = NativeContract.TokenManagement.GetTokenInfo(snapshot, assetId);
-                    comboBox1.Items.Add(new KeyValuePair<UInt160, TokenState>(assetId,descriptor));
+                    comboBox1.Items.Add(new KeyValuePair<UInt160, TokenState>(assetId, descriptor));
                 }
                 catch (ArgumentException)
                 {
