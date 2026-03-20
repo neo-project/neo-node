@@ -360,8 +360,8 @@ public partial class UT_RpcServer
         var calls = (JArray)invokedContracts["call"]!;
         Assert.IsGreaterThanOrEqualTo(1, calls.Count); // Should call at least GAS contract for claim
 
-        // Also check for NEO call, as it's part of the transfer
-        Assert.IsTrue(calls.Any(c => c!["hash"]!.AsString() == s_neoHash)); // Fix based on test output
+        // The transfer goes through TokenManagement
+        Assert.IsTrue(calls.Any(c => c!["hash"]!.AsString() == s_tokenManagementHash)); // Fix based on test output
 
         // Verify Storage Changes
         Assert.IsTrue(diagnostics.ContainsProperty("storagechanges"));
@@ -417,7 +417,7 @@ public partial class UT_RpcServer
         engine.SnapshotCache.Commit();
 
         // GetAllCandidates that should return 1 candidate
-        resp = (JObject)_rpcServer.InvokeFunction(s_neoHash, "getAllCandidates", [], validatorSigner.AsParameter<SignersAndWitnesses>(), true);
+        resp = (JObject)_rpcServer.InvokeFunction(s_governanceHash, "getAllCandidates", [], validatorSigner.AsParameter<SignersAndWitnesses>(), true);
         sessionId = resp["session"]!;
         iteratorId = resp["stack"]![0]!["id"]!;
         respArray = (JArray)_rpcServer.TraverseIterator(sessionId.AsParameter<Guid>(), iteratorId.AsParameter<Guid>(), 100);
@@ -436,7 +436,7 @@ public partial class UT_RpcServer
         Assert.IsEmpty(respArray);
 
         // GetAllCandidates again
-        resp = (JObject)_rpcServer.InvokeFunction(s_neoHash, "getAllCandidates", [], validatorSigner.AsParameter<SignersAndWitnesses>(), true);
+        resp = (JObject)_rpcServer.InvokeFunction(s_governanceHash, "getAllCandidates", [], validatorSigner.AsParameter<SignersAndWitnesses>(), true);
         sessionId = resp["session"]!;
         iteratorId = resp["stack"]![0]!["id"]!;
 
@@ -454,7 +454,7 @@ public partial class UT_RpcServer
         Thread.Sleep((int)_rpcServerSettings.SessionExpirationTime.TotalMilliseconds + 1);
 
         // build another session that did not expire
-        resp = (JObject)_rpcServer.InvokeFunction(s_neoHash, "getAllCandidates", [], validatorSigner.AsParameter<SignersAndWitnesses>(), true);
+        resp = (JObject)_rpcServer.InvokeFunction(s_governanceHash, "getAllCandidates", [], validatorSigner.AsParameter<SignersAndWitnesses>(), true);
         var notExpiredSessionId = resp["session"]!;
         var notExpiredIteratorId = resp["stack"]![0]!["id"]!;
 
@@ -465,7 +465,7 @@ public partial class UT_RpcServer
         Assert.HasCount(1, respArray);
 
         // Mocking disposal
-        resp = (JObject)_rpcServer.InvokeFunction(s_neoHash, "getAllCandidates", [], validatorSigner.AsParameter<SignersAndWitnesses>(), true);
+        resp = (JObject)_rpcServer.InvokeFunction(s_governanceHash, "getAllCandidates", [], validatorSigner.AsParameter<SignersAndWitnesses>(), true);
         sessionId = resp["session"]!;
         iteratorId = resp["stack"]![0]!["id"]!;
         _rpcServer.Dispose_SmartContract();
