@@ -498,7 +498,7 @@ public partial class UT_RpcServer
     public void TestTraverseIterator_CountLimitExceeded()
     {
         // Need an active session and iterator first
-        var resp = (JObject)_rpcServer.InvokeFunction(s_neoHash, "getAllCandidates", [], validatorSigner.AsParameter<SignersAndWitnesses>(), true);
+        var resp = (JObject)_rpcServer.InvokeFunction(s_governanceHash, "getAllCandidates", [], validatorSigner.AsParameter<SignersAndWitnesses>(), true);
         var sessionId = resp["session"]!;
         var iteratorId = resp["stack"]![0]!["id"]!;
 
