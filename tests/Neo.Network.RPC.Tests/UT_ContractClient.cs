@@ -39,12 +39,12 @@ public class UT_ContractClient
     [TestMethod]
     public async Task TestInvoke()
     {
-        byte[] testScript = NativeContract.TokenManagement.Hash.MakeScript("balanceOf", NativeContract.Governance.NeoTokenId, UInt160.Zero);
+        byte[] testScript = NativeContract.TokenManagement.Hash.MakeScript("balanceOf", NativeContract.Governance.GasTokenId, UInt160.Zero);
 
         UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript, new ContractParameter { Type = ContractParameterType.ByteArray, Value = "00e057eb481b".HexToBytes() });
 
         ContractClient contractClient = new ContractClient(rpcClientMock.Object);
-        var result = await contractClient.TestInvokeAsync(NativeContract.TokenManagement.Hash, "balanceOf", NativeContract.Governance.NeoTokenId, UInt160.Zero);
+        var result = await contractClient.TestInvokeAsync(NativeContract.TokenManagement.Hash, "balanceOf", NativeContract.Governance.GasTokenId, UInt160.Zero);
 
         Assert.AreEqual(30000000000000L, (long)result.Stack[0].GetInteger());
     }
