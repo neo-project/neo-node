@@ -63,7 +63,7 @@ public class UT_TransactionManager
             .Verifiable();
 
         // MockGasBalance
-        byte[] balanceScript = NativeContract.Governance.Hash.MakeScript("balanceOf", sender);
+        byte[] balanceScript = NativeContract.TokenManagement.Hash.MakeScript("balanceOf", NativeContract.Governance.NeoTokenId, sender);
         var balanceResult = new ContractParameter() { Type = ContractParameterType.Integer, Value = BigInteger.Parse("10000000000000000") };
 
         MockInvokeScript(mockRpc, balanceScript, balanceResult);
@@ -95,7 +95,7 @@ public class UT_TransactionManager
             .Verifiable();
 
         // MockGasBalance
-        byte[] balanceScript = NativeContract.Governance.Hash.MakeScript("balanceOf", multiHash);
+        byte[] balanceScript = NativeContract.TokenManagement.Hash.MakeScript("balanceOf", NativeContract.Governance.NeoTokenId, multiHash);
         var balanceResult = new ContractParameter() { Type = ContractParameterType.Integer, Value = BigInteger.Parse("10000000000000000") };
 
         MockInvokeScript(mockRpc, balanceScript, balanceResult);
