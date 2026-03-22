@@ -40,6 +40,17 @@ public static class Helper
         }
     }
 
+    public static int CompareLex(byte[] a, byte[] b)
+    {
+        int n = Math.Min(a.Length, b.Length);
+        for (int i = 0; i < n; i++)
+        {
+            int diff = a[i].CompareTo(b[i]);
+            if (diff != 0) return diff;
+        }
+        return a.Length.CompareTo(b.Length);
+    }
+
     internal static byte[]? ToByteArray(this IntPtr data, UIntPtr length)
     {
         if (data == IntPtr.Zero) return null;

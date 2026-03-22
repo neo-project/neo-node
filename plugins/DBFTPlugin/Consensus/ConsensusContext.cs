@@ -203,16 +203,16 @@ public sealed partial class ConsensusContext : IDisposable, ISerializable
                     MerkleRoot = null!,
                     Index = height + 1,
                     NextConsensus = Contract.GetBFTAddress(
-                        NeoToken.ShouldRefreshCommittee(height + 1, neoSystem.Settings.CommitteeMembersCount) ?
-                        NativeContract.NEO.ComputeNextBlockValidators(Snapshot, neoSystem.Settings) :
-                        NativeContract.NEO.GetNextBlockValidators(Snapshot, neoSystem.Settings.ValidatorsCount)),
+                        Governance.ShouldRefreshCommittee(height + 1u, neoSystem.Settings.CommitteeMembersCount) ?
+                        NativeContract.Governance.ComputeNextBlockValidators(Snapshot, neoSystem.Settings) :
+                        NativeContract.Governance.GetNextBlockValidators(Snapshot, neoSystem.Settings.ValidatorsCount)),
                     Witness = null!
                 },
                 Transactions = null!
             };
             TimePerBlock = neoSystem.Settings.TimePerBlock;
             var pv = Validators;
-            Validators = NativeContract.NEO.GetNextBlockValidators(Snapshot, neoSystem.Settings.ValidatorsCount);
+            Validators = NativeContract.Governance.GetNextBlockValidators(Snapshot, neoSystem.Settings.ValidatorsCount);
             if (_witnessSize == 0 || (pv != null && pv.Length != Validators.Length))
             {
                 // Compute the expected size of the witness

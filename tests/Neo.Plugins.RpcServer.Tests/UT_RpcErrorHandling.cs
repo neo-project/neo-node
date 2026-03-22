@@ -17,6 +17,7 @@ using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.Wallets;
 using Neo.Wallets.NEP6;
+using System.Numerics;
 using System.Reflection;
 using System.Text;
 
@@ -42,11 +43,13 @@ public class UT_RpcErrorHandling
         _wallet = TestUtils.GenerateTestWallet("test-wallet.json");
         _walletAccount = _wallet.CreateAccount();
 
-        // Add some GAS to the wallet account for transactions
-        var key = new KeyBuilder(NativeContract.GAS.Id, 20).Add(_walletAccount.ScriptHash);
         var snapshot = _neoSystem.GetSnapshotCache();
+
+        // Add some GAS to the wallet account for transactions
+        var key = new KeyBuilder(NativeContract.TokenManagement.Id, 12).Add(_walletAccount.ScriptHash).Add(NativeContract.Governance.GasTokenId);
+
         var entry = snapshot.GetAndChange(key, () => new StorageItem(new AccountState()));
-        entry.GetInteroperable<AccountState>().Balance = 100_000_000 * NativeContract.GAS.Factor;
+        entry.GetInteroperable<AccountState>().Balance = 100_000_000 * Governance.GasTokenFactor;
         snapshot.Commit();
     }
 

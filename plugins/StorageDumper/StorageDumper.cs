@@ -11,7 +11,6 @@
 
 using Neo.ConsoleService;
 using Neo.Extensions.IO;
-using Neo.IEventHandlers;
 using Neo.Json;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
@@ -20,7 +19,7 @@ using Neo.SmartContract.Native;
 
 namespace Neo.Plugins.StorageDumper;
 
-public class StorageDumper : Plugin, ICommittingHandler, ICommittedHandler
+public class StorageDumper : Plugin
 {
     private NeoSystem? _system;
 
@@ -38,16 +37,16 @@ public class StorageDumper : Plugin, ICommittingHandler, ICommittedHandler
 
     public StorageDumper()
     {
-        Blockchain.Committing += ((ICommittingHandler)this).Blockchain_Committing_Handler;
-        Blockchain.Committed += ((ICommittedHandler)this).Blockchain_Committed_Handler;
+        Blockchain.Committing += Blockchain_Committing_Handler;
+        Blockchain.Committed += Blockchain_Committed_Handler;
     }
 
     protected override void Dispose(bool disposing)
     {
         if (disposing)
         {
-            Blockchain.Committing -= ((ICommittingHandler)this).Blockchain_Committing_Handler;
-            Blockchain.Committed -= ((ICommittedHandler)this).Blockchain_Committed_Handler;
+            Blockchain.Committing -= Blockchain_Committing_Handler;
+            Blockchain.Committed -= Blockchain_Committed_Handler;
         }
         base.Dispose(disposing);
     }
@@ -90,16 +89,11 @@ public class StorageDumper : Plugin, ICommittingHandler, ICommittedHandler
             $"{path}");
     }
 
-    void ICommittingHandler.Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot, IReadOnlyList<Blockchain.ApplicationExecuted> applicationExecutedList)
+    void Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot, IReadOnlyList<Blockchain.ApplicationExecuted> applicationExecutedList)
     {
-        InitFileWriter(system.Settings.Network, snapshot);
-        OnPersistStorage(system.Settings.Network, snapshot);
-    }
+        InitFileWriter(system.Settings.Network, block);
 
-    private void OnPersistStorage(uint network, DataCache snapshot)
-    {
-        var blockIndex = NativeContract.Ledger.CurrentIndex(snapshot);
-        if (blockIndex >= StorageSettings.Default!.HeightToBegin)
+        if (block.Index >= StorageSettings.Default!.HeightToBegin)
         {
             var stateChangeArray = new JArray();
 
@@ -131,18 +125,16 @@ public class StorageDumper : Plugin, ICommittingHandler, ICommittedHandler
                 stateChangeArray.Add(state);
             }
 
-            var bsItem = new JObject()
+            _currentBlock = new JObject()
             {
-                ["block"] = blockIndex,
+                ["block"] = block.Index,
                 ["size"] = stateChangeArray.Count,
                 ["storage"] = stateChangeArray
             };
-            _currentBlock = bsItem;
         }
     }
 
-
-    void ICommittedHandler.Blockchain_Committed_Handler(NeoSystem system, Block block)
+    void Blockchain_Committed_Handler(NeoSystem system, Block block)
     {
         OnCommitStorage(system.Settings.Network);
     }
@@ -156,14 +148,13 @@ public class StorageDumper : Plugin, ICommittingHandler, ICommittedHandler
         }
     }
 
-    private void InitFileWriter(uint network, IReadOnlyStore snapshot)
+    private void InitFileWriter(uint network, Block block)
     {
-        uint blockIndex = NativeContract.Ledger.CurrentIndex(snapshot);
         if (_writer == null
-            || blockIndex % StorageSettings.Default!.BlockCacheSize == 0)
+            || block.Index % StorageSettings.Default!.BlockCacheSize == 0)
         {
-            string path = GetOrCreateDirectory(network, blockIndex);
-            var filepart = (blockIndex / StorageSettings.Default!.BlockCacheSize) * StorageSettings.Default.BlockCacheSize;
+            string path = GetOrCreateDirectory(network, block.Index);
+            var filepart = (block.Index / StorageSettings.Default!.BlockCacheSize) * StorageSettings.Default.BlockCacheSize;
             path = $"{path}/dump-block-{filepart}.dump";
             if (_writer != null)
             {
@@ -189,5 +180,4 @@ public class StorageDumper : Plugin, ICommittingHandler, ICommittedHandler
         uint folder = (blockIndex / StorageSettings.Default!.StoragePerFolder) * StorageSettings.Default.StoragePerFolder;
         return $"./StorageDumper_{network}/BlockStorage_{folder}";
     }
-
 }
