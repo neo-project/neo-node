@@ -78,7 +78,7 @@ internal class Snapshot : IStoreSnapshot
         ArgumentNullException.ThrowIfNull(start);
         ArgumentNullException.ThrowIfNull(end);
 
-        if (CompareLex(start, end) >= 0)
+        if (Helper.CompareLex(start, end) >= 0)
             yield break;
 
         using var it = _db.NewIterator(readOptions: _options);
@@ -88,7 +88,7 @@ internal class Snapshot : IStoreSnapshot
             for (it.Seek(start); it.Valid(); it.Next())
             {
                 var key = it.Key();
-                if (CompareLex(key, end) >= 0)
+                if (Helper.CompareLex(key, end) >= 0)
                     break;
 
                 yield return (key, it.Value());
@@ -110,22 +110,11 @@ internal class Snapshot : IStoreSnapshot
             for (; it.Valid(); it.Prev())
             {
                 var key = it.Key();
-                if (CompareLex(key, start) < 0)
+                if (Helper.CompareLex(key, start) < 0)
                     break;
 
                 yield return (key, it.Value());
             }
-        }
-
-        static int CompareLex(byte[] a, byte[] b)
-        {
-            int n = Math.Min(a.Length, b.Length);
-            for (int i = 0; i < n; i++)
-            {
-                int diff = a[i].CompareTo(b[i]);
-                if (diff != 0) return diff;
-            }
-            return a.Length.CompareTo(b.Length);
         }
     }
 
