@@ -56,6 +56,11 @@ class TestSnapshot : IStoreSnapshot
         return _store.TryGetValue(StoreKey(key), out value);
     }
 
+    public IEnumerable<(byte[] Key, byte[] Value)> FindRange(byte[] start, byte[] end, SeekDirection direction = SeekDirection.Forward)
+    {
+        throw new NotImplementedException();
+    }
+
     public void Dispose() { throw new NotImplementedException(); }
 
     public int Size => _store.Count;

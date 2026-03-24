@@ -17,7 +17,6 @@ using Neo.Cryptography.ECC;
 using Neo.Extensions;
 using Neo.Extensions.Collections;
 using Neo.Extensions.IO;
-using Neo.IEventHandlers;
 using Neo.Json;
 using Neo.Ledger;
 using Neo.Network.P2P;
@@ -36,7 +35,7 @@ using System.Text;
 
 namespace Neo.Plugins.OracleService;
 
-public sealed class OracleService : Plugin, ICommittingHandler
+public sealed class OracleService : Plugin
 {
     private const int RefreshIntervalMilliSeconds = 1000 * 60 * 3;
 
@@ -66,7 +65,7 @@ public sealed class OracleService : Plugin, ICommittingHandler
 
     public OracleService()
     {
-        Blockchain.Committing += ((ICommittingHandler)this).Blockchain_Committing_Handler;
+        Blockchain.Committing += Blockchain_Committing_Handler;
     }
 
     protected override void Configure()
@@ -83,7 +82,6 @@ public sealed class OracleService : Plugin, ICommittingHandler
         _system.ServiceAdded += NeoSystem_ServiceAdded_Handler;
         RpcServerPlugin.RegisterMethods(this, OracleSettings.Default.Network);
     }
-
 
     void NeoSystem_ServiceAdded_Handler(object? sender, object service)
     {
@@ -111,7 +109,7 @@ public sealed class OracleService : Plugin, ICommittingHandler
     {
         if (disposing)
         {
-            Blockchain.Committing -= ((ICommittingHandler)this).Blockchain_Committing_Handler;
+            Blockchain.Committing -= Blockchain_Committing_Handler;
             OnStop();
             while (status != OracleStatus.Stopped)
                 Thread.Sleep(100);
@@ -175,7 +173,7 @@ public sealed class OracleService : Plugin, ICommittingHandler
         ConsoleHelper.Info($"Oracle status: ", $"{status}");
     }
 
-    void ICommittingHandler.Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
+    void Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
         IReadOnlyList<Blockchain.ApplicationExecuted> applicationExecutedList)
     {
         if (system.Settings.Network != OracleSettings.Default.Network) return;
@@ -363,7 +361,6 @@ public sealed class OracleService : Plugin, ICommittingHandler
 
         status = OracleStatus.Stopped;
     }
-
 
     private void SyncPendingQueue(DataCache snapshot)
     {

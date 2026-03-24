@@ -419,8 +419,10 @@ partial class RpcServer
     protected internal virtual JToken GetUnclaimedGas(Address address)
     {
         var scriptHash = address.ScriptHash;
-        var snapshot = system.StoreView;
-        var unclaimed = NativeContract.NEO.UnclaimedGas(snapshot, scriptHash, NativeContract.Ledger.CurrentIndex(snapshot) + 1);
+        using var snapshot = system.GetSnapshotCache();
+        using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot);
+        var unclaimed = NativeContract.Governance.UnclaimedGas(engine, scriptHash, NativeContract.Ledger.CurrentIndex(snapshot) + 1);
+
         return new JObject()
         {
             ["unclaimed"] = unclaimed.ToString(),

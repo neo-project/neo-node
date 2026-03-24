@@ -148,7 +148,7 @@ partial class UT_RpcServer
     public void TestGetWalletBalance()
     {
         TestUtilOpenWallet();
-        var assetId = NativeContract.NEO.Hash;
+        var assetId = NativeContract.Governance.GasTokenId;
         var result = _rpcServer.GetWalletBalance(assetId);
         Assert.IsInstanceOfType(result, typeof(JObject));
 
@@ -292,7 +292,7 @@ partial class UT_RpcServer
     [TestMethod]
     public void TestSendFromNoWallet()
     {
-        var assetId = NativeContract.GAS.Hash;
+        var assetId = NativeContract.Governance.Hash;
         var from = new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion);
         var to = new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion);
         var amount = "1";
@@ -307,7 +307,7 @@ partial class UT_RpcServer
     {
         TestUtilOpenWallet();
 
-        var assetId = NativeContract.GAS.Hash;
+        var assetId = NativeContract.Governance.GasTokenId;
         var from = new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion);
         var to = new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion);
         var amount = "1";
@@ -333,7 +333,7 @@ partial class UT_RpcServer
     {
         var from = _walletAccount.Address;
         var to = new JArray {
-            new JObject { ["asset"] = NativeContract.GAS.Hash.ToString(), ["value"] = "1", ["address"] = _walletAccount.Address }
+            new JObject { ["asset"] = NativeContract.Governance.GasTokenId.ToString(), ["value"] = "1", ["address"] = _walletAccount.Address }
         };
 
         var exception = Assert.ThrowsExactly<RpcException>(
@@ -356,7 +356,7 @@ partial class UT_RpcServer
     [TestMethod]
     public void TestSendToAddress()
     {
-        var assetId = NativeContract.GAS.Hash;
+        var assetId = NativeContract.Governance.GasTokenId;
         var to = new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion);
         var amount = "1";
         var exception = Assert.ThrowsExactly<RpcException>(
@@ -395,7 +395,7 @@ partial class UT_RpcServer
     public void TestSendToAddress_InvalidToAddress()
     {
         TestUtilOpenWallet();
-        var assetId = NativeContract.GAS.Hash;
+        var assetId = NativeContract.Governance.GasTokenId;
         var invalidToAddress = "NotAnAddress";
         var amount = "1";
 
@@ -411,7 +411,7 @@ partial class UT_RpcServer
     public void TestSendToAddress_NegativeAmount()
     {
         TestUtilOpenWallet();
-        var assetId = NativeContract.GAS.Hash;
+        var assetId = NativeContract.Governance.GasTokenId;
         var to = new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion);
         var amount = "-1";
 
@@ -424,7 +424,7 @@ partial class UT_RpcServer
     public void TestSendToAddress_ZeroAmount()
     {
         TestUtilOpenWallet();
-        var assetId = NativeContract.GAS.Hash;
+        var assetId = NativeContract.Governance.GasTokenId;
         var to = new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion);
         var amount = "0";
 
@@ -438,7 +438,7 @@ partial class UT_RpcServer
     public void TestSendToAddress_InsufficientFunds()
     {
         TestUtilOpenWallet();
-        var assetId = NativeContract.GAS.Hash;
+        var assetId = NativeContract.Governance.GasTokenId;
 
         var to = new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion);
         var hugeAmount = "100000000000000000"; // Exceeds likely balance
@@ -455,7 +455,7 @@ partial class UT_RpcServer
         TestUtilOpenWallet();
         var invalidFrom = "NotAnAddress";
         var to = new JArray {
-            new JObject { ["asset"] = NativeContract.GAS.Hash.ToString(), ["value"] = "1", ["address"] = _walletAccount.Address }
+            new JObject { ["asset"] = NativeContract.Governance.Hash.ToString(), ["value"] = "1", ["address"] = _walletAccount.Address }
         };
 
         var ex = Assert.ThrowsExactly<RpcException>(() => _rpcServer.SendMany(new JArray(invalidFrom, to)));
@@ -509,7 +509,7 @@ partial class UT_RpcServer
     {
         _rpcServer.wallet = null;
         var exception = Assert.ThrowsExactly<RpcException>(
-            () => _ = _rpcServer.GetWalletBalance(NativeContract.NEO.Hash),
+            () => _ = _rpcServer.GetWalletBalance(NativeContract.Governance.NeoTokenId),
             "Should throw RpcException for no opened wallet");
         Assert.AreEqual(exception.HResult, RpcError.NoOpenedWallet.Code);
     }
@@ -556,66 +556,6 @@ partial class UT_RpcServer
 
         // Verify the exception has the expected error code
         Assert.AreEqual(RpcError.NoOpenedWallet.Code, exception.HResult);
-    }
-
-    [TestMethod]
-    [Obsolete]
-    public void TestCancelTransaction()
-    {
-        TestUtilOpenWallet();
-
-        var snapshot = _neoSystem.GetSnapshotCache();
-        var tx = TestUtils.CreateValidTx(snapshot, _wallet, _walletAccount);
-        snapshot.Commit();
-
-        var address = new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion);
-        var exception = Assert.ThrowsExactly<RpcException>(
-            () => _ = _rpcServer.CancelTransaction(tx.Hash, [address]),
-            "Should throw RpcException for non-existing transaction");
-        Assert.AreEqual(RpcError.InsufficientFunds.Code, exception.HResult);
-
-        // Test with invalid transaction id
-        var invalidTxHash = "invalid_txid";
-        exception = Assert.ThrowsExactly<RpcException>(
-            () => _ = _rpcServer.CancelTransaction(new JString(invalidTxHash).AsParameter<UInt256>(), [address]),
-            "Should throw RpcException for invalid txid");
-        Assert.AreEqual(exception.HResult, RpcError.InvalidParams.Code);
-
-        // Test with no signer
-        exception = Assert.ThrowsExactly<RpcException>(
-            () => _ = _rpcServer.CancelTransaction(tx.Hash, []),
-            "Should throw RpcException for invalid txid");
-        Assert.AreEqual(exception.HResult, RpcError.BadRequest.Code);
-
-        // Test with null wallet
-        _rpcServer.wallet = null;
-        exception = Assert.ThrowsExactly<RpcException>(
-            () => _ = _rpcServer.CancelTransaction(tx.Hash, [address]),
-            "Should throw RpcException for no opened wallet");
-        Assert.AreEqual(exception.HResult, RpcError.NoOpenedWallet.Code);
-        TestUtilCloseWallet();
-
-        // Test valid cancel
-        _rpcServer.wallet = _wallet;
-        var resp = (JObject)_rpcServer.SendFrom(
-            NativeContract.GAS.Hash,
-            new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion),
-            new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion),
-            "1"
-        );
-
-        var txHash = resp["hash"]!;
-        resp = (JObject)_rpcServer.CancelTransaction(
-            txHash.AsParameter<UInt256>(), new JArray(ValidatorAddress).AsParameter<Address[]>(), "1");
-        Assert.AreEqual(12, resp.Count);
-        Assert.AreEqual(resp["sender"], ValidatorAddress);
-
-        var signers = (JArray)resp["signers"]!;
-        Assert.HasCount(1, signers);
-        Assert.AreEqual(signers[0]!["account"], ValidatorScriptHash.ToString());
-        Assert.AreEqual(nameof(WitnessScope.None), signers[0]!["scopes"]);
-        Assert.AreEqual(nameof(TransactionAttributeType.Conflicts), resp["attributes"]![0]!["type"]);
-        _rpcServer.wallet = null;
     }
 
     [TestMethod]

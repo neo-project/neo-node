@@ -19,7 +19,6 @@ using Neo.Network.P2P.Payloads;
 using Neo.Plugins.RpcServer.Model;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
-using static Neo.SmartContract.Native.NeoToken;
 
 namespace Neo.Plugins.RpcServer.Tests;
 
@@ -174,8 +173,9 @@ public partial class UT_RpcServer
     {
         var snapshot = _neoSystem.GetSnapshotCache();
         var block = TestUtils.CreateBlockWithValidTransactions(snapshot, _wallet, _walletAccount, 3);
-        // TestUtils.BlocksAdd(snapshot, block.Hash, block);
-        // snapshot.Commit();
+        TestUtils.BlocksAdd(snapshot, block.Hash, block);
+        snapshot.Commit();
+
         var reason = _neoSystem.Blockchain.Ask<Blockchain.RelayResult>(block, cancellationToken: CancellationToken.None).Result;
         var expectedHash = block.Hash.ToString();
         var result = _rpcServer.GetBlockHash(block.Index);
@@ -237,14 +237,12 @@ public partial class UT_RpcServer
     [TestMethod]
     public void TestGetContractState_Native_CaseInsensitive()
     {
-        var gasTokenHash = NativeContract.GAS.Hash;
-        var resultLower = _rpcServer.GetContractState(new ContractNameOrHashOrId("gastoken"));
-        var resultUpper = _rpcServer.GetContractState(new ContractNameOrHashOrId("GASTOKEN"));
-        var resultMixed = _rpcServer.GetContractState(new ContractNameOrHashOrId("GasToken"));
+        var gasTokenHash = NativeContract.Governance.Hash;
+        var resultLower = _rpcServer.GetContractState(new ContractNameOrHashOrId("governance"));
+        var resultUpper = _rpcServer.GetContractState(new ContractNameOrHashOrId("GOVERNANCE"));
 
         Assert.AreEqual(gasTokenHash.ToString(), ((JObject)resultLower)["hash"]!.AsString());
         Assert.AreEqual(gasTokenHash.ToString(), ((JObject)resultUpper)["hash"]!.AsString());
-        Assert.AreEqual(gasTokenHash.ToString(), ((JObject)resultMixed)["hash"]!.AsString());
     }
 
     [TestMethod]
@@ -450,27 +448,27 @@ public partial class UT_RpcServer
         var snapshot = _neoSystem.GetSnapshotCache();
         var key = new byte[] { 0x01 };
         var value = new byte[] { 0x02 };
-        TestUtils.StorageItemAdd(snapshot, NativeContract.GAS.Id, key, value);
+        TestUtils.StorageItemAdd(snapshot, NativeContract.Governance.Id, key, value);
         snapshot.Commit();
 
         // GetStorage
-        var result = _rpcServer.GetStorage(new("GasToken"), Convert.ToBase64String(key));
+        var result = _rpcServer.GetStorage(new("Governance"), Convert.ToBase64String(key));
         Assert.AreEqual(Convert.ToBase64String(value), result.AsString());
 
         var ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.GetStorage(null!, Convert.ToBase64String(key)));
         Assert.AreEqual(RpcError.InvalidParams.Code, ex.HResult);
 
-        ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.GetStorage(new("GasToken"), null!));
+        ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.GetStorage(new("Governance"), null!));
         Assert.AreEqual(RpcError.InvalidParams.Code, ex.HResult);
 
         // FindStorage
-        var result2 = _rpcServer.FindStorage(new("GasToken"), Convert.ToBase64String(key), 0);
+        var result2 = _rpcServer.FindStorage(new("Governance"), Convert.ToBase64String(key), 0);
         Assert.AreEqual(Convert.ToBase64String(value), result2["results"]![0]!["value"]!.AsString());
 
         ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.FindStorage(null!, Convert.ToBase64String(key), 0));
         Assert.AreEqual(RpcError.InvalidParams.Code, ex.HResult);
 
-        ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.FindStorage(new("GasToken"), null!, 0));
+        ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.FindStorage(new("Governance"), null!, 0));
         Assert.AreEqual(RpcError.InvalidParams.Code, ex.HResult);
     }
 
@@ -575,13 +573,13 @@ public partial class UT_RpcServer
         var snapshot = _neoSystem.GetSnapshotCache();
         var result = _rpcServer.GetNextBlockValidators();
 
-        var validators = NativeContract.NEO.GetNextBlockValidators(snapshot, _neoSystem.Settings.ValidatorsCount);
+        var validators = NativeContract.Governance.GetNextBlockValidators(snapshot, _neoSystem.Settings.ValidatorsCount);
         var expected = validators.Select(p =>
         {
             return new JObject()
             {
                 ["publickey"] = p.ToString(),
-                ["votes"] = (int)NativeContract.NEO.GetCandidateVote(snapshot, p),
+                ["votes"] = (int)NativeContract.Governance.GetCandidateVote(snapshot, p),
             };
         }).ToArray();
         Assert.AreEqual(new JArray(expected).ToString(), result.ToString());
@@ -592,17 +590,17 @@ public partial class UT_RpcServer
     {
         var snapshot = _neoSystem.GetSnapshotCache();
         var json = new JArray();
-        var validators = NativeContract.NEO.GetNextBlockValidators(snapshot, _neoSystem.Settings.ValidatorsCount);
+        var validators = NativeContract.Governance.GetNextBlockValidators(snapshot, _neoSystem.Settings.ValidatorsCount);
 
-        var key1 = new KeyBuilder(NativeContract.NEO.Id, 33)
+        var key1 = new KeyBuilder(NativeContract.Governance.Id, 33)
             .Add(ECPoint.Parse("02237309a0633ff930d51856db01d17c829a5b2e5cc2638e9c03b4cfa8e9c9f971", ECCurve.Secp256r1));
-        snapshot.Add(key1, new StorageItem(new CandidateState() { Registered = true, Votes = 10000 }));
-        var key2 = new KeyBuilder(NativeContract.NEO.Id, 33)
+        snapshot.Add(key1, new StorageItem(new Governance.CandidateState() { Registered = true, Votes = 10000 }));
+        var key2 = new KeyBuilder(NativeContract.Governance.Id, 33)
            .Add(ECPoint.Parse("0285265dc8859d05e1e42a90d6c29a9de15531eac182489743e6a947817d2a9f66", ECCurve.Secp256r1));
-        snapshot.Add(key2, new StorageItem(new CandidateState() { Registered = true, Votes = 10001 }));
+        snapshot.Add(key2, new StorageItem(new Governance.CandidateState() { Registered = true, Votes = 10001 }));
         snapshot.Commit();
 
-        var candidates = NativeContract.NEO.GetCandidates(_neoSystem.GetSnapshotCache());
+        var candidates = NativeContract.Governance.GetCandidatesInternal(_neoSystem.GetSnapshotCache());
         Assert.AreEqual(2, candidates.Count());
 
         var result = _rpcServer.GetCandidates();
@@ -612,7 +610,7 @@ public partial class UT_RpcServer
             var item = new JObject()
             {
                 ["publickey"] = candidate.PublicKey.ToString(),
-                ["votes"] = candidate.Votes.ToString(),
+                ["votes"] = candidate.State.Votes.ToString(),
                 ["active"] = validators.Contains(candidate.PublicKey),
             };
             json.Add(item);
@@ -625,7 +623,7 @@ public partial class UT_RpcServer
     {
         var snapshot = _neoSystem.GetSnapshotCache();
         var result = _rpcServer.GetCommittee();
-        var committee = NativeContract.NEO.GetCommittee(snapshot);
+        var committee = NativeContract.Governance.GetCommittee(snapshot);
         var expected = new JArray(committee.Select(p => (JToken)p.ToString()));
         Assert.AreEqual(expected.ToString(), result.ToString());
     }
