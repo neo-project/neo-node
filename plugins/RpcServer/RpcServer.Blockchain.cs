@@ -9,6 +9,7 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using Neo.Cryptography.ECC;
 using Neo.Extensions.Collections;
 using Neo.Extensions.IO;
 using Neo.Extensions.SmartContract;
@@ -538,12 +539,12 @@ partial class RpcServer
     protected internal virtual JToken GetNextBlockValidators()
     {
         using var snapshot = system.GetSnapshotCache();
-        var validators = NativeContract.NEO.GetNextBlockValidators(snapshot, system.Settings.ValidatorsCount);
+        var validators = NativeContract.Governance.GetNextBlockValidators(snapshot, system.Settings.ValidatorsCount);
         return validators.Select(p =>
         {
             JObject validator = new();
             validator["publickey"] = p.ToString();
-            validator["votes"] = (int)NativeContract.NEO.GetCandidateVote(snapshot, p);
+            validator["votes"] = (int)NativeContract.Governance.GetCandidateVote(snapshot, p);
             return validator;
         }).ToArray();
     }
@@ -570,7 +571,7 @@ partial class RpcServer
         byte[] script;
         using (ScriptBuilder sb = new())
         {
-            script = sb.EmitDynamicCall(NativeContract.NEO.Hash, "getCandidates").ToArray();
+            script = sb.EmitDynamicCall(NativeContract.Governance.Hash, "getCandidates").ToArray();
         }
 
         StackItem[] resultStack;
@@ -591,19 +592,19 @@ partial class RpcServer
 
         try
         {
-            var validators = NativeContract.NEO.GetNextBlockValidators(snapshot, system.Settings.ValidatorsCount)
+            var validators = NativeContract.Governance.GetNextBlockValidators(snapshot, system.Settings.ValidatorsCount)
                 ?? throw new RpcException(RpcError.InternalServerError.WithData("Can't get next block validators."));
 
             var candidates = (Array)resultStack[0];
             var result = new JArray();
             foreach (Struct ele in candidates)
             {
-                var publickey = ele[0].GetSpan().ToHexString();
+                var publickey = ECPoint.DecodePoint(ele[0].GetSpan(), ECCurve.Secp256r1);
                 result.Add(new JObject()
                 {
-                    ["publickey"] = publickey,
+                    ["publickey"] = publickey.ToString(),
                     ["votes"] = ele[1].GetInteger().ToString(),
-                    ["active"] = validators.ToByteArray().ToHexString().Contains(publickey),
+                    ["active"] = validators.Contains(publickey),
                 });
             }
             return result;
@@ -625,7 +626,7 @@ partial class RpcServer
     [RpcMethod]
     protected internal virtual JToken GetCommittee()
     {
-        return new JArray(NativeContract.NEO.GetCommittee(system.StoreView).Select(p => (JToken)p.ToString()));
+        return new JArray(NativeContract.Governance.GetCommittee(system.StoreView).Select(p => (JToken)p.ToString()));
     }
 
     /// <summary>

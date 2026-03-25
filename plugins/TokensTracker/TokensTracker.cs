@@ -10,19 +10,17 @@
 // modifications are permitted.
 
 using Microsoft.Extensions.Configuration;
-using Neo.IEventHandlers;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.Plugins.RpcServer;
 using Neo.Plugins.Trackers;
 using Neo.Plugins.Trackers.NEP_11;
-using Neo.Plugins.Trackers.NEP_17;
 using static System.IO.Path;
 
 namespace Neo.Plugins;
 
-public class TokensTracker : Plugin, ICommittingHandler, ICommittedHandler
+public class TokensTracker : Plugin
 {
     private string _dbPath = "TokensBalanceData";
     private bool _shouldTrackHistory;
@@ -41,16 +39,16 @@ public class TokensTracker : Plugin, ICommittingHandler, ICommittedHandler
 
     public TokensTracker()
     {
-        Blockchain.Committing += ((ICommittingHandler)this).Blockchain_Committing_Handler;
-        Blockchain.Committed += ((ICommittedHandler)this).Blockchain_Committed_Handler;
+        Blockchain.Committing += Blockchain_Committing_Handler;
+        Blockchain.Committed += Blockchain_Committed_Handler;
     }
 
     protected override void Dispose(bool disposing)
     {
         if (disposing)
         {
-            Blockchain.Committing -= ((ICommittingHandler)this).Blockchain_Committing_Handler;
-            Blockchain.Committed -= ((ICommittedHandler)this).Blockchain_Committed_Handler;
+            Blockchain.Committing -= Blockchain_Committing_Handler;
+            Blockchain.Committed -= Blockchain_Committed_Handler;
         }
         base.Dispose(disposing);
     }
@@ -82,8 +80,6 @@ public class TokensTracker : Plugin, ICommittingHandler, ICommittedHandler
         _db = neoSystem.LoadStore(GetFullPath(path));
         if (_enabledTrackers.Contains("NEP-11"))
             trackers.Add(new Nep11Tracker(_db, _maxResults, _shouldTrackHistory, neoSystem));
-        if (_enabledTrackers.Contains("NEP-17"))
-            trackers.Add(new Nep17Tracker(_db, _maxResults, _shouldTrackHistory, neoSystem));
         foreach (TrackerBase tracker in trackers)
             RpcServerPlugin.RegisterMethods(tracker, _network);
     }
@@ -96,7 +92,7 @@ public class TokensTracker : Plugin, ICommittingHandler, ICommittedHandler
         }
     }
 
-    void ICommittingHandler.Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
+    void Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
         IReadOnlyList<Blockchain.ApplicationExecuted> applicationExecutedList)
     {
         if (system.Settings.Network != _network) return;
@@ -108,7 +104,7 @@ public class TokensTracker : Plugin, ICommittingHandler, ICommittedHandler
         }
     }
 
-    void ICommittedHandler.Blockchain_Committed_Handler(NeoSystem system, Block block)
+    void Blockchain_Committed_Handler(NeoSystem system, Block block)
     {
         if (system.Settings.Network != _network) return;
         foreach (var tracker in trackers)

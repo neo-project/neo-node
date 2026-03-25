@@ -98,8 +98,8 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
     {
         switch (input.ToLowerInvariant())
         {
-            case "neo": return NativeContract.NEO.Hash;
-            case "gas": return NativeContract.GAS.Hash;
+            case "neo": return NativeContract.Governance.NeoTokenId;
+            case "gas": return NativeContract.Governance.GasTokenId;
         }
 
         if (input.IndexOf('.') > 0 && input.LastIndexOf('.') < input.Length)
@@ -154,6 +154,7 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         }
         wallet.Save();
 
+        if (CurrentWallet is not null) SignerManager.UnregisterSigner(CurrentWallet.Name);
         CurrentWallet = wallet;
         SignerManager.RegisterSigner(wallet.Name, wallet);
     }
@@ -271,9 +272,7 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         void DisplayError(string primaryMessage, string? secondaryMessage = null)
         {
             ConsoleHelper.Error(primaryMessage + Environment.NewLine +
-                                (secondaryMessage != null ? secondaryMessage + Environment.NewLine : "") +
-                                "Press any key to exit.");
-            Console.ReadKey();
+                                (secondaryMessage != null ? secondaryMessage + Environment.NewLine : ""));
             Environment.Exit(-1);
         }
 
@@ -342,10 +341,9 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         var protocol = ProtocolSettings.Load("config.json");
         CustomProtocolSettings(options, protocol);
         CustomApplicationSettings(options, Settings.Default);
-        var engineConfig = Settings.Default.Storage.Engine;
-        var engine = engineConfig;
+        var engine = Settings.Default.Storage.Engine;
 
-        if (string.IsNullOrWhiteSpace(engineConfig))
+        if (string.IsNullOrWhiteSpace(engine))
         {
             ConsoleHelper.Warning("No persistence engine specified, using MemoryStore now");
             engine = nameof(MemoryStore);
@@ -461,7 +459,7 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         if (account != null)
         {
             signers = CurrentWallet!.GetAccounts()
-            .Where(p => !p.Lock && !p.WatchOnly && p.ScriptHash == account && NativeContract.GAS.BalanceOf(snapshot, p.ScriptHash).Sign > 0)
+            .Where(p => !p.Lock && !p.WatchOnly && p.ScriptHash == account && NativeContract.TokenManagement.BalanceOf(snapshot, NativeContract.Governance.GasTokenId, p.ScriptHash).Sign > 0)
             .Select(p => new Signer { Account = p.ScriptHash, Scopes = WitnessScope.CalledByEntry })
             .ToArray();
         }
@@ -554,7 +552,7 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
     private void PrintExecutionOutput(ApplicationEngine engine, bool showStack = true)
     {
         ConsoleHelper.Info("VM State: ", engine.State.ToString());
-        ConsoleHelper.Info("Gas Consumed: ", new BigDecimal((BigInteger)engine.FeeConsumed, NativeContract.GAS.Decimals).ToString());
+        ConsoleHelper.Info("Gas Consumed: ", new BigDecimal((BigInteger)engine.FeeConsumed, Governance.GasTokenDecimals).ToString());
 
         if (showStack)
             ConsoleHelper.Info("Result Stack: ", new JArray(engine.ResultStack.Select(p => p.ToJson())).ToString());
