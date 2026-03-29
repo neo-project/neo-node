@@ -170,7 +170,8 @@ public abstract class ConsoleServiceBase
 
         // Show Ambiguous call
         var ambiguousCommands = availableCommands.Select(u => u.Command.Key).Distinct().ToList();
-        throw new ArgumentException($"Ambiguous calls for: {string.Join(',', ambiguousCommands)}");
+        var ambiguousCommandsQuoted = ambiguousCommands.Select(u => $"'{u}'").ToList();
+        throw new ArgumentException($"Ambiguous calls for: {string.Join(',', ambiguousCommandsQuoted)}");
     }
 
     private bool TryProcessValue(Type parameterType, IList<CommandToken> args, bool consumeAll, out object? value)
