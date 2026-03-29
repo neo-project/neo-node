@@ -65,6 +65,7 @@ internal class Snapshot : IStoreSnapshot, IEnumerable<KeyValuePair<byte[], byte[
     {
         _snapshot.Dispose();
         _readOptions.Dispose();
+        _batch.Dispose();
     }
 
     /// <inheritdoc/>
