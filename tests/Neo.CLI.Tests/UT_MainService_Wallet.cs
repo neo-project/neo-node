@@ -9,6 +9,11 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using Neo.Json;
+using Neo.Network.P2P.Payloads;
+using Neo.SmartContract;
+using Neo.SmartContract.Native;
+using Neo.VM;
 using System.Reflection;
 using System.Text;
 
@@ -117,6 +122,26 @@ public class UT_MainService_Wallet
 
         Assert.AreEqual(msgPayloadWithoutQuotes, msgPayloadWithDoubleQuotes, "Signing a message with surrounding double quotes should produce the same normalized message as a signing without quotes");
         Assert.AreEqual(msgPayloadWithoutQuotes, msgPayloadWithSingleQuotes, "Signing a message with surrounding single quotes should produce the same normalized message as a signing without quotes");
+    }
+
+    [TestMethod]
+    public void TestOnCommandSignMessagePrefersLongestCommand()
+    {
+        var output = CreateWalletAndRunCommand("test_pwd", "sign message \"wdadhauoi$#@$#@\" false");
+
+        Assert.IsFalse(string.IsNullOrWhiteSpace(output), "Output should not be empty");
+        Assert.Contains("Signed Payload", output, "Output should contain signed payload");
+        Assert.IsFalse(output.Contains("invalid start of a value", StringComparison.OrdinalIgnoreCase),
+            "Running 'sign message' should not emit the shorter 'sign' command JSON parse error.");
+    }
+
+    [TestMethod]
+    public void TestOnSignCommandStillWorks()
+    {
+        var output = CreateWalletAndRunSignCommand();
+
+        Assert.IsFalse(string.IsNullOrWhiteSpace(output), "Output should not be empty");
+        Assert.Contains("Signed Output", output, "The sign command should still sign context JSON successfully.");
     }
 
     [TestMethod]
@@ -359,6 +384,102 @@ public class UT_MainService_Wallet
         return outputWriter.ToString();
     }
 
+    private string CreateWalletAndRunCommand(string userPassword, string command, bool withAccount = true)
+    {
+        var walletPassword = "test_pwd";
+        var wallet = TestUtils.GenerateTestWallet(walletPassword);
+        if (withAccount)
+        {
+            var account = wallet.CreateAccount();
+            Assert.IsNotNull(account, "Wallet.CreateAccount() should create an account");
+        }
+
+        var service = new MainService();
+
+        TrySet(service, "NeoSystem", _neoSystem);
+        TrySetField(service, "_neoSystem", _neoSystem);
+        TrySet(service, "CurrentWallet", wallet);
+        TrySetField(service, "_currentWallet", wallet);
+
+        var readInputProp = service.GetType().GetProperty(
+            "ReadUserInput",
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+
+        Assert.IsNotNull(readInputProp, "ReadUserInput property not found on MainService");
+        readInputProp!.SetValue(service, (Func<string, bool, string>)((label, isPassword) =>
+        {
+            Assert.AreEqual("password", label);
+            Assert.IsTrue(isPassword);
+            return userPassword;
+        }));
+
+        var originalOut = Console.Out;
+        var originalErr = Console.Error;
+        using var outputWriter = new StringWriter();
+        Console.SetOut(outputWriter);
+        Console.SetError(outputWriter);
+
+        try
+        {
+            var result = (bool)InvokeNonPublic(service, "OnCommand", command);
+            Assert.IsTrue(result, "Command should be handled");
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalErr);
+        }
+
+        return outputWriter.ToString();
+    }
+
+    private string CreateWalletAndRunSignCommand()
+    {
+        var wallet = TestUtils.GenerateTestWallet("test_pwd");
+        var account = wallet.CreateAccount();
+        Assert.IsNotNull(account, "Wallet.CreateAccount() should create an account");
+
+        var snapshot = _neoSystem.StoreView;
+        var tx = new Transaction
+        {
+            Version = 0,
+            Nonce = 1,
+            ValidUntilBlock = NativeContract.Ledger.CurrentIndex(snapshot) + _neoSystem.Settings.MaxValidUntilBlockIncrement,
+            Signers = [new Signer { Account = account.ScriptHash, Scopes = WitnessScope.CalledByEntry }],
+            Attributes = [],
+            Script = new byte[] { (byte)OpCode.RET },
+            Witnesses = []
+        };
+
+        var context = new ContractParametersContext(snapshot, tx, _neoSystem.Settings.Network);
+        var jsonObjectToSign = (JObject)JToken.Parse(context.ToString());
+
+        var service = new MainService();
+
+        TrySet(service, "NeoSystem", _neoSystem);
+        TrySetField(service, "_neoSystem", _neoSystem);
+        TrySet(service, "CurrentWallet", wallet);
+        TrySetField(service, "_currentWallet", wallet);
+
+        var originalOut = Console.Out;
+        var originalErr = Console.Error;
+        using var outputWriter = new StringWriter();
+        Console.SetOut(outputWriter);
+        Console.SetError(outputWriter);
+
+        try
+        {
+            InvokeNonPublic(service, "OnSignCommand", jsonObjectToSign);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalErr);
+        }
+
+        return outputWriter.ToString();
+    }
+
     private static string ExtractHexValue(string output, string label)
     {
         var index = output.IndexOf(label, StringComparison.OrdinalIgnoreCase);
@@ -409,7 +530,7 @@ public class UT_MainService_Wallet
         field?.SetValue(target, value);
     }
 
-    private static void InvokeNonPublic(object target, string methodName, params object[] args)
+    private static object InvokeNonPublic(object target, string methodName, params object[] args)
     {
         var method = target.GetType().GetMethod(
             methodName,
@@ -417,7 +538,7 @@ public class UT_MainService_Wallet
         );
 
         Assert.IsNotNull(method, $"Method '{methodName}' not found on type '{target.GetType().FullName}'.");
-        method.Invoke(target, args);
+        return method.Invoke(target, args);
     }
 
     private static string ExtractMessageFromSignedPayload(string payloadHex)
