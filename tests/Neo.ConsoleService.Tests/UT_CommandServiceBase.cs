@@ -18,6 +18,7 @@ public class UT_CommandServiceBase
     {
         public override string ServiceName => "TestService";
         public bool _asyncTestCalled = false;
+        public bool _longCommandCalled = false;
 
         // Test method with various parameter types
         [ConsoleCommand("test", Category = "Test Commands")]
@@ -44,6 +45,15 @@ public class UT_CommandServiceBase
         {
             await Task.Delay(100);
             _asyncTestCalled = true;
+        }
+
+        [ConsoleCommand("prefix", Category = "Test Commands")]
+        public void PrefixCommand(uint number) { }
+
+        [ConsoleCommand("prefix child", Category = "Test Commands")]
+        public void PrefixChildCommand()
+        {
+            _longCommandCalled = true;
         }
 
         public enum TestEnum { Value1, Value2, Value3 }
@@ -170,5 +180,29 @@ public class UT_CommandServiceBase
         var resultTestTaskAsync = service.OnCommand("testasync");
         Assert.IsTrue(resultTestTaskAsync);
         Assert.IsTrue(service._asyncTestCalled);
+    }
+
+    [TestMethod]
+    public void TestOnCommandPrefersLongestMatchWithoutShortCommandError()
+    {
+        var service = new TestConsoleService();
+        service.RegisterCommand(service, "TestConsoleService");
+
+        var originalOut = Console.Out;
+        using var outputWriter = new StringWriter();
+        Console.SetOut(outputWriter);
+
+        try
+        {
+            var result = service.OnCommand("prefix child");
+            Assert.IsTrue(result);
+            Assert.IsTrue(service._longCommandCalled);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+
+        Assert.AreEqual(string.Empty, outputWriter.ToString());
     }
 }
