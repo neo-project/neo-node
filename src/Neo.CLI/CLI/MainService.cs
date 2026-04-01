@@ -339,7 +339,7 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         CustomApplicationSettings(options, Settings.Default);
         if (!string.IsNullOrEmpty(Settings.Default.Logger.Path) && Settings.Default.Logger.Active)
         {
-            Logs.LogDirectory = Settings.Default.Logger.Path;
+            SetupLogger(Settings.Default.Logger.Path, options.Verbose, Settings.Default.Logger.ConsoleOutput);
         }
 
         var engine = Settings.Default.Storage.Engine;

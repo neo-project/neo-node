@@ -10,19 +10,49 @@
 // modifications are permitted.
 
 using Neo.ConsoleService;
+using Serilog;
+using Serilog.Core;
+using Serilog.Events;
 
 namespace Neo.CLI;
 
 partial class MainService
 {
-    private static readonly ConsoleColorSet DebugColor = new(ConsoleColor.Cyan);
-    private static readonly ConsoleColorSet InfoColor = new(ConsoleColor.White);
-    private static readonly ConsoleColorSet WarningColor = new(ConsoleColor.Yellow);
-    private static readonly ConsoleColorSet ErrorColor = new(ConsoleColor.Red);
-    private static readonly ConsoleColorSet FatalColor = new(ConsoleColor.Red);
-
     private readonly object syncRoot = new();
-    private bool _showLog = Settings.Default.Logger.ConsoleOutput;
+
+    private string _logPath = "";
+
+    private readonly LoggingLevelSwitch _logLevel = new();
+
+    private readonly LoggingLevelSwitch _consoleLevel = new();
+
+    /// <summary>
+    /// Initialize the logger. it should be called when system is starting.
+    /// </summary>
+    private void SetupLogger(string logPath, LogLevel level, bool showConsoleLog)
+    {
+        _logLevel.MinimumLevel = (LogEventLevel)level;
+        _logPath = logPath;
+        _consoleLevel.MinimumLevel = showConsoleLog ? _logLevel.MinimumLevel : LogEventLevel.Fatal;
+        Logs.LoggerFactory = CreateLogger;
+    }
+
+    private ILogger CreateLogger(string source)
+    {
+        if (string.IsNullOrEmpty(_logPath)) return new LoggerConfiguration().CreateLogger();
+
+        return new LoggerConfiguration()
+            .MinimumLevel.ControlledBy(_logLevel)
+            .WriteTo.File(
+                path: Path.Combine(_logPath, source, "log-.txt"),
+                fileSizeLimitBytes: 100 * 1024 * 1024, // 100 MiB
+                rollOnFileSizeLimit: true,
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 30 // about 1 month
+            )
+            .WriteTo.Console(levelSwitch: _consoleLevel, syncRoot: syncRoot)
+            .CreateLogger();
+    }
 
     /// <summary>
     /// Process "console log off" command to turn off console log
@@ -30,7 +60,7 @@ partial class MainService
     [ConsoleCommand("console log off", Category = "Log Commands")]
     private void OnLogOffCommand()
     {
-        _showLog = false;
+        _consoleLevel.MinimumLevel = LogEventLevel.Fatal;
     }
 
     /// <summary>
@@ -39,6 +69,6 @@ partial class MainService
     [ConsoleCommand("console log on", Category = "Log Commands")]
     private void OnLogOnCommand()
     {
-        _showLog = true;
+        _consoleLevel.MinimumLevel = _logLevel.MinimumLevel;
     }
 }

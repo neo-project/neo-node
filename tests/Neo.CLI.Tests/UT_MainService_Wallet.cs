@@ -334,8 +334,6 @@ public class UT_MainService_Wallet
                 var neoSystemField = typeof(MainService).GetField("_neoSystem", BindingFlags.NonPublic | BindingFlags.Instance);
                 return neoSystemField?.GetValue(service) is not null;
             }, TimeSpan.FromSeconds(5)));
-            Assert.AreEqual(logDirectory, Neo.Logs.LogDirectory);
-
             service.Stop();
         }
         finally
