@@ -607,6 +607,11 @@ partial class MainService
         try
         {
             message = NormalizeMessage(message);
+            if (message == null)
+            {
+                ConsoleHelper.Error("Null message");
+                return;
+            }
 
             // Parse public key
             if (!ECPoint.TryParse(publicKey, ECCurve.Secp256r1, out var pubKey))
