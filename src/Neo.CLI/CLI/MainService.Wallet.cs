@@ -523,7 +523,6 @@ partial class MainService
             ConsoleHelper.Error("Null message");
             return;
         }
-        
         string password = ReadUserInput("password", true);
         if (password.Length == 0)
         {
