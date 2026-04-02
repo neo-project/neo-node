@@ -34,7 +34,11 @@ internal class SQLiteWallet : Wallet
     private readonly ScryptParameters _scrypt;
     private readonly Dictionary<UInt160, SQLiteWalletAccount> _accounts;
 
-    public override string Name => GetFileNameWithoutExtension(Path);
+    public override string Name
+    {
+        get => GetWalletName();
+        set => ChangeWalletName(value);
+    }
 
     /// <summary>
     /// IsUnlocked always returns true for SQLiteWallet.
@@ -189,6 +193,28 @@ internal class SQLiteWallet : Wallet
         ctx.Database.EnsureDeleted();
         ctx.Database.EnsureCreated();
         return ctx;
+    }
+
+    private string GetWalletName()
+    {
+        lock (_lock)
+        {
+            using var ctx = new WalletDataContext(Path);
+            var name = LoadStoredData(ctx, "WalletName");
+            if (name == null || name.Length == 0)
+                return GetFileNameWithoutExtension(Path);
+            return Encoding.UTF8.GetString(name);
+        }
+    }
+
+    private void ChangeWalletName(string name)
+    {
+        lock (_lock)
+        {
+            using var ctx = new WalletDataContext(Path);
+            SaveStoredData(ctx, "WalletName", Encoding.UTF8.GetBytes(name));
+            ctx.SaveChanges();
+        }
     }
 
     public override bool ChangePassword(string oldPassword, string newPassword)
