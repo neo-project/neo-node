@@ -44,6 +44,7 @@ public class UT_SQLiteWallet
     {
         var path = GetTestWalletPath();
         var wallet = SQLiteWallet.Create(path, TestPassword, TestSettings);
+        Assert.IsTrue(wallet.IsUnlocked);
 
         Assert.IsNotNull(wallet);
         Assert.AreEqual(Path.GetFileNameWithoutExtension(path), wallet.Name);

@@ -20,27 +20,17 @@ public class MockWallet : Wallet
 {
     private readonly Dictionary<UInt160, TestWalletAccount> accounts = new();
 
-    public MockWallet(ProtocolSettings settings) : base(null!, settings)
-    {
-    }
+    public MockWallet(ProtocolSettings settings) : base(null!, settings) { }
 
     public override string Name => "TestWallet";
     public override Version Version => new Version(1, 0, 0);
+    public override bool IsUnlocked => true;
 
-    public override bool ChangePassword(string oldPassword, string newPassword)
-    {
-        return true;
-    }
+    public override bool ChangePassword(string oldPassword, string newPassword) => true;
 
-    public override void Delete()
-    {
-        // No-op for test wallet
-    }
+    public override void Delete() { }
 
-    public override void Save()
-    {
-        // No-op for test wallet
-    }
+    public override void Save() { }
 
     public void AddAccount(ECPoint publicKey)
     {
@@ -49,45 +39,20 @@ public class MockWallet : Wallet
         accounts[scriptHash] = account;
     }
 
-    public override bool Contains(UInt160 scriptHash)
-    {
-        return accounts.ContainsKey(scriptHash);
-    }
+    public override bool Contains(UInt160 scriptHash) => accounts.ContainsKey(scriptHash);
+    public override WalletAccount CreateAccount(byte[] privateKey) => null!;
+    public override WalletAccount CreateAccount(Contract contract, KeyPair? key = null) => null!;
+    public override WalletAccount CreateAccount(UInt160 scriptHash) => null!;
 
-    public override WalletAccount CreateAccount(byte[] privateKey)
-    {
-        throw new NotImplementedException();
-    }
-
-    public override WalletAccount CreateAccount(Contract contract, KeyPair? key)
-    {
-        throw new NotImplementedException();
-    }
-
-    public override WalletAccount CreateAccount(UInt160 scriptHash)
-    {
-        throw new NotImplementedException();
-    }
-
-    public override bool DeleteAccount(UInt160 scriptHash)
-    {
-        return accounts.Remove(scriptHash);
-    }
+    public override bool DeleteAccount(UInt160 scriptHash) => accounts.Remove(scriptHash);
 
     public override WalletAccount? GetAccount(UInt160 scriptHash)
     {
         return accounts.TryGetValue(scriptHash, out var account) ? account : null;
     }
 
-    public override IEnumerable<WalletAccount> GetAccounts()
-    {
-        return accounts.Values;
-    }
-
-    public override bool VerifyPassword(string password)
-    {
-        return true;
-    }
+    public override IEnumerable<WalletAccount> GetAccounts() => accounts.Values;
+    public override bool VerifyPassword(string password) => true;
 }
 
 public class TestWalletAccount : WalletAccount
