@@ -37,6 +37,11 @@ internal class SQLiteWallet : Wallet
 
     public override string Name => GetFileNameWithoutExtension(Path);
 
+    /// <summary>
+    /// IsUnlocked always returns true for SQLiteWallet.
+    /// </summary>
+    public override bool IsUnlocked => true;
+
     public override Version Version
     {
         get

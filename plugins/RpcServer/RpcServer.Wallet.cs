@@ -31,25 +31,6 @@ namespace Neo.Plugins.RpcServer;
 
 partial class RpcServer
 {
-    private class DummyWallet : Wallet
-    {
-        public DummyWallet(ProtocolSettings settings) : base(null!, settings) { }
-        public override string Name => "";
-        public override Version Version => new();
-
-        public override bool ChangePassword(string oldPassword, string newPassword) => false;
-        public override bool Contains(UInt160 scriptHash) => false;
-        public override WalletAccount CreateAccount(byte[] privateKey) => null!;
-        public override WalletAccount CreateAccount(Contract contract, KeyPair? key = null) => null!;
-        public override WalletAccount CreateAccount(UInt160 scriptHash) => null!;
-        public override void Delete() { }
-        public override bool DeleteAccount(UInt160 scriptHash) => false;
-        public override WalletAccount? GetAccount(UInt160 scriptHash) => null;
-        public override IEnumerable<WalletAccount> GetAccounts() => [];
-        public override bool VerifyPassword(string password) => false;
-        public override void Save() { }
-    }
-
     protected internal Wallet? wallet;
 
     /// <summary>
