@@ -9,9 +9,9 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-using Neo.Persistence.Providers;
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
+using Neo.Persistence.Providers;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;
