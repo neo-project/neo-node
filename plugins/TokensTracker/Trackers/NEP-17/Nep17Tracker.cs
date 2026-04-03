@@ -64,9 +64,9 @@ class Nep17Tracker : TrackerBase
                     {
                         HandleNotificationNep17(notifyEventArgs.ScriptContainer, notifyEventArgs.ScriptHash, stateItems, balanceChangeRecords, ref nep17TransferIndex);
                     }
-                    catch (Exception e)
+                    catch (Exception ex)
                     {
-                        Log(e.ToString(), LogLevel.Error);
+                        TokensTracker.PluginLogger?.Error(ex, "Error handling NEP-17 notification");
                         throw;
                     }
                 }
@@ -80,15 +80,16 @@ class Nep17Tracker : TrackerBase
             {
                 SaveNep17Balance(balanceChangeRecord, snapshot);
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                Log(e.ToString(), LogLevel.Error);
+                TokensTracker.PluginLogger?.Error(ex, "Error saving NEP-17 balance");
                 throw;
             }
         }
     }
 
-    private void HandleNotificationNep17(IVerifiable? scriptContainer, UInt160 asset, Array stateItems, HashSet<BalanceChangeRecord> balanceChangeRecords, ref uint transferIndex)
+    private void HandleNotificationNep17(IVerifiable? scriptContainer, UInt160 asset, Array stateItems,
+        HashSet<BalanceChangeRecord> balanceChangeRecords, ref uint transferIndex)
     {
         if (stateItems.Count != 3) return;
         var transferRecord = GetTransferRecord(asset, stateItems);
@@ -117,14 +118,14 @@ class Nep17Tracker : TrackerBase
 
         if (engine.State.HasFlag(VMState.FAULT) || engine.ResultStack.Count == 0)
         {
-            Log($"Fault:{balanceChanged.User} get {balanceChanged.Asset} balance fault", LogLevel.Warning);
+            TokensTracker.PluginLogger?.Warning("Fault:{User} get {Asset} balance fault", balanceChanged.User, balanceChanged.Asset);
             return;
         }
 
         var balanceItem = engine.ResultStack.Pop();
         if (balanceItem is not Integer)
         {
-            Log($"Fault:{balanceChanged.User} get {balanceChanged.Asset} balance not number", LogLevel.Warning);
+            TokensTracker.PluginLogger?.Warning("Fault:{User} get {Asset} balance not number", balanceChanged.User, balanceChanged.Asset);
             return;
         }
 

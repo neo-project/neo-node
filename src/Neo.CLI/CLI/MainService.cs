@@ -88,8 +88,6 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         RegisterCommandHandler<JToken, JArray>(obj => (JArray)obj);
 
         RegisterCommand(this);
-
-        Initialize_Logger();
     }
 
     internal UInt160 StringToAddress(string input, byte version)
@@ -339,8 +337,12 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         var protocol = ProtocolSettings.Load("config.json");
         CustomProtocolSettings(options, protocol);
         CustomApplicationSettings(options, Settings.Default);
-        var engine = Settings.Default.Storage.Engine;
+        if (!string.IsNullOrEmpty(Settings.Default.Logger.Path) && Settings.Default.Logger.Active)
+        {
+            SetupLogger(Settings.Default.Logger.Path, options.Verbose, Settings.Default.Logger.ConsoleOutput);
+        }
 
+        var engine = Settings.Default.Storage.Engine;
         if (string.IsNullOrWhiteSpace(engine))
         {
             ConsoleHelper.Warning("No persistence engine specified, using MemoryStore now");
@@ -467,7 +469,6 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
 
     public void Stop()
     {
-        Dispose_Logger();
         Interlocked.Exchange(ref _neoSystem, null)?.Dispose();
     }
 

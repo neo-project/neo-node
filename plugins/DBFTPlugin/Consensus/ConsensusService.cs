@@ -14,7 +14,6 @@ using Neo.Extensions;
 using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
-using Neo.Plugins.DBFTPlugin.Messages;
 using Neo.Plugins.DBFTPlugin.Types;
 using Neo.Sign;
 using static Neo.Ledger.Blockchain;
@@ -84,7 +83,8 @@ internal partial class ConsensusService : UntypedActor
 
     private void OnPersistCompleted(Block block)
     {
-        Log($"Persisted {nameof(Block)}: height={block.Index} hash={block.Hash} tx={block.Transactions.Length} nonce={block.Nonce}");
+        DBFTPlugin.PluginLogger?.Information("Persisted Block: height={Index} hash={Hash} tx={TransactionsLength} nonce={Nonce}",
+            block.Index, block.Hash, block.Transactions.Length, block.Nonce);
         knownHashes.Clear();
         InitializeConsensus(0);
     }
@@ -93,8 +93,13 @@ internal partial class ConsensusService : UntypedActor
     {
         context.Reset(viewNumber);
         if (viewNumber > 0)
-            Log($"View changed: view={viewNumber} primary={context.Validators[context.GetPrimaryIndex((byte)(viewNumber - 1u))]}", LogLevel.Warning);
-        Log($"Initialize: height={context.Block.Index} view={viewNumber} index={context.MyIndex} role={(context.IsPrimary ? "Primary" : context.WatchOnly ? "WatchOnly" : "Backup")}");
+        {
+            DBFTPlugin.PluginLogger?.Warning("View changed: view={ViewNumber} primary={Primary}",
+                viewNumber, context.Validators[context.GetPrimaryIndex((byte)(viewNumber - 1u))]);
+        }
+
+        DBFTPlugin.PluginLogger?.Information("Initialize: height={BlockIndex} view={ViewNumber} index={ValidatorIndex} role={Role}",
+            context.Block.Index, viewNumber, context.MyIndex, context.IsPrimary ? "Primary" : context.WatchOnly ? "WatchOnly" : "Backup");
         if (context.WatchOnly) return;
         if (context.IsPrimary)
         {
@@ -154,7 +159,7 @@ internal partial class ConsensusService : UntypedActor
 
     private void OnStart()
     {
-        Log("OnStart");
+        DBFTPlugin.PluginLogger?.Information("ConsensusService started");
         started = true;
         if (!dbftSettings.IgnoreRecoveryLogs && context.Load())
         {
@@ -187,7 +192,7 @@ internal partial class ConsensusService : UntypedActor
             if (context.CommitSent)
             {
                 // Re-send commit periodically by sending recover message in case of a network issue.
-                Log($"Sending {nameof(RecoveryMessage)} to resend {nameof(Commit)}");
+                DBFTPlugin.PluginLogger?.Information("Sending RecoveryMessage to resend Commit");
                 localNode.Tell(new LocalNode.SendDirectly(context.MakeRecoveryMessage()));
                 ChangeTimer(TimeSpan.FromMilliseconds((int)context.TimePerBlock.TotalMilliseconds << 1));
             }
@@ -207,7 +212,8 @@ internal partial class ConsensusService : UntypedActor
 
     private void SendPrepareRequest()
     {
-        Log($"Sending {nameof(PrepareRequest)}: height={context.Block.Index} view={context.ViewNumber}");
+        DBFTPlugin.PluginLogger?.Information("Sending PrepareRequest: height={BlockIndex} view={ViewNumber}",
+            context.Block.Index, context.ViewNumber);
         localNode.Tell(new LocalNode.SendDirectly(context.MakePrepareRequest()));
 
         if (context.Validators.Length == 1)
@@ -223,7 +229,8 @@ internal partial class ConsensusService : UntypedActor
 
     private void RequestRecovery()
     {
-        Log($"Sending {nameof(RecoveryRequest)}: height={context.Block.Index} view={context.ViewNumber} nc={context.CountCommitted} nf={context.CountFailed}");
+        DBFTPlugin.PluginLogger?.Information("Sending RecoveryRequest: height={BlockIndex} view={ViewNumber} committed={CountCommitted} failed={CountFailed}",
+            context.Block.Index, context.ViewNumber, context.CountCommitted, context.CountFailed);
         localNode.Tell(new LocalNode.SendDirectly(context.MakeRecoveryRequest()));
     }
 
@@ -242,7 +249,8 @@ internal partial class ConsensusService : UntypedActor
         }
         else
         {
-            Log($"Sending {nameof(ChangeView)}: height={context.Block.Index} view={context.ViewNumber} nv={expectedView} nc={context.CountCommitted} nf={context.CountFailed} reason={reason}");
+            DBFTPlugin.PluginLogger?.Information("Sending ChangeView: height={BlockIndex} view={ViewNumber} newView={NewViewNumber} committed={CountCommitted} failed={CountFailed} reason={Reason}",
+                context.Block.Index, context.ViewNumber, expectedView, context.CountCommitted, context.CountFailed, reason);
             localNode.Tell(new LocalNode.SendDirectly(context.MakeChangeView(reason, rejectedHash)));
             CheckExpectedView(expectedView);
         }
@@ -272,7 +280,8 @@ internal partial class ConsensusService : UntypedActor
             // Must not be more than MaxBlockSystemFee
             if (tx.SystemFee > dbftSettings.MaxBlockSystemFee)
             {
-                Log($"Rejected tx: {tx.Hash}, SystemFee {tx.SystemFee} exceeds MaxBlockSystemFee {dbftSettings.MaxBlockSystemFee}", LogLevel.Warning);
+                DBFTPlugin.PluginLogger?.Warning("Rejected tx: {Hash}, SystemFee {SystemFee} exceeds MaxBlockSystemFee {MaxBlockSystemFee}",
+                    tx.Hash, tx.SystemFee, dbftSettings.MaxBlockSystemFee);
                 RequestChangeView(ChangeViewReason.TxRejectedByPolicy, tx.Hash);
                 return false;
             }
@@ -288,7 +297,7 @@ internal partial class ConsensusService : UntypedActor
                 if (context.TransactionHashes.Contains(h))
                 {
                     result = VerifyResult.HasConflicts;
-                    Log($"Rejected tx: {tx.Hash}, {result}{Environment.NewLine}{tx.ToArray().ToHexString()}", LogLevel.Warning);
+                    DBFTPlugin.PluginLogger?.Warning("Rejected tx {Hash}, {Result}: {Transaction}", tx.Hash, result, tx.ToArray().ToHexString());
                     RequestChangeView(ChangeViewReason.TxInvalid, tx.Hash);
                     return false;
                 }
@@ -299,7 +308,7 @@ internal partial class ConsensusService : UntypedActor
                 if (pooledTx.GetAttributes<Conflicts>().Select(attr => attr.Hash).Contains(tx.Hash))
                 {
                     result = VerifyResult.HasConflicts;
-                    Log($"Rejected tx: {tx.Hash}, {result}{Environment.NewLine}{tx.ToArray().ToHexString()}", LogLevel.Warning);
+                    DBFTPlugin.PluginLogger?.Warning("Rejected tx {Hash}, {Result}: {Transaction}", tx.Hash, result, tx.ToArray().ToHexString());
                     RequestChangeView(ChangeViewReason.TxInvalid, tx.Hash);
                     return false;
                 }
@@ -311,7 +320,7 @@ internal partial class ConsensusService : UntypedActor
             result = tx.Verify(neoSystem.Settings, context.Snapshot, context.VerificationContext, conflictingTxs);
             if (result != VerifyResult.Succeed)
             {
-                Log($"Rejected tx: {tx.Hash}, {result}{Environment.NewLine}{tx.ToArray().ToHexString()}", LogLevel.Warning);
+                DBFTPlugin.PluginLogger?.Warning("Rejected tx {Hash}, {Result}: {Transaction}", tx.Hash, result, tx.ToArray().ToHexString());
                 RequestChangeView(result == VerifyResult.PolicyFail ? ChangeViewReason.TxRejectedByPolicy : ChangeViewReason.TxInvalid, tx.Hash);
                 return false;
             }
@@ -344,7 +353,7 @@ internal partial class ConsensusService : UntypedActor
 
     protected override void PostStop()
     {
-        Log("OnStop");
+        DBFTPlugin.PluginLogger?.Information("ConsensusService stopped");
         started = false;
         Context.System.EventStream.Unsubscribe(Self);
         context.Dispose();
@@ -354,10 +363,5 @@ internal partial class ConsensusService : UntypedActor
     public static Props Props(NeoSystem neoSystem, DbftSettings dbftSettings, ISigner signer)
     {
         return Akka.Actor.Props.Create(() => new ConsensusService(neoSystem, dbftSettings, signer));
-    }
-
-    private static void Log(string message, LogLevel level = LogLevel.Info)
-    {
-        Utility.Log(nameof(ConsensusService), level, message);
     }
 }

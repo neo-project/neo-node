@@ -11,6 +11,7 @@
 
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
+using Neo.Persistence.Providers;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;
@@ -305,6 +306,40 @@ public class UT_MainService_Wallet
         // 7) Input validation: empty salt
         var emptySaltOutput = CreateServiceAndVerifyMessage(message, signature!, publicKey!, string.Empty, false);
         Assert.Contains("Salt cannot be empty", emptySaltOutput, "Should reject empty salt");
+    }
+
+    [TestMethod]
+    public void TestStartAppliesConfiguredLogDirectory()
+    {
+        var previousSettings = Settings.Custom;
+        var logDirectory = Path.Combine(Path.GetTempPath(), $"neo-cli-logs-{Guid.NewGuid():N}");
+
+        try
+        {
+            Settings.Custom = new Settings
+            {
+                Logger = new LoggerSettings { Active = true, Path = logDirectory, ConsoleOutput = false },
+                Storage = new StorageSettings { Engine = nameof(MemoryStore), Path = string.Empty },
+                P2P = new P2PSettings(),
+                UnlockWallet = new UnlockWalletSettings(),
+                Contracts = new ContractsSettings(),
+                Plugins = new PluginsSettings()
+            };
+
+            var service = new MainService();
+            service.Start(new CommandLineOptions());
+
+            Assert.IsTrue(SpinWait.SpinUntil(() =>
+            {
+                var neoSystemField = typeof(MainService).GetField("_neoSystem", BindingFlags.NonPublic | BindingFlags.Instance);
+                return neoSystemField?.GetValue(service) is not null;
+            }, TimeSpan.FromSeconds(5)));
+            service.Stop();
+        }
+        finally
+        {
+            Settings.Custom = previousSettings;
+        }
     }
 
     private string CreateServiceAndVerifyMessage(string message, string signature, string publicKey, string salt, bool avoidSignatureReplay)

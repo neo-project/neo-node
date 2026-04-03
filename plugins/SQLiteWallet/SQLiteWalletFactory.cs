@@ -34,8 +34,10 @@ public class SQLiteWalletFactory : Plugin, IWalletFactory
         return SQLiteWallet.Create(path, password, settings);
     }
 
-    public Wallet OpenWallet(string path, string password, ProtocolSettings settings)
+    public Wallet OpenWallet(string path, string? password, ProtocolSettings settings)
     {
+        if (string.IsNullOrEmpty(password))
+            throw new ArgumentException("Password cannot be null or empty for SQLiteWallet.");
         return SQLiteWallet.Open(path, password, settings);
     }
 }
