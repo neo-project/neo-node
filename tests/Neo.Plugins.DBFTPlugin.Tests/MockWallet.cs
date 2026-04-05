@@ -22,7 +22,7 @@ public class MockWallet : Wallet
 
     public MockWallet(ProtocolSettings settings) : base(null!, settings) { }
 
-    public override string Name => "TestWallet";
+    public override string Name { get; set; } = "TestWallet";
     public override Version Version => new Version(1, 0, 0);
     public override bool IsUnlocked => true;
 
