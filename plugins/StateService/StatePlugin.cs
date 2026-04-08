@@ -22,6 +22,7 @@ using Neo.Plugins.StateService.Verification;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.Wallets;
+using Serilog;
 using System.Buffers.Binary;
 using static Neo.Ledger.Blockchain;
 
@@ -42,6 +43,8 @@ public class StatePlugin : Plugin
     private static NeoSystem _system;
 
     internal static NeoSystem NeoSystem => _system;
+
+    internal static ILogger PluginLogger { get; private set; }
 
     private IWalletProvider walletProvider;
 
@@ -65,9 +68,10 @@ public class StatePlugin : Plugin
         var pluginPath = string.Format(StateServiceSettings.Default.Path, networkId);
         var path = PluginHelper.ApplyUnifiedStoragePath(pluginPath);
         var fullPath = System.IO.Path.GetFullPath(path);
-        System.IO.Directory.CreateDirectory(fullPath);
+        Directory.CreateDirectory(fullPath);
         Store = _system.ActorSystem.ActorOf(StateStore.Props(this, fullPath));
         _system.ServiceAdded += NeoSystem_ServiceAdded_Handler;
+        PluginLogger ??= Logger;
         RpcServerPlugin.RegisterMethods(this, StateServiceSettings.Default.Network);
     }
 

@@ -17,6 +17,7 @@ using Neo.Plugins.RpcServer;
 using Neo.Plugins.Trackers;
 using Neo.Plugins.Trackers.NEP_11;
 using Neo.Plugins.Trackers.NEP_17;
+using Serilog;
 using static System.IO.Path;
 
 namespace Neo.Plugins;
@@ -37,6 +38,8 @@ public class TokensTracker : Plugin
     public override string Description => "Enquiries balances and transaction history of accounts through RPC";
 
     public override string ConfigFile => Combine(RootPath, "TokensTracker.json");
+
+    internal static ILogger? PluginLogger { get; private set; }
 
     public TokensTracker()
     {
@@ -89,6 +92,7 @@ public class TokensTracker : Plugin
             trackers.Add(new Nep17Tracker(_db, _maxResults, _shouldTrackHistory, neoSystem));
         foreach (TrackerBase tracker in trackers)
             RpcServerPlugin.RegisterMethods(tracker, _network);
+        PluginLogger ??= Logger;
     }
 
     private void ResetBatch()

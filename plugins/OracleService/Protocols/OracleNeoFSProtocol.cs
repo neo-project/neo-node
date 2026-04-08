@@ -46,16 +46,16 @@ class OracleNeoFSProtocol : IOracleProtocol
 
     public async Task<(OracleResponseCode, string)> ProcessAsync(Uri uri, CancellationToken cancellation)
     {
-        Utility.Log(nameof(OracleNeoFSProtocol), LogLevel.Debug, $"Request: {uri.AbsoluteUri}");
+        OracleService.PluginLogger?.Information("NeoFS request: {Uri}", uri.AbsoluteUri);
         try
         {
             (OracleResponseCode code, string data) = await GetAsync(uri, OracleSettings.Default.NeoFS.EndPoint, cancellation);
-            Utility.Log(nameof(OracleNeoFSProtocol), LogLevel.Debug, $"NeoFS result, code: {code}, data: {data}");
+            OracleService.PluginLogger?.Information("NeoFS result, code: {Code}, data: {Data}", code, data);
             return (code, data);
         }
         catch (Exception e)
         {
-            Utility.Log(nameof(OracleNeoFSProtocol), LogLevel.Debug, $"NeoFS result: error,{e.Message}");
+            OracleService.PluginLogger?.Information("NeoFS result: error,{ErrorMessage}", e.Message);
             return (OracleResponseCode.Error, null);
         }
     }
