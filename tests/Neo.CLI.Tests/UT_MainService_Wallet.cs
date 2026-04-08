@@ -49,6 +49,7 @@ public class UT_MainService_Wallet
         Assert.AreEqual(32, salt!.Length, "Salt should be 16 bytes (32 hex chars)");
         Assert.IsTrue(IsHexString(salt!), "Salt should be valid hex");
     }
+
     [TestMethod]
     public void TestOnSignMessageCommandWithoutPassword()
     {
@@ -57,6 +58,7 @@ public class UT_MainService_Wallet
         Assert.IsFalse(string.IsNullOrWhiteSpace(output), "Output should not be empty");
         Assert.Contains("Cancelled", output, "Output should contain cancellation message");
     }
+
     [TestMethod]
     public void TestOnSignMessageCommandWrongPassword()
     {
@@ -68,6 +70,7 @@ public class UT_MainService_Wallet
         Assert.DoesNotContain("Signed Payload", output, "Output should not containt signed payload");
         Assert.DoesNotContain("Generated signatures", output, "Output should not containt signatures");
     }
+
     [TestMethod]
     public void TestOnSignMessageCommandWithoutAccount()
     {
@@ -82,6 +85,7 @@ public class UT_MainService_Wallet
         Assert.DoesNotContain("Signature:", output, "Output should not containt Signature");
         Assert.DoesNotContain("Salt:", output, "Output should not containt Salt");
     }
+
     [TestMethod]
     public void TestOnSignMessageCommandWithNullMessage()
     {
@@ -90,6 +94,7 @@ public class UT_MainService_Wallet
         Assert.IsFalse(string.IsNullOrWhiteSpace(output), "Output should not be empty");
         Assert.Contains("Null message", output, "Output should contain null message");
     }
+
     [TestMethod]
     public void TestOnSignMessageCommandWithQuotes()
     {
@@ -359,7 +364,7 @@ public class UT_MainService_Wallet
         return outputWriter.ToString();
     }
 
-    private static string ExtractHexValue(string output, string label)
+    private static string? ExtractHexValue(string output, string label)
     {
         var index = output.IndexOf(label, StringComparison.OrdinalIgnoreCase);
         if (index < 0)
