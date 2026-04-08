@@ -518,7 +518,11 @@ partial class MainService
         if (NoWallet()) return;
 
         message = NormalizeMessage(message);
-
+        if (message == null)
+        {
+            ConsoleHelper.Error("Null message");
+            return;
+        }
         string password = ReadUserInput("password", true);
         if (password.Length == 0)
         {
@@ -529,12 +533,6 @@ partial class MainService
         if (!CurrentWallet!.VerifyPassword(password))
         {
             ConsoleHelper.Error("Incorrect password");
-            return;
-        }
-
-        if (message == null)
-        {
-            ConsoleHelper.Error("Null message");
             return;
         }
 
@@ -608,6 +606,11 @@ partial class MainService
         try
         {
             message = NormalizeMessage(message);
+            if (message == null)
+            {
+                ConsoleHelper.Error("Null message");
+                return;
+            }
 
             // Parse public key
             if (!ECPoint.TryParse(publicKey, ECCurve.Secp256r1, out var pubKey))

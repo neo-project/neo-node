@@ -13,6 +13,7 @@ using Neo.Extensions.VM;
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
+using Neo.Plugins.RpcServer.Diagnostics;
 using Neo.Plugins.RpcServer.Model;
 using Neo.SmartContract;
 using Neo.SmartContract.Iterators;
@@ -44,7 +45,9 @@ partial class RpcServer
             sessions.Clear();
         }
         foreach (Session session in toBeDestroyed)
+        {
             session.Dispose();
+        }
     }
 
     internal void OnTimer(object? state)
@@ -53,13 +56,21 @@ partial class RpcServer
         lock (sessions)
         {
             foreach (var (id, session) in sessions)
+            {
                 if (DateTime.UtcNow >= session.StartTime + settings.SessionExpirationTime)
                     toBeDestroyed.Add((id, session));
+            }
+
             foreach (var (id, _) in toBeDestroyed)
+            {
                 sessions.Remove(id);
+            }
         }
+
         foreach (var (_, session) in toBeDestroyed)
+        {
             session.Dispose();
+        }
     }
 
     private JObject GetInvokeResult(byte[] script, Signer[]? signers = null, Witness[]? witnesses = null, bool useDiagnostic = false)
@@ -87,7 +98,8 @@ partial class RpcServer
                 var diagnostic = (Diagnostic)session.Engine.Diagnostic!;
                 json["diagnostics"] = new JObject()
                 {
-                    ["invokedcontracts"] = ToJson(diagnostic.InvocationTree.Root!),
+                    ["invokedcontracts"] = ToJson(diagnostic.Root!),
+                    ["traces"] = diagnostic.Root!.ToJson(),
                     ["storagechanges"] = ToJson(session.Engine.SnapshotCache.GetChangeSet())
                 };
             }
@@ -130,13 +142,29 @@ partial class RpcServer
         return json;
     }
 
-    protected static JObject ToJson(TreeNode<UInt160> node)
+    static JObject ToJson(DiagnosticRoot root)
     {
-        var json = new JObject() { ["hash"] = node.Item.ToString() };
-        if (node.Children.Any())
+        var json = new JObject() { ["hash"] = root.ScriptHash.ToString() };
+        if (root.Calls.Count > 0)
         {
-            json["call"] = new JArray(node.Children.Select(ToJson));
+            json["call"] = new JArray(root.Calls.Select(p => ToJson(p, root.ScriptHash)).Where(p => p != null));
         }
+        return json;
+    }
+
+    static JObject? ToJson(DiagnosticNode node, UInt160 parentHash)
+    {
+        var (hash, calls) = node switch
+        {
+            DynamicScriptInfo call => (call.ScriptHash, call.Calls),
+            InternalCallInfo call => (parentHash, call.Calls),
+            InvocationInfo call => (call.ScriptHash, call.Calls),
+            _ => (null, null)
+        };
+        if (hash is null || calls is null) return null;
+        var json = new JObject { ["hash"] = hash.ToString() };
+        if (calls.Count > 0)
+            json["call"] = new JArray(calls.Select(p => ToJson(p, hash)).Where(p => p != null));
         return json;
     }
 
