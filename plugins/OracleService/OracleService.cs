@@ -30,6 +30,7 @@ using Neo.SmartContract.Manifest;
 using Neo.SmartContract.Native;
 using Neo.VM;
 using Neo.Wallets;
+using Serilog;
 using System.Collections.Concurrent;
 using System.Text;
 
@@ -63,6 +64,8 @@ public sealed class OracleService : Plugin
 
     public override string ConfigFile => System.IO.Path.Combine(RootPath, "OracleService.json");
 
+    internal static ILogger? PluginLogger { get; private set; }
+
     public OracleService()
     {
         Blockchain.Committing += Blockchain_Committing_Handler;
@@ -81,6 +84,7 @@ public sealed class OracleService : Plugin
         _system = system;
         _system.ServiceAdded += NeoSystem_ServiceAdded_Handler;
         RpcServerPlugin.RegisterMethods(this, OracleSettings.Default.Network);
+        PluginLogger ??= Logs.GetLogger($"Plugin_{Name}");
     }
 
     void NeoSystem_ServiceAdded_Handler(object? sender, object service)
@@ -218,9 +222,9 @@ public sealed class OracleService : Plugin
                 if (TimeProvider.Current.UtcNow - value > TimeSpan.FromDays(3))
                     finishedCache.TryRemove(key, out _);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            Log(e, LogLevel.Error);
+            PluginLogger?.Error(ex, "Error in timer: {ErrorMessage}", ex.Message);
         }
         finally
         {
@@ -265,16 +269,16 @@ public sealed class OracleService : Plugin
         return new JObject();
     }
 
-    private static async Task SendContentAsync(Uri url, string content)
+    private async Task SendContentAsync(Uri url, string content)
     {
         try
         {
             using HttpResponseMessage response = await httpClient.PostAsync(url, new StringContent(content, Encoding.UTF8, "application/json"));
             response.EnsureSuccessStatusCode();
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            Log($"Failed to send the response signature to {url}, as {e.Message}", LogLevel.Warning);
+            PluginLogger?.Warning("Failed to send the response signature to {Url}, as {ErrorMessage}", url.AbsoluteUri, ex.Message);
         }
     }
 
@@ -291,13 +295,14 @@ public sealed class OracleService : Plugin
 
     private async Task ProcessRequestAsync(DataCache snapshot, OracleRequest req)
     {
-        Log($"[{req.OriginalTxid}] Process oracle request start:<{req.Url}>");
+        PluginLogger?.Information("Process oracle request start: {OriginalTxid} <{Url}>", req.OriginalTxid, req.Url);
 
         uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
 
         (OracleResponseCode code, string? data) = await ProcessUrlAsync(req.Url);
 
-        Log($"[{req.OriginalTxid}] Process oracle request end:<{req.Url}>, responseCode:{code}, response:{data}");
+        PluginLogger?.Information("Process oracle request end: {OriginalTxid} <{Url}>, responseCode:{ResponseCode}, response:{Response}",
+            req.OriginalTxid, req.Url, code, data);
 
         var oracleNodes = NativeContract.RoleManagement.GetDesignatedByRole(snapshot, Role.Oracle, height);
         foreach (var (requestId, request) in NativeContract.Oracle.GetRequestsByUrl(snapshot, req.Url))
@@ -312,14 +317,20 @@ public sealed class OracleService : Plugin
                 catch (Exception ex)
                 {
                     code = OracleResponseCode.Error;
-                    Log($"[{req.OriginalTxid}] Filter '{request.Filter}' error:{ex.Message}");
+                    PluginLogger?.Warning("Filter '{Filter}' error: {ErrorMessage}", request.Filter, ex.Message);
                 }
             }
             var response = new OracleResponse() { Id = requestId, Code = code, Result = result };
             var responseTx = CreateResponseTx(snapshot, request, response, oracleNodes, _system.Settings);
-            var backupTx = CreateResponseTx(snapshot, request, new OracleResponse() { Code = OracleResponseCode.ConsensusUnreachable, Id = requestId, Result = Array.Empty<byte>() }, oracleNodes, _system.Settings, true);
+            var backupTx = CreateResponseTx(snapshot, request, new OracleResponse()
+            {
+                Code = OracleResponseCode.ConsensusUnreachable,
+                Id = requestId,
+                Result = Array.Empty<byte>()
+            }, oracleNodes, _system.Settings, true);
 
-            Log($"[{req.OriginalTxid}]-({requestId}) Built response tx[[{responseTx.Hash}]], responseCode:{code}, result:{result.ToHexString()}, validUntilBlock:{responseTx.ValidUntilBlock}, backupTx:{backupTx.Hash}-{backupTx.ValidUntilBlock}");
+            PluginLogger?.Information("Built response tx: {OriginalTxid}-({RequestId}) {ResponseTxHash}, responseCode:{ResponseCode}, result:{Result}, validUntilBlock:{ValidUntilBlock}, backupTx:{BackupTxHash}-{BackupValidUntilBlock}",
+                req.OriginalTxid, requestId, responseTx.Hash, code, result.ToHexString(), responseTx.ValidUntilBlock, backupTx.Hash, backupTx.ValidUntilBlock);
 
             var tasks = new List<Task>();
             ECPoint[] oraclePublicKeys = NativeContract.RoleManagement.GetDesignatedByRole(snapshot, Role.Oracle, height);
@@ -335,7 +346,8 @@ public sealed class OracleService : Plugin
                 AddResponseTxSign(snapshot, requestId, key.PublicKey, txSign, responseTx, backupTx, backTxSign);
                 tasks.Add(SendResponseSignatureAsync(requestId, txSign, key));
 
-                Log($"[{request.OriginalTxid}]-[[{responseTx.Hash}]] Send oracle sign data, Oracle node: {key.PublicKey}, Sign: {txSign.ToHexString()}");
+                PluginLogger?.Information("Send oracle sign data: {OriginalTxid}-[{ResponseTxHash}] Oracle node: {OracleNode}, Sign: {Sign}",
+                    request.OriginalTxid, responseTx.Hash, key.PublicKey.ToString(), txSign.ToHexString());
             }
             await Task.WhenAll(tasks);
         }
@@ -392,7 +404,8 @@ public sealed class OracleService : Plugin
         }
     }
 
-    public static Transaction CreateResponseTx(DataCache snapshot, OracleRequest request, OracleResponse response, ECPoint[] oracleNodes, ProtocolSettings settings, bool useCurrentHeight = false)
+    public static Transaction CreateResponseTx(DataCache snapshot, OracleRequest request, OracleResponse response,
+        ECPoint[] oracleNodes, ProtocolSettings settings, bool useCurrentHeight = false)
     {
         var requestTx = NativeContract.Ledger.GetTransactionState(snapshot, request.OriginalTxid)!;
         var n = oracleNodes.Length;
@@ -474,7 +487,8 @@ public sealed class OracleService : Plugin
         return tx;
     }
 
-    private void AddResponseTxSign(DataCache snapshot, ulong requestId, ECPoint oraclePub, byte[] sign, Transaction? responseTx = null, Transaction? backupTx = null, byte[]? backupSign = null)
+    private void AddResponseTxSign(DataCache snapshot, ulong requestId, ECPoint oraclePub, byte[] sign,
+        Transaction? responseTx = null, Transaction? backupTx = null, byte[]? backupSign = null)
     {
         var task = pendingQueue.GetOrAdd(requestId, _ => new OracleTask
         {
@@ -549,7 +563,7 @@ public sealed class OracleService : Plugin
             var idx = tx.GetScriptHashesForVerifying(snapshot)[0] == contract.ScriptHash ? 0 : 1;
             tx.Witnesses[idx].InvocationScript = sb.ToArray();
 
-            Log($"Send response tx: responseTx={tx.Hash}");
+            PluginLogger?.Information("Send response tx: responseTx={ResponseTxHash}", tx.Hash);
 
             _system.Blockchain.Tell(tx);
             return true;
@@ -567,11 +581,6 @@ public sealed class OracleService : Plugin
     private static bool CheckOracleAccount(ISigner signer, ECPoint[] oracles)
     {
         return signer is not null && oracles.Any(p => signer.ContainsSignable(p));
-    }
-
-    private static void Log(string message, LogLevel level = LogLevel.Info)
-    {
-        Utility.Log(nameof(OracleService), level, message);
     }
 
     class OracleTask

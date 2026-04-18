@@ -9,6 +9,7 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using Neo.Persistence.Providers;
 using System.Reflection;
 using System.Text;
 
@@ -17,7 +18,7 @@ namespace Neo.CLI.Tests;
 [TestClass]
 public class UT_MainService_Wallet
 {
-    private NeoSystem _neoSystem;
+    private NeoSystem? _neoSystem;
 
     [TestInitialize]
     public void TestSetup()
@@ -90,7 +91,7 @@ public class UT_MainService_Wallet
     public void TestOnSignMessageCommandWithNullMessage()
     {
         var walletPassword = "test_pwd";
-        var output = CreateWalletAngSignMessage(walletPassword, true, true, null);
+        var output = CreateWalletAngSignMessage(walletPassword, true, true, null!);
         Assert.IsFalse(string.IsNullOrWhiteSpace(output), "Output should not be empty");
         Assert.Contains("Null message", output, "Output should contain null message");
     }
@@ -287,16 +288,49 @@ public class UT_MainService_Wallet
         Assert.Contains("Salt cannot be empty", emptySaltOutput, "Should reject empty salt");
     }
 
+    [TestMethod]
+    public void TestStartAppliesConfiguredLogDirectory()
+    {
+        var previousSettings = Settings.Custom;
+        var logDirectory = Path.Combine(Path.GetTempPath(), $"neo-cli-logs-{Guid.NewGuid():N}");
+        try
+        {
+            Settings.Custom = new Settings
+            {
+                Logger = new LoggerSettings { Active = true, Path = logDirectory, ConsoleOutput = false },
+                Storage = new StorageSettings { Engine = nameof(MemoryStore), Path = string.Empty },
+                P2P = new P2PSettings(),
+                UnlockWallet = new UnlockWalletSettings(),
+                Contracts = new ContractsSettings(),
+                Plugins = new PluginsSettings()
+            };
+
+            var service = new MainService();
+            service.Start(new CommandLineOptions());
+
+            Assert.IsTrue(SpinWait.SpinUntil(() =>
+            {
+                var neoSystemField = typeof(MainService).GetField("_neoSystem", BindingFlags.NonPublic | BindingFlags.Instance);
+                return neoSystemField?.GetValue(service) is not null;
+            }, TimeSpan.FromSeconds(5)));
+            service.Stop();
+        }
+        finally
+        {
+            Settings.Custom = previousSettings;
+        }
+    }
+
     private string CreateServiceAndVerifyMessage(string message, string signature, string publicKey, string salt, bool avoidSignatureReplay)
     {
-        var service = new MainService();
+        Assert.IsNotNull(_neoSystem);
 
+        var service = new MainService();
         TrySet(service, "NeoSystem", _neoSystem);
         TrySetField(service, "_neoSystem", _neoSystem);
 
         var originalOut = Console.Out;
         var originalErr = Console.Error;
-
         using var outputWriter = new StringWriter();
         Console.SetOut(outputWriter);
         Console.SetError(outputWriter);
@@ -318,16 +352,15 @@ public class UT_MainService_Wallet
     {
         var walletPassword = "test_pwd";
         var message = messageToSign;
-
         var wallet = TestUtils.GenerateTestWallet(walletPassword);
         if (withAccount)
         {
             var account = wallet.CreateAccount();
             Assert.IsNotNull(account, "Wallet.CreateAccount() should create an account");
         }
+        Assert.IsNotNull(_neoSystem);
 
         var service = new MainService();
-
         TrySet(service, "NeoSystem", _neoSystem);
         TrySetField(service, "_neoSystem", _neoSystem);
         TrySet(service, "CurrentWallet", wallet);

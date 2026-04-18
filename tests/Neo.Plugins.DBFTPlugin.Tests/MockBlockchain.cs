@@ -43,7 +43,7 @@ public static class MockBlockchain
 
     internal static DbftSettings CreateDefaultSettings()
     {
-        var config = new Microsoft.Extensions.Configuration.ConfigurationBuilder()
+        var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ApplicationConfiguration:DBFTPlugin:RecoveryLogs"] = "ConsensusState",

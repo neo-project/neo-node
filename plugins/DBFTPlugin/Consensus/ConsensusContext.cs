@@ -182,7 +182,7 @@ public sealed partial class ConsensusContext : IDisposable, ISerializable
         }
         catch (Exception exception)
         {
-            Utility.Log(nameof(ConsensusContext), LogLevel.Debug, exception.ToString());
+            DBFTPlugin.PluginLogger?.Information("Error loading consensus context {Exception}", exception.ToString());
             return false;
         }
         return true;
