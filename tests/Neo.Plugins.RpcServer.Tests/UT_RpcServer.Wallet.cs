@@ -9,6 +9,7 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using Microsoft.AspNetCore.Http;
 using Neo.Extensions.IO;
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
@@ -248,6 +249,134 @@ partial class UT_RpcServer
         var initialCount = _rpcServer.wallet.GetAccounts().Count();
         Assert.AreEqual(initialCount, _rpcServer.wallet.GetAccounts().Count(), "Account count should not change when importing existing key.");
 
+        TestUtilCloseWallet();
+    }
+
+    [TestMethod]
+    public void TestSignMsgAndVerifyMsg()
+    {
+        TestUtilOpenWallet();
+
+        var message = "\"hello rpc wallet\"";
+        var signResult = (JObject)_rpcServer.SignMsg(message);
+
+        Assert.IsTrue(signResult.ContainsProperty("payload"));
+        Assert.IsTrue(signResult.ContainsProperty("signatures"));
+
+        var signatures = (JArray)signResult["signatures"]!;
+        Assert.IsGreaterThan(0, signatures.Count);
+
+        var first = (JObject)signatures[0]!;
+        var verifyResult = (JObject)_rpcServer.VerifyMsg(
+            message,
+            first["signature"]!.AsString(),
+            first["publickey"]!.AsString(),
+            first["salt"]!.AsString());
+
+        Assert.AreEqual("Valid", verifyResult["status"]!.AsString());
+        TestUtilCloseWallet();
+    }
+
+    [TestMethod]
+    public void TestVerifyMsg_InvalidSignature()
+    {
+        TestUtilOpenWallet();
+
+        var signResult = (JObject)_rpcServer.SignMsg("hello");
+        var first = (JObject)((JArray)signResult["signatures"]!)[0]!;
+        var originalSignature = first["signature"]!.AsString();
+        var tamperedSignature = new string('0', originalSignature.Length);
+
+        var verifyResult = (JObject)_rpcServer.VerifyMsg(
+            "hello",
+            tamperedSignature,
+            first["publickey"]!.AsString(),
+            first["salt"]!.AsString());
+
+        Assert.AreEqual("Invalid", verifyResult["status"]!.AsString());
+        TestUtilCloseWallet();
+    }
+
+    [TestMethod]
+    public void TestSignMsgAndVerifyMsg_AvoidSignatureReplay()
+    {
+        TestUtilOpenWallet();
+
+        var message = "hello replay-safe";
+        var signResult = (JObject)_rpcServer.SignMsg(message, avoidSignatureReplay: true);
+        var signatures = (JArray)signResult["signatures"]!;
+        Assert.IsGreaterThan(0, signatures.Count);
+
+        var first = (JObject)signatures[0]!;
+        var verifyResult = (JObject)_rpcServer.VerifyMsg(
+            message,
+            first["signature"]!.AsString(),
+            first["publickey"]!.AsString(),
+            first["salt"]!.AsString(),
+            avoidSignatureReplay: true);
+
+        Assert.AreEqual("Valid", verifyResult["status"]!.AsString());
+        TestUtilCloseWallet();
+    }
+
+    [TestMethod]
+    public void TestVerifyMsg_AvoidSignatureReplay_InvalidSignature()
+    {
+        TestUtilOpenWallet();
+
+        var message = "hello replay-safe";
+        var signResult = (JObject)_rpcServer.SignMsg(message, avoidSignatureReplay: true);
+        var first = (JObject)((JArray)signResult["signatures"]!)[0]!;
+        var originalSignature = first["signature"]!.AsString();
+        var tamperedSignature = new string('f', originalSignature.Length);
+
+        var verifyResult = (JObject)_rpcServer.VerifyMsg(
+            message,
+            tamperedSignature,
+            first["publickey"]!.AsString(),
+            first["salt"]!.AsString(),
+            avoidSignatureReplay: true);
+
+        Assert.AreEqual("Invalid", verifyResult["status"]!.AsString());
+        TestUtilCloseWallet();
+    }
+
+    [TestMethod]
+    public void TestSignMsg_NoWallet()
+    {
+        _rpcServer.wallet = null;
+        var ex = Assert.ThrowsExactly<RpcException>(() => _rpcServer.SignMsg("hello"));
+        Assert.AreEqual(RpcError.NoOpenedWallet.Code, ex.HResult);
+    }
+
+    [TestMethod]
+    public async Task TestVerifyMsg_RpcMethodName()
+    {
+        TestUtilOpenWallet();
+        var message = "hello verifymsg";
+        var signResult = (JObject)_rpcServer.SignMsg(message);
+        var first = (JObject)((JArray)signResult["signatures"]!)[0]!;
+
+        var context = new DefaultHttpContext();
+        var request = new JObject
+        {
+            ["jsonrpc"] = "2.0",
+            ["id"] = 1,
+            ["method"] = "verifymsg",
+            ["params"] = new JArray
+            {
+                message,
+                first["signature"],
+                first["publickey"],
+                first["salt"]
+            }
+        };
+
+        var response = await _rpcServer.ProcessRequestAsync(context, request);
+        Assert.IsNotNull(response);
+        Assert.IsNotNull(response["result"]);
+        Assert.IsNull(response["error"]);
+        Assert.AreEqual("Valid", response["result"]!["status"]!.AsString());
         TestUtilCloseWallet();
     }
 
