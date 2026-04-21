@@ -278,6 +278,34 @@ partial class UT_RpcServer
     }
 
     [TestMethod]
+    public void TestSignMsgAndVerifyMsg_QuotedAndUnquotedMessagesAreDifferent()
+    {
+        TestUtilOpenWallet();
+
+        const string quotedMessage = "\"hello rpc wallet\"";
+        const string unquotedMessage = "hello rpc wallet";
+
+        var signResult = (JObject)_rpcServer.SignMsg(quotedMessage);
+        var first = (JObject)((JArray)signResult["signatures"]!)[0]!;
+
+        var verifyWithOriginal = (JObject)_rpcServer.VerifyMsg(
+            quotedMessage,
+            first["signature"]!.AsString(),
+            first["publickey"]!.AsString(),
+            first["salt"]!.AsString());
+        Assert.AreEqual("Valid", verifyWithOriginal["status"]!.AsString());
+
+        var verifyWithDifferentMessage = (JObject)_rpcServer.VerifyMsg(
+            unquotedMessage,
+            first["signature"]!.AsString(),
+            first["publickey"]!.AsString(),
+            first["salt"]!.AsString());
+        Assert.AreEqual("Invalid", verifyWithDifferentMessage["status"]!.AsString());
+
+        TestUtilCloseWallet();
+    }
+
+    [TestMethod]
     public void TestVerifyMsg_InvalidSignature()
     {
         TestUtilOpenWallet();
