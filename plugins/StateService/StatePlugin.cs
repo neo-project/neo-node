@@ -69,10 +69,11 @@ public class StatePlugin : Plugin
         var path = PluginHelper.ApplyUnifiedStoragePath(pluginPath);
         var fullPath = System.IO.Path.GetFullPath(path);
         Directory.CreateDirectory(fullPath);
+
         Store = _system.ActorSystem.ActorOf(StateStore.Props(this, fullPath));
         _system.ServiceAdded += NeoSystem_ServiceAdded_Handler;
-        PluginLogger ??= Logger;
         RpcServerPlugin.RegisterMethods(this, StateServiceSettings.Default.Network);
+        PluginLogger ??= Logs.GetLogger($"Plugin_{Name}");
     }
 
     void NeoSystem_ServiceAdded_Handler(object sender, object service)

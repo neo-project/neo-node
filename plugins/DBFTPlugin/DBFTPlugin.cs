@@ -62,7 +62,7 @@ public sealed class DBFTPlugin : Plugin
         if (system.Settings.Network != settings.Network) return;
         neoSystem = system;
         neoSystem.ServiceAdded += NeoSystem_ServiceAdded_Handler;
-        PluginLogger ??= Logger;
+        PluginLogger ??= Logs.GetLogger($"Plugin_{Name}");
     }
 
     void NeoSystem_ServiceAdded_Handler(object sender, object service)

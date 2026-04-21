@@ -82,7 +82,7 @@ public sealed class OracleService : Plugin
         _system = system;
         _system.ServiceAdded += NeoSystem_ServiceAdded_Handler;
         RpcServerPlugin.RegisterMethods(this, OracleSettings.Default.Network);
-        PluginLogger ??= Logger;
+        PluginLogger ??= Logs.GetLogger($"Plugin_{Name}");
     }
 
 
