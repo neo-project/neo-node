@@ -29,9 +29,9 @@ using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 using static Neo.SmartContract.Helper;
+using Address = Neo.Plugins.RpcServer.Model.Address;
 using ECCurve = Neo.Cryptography.ECC.ECCurve;
 using ECPoint = Neo.Cryptography.ECC.ECPoint;
-using Address = Neo.Plugins.RpcServer.Model.Address;
 using Helper = Neo.Wallets.Helper;
 
 namespace Neo.Plugins.RpcServer;
