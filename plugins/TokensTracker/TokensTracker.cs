@@ -92,7 +92,7 @@ public class TokensTracker : Plugin
             trackers.Add(new Nep17Tracker(_db, _maxResults, _shouldTrackHistory, neoSystem));
         foreach (TrackerBase tracker in trackers)
             RpcServerPlugin.RegisterMethods(tracker, _network);
-        PluginLogger ??= Logger;
+        PluginLogger ??= Logs.GetLogger($"Plugin_{Name}");
     }
 
     private void ResetBatch()
