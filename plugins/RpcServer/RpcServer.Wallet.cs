@@ -308,7 +308,7 @@ partial class RpcServer
             .Select(p =>
             {
                 var key = p.GetKey()!;
-                var signature = Crypto.Sign(signData, key.PrivateKey, ECCurve.Secp256r1);
+                var signature = Crypto.Sign(signData, key);
                 return (JToken)new JObject
                 {
                     ["address"] = p.Address,
