@@ -273,7 +273,6 @@ partial class RpcServer
     protected internal virtual JToken SignMsg(string message, bool avoidSignatureReplay = false)
     {
         var wallet = CheckWallet();
-        message = NormalizeMessage(message);
         if (message is null) throw new RpcException(RpcErrorFactory.InvalidParams("Null message"));
 
         var saltBytes = RandomNumberGenerator.GetBytes(16);
@@ -340,7 +339,6 @@ partial class RpcServer
     [RpcMethod(Name = "verifymsg")]
     protected internal virtual JToken VerifyMsg(string message, string signature, string publicKey, string salt, bool avoidSignatureReplay = false)
     {
-        message = NormalizeMessage(message);
         if (message is null) throw new RpcException(RpcErrorFactory.InvalidParams("Null message"));
 
         if (!ECPoint.TryParse(publicKey, ECCurve.Secp256r1, out var pubKey))
@@ -889,17 +887,5 @@ partial class RpcServer
         {
             return context.ToJson();
         }
-    }
-
-    private static string NormalizeMessage(string message)
-    {
-        if (string.IsNullOrEmpty(message) || message.Length < 2) return message;
-
-        var first = message[0];
-        var last = message[^1];
-        if (first == last && (first == '"' || first == '\''))
-            return message[1..^1];
-
-        return message;
     }
 }
