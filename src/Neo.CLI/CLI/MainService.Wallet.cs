@@ -583,8 +583,8 @@ partial class MainService
             if (account.Contract == null || IsMultiSigContract(account.Contract.Script))
                 continue;
             var key = account.GetKey();
-            var signature = Crypto.Sign(signData, key!.PrivateKey, ECCurve.Secp256r1);
-
+            if (key == null) continue;
+            var signature = Crypto.Sign(signData, key);
             ConsoleHelper.Info("    Address: ", account.Address);
             ConsoleHelper.Info("  PublicKey: ", key.PublicKey.EncodePoint(true).ToHexString());
             ConsoleHelper.Info("  Signature: ", signature.ToHexString());
