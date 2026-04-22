@@ -281,7 +281,7 @@ public sealed class OracleService : Plugin
     private async Task SendResponseSignatureAsync(ulong requestId, byte[] txSign, KeyPair keyPair)
     {
         byte[] message = [.. keyPair.PublicKey.ToArray(), .. BitConverter.GetBytes(requestId), .. txSign];
-        var sign = Crypto.Sign(message, keyPair.PrivateKey);
+        var sign = Crypto.Sign(message, keyPair);
         var param = "\"" + Convert.ToBase64String(keyPair.PublicKey.ToArray()) + "\", " + requestId + ", \"" + Convert.ToBase64String(txSign) + "\",\"" + Convert.ToBase64String(sign) + "\"";
         var content = "{\"id\":" + Interlocked.Increment(ref counter) + ",\"jsonrpc\":\"2.0\",\"method\":\"submitoracleresponse\",\"params\":[" + param + "]}";
 

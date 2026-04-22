@@ -80,11 +80,10 @@ internal partial class SigningDialog : Form
         }
 
         var account = (WalletEntry)cmbAddress.SelectedItem;
-        var keys = account.Account.GetKey();
-
+        var keypair = account.Account.GetKey();
         try
         {
-            signedData = Crypto.Sign(raw, keys.PrivateKey);
+            signedData = Crypto.Sign(raw, keypair);
         }
         catch (Exception err)
         {
