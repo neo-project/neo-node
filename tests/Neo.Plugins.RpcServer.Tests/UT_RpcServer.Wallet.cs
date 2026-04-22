@@ -257,7 +257,7 @@ partial class UT_RpcServer
     {
         TestUtilOpenWallet();
 
-        var message = "\"hello rpc wallet\"";
+        var message = "hello rpc wallet";
         var signResult = (JObject)_rpcServer.SignMsg(message);
 
         Assert.IsTrue(signResult.ContainsProperty("payload"));
