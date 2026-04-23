@@ -54,7 +54,7 @@ class OracleNeoFSProtocol : IOracleProtocol
         }
         catch (Exception e)
         {
-            OracleService.PluginLogger?.Information("NeoFS result: error,{ErrorMessage}", e.Message);
+            OracleService.PluginLogger?.Error("NeoFS result: error,{ErrorMessage}", e.Message);
             return (OracleResponseCode.Error, null);
         }
     }
