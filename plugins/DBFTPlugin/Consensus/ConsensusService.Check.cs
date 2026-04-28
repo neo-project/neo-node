@@ -30,14 +30,14 @@ partial class ConsensusService
             // Check maximum block size via Native Contract policy
             if (context.GetExpectedBlockSize() > dbftSettings.MaxBlockSize)
             {
-                Log($"Rejected block: {context.Block.Index} The size exceed the policy", LogLevel.Warning);
+                DBFTPlugin.PluginLogger?.Warning("Rejected block: {Index} The size exceed the policy", context.Block.Index);
                 RequestChangeView(ChangeViewReason.BlockRejectedByPolicy);
                 return false;
             }
             // Check maximum block system fee via Native Contract policy
             if (context.GetExpectedBlockSystemFee() > dbftSettings.MaxBlockSystemFee)
             {
-                Log($"Rejected block: {context.Block.Index} The system fee exceed the policy", LogLevel.Warning);
+                DBFTPlugin.PluginLogger?.Warning("Rejected block: {Index} The system fee exceed the policy", context.Block.Index);
                 RequestChangeView(ChangeViewReason.BlockRejectedByPolicy);
                 return false;
             }
@@ -46,7 +46,8 @@ partial class ConsensusService
             // around 2*15/M=30.0/5 ~ 40% block time (for M=5)
             ExtendTimerByFactor(2);
 
-            Log($"Sending {nameof(PrepareResponse)}");
+            DBFTPlugin.PluginLogger?.Information("Sending PrepareResponse height={Index} view={ViewNumber}",
+                context.Block.Index, context.ViewNumber);
             localNode.Tell(new LocalNode.SendDirectly(context.MakePrepareResponse()));
             CheckPreparations();
         }
@@ -55,11 +56,13 @@ partial class ConsensusService
 
     private void CheckCommits()
     {
-        if (context.CommitPayloads.Count(p => context.GetMessage(p)?.ViewNumber == context.ViewNumber) >= context.M && context.TransactionHashes!.All(p => context.Transactions!.ContainsKey(p)))
+        if (context.CommitPayloads.Count(p => context.GetMessage(p)?.ViewNumber == context.ViewNumber) >= context.M
+            && context.TransactionHashes!.All(p => context.Transactions!.ContainsKey(p)))
         {
             block_received_index = context.Block.Index;
             Block block = context.CreateBlock();
-            Log($"Sending {nameof(Block)}: height={block.Index} hash={block.Hash} tx={block.Transactions.Length}");
+            DBFTPlugin.PluginLogger?.Information("Sending Block: height={Index} hash={Hash} tx={TransactionsLength}",
+                block.Index, block.Hash, block.Transactions.Length);
             blockchain.Tell(block);
         }
     }
@@ -85,10 +88,11 @@ partial class ConsensusService
 
     private void CheckPreparations()
     {
-        if (context.PreparationPayloads.Count(p => p != null) >= context.M && context.TransactionHashes!.All(p => context.Transactions!.ContainsKey(p)))
+        if (context.PreparationPayloads.Count(p => p != null) >= context.M
+            && context.TransactionHashes!.All(p => context.Transactions!.ContainsKey(p)))
         {
             ExtensiblePayload payload = context.MakeCommit();
-            Log($"Sending {nameof(Commit)}");
+            DBFTPlugin.PluginLogger?.Information("Sending Commit: height={BlockIndex} view={ViewNumber}", context.Block.Index, context.ViewNumber);
             context.Save();
             localNode.Tell(new LocalNode.SendDirectly(payload));
             // Set timer, so we will resend the commit in case of a networking issue

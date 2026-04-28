@@ -68,9 +68,9 @@ class Nep11Tracker : TrackerBase
                     {
                         HandleNotificationNep11(notifyEventArgs.ScriptContainer, notifyEventArgs.ScriptHash, stateItems, transfers, ref nep11TransferIndex);
                     }
-                    catch (Exception e)
+                    catch (Exception ex)
                     {
-                        Log(e.ToString(), LogLevel.Error);
+                        TokensTracker.PluginLogger?.Error(ex, "Error handling NEP-11 notification");
                         throw;
                     }
                 }
@@ -89,7 +89,7 @@ class Nep11Tracker : TrackerBase
                 var balanceMethod2 = state.Manifest.Abi.GetMethod("balanceOf", 2);
                 if (balanceMethod is null && balanceMethod2 is null)
                 {
-                    Log($"{state.Hash} is not nft!", LogLevel.Warning);
+                    TokensTracker.PluginLogger?.Warning("{Hash} is not nft!", state.Hash);
                     continue;
                 }
 
@@ -113,7 +113,7 @@ class Nep11Tracker : TrackerBase
     {
         if (record.tokenId == null)
         {
-            Log($"Fault: from[{record.from}] to[{record.to}] get {record.asset} token is null", LogLevel.Warning);
+            TokensTracker.PluginLogger?.Warning("Fault: from[{From}] to[{To}] get {Asset} token is null", record.from, record.to, record.asset);
             return;
         }
 
@@ -123,14 +123,16 @@ class Nep11Tracker : TrackerBase
         using ApplicationEngine engine = ApplicationEngine.Run(sb.ToArray(), snapshot, settings: _neoSystem.Settings, gas: 3400_0000);
         if (engine.State.HasFlag(VMState.FAULT) || engine.ResultStack.Count != 2)
         {
-            Log($"Fault: from[{record.from}] to[{record.to}] get {record.asset} token [{record.tokenId.ToHexString()}] balance fault", LogLevel.Warning);
+            TokensTracker.PluginLogger?.Warning("Fault: from[{From}] to[{To}] get {Asset} token [{TokenId}] balance fault",
+                record.from, record.to, record.asset, record.tokenId.ToHexString());
             return;
         }
         var toBalance = engine.ResultStack.Pop();
         var fromBalance = engine.ResultStack.Pop();
         if (toBalance is not Integer || fromBalance is not Integer)
         {
-            Log($"Fault: from[{record.from}] to[{record.to}] get {record.asset} token [{record.tokenId.ToHexString()}] balance not number", LogLevel.Warning);
+            TokensTracker.PluginLogger?.Warning("Fault: from[{From}] to[{To}] get {Asset} token [{TokenId}] balance not number",
+                record.from, record.to, record.asset, record.tokenId.ToHexString());
             return;
         }
 
@@ -147,7 +149,7 @@ class Nep11Tracker : TrackerBase
     {
         if (record.tokenId == null)
         {
-            Log($"Fault: from[{record.from}] to[{record.to}] get {record.asset} token is null", LogLevel.Warning);
+            TokensTracker.PluginLogger?.Warning("Fault: from[{From}] to[{To}] get {Asset} token is null", record.from, record.to, record.asset);
             return;
         }
 
