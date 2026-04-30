@@ -624,6 +624,196 @@ partial class UT_RpcServer
     }
 
     [TestMethod]
+    public void TestSign_WhenWalletNotOpen()
+    {
+        _rpcServer.wallet = null;
+        var exception = Assert.ThrowsExactly<RpcException>(
+            () => _ = _rpcServer.Sign(new JObject()),
+            "Should throw RpcException for no opened wallet");
+        Assert.AreEqual(RpcError.NoOpenedWallet.Code, exception.HResult);
+    }
+
+    [TestMethod]
+    public void TestSign_NullContext()
+    {
+        _rpcServer.wallet = _wallet;
+        try
+        {
+            var exception = Assert.ThrowsExactly<RpcException>(
+                () => _ = _rpcServer.Sign(null),
+                "Should throw RpcException when JSON object is null");
+            Assert.AreEqual(RpcError.InvalidParams.Code, exception.HResult);
+        }
+        finally
+        {
+            _rpcServer.wallet = null;
+        }
+    }
+
+    [TestMethod]
+    public void TestSign_InvalidContextJson()
+    {
+        _rpcServer.wallet = _wallet;
+        try
+        {
+            var bogus = new JObject { ["foo"] = "bar" };
+            var exception = Assert.ThrowsExactly<RpcException>(
+                () => _ = _rpcServer.Sign(bogus),
+                "Should throw RpcException when JSON object is not a valid ContractParametersContext");
+            Assert.AreEqual(RpcError.InvalidParams.Code, exception.HResult);
+            Assert.Contains("Invalid signature context", exception.Message);
+        }
+        finally
+        {
+            _rpcServer.wallet = null;
+        }
+    }
+
+    [TestMethod]
+    public void TestSign_NetworkMismatch()
+    {
+        _rpcServer.wallet = _wallet;
+        try
+        {
+            var snapshot = _neoSystem.GetSnapshotCache();
+            var tx = TestUtils.CreateValidTx(snapshot, _wallet, _walletAccount);
+            tx.Witnesses = [];
+            // Sign on the correct network and then rewrite "network" so the JSON looks like
+            // a context produced for a different network (e.g. mainnet vs testnet).
+            var ctx = new ContractParametersContext(snapshot, tx, _neoSystem.Settings.Network);
+            Assert.IsTrue(_wallet.Sign(ctx));
+            var contextJson = (JObject)ctx.ToJson();
+            contextJson["network"] = _neoSystem.Settings.Network + 1;
+
+            var exception = Assert.ThrowsExactly<RpcException>(
+                () => _ = _rpcServer.Sign(contextJson),
+                "Should throw RpcException on network mismatch");
+            Assert.AreEqual(RpcError.InvalidParams.Code, exception.HResult);
+            Assert.Contains("Network mismatch", exception.Message);
+        }
+        finally
+        {
+            _rpcServer.wallet = null;
+        }
+    }
+
+    [TestMethod]
+    public void TestSign_NoMatchingPrivateKey()
+    {
+        // A wallet that contains no private keys for the signers of the context.
+        var emptyWallet = TestUtils.GenerateTestWallet("empty");
+        _rpcServer.wallet = emptyWallet;
+        try
+        {
+            var snapshot = _neoSystem.GetSnapshotCache();
+            var tx = TestUtils.CreateValidTx(snapshot, _wallet, _walletAccount);
+            tx.Witnesses = [];
+            var unsigned = new ContractParametersContext(snapshot, tx, _neoSystem.Settings.Network);
+            var contextJson = (JObject)unsigned.ToJson();
+
+            var exception = Assert.ThrowsExactly<RpcException>(
+                () => _ = _rpcServer.Sign(contextJson),
+                "Should throw RpcException when wallet has no matching private key");
+            Assert.AreEqual(RpcError.BadRequest.Code, exception.HResult);
+            Assert.Contains("Non-existent private key", exception.Message);
+        }
+        finally
+        {
+            _rpcServer.wallet = null;
+        }
+    }
+
+    [TestMethod]
+    public void TestSign_CompleteSingleSignature()
+    {
+        // Verify that an unsigned context produced by another node (e.g. CLI `sign`)
+        // can be fed into the RPC `sign` and gets fully signed.
+        _rpcServer.wallet = _wallet;
+        try
+        {
+            var snapshot = _neoSystem.GetSnapshotCache();
+            var tx = TestUtils.CreateValidTx(snapshot, _wallet, _walletAccount);
+            tx.Witnesses = [];
+            var unsigned = new ContractParametersContext(snapshot, tx, _neoSystem.Settings.Network);
+            Assert.IsNull(unsigned.GetSignatures(tx.Sender));
+            var contextJson = (JObject)unsigned.ToJson();
+
+            var result = _rpcServer.Sign(contextJson);
+            Assert.IsInstanceOfType(result, typeof(JObject));
+
+            var signed = ContractParametersContext.Parse(result.ToString(), snapshot);
+            Assert.IsTrue(signed.Completed, "Context should be complete after signing with the only required key.");
+            Assert.HasCount(1, signed.GetSignatures(tx.Sender));
+        }
+        finally
+        {
+            _rpcServer.wallet = null;
+        }
+    }
+
+    [TestMethod]
+    public void TestSign_PartialMultiSignature()
+    {
+        // Build a 2-of-3 multisig contract where each share lives in a separate wallet.
+        // The CLI of one node would produce a partial context for the first signer, and
+        // another node's RPC `sign` should be able to add the second signature.
+        var walletA = TestUtils.GenerateTestWallet("a");
+        var walletB = TestUtils.GenerateTestWallet("b");
+        var walletC = TestUtils.GenerateTestWallet("c");
+
+        var accountA = walletA.CreateAccount();
+        var accountB = walletB.CreateAccount();
+        var accountC = walletC.CreateAccount();
+
+        var publicKeys = new[]
+        {
+            accountA.GetKey().PublicKey,
+            accountB.GetKey().PublicKey,
+            accountC.GetKey().PublicKey,
+        };
+
+        var multiSigContract = Contract.CreateMultiSigContract(2, publicKeys);
+        walletA.CreateAccount(multiSigContract, accountA.GetKey());
+        walletB.CreateAccount(multiSigContract, accountB.GetKey());
+        walletC.CreateAccount(multiSigContract, accountC.GetKey());
+
+        var snapshot = _neoSystem.GetSnapshotCache();
+        var tx = new Transaction
+        {
+            Version = 0,
+            Nonce = 12345,
+            ValidUntilBlock = NativeContract.Ledger.CurrentIndex(snapshot) + _neoSystem.Settings.MaxValidUntilBlockIncrement,
+            Signers = [new Signer { Account = multiSigContract.ScriptHash, Scopes = WitnessScope.CalledByEntry }],
+            Attributes = [],
+            Script = new[] { (byte)OpCode.RET },
+            Witnesses = [],
+            SystemFee = 0,
+            NetworkFee = 1_000_000,
+        };
+
+        // Step 1: walletA signs locally (simulating CLI `sign` on node A).
+        var contextA = new ContractParametersContext(snapshot, tx, _neoSystem.Settings.Network);
+        Assert.IsTrue(walletA.Sign(contextA));
+        Assert.IsFalse(contextA.Completed, "2-of-3 multisig should not be complete after a single signature.");
+
+        // Step 2: hand the JSON over to the RPC of node B and let it add the second signature.
+        _rpcServer.wallet = walletB;
+        try
+        {
+            var partialJson = (JObject)contextA.ToJson();
+            var rpcResult = _rpcServer.Sign(partialJson);
+
+            var contextB = ContractParametersContext.Parse(rpcResult.ToString(), snapshot);
+            Assert.IsTrue(contextB.Completed, "Context should be complete after the second signature from RPC.");
+            Assert.HasCount(2, contextB.GetSignatures(tx.Sender));
+        }
+        finally
+        {
+            _rpcServer.wallet = null;
+        }
+    }
+
+    [TestMethod]
     public void TestCloseWallet_WhenWalletNotOpen()
     {
         _rpcServer.wallet = null;

@@ -298,6 +298,119 @@ partial class UT_RpcServer
 
     #endregion
 
+    #region Relay Tests
+
+    [TestMethod]
+    public void TestRelay_Normal()
+    {
+        // The full sign + relay round-trip: take a freshly built unsigned context,
+        // sign it through the wallet, then hand the (now-completed) JSON to `relay`.
+        var snapshot = _neoSystem.GetSnapshotCache();
+        var tx = TestUtils.CreateValidTx(snapshot, _wallet, _walletAccount);
+        tx.Witnesses = [];
+
+        var context = new ContractParametersContext(snapshot, tx, _neoSystem.Settings.Network);
+        Assert.IsTrue(_wallet.Sign(context));
+        Assert.IsTrue(context.Completed);
+        var contextJson = (JObject)context.ToJson();
+
+        var result = _rpcServer.Relay(contextJson);
+        Assert.IsInstanceOfType(result, typeof(JObject));
+
+        var json = (JObject)result;
+        Assert.IsTrue(json.ContainsProperty("hash"));
+        Assert.AreEqual(tx.Hash.ToString(), json["hash"].AsString());
+    }
+
+    [TestMethod]
+    public void TestRelay_NullContext()
+    {
+        var exception = Assert.ThrowsExactly<RpcException>(
+            () => _ = _rpcServer.Relay(null),
+            "Should throw RpcException when JSON object is null");
+        Assert.AreEqual(RpcError.InvalidParams.Code, exception.HResult);
+    }
+
+    [TestMethod]
+    public void TestRelay_InvalidContextJson()
+    {
+        var bogus = new JObject { ["foo"] = "bar" };
+        var exception = Assert.ThrowsExactly<RpcException>(
+            () => _ = _rpcServer.Relay(bogus),
+            "Should throw RpcException when JSON object is not a valid ContractParametersContext");
+        Assert.AreEqual(RpcError.InvalidParams.Code, exception.HResult);
+        Assert.Contains("Invalid signature context", exception.Message);
+    }
+
+    [TestMethod]
+    public void TestRelay_IncompleteSignature()
+    {
+        // Build a 2-of-3 multisig context that only has one signature; relay should refuse it.
+        var walletA = TestUtils.GenerateTestWallet("a");
+        var walletB = TestUtils.GenerateTestWallet("b");
+        var walletC = TestUtils.GenerateTestWallet("c");
+        var accountA = walletA.CreateAccount();
+        var accountB = walletB.CreateAccount();
+        var accountC = walletC.CreateAccount();
+
+        var publicKeys = new[]
+        {
+            accountA.GetKey().PublicKey,
+            accountB.GetKey().PublicKey,
+            accountC.GetKey().PublicKey,
+        };
+        var multiSigContract = Contract.CreateMultiSigContract(2, publicKeys);
+        walletA.CreateAccount(multiSigContract, accountA.GetKey());
+
+        var snapshot = _neoSystem.GetSnapshotCache();
+        var tx = new Transaction
+        {
+            Version = 0,
+            Nonce = 54321,
+            ValidUntilBlock = NativeContract.Ledger.CurrentIndex(snapshot) + _neoSystem.Settings.MaxValidUntilBlockIncrement,
+            Signers = [new Signer { Account = multiSigContract.ScriptHash, Scopes = WitnessScope.CalledByEntry }],
+            Attributes = [],
+            Script = new[] { (byte)Neo.VM.OpCode.RET },
+            Witnesses = [],
+            SystemFee = 0,
+            NetworkFee = 1_000_000,
+        };
+
+        var partialContext = new ContractParametersContext(snapshot, tx, _neoSystem.Settings.Network);
+        Assert.IsTrue(walletA.Sign(partialContext));
+        Assert.IsFalse(partialContext.Completed);
+
+        var partialJson = (JObject)partialContext.ToJson();
+        var exception = Assert.ThrowsExactly<RpcException>(
+            () => _ = _rpcServer.Relay(partialJson),
+            "Should throw RpcException when the signature context is incomplete");
+        Assert.AreEqual(RpcError.InvalidParams.Code, exception.HResult);
+        Assert.Contains("incomplete", exception.Message);
+    }
+
+    [TestMethod]
+    public void TestRelay_AlreadyInPool()
+    {
+        // Pre-load the tx into the mempool, then try to relay the matching context.
+        var snapshot = _neoSystem.GetSnapshotCache();
+        var tx = TestUtils.CreateValidTx(snapshot, _wallet, _walletAccount);
+        _neoSystem.MemPool.TryAdd(tx, snapshot);
+
+        // Re-build the context for the same tx (without witnesses) and re-sign so we get
+        // the same JSON shape an external caller would produce.
+        tx.Witnesses = [];
+        var context = new ContractParametersContext(snapshot, tx, _neoSystem.Settings.Network);
+        Assert.IsTrue(_wallet.Sign(context));
+        var contextJson = (JObject)context.ToJson();
+
+        var exception = Assert.ThrowsExactly<RpcException>(
+            () => _ = _rpcServer.Relay(contextJson),
+            "Should throw RpcException when the transaction is already in mempool");
+        Assert.AreEqual(RpcError.AlreadyInPool.Code, exception.HResult);
+    }
+
+    #endregion
+
     #region SubmitBlock Tests
 
     [TestMethod]

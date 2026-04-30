@@ -15,6 +15,7 @@ using Neo.Json;
 using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
+using Neo.SmartContract;
 using static Neo.Ledger.Blockchain;
 
 namespace Neo.Plugins.RpcServer;
@@ -209,6 +210,64 @@ partial class RpcServer
         var tx = Result.Ok_Or(
             () => Convert.FromBase64String(base64Tx).AsSerializable<Transaction>(),
             RpcError.InvalidParams.WithData($"Invalid Transaction Format: {base64Tx}"));
+        var reason = system.Blockchain.Ask<RelayResult>(tx).Result;
+        return GetRelayResult(reason.Result, tx.Hash);
+    }
+
+    /// <summary>
+    /// Relays a completed signature context (a <see cref="ContractParametersContext"/> JSON
+    /// object, typically produced by the <c>sign</c> RPC method or the CLI <c>sign</c> command)
+    /// to the network. This is the RPC equivalent of the CLI <c>relay</c> command: it parses
+    /// the JSON, verifies the context is fully signed, attaches the witnesses to the underlying
+    /// transaction, and broadcasts the transaction. Unlike <c>sendrawtransaction</c>, this
+    /// accepts a <c>ContractParametersContext</c> JSON instead of a base64-encoded raw tx,
+    /// so it can directly consume the output of CLI/RPC <c>sign</c> in a multi-signature flow.
+    /// <para>Request format:</para>
+    /// <code>{
+    ///   "jsonrpc": "2.0",
+    ///   "id": 1,
+    ///   "method": "relay",
+    ///   "params": [{
+    ///     "type": "Neo.Network.P2P.Payloads.Transaction",
+    ///     "hash": "An UInt256 transaction hash",
+    ///     "data": "A Base64-encoded serialized unsigned transaction",
+    ///     "items": { "0xScriptHash": { /* fully populated signatures */ } },
+    ///     "network": 894710606
+    ///   }]
+    /// }</code>
+    /// <para>Response format:</para>
+    /// <code>{"jsonrpc": "2.0", "id": 1, "result": {"hash": "The hash of the transaction(UInt256)"}}</code>
+    /// </summary>
+    /// <param name="contextJson">
+    /// A fully-signed <see cref="ContractParametersContext"/> JSON object whose
+    /// <see cref="ContractParametersContext.Verifiable"/> is a <see cref="Transaction"/>.
+    /// </param>
+    /// <returns>A JSON object containing the relayed transaction hash.</returns>
+    /// <exception cref="RpcException">
+    /// Thrown when the JSON object is missing or malformed, the signature context is incomplete,
+    /// the underlying verifiable is not a transaction, or the transaction fails verification
+    /// (already exists, expired, invalid script, insufficient funds, etc.).
+    /// </exception>
+    [RpcMethod]
+    protected internal virtual JToken Relay(JObject contextJson)
+    {
+        contextJson.NotNull_Or(RpcErrorFactory.InvalidParams("You must input JSON object to relay."));
+
+        ContractParametersContext context;
+        try
+        {
+            context = ContractParametersContext.Parse(contextJson.ToString(), system.StoreView);
+        }
+        catch (Exception ex)
+        {
+            throw new RpcException(RpcErrorFactory.InvalidParams($"Invalid signature context: {ex.Message}"));
+        }
+
+        context.Completed.True_Or(RpcErrorFactory.InvalidParams("The signature is incomplete."));
+        if (context.Verifiable is not Transaction tx)
+            throw new RpcException(RpcErrorFactory.InvalidParams("Only support to relay transaction."));
+
+        tx.Witnesses = context.GetWitnesses();
         var reason = system.Blockchain.Ask<RelayResult>(tx).Result;
         return GetRelayResult(reason.Result, tx.Hash);
     }

@@ -673,6 +673,69 @@ partial class RpcServer
     }
 
     /// <summary>
+    /// Signs a transaction <see cref="ContractParametersContext"/> JSON object using the currently opened wallet.
+    /// This is the RPC equivalent of the CLI <c>sign &lt;json&gt;</c> command and is fully compatible
+    /// with the JSON output produced by the CLI for incomplete (e.g. multi-signature) signature contexts:
+    /// the JSON returned by the CLI can be passed directly as the parameter of this method, and
+    /// the JSON returned by this method can be fed back into the CLI <c>sign</c> command on another node.
+    /// <para>Request format:</para>
+    /// <code>{
+    ///   "jsonrpc": "2.0",
+    ///   "id": 1,
+    ///   "method": "sign",
+    ///   "params": [{
+    ///     "type": "Neo.Network.P2P.Payloads.Transaction",
+    ///     "hash": "An UInt256 transaction hash",
+    ///     "data": "A Base64-encoded serialized unsigned transaction",
+    ///     "items": {
+    ///       "0xScriptHash": {
+    ///         "script": "A Base64-encoded verification script",
+    ///         "parameters": [{ "type": "Signature", "value": null }],
+    ///         "signatures": { "Hex public key": "A Base64-encoded signature" }
+    ///       }
+    ///     },
+    ///     "network": 894710606
+    ///   }]
+    /// }</code>
+    /// <para>Response format:</para>
+    /// <code>{
+    ///   "jsonrpc": "2.0",
+    ///   "id": 1,
+    ///   "result": { /* The updated ContractParametersContext as JSON, possibly still incomplete */ }
+    /// }</code>
+    /// </summary>
+    /// <param name="contextJson">The <see cref="ContractParametersContext"/> JSON object to sign.</param>
+    /// <returns>The updated <see cref="ContractParametersContext"/> as a JSON object.</returns>
+    /// <exception cref="RpcException">
+    /// Thrown when no wallet is open, the JSON object is missing or malformed, the network of the
+    /// context does not match the current network, or the wallet does not contain any matching
+    /// private key for the given context.
+    /// </exception>
+    [RpcMethod]
+    protected internal virtual JToken Sign(JObject contextJson)
+    {
+        var wallet = CheckWallet();
+        contextJson.NotNull_Or(RpcErrorFactory.InvalidParams("You must input JSON object pending signature data."));
+
+        ContractParametersContext context;
+        try
+        {
+            context = ContractParametersContext.Parse(contextJson.ToString(), system.StoreView);
+        }
+        catch (Exception ex)
+        {
+            throw new RpcException(RpcErrorFactory.InvalidParams($"Invalid signature context: {ex.Message}"));
+        }
+
+        (context.Network == system.Settings.Network)
+            .True_Or(RpcErrorFactory.InvalidParams($"Network mismatch. Expected {system.Settings.Network}, got {context.Network}."));
+
+        wallet.Sign(context).True_Or(RpcErrorFactory.BadRequest("Non-existent private key in wallet."));
+
+        return context.ToJson();
+    }
+
+    /// <summary>
     /// Cancels an unconfirmed transaction.
     /// <para>Request format:</para>
     /// <code>{

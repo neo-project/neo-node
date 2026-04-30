@@ -44,6 +44,7 @@ public static class ParameterConverter
             { typeof(bool), token => Result.Ok_Or(token.AsBoolean, CreateInvalidParamError<bool>(token)) },
             { typeof(byte[]), ToBytes }, // byte[] in jsonrpc request must be base64 encoded.
             { typeof(Guid), ToGuid },
+            { typeof(JObject), ToJObject },
             { typeof(UInt160), ToUInt160 }, // hex-encoded UInt160
             { typeof(UInt256), ToUInt256 }, // hex-encoded UInt256
             { typeof(ContractNameOrHashOrId), ToContractNameOrHashOrId },
@@ -374,6 +375,12 @@ public static class ParameterConverter
         if (Guid.TryParse(value.Value, out var guid)) return guid;
 
         throw new RpcException(RpcError.InvalidParams.WithData($"Invalid Guid: {token}"));
+    }
+
+    private static object ToJObject(JToken token)
+    {
+        if (token is JObject obj) return obj;
+        throw new RpcException(RpcError.InvalidParams.WithData($"Invalid JSON object: {token}"));
     }
 }
 
