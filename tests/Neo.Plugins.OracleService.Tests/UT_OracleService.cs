@@ -13,6 +13,9 @@ using Neo.Cryptography.ECC;
 using Neo.Extensions;
 using Neo.Network.P2P.Payloads;
 using Neo.SmartContract.Native;
+using System.Collections.Concurrent;
+using System.Reflection;
+using static Neo.Plugins.OracleService.Tests.TestBlockchain;
 
 namespace Neo.Plugins.OracleService.Tests;
 
@@ -97,5 +100,72 @@ public class UT_OracleService
         Assert.AreEqual(OracleResponseCode.InsufficientFunds, response.Code);
         Assert.AreEqual(2197650, tx.NetworkFee);
         Assert.AreEqual(7802350, tx.SystemFee);
+    }
+
+    [TestMethod]
+    public void TestMarkRequestFinishedUsesCurrentTimestamp()
+    {
+        var oracle = new OracleService();
+        var markRequestFinished = typeof(OracleService).GetMethod("MarkRequestFinished", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.IsNotNull(markRequestFinished);
+
+        var before = TimeProvider.Current.UtcNow;
+        markRequestFinished.Invoke(oracle, [1ul]);
+        var after = TimeProvider.Current.UtcNow;
+
+        var finishedCache = GetPrivateField<ConcurrentDictionary<ulong, DateTime>>(oracle, "finishedCache");
+        Assert.IsTrue(finishedCache.TryGetValue(1ul, out var timestamp));
+        Assert.IsTrue(timestamp >= before && timestamp <= after);
+    }
+
+    [TestMethod]
+    public async Task TestStartAfterStopUsesFreshCancellationSource()
+    {
+        ResetStore();
+        InitializeContract();
+
+        var oracle = new OracleService();
+        SetPrivateField(oracle, "_system", s_theNeoSystem);
+        Task secondRun = Task.CompletedTask;
+
+        try
+        {
+            _ = oracle.Start(s_wallet);
+            await Task.Delay(100);
+            StopOracle(oracle);
+
+            secondRun = oracle.Start(s_wallet);
+            await Task.Delay(100);
+
+            var cancelSource = GetPrivateField<CancellationTokenSource>(oracle, "cancelSource");
+            Assert.IsFalse(cancelSource.IsCancellationRequested);
+        }
+        finally
+        {
+            StopOracle(oracle);
+            await secondRun.WaitAsync(TimeSpan.FromSeconds(5));
+            oracle.Dispose();
+        }
+    }
+
+    private static T GetPrivateField<T>(object instance, string name)
+    {
+        return (T)instance.GetType()
+            .GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(instance)!;
+    }
+
+    private static void SetPrivateField(object instance, string name, object value)
+    {
+        instance.GetType()
+            .GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!
+            .SetValue(instance, value);
+    }
+
+    private static void StopOracle(OracleService oracle)
+    {
+        typeof(OracleService)
+            .GetMethod("OnStop", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(oracle, []);
     }
 }

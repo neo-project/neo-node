@@ -48,7 +48,7 @@ public sealed class OracleService : Plugin
     private readonly ConcurrentDictionary<ulong, OracleTask> pendingQueue = new();
     private readonly ConcurrentDictionary<ulong, DateTime> finishedCache = new();
     private Timer timer;
-    internal readonly CancellationTokenSource cancelSource = new();
+    internal CancellationTokenSource cancelSource = new();
     private OracleStatus status = OracleStatus.Unstarted;
     private IWalletProvider walletProvider;
     private int counter;
@@ -125,6 +125,7 @@ public sealed class OracleService : Plugin
     public Task Start(Wallet wallet)
     {
         if (status == OracleStatus.Running) return Task.CompletedTask;
+        ResetCancellationSource();
 
         if (wallet is null)
         {
@@ -150,7 +151,13 @@ public sealed class OracleService : Plugin
         status = OracleStatus.Running;
         timer = new Timer(OnTimer, null, RefreshIntervalMilliSeconds, Timeout.Infinite);
         ConsoleHelper.Info($"Oracle started");
-        return ProcessRequestsAsync();
+        return ProcessRequestsAsync(cancelSource.Token);
+    }
+
+    private void ResetCancellationSource()
+    {
+        if (cancelSource.IsCancellationRequested)
+            cancelSource = new CancellationTokenSource();
     }
 
     [ConsoleCommand("stop oracle", Category = "Oracle", Description = "Stop oracle service")]
@@ -287,13 +294,13 @@ public sealed class OracleService : Plugin
         await Task.WhenAll(tasks);
     }
 
-    private async Task ProcessRequestAsync(DataCache snapshot, OracleRequest req)
+    private async Task ProcessRequestAsync(DataCache snapshot, OracleRequest req, CancellationToken cancellation)
     {
         PluginLogger?.Information("Process oracle request start: {OriginalTxid} <{Url}>", req.OriginalTxid, req.Url);
 
         uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
 
-        (OracleResponseCode code, string data) = await ProcessUrlAsync(req.Url);
+        (OracleResponseCode code, string data) = await ProcessUrlAsync(req.Url, cancellation);
 
         PluginLogger?.Information("Process oracle request end: {OriginalTxid} <{Url}>, responseCode:{ResponseCode}, response:{Response}",
             req.OriginalTxid, req.Url, code, data);
@@ -346,21 +353,21 @@ public sealed class OracleService : Plugin
         }
     }
 
-    private async Task ProcessRequestsAsync()
+    private async Task ProcessRequestsAsync(CancellationToken cancellation)
     {
-        while (!cancelSource.IsCancellationRequested)
+        while (!cancellation.IsCancellationRequested)
         {
             using (var snapshot = _system.GetSnapshotCache())
             {
                 SyncPendingQueue(snapshot);
                 foreach (var (id, request) in NativeContract.Oracle.GetRequests(snapshot))
                 {
-                    if (cancelSource.IsCancellationRequested) break;
+                    if (cancellation.IsCancellationRequested) break;
                     if (!finishedCache.ContainsKey(id) && (!pendingQueue.TryGetValue(id, out OracleTask task) || task.Tx is null))
-                        await ProcessRequestAsync(snapshot, request);
+                        await ProcessRequestAsync(snapshot, request, cancellation);
                 }
             }
-            if (cancelSource.IsCancellationRequested) break;
+            if (cancellation.IsCancellationRequested) break;
             await Task.Delay(500);
         }
 
@@ -378,7 +385,7 @@ public sealed class OracleService : Plugin
         }
     }
 
-    private async Task<(OracleResponseCode, string)> ProcessUrlAsync(string url)
+    private async Task<(OracleResponseCode, string)> ProcessUrlAsync(string url, CancellationToken cancellation)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
             return (OracleResponseCode.Error, $"Invalid url:<{url}>");
@@ -386,7 +393,7 @@ public sealed class OracleService : Plugin
             return (OracleResponseCode.ProtocolNotSupported, $"Invalid Protocol:<{url}>");
 
         using CancellationTokenSource ctsTimeout = new(OracleSettings.Default.MaxOracleTimeout);
-        using CancellationTokenSource ctsLinked = CancellationTokenSource.CreateLinkedTokenSource(cancelSource.Token, ctsTimeout.Token);
+        using CancellationTokenSource ctsLinked = CancellationTokenSource.CreateLinkedTokenSource(cancellation, ctsTimeout.Token);
 
         try
         {
@@ -521,9 +528,14 @@ public sealed class OracleService : Plugin
 
         if (CheckTxSign(snapshot, task.Tx, task.Signs) || CheckTxSign(snapshot, task.BackupTx, task.BackupSigns))
         {
-            finishedCache.TryAdd(requestId, new DateTime());
+            MarkRequestFinished(requestId);
             pendingQueue.TryRemove(requestId, out _);
         }
+    }
+
+    private void MarkRequestFinished(ulong requestId)
+    {
+        finishedCache.TryAdd(requestId, TimeProvider.Current.UtcNow);
     }
 
     public static byte[] Filter(string input, string filterArgs)
