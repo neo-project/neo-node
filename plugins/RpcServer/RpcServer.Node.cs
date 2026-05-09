@@ -74,7 +74,7 @@ partial class RpcServer
 
     /// <summary>
     /// Returns locally queued transactions whose <c>ValidUntilBlock</c> was too far ahead at submission time
-    /// (same store as CLI <c>list pending validuntil</c>), plus height and P2P pending-relay settings.
+    /// (same store as CLI <c>list pending</c>), plus height and P2P pending-relay settings.
     /// <para>Request format:</para>
     /// <code>{ "jsonrpc": "2.0", "id": 1, "method": "getpendingvaliduntilrelay", "params": [] }</code>
     /// </summary>

@@ -10,6 +10,7 @@
 // modifications are permitted.
 
 using Neo.CLI;
+using Neo.ConsoleService;
 using Neo.Json;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
@@ -19,6 +20,8 @@ using Neo.SmartContract.Native;
 using Neo.VM;
 using Neo.Wallets;
 using Neo.Wallets.NEP6;
+using System.Linq;
+using System.Reflection;
 
 namespace Neo.CLI.Tests;
 
@@ -160,5 +163,14 @@ public class UT_PendingValidUntilRelay
         int entries2 = store.Find(null).Count();
         Assert.AreEqual(1, entries1);
         Assert.AreEqual(1, entries2);
+    }
+
+    [TestMethod]
+    public void ListPending_Command_Name_IsListPending()
+    {
+        var m = typeof(MainService).GetMethod("OnListPendingCommand", BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.IsNotNull(m, "CLI handler OnListPendingCommand should exist");
+        var attr = m.GetCustomAttributes(typeof(ConsoleCommandAttribute), inherit: false).Cast<ConsoleCommandAttribute>().Single();
+        Assert.AreEqual("list pending", string.Join(' ', attr.Verbs));
     }
 }

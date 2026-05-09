@@ -180,8 +180,8 @@ partial class MainService
     /// <summary>
     /// Lists transactions stored for local deferred ValidUntil relay (see <c>config.json</c> P2P <c>PendingRelay</c>).
     /// </summary>
-    [ConsoleCommand("list pending validuntil", Category = "Network Commands")]
-    private void OnListPendingValidUntilCommand()
+    [ConsoleCommand("list pending", Category = "Network Commands")]
+    private void OnListPendingCommand()
     {
         var host = NeoSystem.GetService<PendingValidUntilRelayHost>();
         JObject json = PendingValidUntilRelay.GetPendingState(NeoSystem, host);
