@@ -38,9 +38,10 @@ public class UT_OracleDnsProtocol
         LoadSettings();
     }
 
-    private static VmStruct DeserializeEnvelope(string payload)
+    private static VmStruct DeserializeEnvelope(string? payload)
     {
-        byte[] bytes = Convert.FromBase64String(payload);
+        Assert.IsNotNull(payload);
+        byte[] bytes = Convert.FromBase64String(payload!);
         StackItem item = Neo.SmartContract.BinarySerializer.Deserialize(bytes, ExecutionEngineLimits.Default with
         {
             MaxItemSize = (uint)OracleResponse.MaxResultSize
@@ -50,12 +51,12 @@ public class UT_OracleDnsProtocol
         return (VmStruct)item;
     }
 
-    private static (string Name, string Type, VmArray Answers) ParseEnvelope(string payload)
+    private static (string Name, string Type, VmArray Answers) ParseEnvelope(string? payload)
     {
         VmStruct envelope = DeserializeEnvelope(payload);
         Assert.AreEqual(3, envelope.Count);
         Assert.IsInstanceOfType<VmArray>(envelope[2]);
-        return (envelope[0].GetString(), envelope[1].GetString(), (VmArray)envelope[2]);
+        return (envelope[0].GetString()!, envelope[1].GetString()!, (VmArray)envelope[2]);
     }
 
     private static VmStruct ParseAnswer(StackItem item)
@@ -114,7 +115,7 @@ public class UT_OracleDnsProtocol
     public async Task ProcessAsync_RejectsUnsupportedClass()
     {
         using var protocol = new OracleDnsProtocol(new StubHandler(_ => throw new InvalidOperationException("Should not send when class is invalid")));
-        (OracleResponseCode code, string message) = await protocol.ProcessAsync(new Uri("dns:example.com?CLASS=CH"), CancellationToken.None);
+        (OracleResponseCode code, string? message) = await protocol.ProcessAsync(new Uri("dns:example.com?CLASS=CH"), CancellationToken.None);
         Assert.AreEqual(OracleResponseCode.Error, code);
         StringAssert.Contains(message, "class");
     }
@@ -126,7 +127,7 @@ public class UT_OracleDnsProtocol
         var handler = new StubHandler(request =>
         {
             Assert.AreEqual(HttpMethod.Post, request.Method);
-            Assert.AreEqual("application/dns-message", request.Content.Headers.ContentType.MediaType);
+            Assert.AreEqual("application/dns-message", request.Content!.Headers.ContentType!.MediaType);
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new ByteArrayContent(dnsResponse)
@@ -136,7 +137,7 @@ public class UT_OracleDnsProtocol
             };
         });
         using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:example.com?CLASS=IN;TYPE=TXT"), CancellationToken.None);
+        (OracleResponseCode code, string? payload) = await protocol.ProcessAsync(new Uri("dns:example.com?CLASS=IN;TYPE=TXT"), CancellationToken.None);
         Assert.AreEqual(OracleResponseCode.Success, code);
         var (_, _, answers) = ParseEnvelope(payload);
         VmStruct answer0 = ParseAnswer(answers[0]);
@@ -156,7 +157,7 @@ public class UT_OracleDnsProtocol
         });
 
         using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=TXT"), CancellationToken.None);
+        (OracleResponseCode code, string? payload) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=TXT"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Success, code);
         Assert.IsNotNull(payload);
@@ -218,7 +219,7 @@ public class UT_OracleDnsProtocol
             }
         });
         using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:big.example.com?TYPE=TXT"), CancellationToken.None);
+        (OracleResponseCode code, string? payload) = await protocol.ProcessAsync(new Uri("dns:big.example.com?TYPE=TXT"), CancellationToken.None);
         Assert.AreEqual(OracleResponseCode.ResponseTooLarge, code);
         Assert.IsNull(payload);
     }
@@ -240,7 +241,7 @@ public class UT_OracleDnsProtocol
             };
         });
         using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:example.com"), CancellationToken.None);
+        (OracleResponseCode code, string? payload) = await protocol.ProcessAsync(new Uri("dns:example.com"), CancellationToken.None);
         Assert.AreEqual(OracleResponseCode.NotFound, code);
         Assert.IsNull(payload);
     }
@@ -259,7 +260,7 @@ public class UT_OracleDnsProtocol
             }
         });
         using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:plain.example.com?TYPE=TXT"), CancellationToken.None);
+        (OracleResponseCode code, string? payload) = await protocol.ProcessAsync(new Uri("dns:plain.example.com?TYPE=TXT"), CancellationToken.None);
         Assert.AreEqual(OracleResponseCode.Success, code);
         var (_, _, answers) = ParseEnvelope(payload);
         Assert.AreEqual(1, answers.Count);
@@ -287,7 +288,7 @@ public class UT_OracleDnsProtocol
             };
         });
         using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:1alhai._domainkey.icloud.com?TYPE=TXT"), CancellationToken.None);
+        (OracleResponseCode code, string? payload) = await protocol.ProcessAsync(new Uri("dns:1alhai._domainkey.icloud.com?TYPE=TXT"), CancellationToken.None);
         Assert.AreEqual(OracleResponseCode.Success, code);
         var (name, type, answers) = ParseEnvelope(payload);
         Assert.AreEqual("1alhai._domainkey.icloud.com", name);
@@ -387,7 +388,7 @@ public class UT_OracleDnsProtocol
             }
         });
         using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=A"), CancellationToken.None);
+        (OracleResponseCode code, string? payload) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=A"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Success, code);
         var (_, type, answers) = ParseEnvelope(payload);
@@ -411,7 +412,7 @@ public class UT_OracleDnsProtocol
         });
         using var protocol = new OracleDnsProtocol(handler);
         // No TYPE specified - should default to A
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:example.com"), CancellationToken.None);
+        (OracleResponseCode code, string? payload) = await protocol.ProcessAsync(new Uri("dns:example.com"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Success, code);
         var (_, type, _) = ParseEnvelope(payload);
@@ -437,13 +438,13 @@ public class UT_OracleDnsProtocol
             }
         });
         using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=AAAA"), CancellationToken.None);
+        (OracleResponseCode code, string? payload) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=AAAA"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Success, code);
         var (_, type, answers) = ParseEnvelope(payload);
         Assert.AreEqual("AAAA", type);
         VmStruct answer0 = ParseAnswer(answers[0]);
-        string ipv6 = answer0[3].GetString();
+        string ipv6 = answer0[3].GetString()!;
         Assert.IsTrue(ipv6.Contains("2001:db8", StringComparison.OrdinalIgnoreCase));
     }
 
@@ -472,13 +473,13 @@ public class UT_OracleDnsProtocol
             }
         });
         using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:cert.example.com?TYPE=CERT"), CancellationToken.None);
+        (OracleResponseCode code, string? payload) = await protocol.ProcessAsync(new Uri("dns:cert.example.com?TYPE=CERT"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Success, code);
         var (_, _, answers) = ParseEnvelope(payload);
         VmStruct answer0 = ParseAnswer(answers[0]);
         Assert.AreEqual("CERT", answer0[1].GetString());
-        string data = answer0[3].GetString();
+        string data = answer0[3].GetString()!;
         StringAssert.Contains(data, Convert.ToBase64String(certBytes));
     }
 
@@ -521,7 +522,7 @@ public class UT_OracleDnsProtocol
             }
         });
         using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=A"), CancellationToken.None);
+        (OracleResponseCode code, string? payload) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=A"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Success, code);
         var (_, _, answers) = ParseEnvelope(payload);
@@ -539,7 +540,7 @@ public class UT_OracleDnsProtocol
     {
         var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError));
         using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string message) = await protocol.ProcessAsync(new Uri("dns:example.com"), CancellationToken.None);
+        (OracleResponseCode code, string? message) = await protocol.ProcessAsync(new Uri("dns:example.com"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Error, code);
         StringAssert.Contains(message, "500");
@@ -550,7 +551,7 @@ public class UT_OracleDnsProtocol
     {
         var handler = new StubHandler(_ => throw new TaskCanceledException());
         using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:example.com"), CancellationToken.None);
+        (OracleResponseCode code, string? payload) = await protocol.ProcessAsync(new Uri("dns:example.com"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Timeout, code);
         Assert.IsNull(payload);
@@ -569,7 +570,7 @@ public class UT_OracleDnsProtocol
             }
         });
         using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string message) = await protocol.ProcessAsync(new Uri("dns:example.com"), CancellationToken.None);
+        (OracleResponseCode code, string? message) = await protocol.ProcessAsync(new Uri("dns:example.com"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Error, code);
         StringAssert.Contains(message, "RCODE 2");
@@ -588,7 +589,7 @@ public class UT_OracleDnsProtocol
             }
         });
         using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:example.com"), CancellationToken.None);
+        (OracleResponseCode code, string? payload) = await protocol.ProcessAsync(new Uri("dns:example.com"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.NotFound, code);
         Assert.IsNull(payload);
@@ -600,7 +601,7 @@ public class UT_OracleDnsProtocol
         // Should reject before sending any request
         var handler = new StubHandler(_ => throw new InvalidOperationException("Should not send"));
         using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string message) = await protocol.ProcessAsync(new Uri("dns://127.0.0.1/example.com?TYPE=A"), CancellationToken.None);
+        (OracleResponseCode code, string? message) = await protocol.ProcessAsync(new Uri("dns://127.0.0.1/example.com?TYPE=A"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Error, code);
         StringAssert.Contains(message, "Private resolver");
@@ -610,7 +611,7 @@ public class UT_OracleDnsProtocol
     public async Task ProcessAsync_RejectsUnsupportedRecordType()
     {
         using var protocol = new OracleDnsProtocol(new StubHandler(_ => throw new InvalidOperationException("Should not send")));
-        (OracleResponseCode code, string message) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=INVALID"), CancellationToken.None);
+        (OracleResponseCode code, string? message) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=INVALID"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Error, code);
         StringAssert.Contains(message, "INVALID");
@@ -635,7 +636,7 @@ public class UT_OracleDnsProtocol
         });
         using var protocol = new OracleDnsProtocol(handler);
         // Use numeric type 1 instead of "A"
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=1"), CancellationToken.None);
+        (OracleResponseCode code, string? payload) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=1"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Success, code);
         var (_, type, _) = ParseEnvelope(payload);
@@ -656,7 +657,7 @@ public class UT_OracleDnsProtocol
             }
         });
         using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=txt"), CancellationToken.None);
+        (OracleResponseCode code, string? payload) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=txt"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Success, code);
     }
@@ -665,7 +666,7 @@ public class UT_OracleDnsProtocol
     public async Task ProcessAsync_RejectsOutOfRangeNumericRecordType()
     {
         using var protocol = new OracleDnsProtocol(new StubHandler(_ => throw new InvalidOperationException("Should not send")));
-        (OracleResponseCode code, string message) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=70000"), CancellationToken.None);
+        (OracleResponseCode code, string? message) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=70000"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Error, code);
         StringAssert.Contains(message, "70000");
@@ -776,7 +777,7 @@ public class UT_OracleDnsProtocol
             }
         });
         using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=A"), CancellationToken.None);
+        (OracleResponseCode code, string? payload) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=A"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Success, code);
         var (_, _, answers) = ParseEnvelope(payload);
@@ -805,7 +806,7 @@ public class UT_OracleDnsProtocol
             }
         });
         using var protocol = new OracleDnsProtocol(handler);
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=A"), CancellationToken.None);
+        (OracleResponseCode code, string? payload) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=A"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Success, code);
         var (_, _, answers) = ParseEnvelope(payload);
@@ -844,7 +845,7 @@ public class UT_OracleDnsProtocol
         byte[] rdata = [1, 2, 3, 4];
         byte[] dnsResponse = BuildDnsResponse("example.com", 1, 300, rdata);
 
-        Uri capturedUri = null;
+        Uri? capturedUri = null;
         var handler = new StubHandler(request =>
         {
             capturedUri = request.RequestUri;
@@ -865,7 +866,7 @@ public class UT_OracleDnsProtocol
 
         Assert.AreEqual(OracleResponseCode.Success, code);
         Assert.IsNotNull(capturedUri);
-        Assert.AreEqual("example.com", capturedUri.Host);
+        Assert.AreEqual("example.com", capturedUri!.Host);
         Assert.AreEqual("/dns-query", capturedUri.AbsolutePath);
         Assert.AreEqual("https", capturedUri.Scheme);
     }
@@ -876,7 +877,7 @@ public class UT_OracleDnsProtocol
         byte[] rdata = [1, 2, 3, 4];
         byte[] dnsResponse = BuildDnsResponse("example.com", 1, 300, rdata);
 
-        Uri capturedUri = null;
+        Uri? capturedUri = null;
         var handler = new StubHandler(request =>
         {
             capturedUri = request.RequestUri;
@@ -898,7 +899,7 @@ public class UT_OracleDnsProtocol
         Assert.AreEqual(OracleResponseCode.Success, code);
         Assert.IsNotNull(capturedUri);
         // Should use the configured endpoint from LoadSettings()
-        Assert.AreEqual("example.com", capturedUri.Host);
+        Assert.AreEqual("example.com", capturedUri!.Host);
     }
 
     [TestMethod]
@@ -910,7 +911,7 @@ public class UT_OracleDnsProtocol
         using var protocol = new OracleDnsProtocol();
 
         // But use Google via authority
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(
+        (OracleResponseCode code, string? payload) = await protocol.ProcessAsync(
             new Uri("dns://dns.google/google.com?TYPE=A"),
             CancellationToken.None);
 
@@ -929,7 +930,7 @@ public class UT_OracleDnsProtocol
         using var protocol = new OracleDnsProtocol();
 
         // But use Cloudflare via authority
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(
+        (OracleResponseCode code, string? payload) = await protocol.ProcessAsync(
             new Uri("dns://cloudflare-dns.com/cloudflare.com?TYPE=A"),
             CancellationToken.None);
 
@@ -1018,7 +1019,7 @@ public class UT_OracleDnsProtocol
         if (!ShouldRunLiveDoHTests()) return;
         LoadSettingsWithEndpoint(endpoint);
         using var protocol = new OracleDnsProtocol();
-        (OracleResponseCode code, string payload) = await protocol.ProcessAsync(
+        (OracleResponseCode code, string? payload) = await protocol.ProcessAsync(
             new Uri($"dns:{domain}?TYPE={recordType}"),
             CancellationToken.None);
 
@@ -1038,7 +1039,7 @@ public class UT_OracleDnsProtocol
 
     private static void LoadSettingsWithEndpoint(string dnsEndpoint)
     {
-        var values = new Dictionary<string, string>
+        var values = new Dictionary<string, string?>
         {
             ["PluginConfiguration:Network"] = "5195086",
             ["PluginConfiguration:Nodes:0"] = "http://127.0.0.1:20332",
@@ -1060,7 +1061,7 @@ public class UT_OracleDnsProtocol
 
     private static void LoadSettings()
     {
-        var values = new Dictionary<string, string>
+        var values = new Dictionary<string, string?>
         {
             ["PluginConfiguration:Network"] = "5195086",
             ["PluginConfiguration:Nodes:0"] = "http://127.0.0.1:20332",

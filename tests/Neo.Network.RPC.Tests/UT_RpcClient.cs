@@ -16,6 +16,7 @@ using Neo.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.Network.RPC.Models;
 using Neo.SmartContract;
+using Neo.SmartContract.Native;
 using System.Net;
 
 namespace Neo.Network.RPC.Tests;
@@ -429,7 +430,54 @@ public class UT_RpcClient
     public async Task TestGetWalletBalance()
     {
         var test = TestUtils.RpcTestCases.Find(p => p.Name.Equals(nameof(rpc.GetWalletBalanceAsync), StringComparison.CurrentCultureIgnoreCase))!;
-        var result = await rpc.GetWalletBalanceAsync(test.Request.Params[0]!.AsString());
+        string assetId = test.Request.Params[0]!.AsString();
+
+        var tokenInfoResult = new JObject
+        {
+            ["jsonrpc"] = "2.0",
+            ["id"] = 1,
+            ["result"] = new JObject
+            {
+                ["script"] = "",
+                ["state"] = "HALT",
+                ["gasconsumed"] = "0",
+                ["exception"] = null,
+                ["notifications"] = new JArray(),
+                ["stack"] = new JArray
+        {
+            new JObject
+            {
+                ["type"] = "Struct",
+                ["value"] = new JArray
+                {
+                    new JObject { ["type"] = "Integer", ["value"] = "0" },
+                    new JObject { ["type"] = "Integer", ["value"] = "0" },
+                    new JObject { ["type"] = "Integer", ["value"] = "0" },
+                    new JObject { ["type"] = "Integer", ["value"] = "8" },
+                    new JObject { ["type"] = "Integer", ["value"] = "0" },
+                    new JObject { ["type"] = "Integer", ["value"] = "0" },
+                    new JObject { ["type"] = "Integer", ["value"] = "0" }
+                }
+            }
+        }
+            }
+        };
+
+        handlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Content != null &&
+                    req.Content.ReadAsStringAsync().Result.Contains("\"method\":\"invokescript\"")),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(tokenInfoResult.ToString())
+            });
+
+        var result = await rpc.GetWalletBalanceAsync(assetId);
+
         Assert.AreEqual(test.Response.Result!["balance"]!.AsString(), result.Value.ToString());
     }
 

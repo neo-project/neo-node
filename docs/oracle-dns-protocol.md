@@ -2,7 +2,7 @@
 
 The Oracle plugin resolves RFC 4501 `dns:` URIs through a DNS-over-HTTPS (DoH) gateway. This lets oracle nodes read authoritative DNS data (TXT for DKIM/SPF/DIDs, CERT/TLSA, etc.) without sending plaintext DNS queries.
 
-> **When should I use it?**  
+> **When should I use it?**
 > Whenever you need DNS data on-chain and want the request to stay encrypted end-to-end.
 
 ## Enable and configure
@@ -23,7 +23,7 @@ The Oracle plugin resolves RFC 4501 `dns:` URIs through a DNS-over-HTTPS (DoH) g
 ```
 
 - `EndPoint` must point to a DoH resolver that supports [RFC 8484](https://www.rfc-editor.org/rfc/rfc8484.html) with `application/dns-message` format.
-- `Timeout` is the maximum milliseconds the oracle will wait for a DoH response before returning `OracleResponseCode.Timeout` (`TimeoutMilliseconds` is still accepted for backward compatibility).
+- `Timeout` is the maximum milliseconds the oracle will wait for a DoH response before returning `OracleResponseCode.Timeout`.
 
 > You can run your own DoH gateway and point the oracle to it if you need custom trust anchors or strict egress controls.
 

@@ -29,20 +29,6 @@ public class UT_Node
     }
 
     [TestMethod]
-    public void TestLogLevel()
-    {
-        Utility.LogLevel = LogLevel.Debug;
-        int raised = 0;
-        Utility.Logging += (a, b, c) => raised++;
-
-        Utility.Log("a", LogLevel.Warning, "null");
-        Assert.AreEqual(1, raised);
-        Utility.LogLevel = LogLevel.Fatal;
-        Utility.Log("a", LogLevel.Warning, "null");
-        Assert.AreEqual(1, raised);
-    }
-
-    [TestMethod]
     public void TestHashSerialize()
     {
         var n = Node.NewHash(UInt256.Zero);

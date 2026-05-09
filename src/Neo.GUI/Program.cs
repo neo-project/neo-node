@@ -21,7 +21,7 @@ static class Program
 {
     public static MainService Service = new MainService();
     public static MainForm MainForm;
-    public static UInt160[] NEP5Watched = { NativeContract.NEO.Hash, NativeContract.GAS.Hash };
+    public static UInt160[] NEP5Watched = { NativeContract.Governance.NeoTokenId, NativeContract.Governance.GasTokenId };
 
     private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
     {

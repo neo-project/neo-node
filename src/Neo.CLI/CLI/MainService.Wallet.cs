@@ -11,7 +11,11 @@
 
 using Akka.Actor;
 using Neo.ConsoleService;
+using Neo.Cryptography;
+using Neo.Extensions.IO;
+using Neo.Factories;
 using Neo.Json;
+using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.Sign;
@@ -22,7 +26,9 @@ using Neo.Wallets;
 using Neo.Wallets.NEP6;
 using System.Numerics;
 using System.Security.Cryptography;
+using System.Text;
 using static Neo.SmartContract.Helper;
+using ECCurve = Neo.Cryptography.ECC.ECCurve;
 using ECPoint = Neo.Cryptography.ECC.ECPoint;
 
 namespace Neo.CLI;
@@ -438,16 +444,16 @@ partial class MainService
         foreach (UInt160 account in CurrentWallet!.GetAccounts().Select(p => p.ScriptHash))
         {
             Console.WriteLine(account.ToAddress(NeoSystem.Settings.AddressVersion));
-            ConsoleHelper.Info("NEO: ", $"{CurrentWallet.GetBalance(snapshot, NativeContract.NEO.Hash, account)}");
-            ConsoleHelper.Info("GAS: ", $"{CurrentWallet.GetBalance(snapshot, NativeContract.GAS.Hash, account)}");
+            ConsoleHelper.Info("NEO: ", $"{CurrentWallet.GetBalance(snapshot, NativeContract.Governance.NeoTokenId, account)}");
+            ConsoleHelper.Info("GAS: ", $"{CurrentWallet.GetBalance(snapshot, NativeContract.Governance.GasTokenId, account)}");
             Console.WriteLine();
         }
         Console.WriteLine("----------------------------------------------------");
-        ConsoleHelper.Info("Total:   NEO: ", $"{CurrentWallet.GetAvailable(snapshot, NativeContract.NEO.Hash),10}     ",
-            "GAS: ", $"{CurrentWallet.GetAvailable(snapshot, NativeContract.GAS.Hash),18}");
+        ConsoleHelper.Info("Total:   NEO: ", $"{CurrentWallet.GetAvailable(snapshot, NativeContract.Governance.NeoTokenId),10}     ",
+            "GAS: ", $"{CurrentWallet.GetAvailable(snapshot, NativeContract.Governance.GasTokenId),18}");
         Console.WriteLine();
-        ConsoleHelper.Info("NEO hash: ", NativeContract.NEO.Hash.ToString());
-        ConsoleHelper.Info("GAS hash: ", NativeContract.GAS.Hash.ToString());
+        ConsoleHelper.Info("NEO hash: ", NativeContract.Governance.NeoTokenId.ToString());
+        ConsoleHelper.Info("GAS hash: ", NativeContract.Governance.GasTokenId.ToString());
     }
 
     /// <summary>
@@ -469,7 +475,7 @@ partial class MainService
     /// <summary>
     /// Process "sign" command
     /// </summary>
-    /// <param name="jsonObjectToSign">Json object to sign</param>
+    /// <param name="jsonObjectToSign">The json string that records the transaction information</param>
     [ConsoleCommand("sign", Category = "Wallet Commands")]
     private void OnSignCommand(JObject jsonObjectToSign)
     {
@@ -503,16 +509,213 @@ partial class MainService
     }
 
     /// <summary>
+    /// Process "sign message" command
+    /// </summary>
+    /// <param name="message">Message to sign</param>
+    [ConsoleCommand("sign message", Category = "Wallet Commands")]
+    private void OnSignMessageCommand(string message, bool avoidSignatureReplay)
+    {
+        if (NoWallet()) return;
+
+        message = NormalizeMessage(message);
+        if (message == null)
+        {
+            ConsoleHelper.Error("Null message");
+            return;
+        }
+        string password = ReadUserInput("password", true);
+        if (password.Length == 0)
+        {
+            ConsoleHelper.Info("Cancelled");
+            return;
+        }
+
+        if (!CurrentWallet!.VerifyPassword(password))
+        {
+            ConsoleHelper.Error("Incorrect password");
+            return;
+        }
+
+        var saltBytes = new byte[16];
+        saltBytes = RandomNumberFactory.NextBytes(saltBytes.Length, cryptography: true);
+        var saltHex = Convert.ToHexStringLower(saltBytes);
+
+        var paramBytes = Encoding.UTF8.GetBytes(saltHex + message);
+        byte[] payload;
+        using (var ms = new MemoryStream())
+        using (var w = new BinaryWriter(ms, Encoding.UTF8, true))
+        {
+            // We add these 4 bytes to prevent the signature from being a valid transaction
+            w.Write((byte)0x01);
+            w.Write((byte)0x00);
+            w.Write((byte)0x01);
+            w.Write((byte)0xF0);
+            // Write the actual message to sign
+            w.WriteVarBytes(paramBytes);
+            // We add these 2 bytes to prevent the signature from being a valid transaction
+            w.Write((ushort)0);
+            w.Flush();
+            payload = ms.ToArray();
+        }
+
+        ConsoleHelper.Info("Signed Payload: ", $"{payload.ToHexString()}");
+        Console.WriteLine();
+        ConsoleHelper.Info("    Curve: ", "secp256r1");
+        ConsoleHelper.Info("Algorithm: ", "payload = 010001f0 + VarBytes(Salt + Message) + 0000");
+        ConsoleHelper.Info("Algorithm: ", avoidSignatureReplay
+            ? "Sign(SHA256(network || Hash256(payload)))"
+            : "Sign(payload)");
+        ConsoleHelper.Info("           ", "See the online documentation for details on how to verify this signature.");
+        ConsoleHelper.Info("           ", "https://developers.neo.org/docs/n3/node/cli/cli#sign_message");
+        Console.WriteLine();
+        ConsoleHelper.Info("Generated signatures:");
+        Console.WriteLine();
+
+        var signData = payload;
+        if (avoidSignatureReplay)
+        {
+            var hash = new UInt256(Crypto.Hash256(payload));
+            signData = hash.GetSignData(NeoSystem.Settings.Network);
+        }
+
+        foreach (WalletAccount account in CurrentWallet.GetAccounts().Where(p => p.HasKey))
+        {
+            if (account.Contract == null || IsMultiSigContract(account.Contract.Script))
+                continue;
+            var key = account.GetKey();
+            if (key == null) continue;
+            var signature = Crypto.Sign(signData, key);
+            ConsoleHelper.Info("    Address: ", account.Address);
+            ConsoleHelper.Info("  PublicKey: ", key.PublicKey.EncodePoint(true).ToHexString());
+            ConsoleHelper.Info("  Signature: ", signature.ToHexString());
+            ConsoleHelper.Info("       Salt: ", saltHex);
+            Console.WriteLine();
+        }
+    }
+
+    /// <summary>
+    /// Process "verify message" command
+    /// </summary>
+    /// <param name="message">Original message that was signed</param>
+    /// <param name="signature">Signature in hex format</param>
+    /// <param name="publicKey">Public key in hex format</param>
+    /// <param name="salt">Salt in hex format</param>
+    [ConsoleCommand("verify message", Category = "Wallet Commands")]
+    private void OnVerifyMessageCommand(string message, string signature, string publicKey, string salt, bool avoidSignatureReplay)
+    {
+        try
+        {
+            message = NormalizeMessage(message);
+            if (message == null)
+            {
+                ConsoleHelper.Error("Null message");
+                return;
+            }
+
+            // Parse public key
+            if (!ECPoint.TryParse(publicKey, ECCurve.Secp256r1, out var pubKey))
+            {
+                ConsoleHelper.Error("Invalid public key format");
+                return;
+            }
+
+            // Parse signature
+            byte[] signatureBytes;
+            try
+            {
+                signatureBytes = signature.HexToBytes();
+            }
+            catch
+            {
+                ConsoleHelper.Error("Invalid signature format (must be hex string)");
+                return;
+            }
+
+            // Validate salt format (should be hex string, typically 32 characters for 16 bytes)
+            if (string.IsNullOrEmpty(salt))
+            {
+                ConsoleHelper.Error("Salt cannot be empty");
+                return;
+            }
+
+            // Reconstruct payload: 010001f0 + VarBytes(Salt + Message) + 0000
+            // Note: salt is used as hex string (lowercase), same as in signing
+            var saltHex = salt.ToLowerInvariant();
+            var paramBytes = Encoding.UTF8.GetBytes(saltHex + message);
+            byte[] payload;
+            using (var ms = new MemoryStream())
+            using (var w = new BinaryWriter(ms, Encoding.UTF8, true))
+            {
+                w.Write((byte)0x01);
+                w.Write((byte)0x00);
+                w.Write((byte)0x01);
+                w.Write((byte)0xF0);
+                w.WriteVarBytes(paramBytes);
+                w.Write((ushort)0);
+                w.Flush();
+                payload = ms.ToArray();
+            }
+
+            // signData = payload, or SHA256(network || Hash256(payload)) depends on avoidSignatureReplay
+            var hash = UInt256.Zero;
+            var signData = payload;
+            if (avoidSignatureReplay)
+            {
+                hash = new UInt256(Crypto.Hash256(payload));
+                signData = hash.GetSignData(NeoSystem.Settings.Network);
+            }
+
+            bool isValid = Crypto.VerifySignature(signData, signatureBytes, pubKey);
+            var contract = Contract.CreateSignatureContract(pubKey);
+            var address = contract.ScriptHash.ToAddress(NeoSystem.Settings.AddressVersion);
+
+            Console.WriteLine();
+            ConsoleHelper.Info("Verification Result:");
+            Console.WriteLine();
+            ConsoleHelper.Info("    Address: ", address);
+            ConsoleHelper.Info("  PublicKey: ", pubKey.EncodePoint(true).ToHexString());
+            ConsoleHelper.Info("  Signature: ", signature);
+            ConsoleHelper.Info("       Salt: ", saltHex);
+            ConsoleHelper.Info("     Status: ", isValid ? "Valid" : "Invalid");
+            Console.WriteLine();
+
+            if (!isValid)
+            {
+                ConsoleHelper.Info("Debug Information:");
+                Console.WriteLine();
+                ConsoleHelper.Info("  Message used: ", $"\"{message}\"");
+                ConsoleHelper.Info("  Message bytes: ", Encoding.UTF8.GetBytes(message).ToHexString());
+                ConsoleHelper.Info("  Salt+Message: ", $"{saltHex}{message}");
+                ConsoleHelper.Info("  Reconstructed Payload: ", payload.ToHexString());
+                if (avoidSignatureReplay)
+                {
+                    ConsoleHelper.Info("  Payload Hash256: ", hash.ToString());
+                }
+
+                Console.WriteLine();
+                ConsoleHelper.Warning("Note: The message must match exactly what was signed.");
+                ConsoleHelper.Warning("If you used 'sign message \"Hello world!\"', the actual message signed is 'Hello world!' (without quotes).");
+                ConsoleHelper.Warning("If the signed message contains quote characters, you need to include them in the verify command.");
+                Console.WriteLine();
+            }
+        }
+        catch (Exception e)
+        {
+            ConsoleHelper.Error($"Verification failed: {GetExceptionMessage(e)}");
+        }
+    }
+
+    /// <summary>
     /// Process "send" command
     /// </summary>
-    /// <param name="asset">Asset id</param>
+    /// <param name="tokenId">Token Id</param>
     /// <param name="to">To</param>
     /// <param name="amount">Amount</param>
     /// <param name="from">From</param>
     /// <param name="data">Data</param>
     /// <param name="signerAccounts">Signer's accounts</param>
     [ConsoleCommand("send", Category = "Wallet Commands")]
-    private void OnSendCommand(UInt160 asset, UInt160 to, string amount, UInt160? from = null, string? data = null, UInt160[]? signerAccounts = null)
+    private void OnSendCommand(UInt160 tokenId, UInt160 to, string amount, UInt160? from = null, string? data = null, UInt160[]? signerAccounts = null)
     {
         if (NoWallet()) return;
         string password = ConsoleHelper.ReadUserInput("password", true);
@@ -528,8 +731,15 @@ partial class MainService
         }
 
         var snapshot = NeoSystem.StoreView;
+        var descriptor = NativeContract.TokenManagement.GetTokenInfo(snapshot, tokenId);
+
+        if (descriptor == null)
+        {
+            ConsoleHelper.Error($"No token found for token id {tokenId}");
+            return;
+        }
+
         Transaction tx;
-        AssetDescriptor descriptor = new(snapshot, NeoSystem.Settings, asset);
         if (!BigDecimal.TryParse(amount, descriptor.Decimals, out BigDecimal decimalAmount) || decimalAmount.Sign <= 0)
         {
             ConsoleHelper.Error("Incorrect Amount Format");
@@ -541,7 +751,7 @@ partial class MainService
             {
                 new TransferOutput
                 {
-                    AssetId = asset,
+                    AssetId = tokenId,
                     Value = decimalAmount,
                     ScriptHash = to,
                     Data = data
@@ -568,8 +778,8 @@ partial class MainService
 
         ConsoleHelper.Info(
             "Send To: ", $"{to.ToAddress(NeoSystem.Settings.AddressVersion)}\n",
-            "Network fee: ", $"{new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)}\t",
-            "Total fee: ", $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
+            "Network fee: ", $"{new BigDecimal((BigInteger)tx.NetworkFee, Governance.GasTokenDecimals)}\t",
+            "Total fee: ", $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), Governance.GasTokenDecimals)} GAS");
         if (!ConsoleHelper.ReadUserInput("Relay tx? (no|yes)").IsYes())
         {
             return;
@@ -639,10 +849,8 @@ partial class MainService
         }
         else
         {
-            var snapshot = NeoSystem.StoreView;
-            AssetDescriptor descriptor = new(snapshot, NeoSystem.Settings, NativeContract.GAS.Hash);
             string extracFee = ConsoleHelper.ReadUserInput("This tx is not in mempool, please input extra fee (datoshi) manually");
-            if (!BigDecimal.TryParse(extracFee, descriptor.Decimals, out BigDecimal decimalExtraFee) || decimalExtraFee.Sign <= 0)
+            if (!BigDecimal.TryParse(extracFee, Governance.GasTokenDecimals, out BigDecimal decimalExtraFee) || decimalExtraFee.Sign <= 0)
             {
                 ConsoleHelper.Error("Incorrect Amount Format");
                 return;
@@ -651,9 +859,9 @@ partial class MainService
         }
 
         ConsoleHelper.Info("Network fee: ",
-            $"{new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)} GAS\t",
+            $"{new BigDecimal((BigInteger)tx.NetworkFee, Governance.GasTokenDecimals)} GAS\t",
             "Total fee: ",
-            $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
+            $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), Governance.GasTokenDecimals)} GAS");
         if (!ConsoleHelper.ReadUserInput("Relay tx? (no|yes)").IsYes())
         {
             return;
@@ -669,11 +877,12 @@ partial class MainService
     {
         if (NoWallet()) return;
         BigInteger gas = BigInteger.Zero;
-        var snapshot = NeoSystem.StoreView;
+        using var snapshot = NeoSystem.GetSnapshotCache();
+        using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot);
         uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
         foreach (UInt160 account in CurrentWallet!.GetAccounts().Select(p => p.ScriptHash))
-            gas += NativeContract.NEO.UnclaimedGas(snapshot, account, height);
-        ConsoleHelper.Info("Unclaimed gas: ", new BigDecimal(gas, NativeContract.GAS.Decimals).ToString());
+            gas += NativeContract.Governance.UnclaimedGas(engine, account, height);
+        ConsoleHelper.Info("Unclaimed gas: ", new BigDecimal(gas, Governance.GasTokenDecimals).ToString());
     }
 
     /// <summary>
@@ -734,6 +943,19 @@ partial class MainService
         }
     }
 
+    private string NormalizeMessage(string message)
+    {
+        if (string.IsNullOrEmpty(message) || message.Length < 2) return message;
+
+        var first = message[0];
+        var last = message[^1];
+
+        if (first == last && (first == '"' || first == '\''))
+            return message[1..^1];
+
+        return message;
+    }
+
     private void SignAndSendTx(DataCache snapshot, Transaction tx)
     {
         if (NoWallet()) return;
@@ -760,4 +982,6 @@ partial class MainService
             ConsoleHelper.Info("Incomplete signature:\n", $"{context}");
         }
     }
+
+    internal Func<string, bool, string> ReadUserInput { get; set; } = ConsoleHelper.ReadUserInput;
 }

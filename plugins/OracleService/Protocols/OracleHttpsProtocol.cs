@@ -43,7 +43,7 @@ class OracleHttpsProtocol : IOracleProtocol
 
     public async Task<(OracleResponseCode, string?)> ProcessAsync(Uri uri, CancellationToken cancellation)
     {
-        Utility.Log(nameof(OracleHttpsProtocol), LogLevel.Debug, $"Request: {uri.AbsoluteUri}");
+        OracleService.PluginLogger?.Debug("Request: {Uri}", uri.AbsoluteUri);
 
         HttpResponseMessage? message;
         try

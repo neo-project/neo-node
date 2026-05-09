@@ -9,6 +9,7 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using Neo.SmartContract.Native;
 using Neo.Wallets;
 using static Neo.Program;
 
@@ -16,16 +17,18 @@ namespace Neo.GUI;
 
 internal partial class PayToDialog : Form
 {
-    public PayToDialog(AssetDescriptor asset = null, UInt160 scriptHash = null)
+    public PayToDialog(TokenState asset = null, UInt160 scriptHash = null)
     {
         InitializeComponent();
         if (asset is null)
         {
+            var snapshot = Service.NeoSystem.StoreView;
             foreach (UInt160 assetId in NEP5Watched)
             {
                 try
                 {
-                    comboBox1.Items.Add(new AssetDescriptor(Service.NeoSystem.StoreView, Service.NeoSystem.Settings, assetId));
+                    var descriptor = NativeContract.TokenManagement.GetTokenInfo(snapshot, assetId);
+                    comboBox1.Items.Add(new KeyValuePair<UInt160, TokenState>(assetId, descriptor));
                 }
                 catch (ArgumentException)
                 {
@@ -35,7 +38,8 @@ internal partial class PayToDialog : Form
         }
         else
         {
-            comboBox1.Items.Add(asset);
+            var tokenId = TokenManagement.GetAssetId(asset.Owner, asset.Name);
+            comboBox1.Items.Add(new KeyValuePair<UInt160, TokenState>(tokenId, asset));
             comboBox1.SelectedIndex = 0;
             comboBox1.Enabled = false;
         }
@@ -48,21 +52,21 @@ internal partial class PayToDialog : Form
 
     public TxOutListBoxItem GetOutput()
     {
-        AssetDescriptor asset = (AssetDescriptor)comboBox1.SelectedItem;
+        var asset = (KeyValuePair<UInt160, TokenState>)comboBox1.SelectedItem;
         return new TxOutListBoxItem
         {
-            AssetName = asset.AssetName,
-            AssetId = asset.AssetId,
-            Value = BigDecimal.Parse(textBox2.Text, asset.Decimals),
+            AssetName = asset.Value.Name,
+            AssetId = asset.Key,
+            Value = BigDecimal.Parse(textBox2.Text, asset.Value.Decimals),
             ScriptHash = textBox1.Text.ToScriptHash(Service.NeoSystem.Settings.AddressVersion)
         };
     }
 
     private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
     {
-        if (comboBox1.SelectedItem is AssetDescriptor asset)
+        if (comboBox1.SelectedItem is KeyValuePair<UInt160, TokenState> asset)
         {
-            textBox3.Text = Service.CurrentWallet.GetAvailable(Service.NeoSystem.StoreView, asset.AssetId).ToString();
+            textBox3.Text = Service.CurrentWallet.GetAvailable(Service.NeoSystem.StoreView, asset.Key).ToString();
         }
         else
         {
@@ -87,8 +91,8 @@ internal partial class PayToDialog : Form
             button1.Enabled = false;
             return;
         }
-        AssetDescriptor asset = (AssetDescriptor)comboBox1.SelectedItem;
-        if (!BigDecimal.TryParse(textBox2.Text, asset.Decimals, out BigDecimal amount))
+        var asset = (KeyValuePair<UInt160, TokenState>)comboBox1.SelectedItem;
+        if (!BigDecimal.TryParse(textBox2.Text, asset.Value.Decimals, out BigDecimal amount))
         {
             button1.Enabled = false;
             return;

@@ -10,6 +10,7 @@
 // modifications are permitted.
 
 using Neo.Cryptography.ECC;
+using Neo.Extensions;
 using Neo.Network.P2P.Payloads;
 using Neo.Network.RPC.Models;
 using Neo.SmartContract;
@@ -25,7 +26,8 @@ namespace Neo.Network.RPC;
 public class WalletAPI
 {
     private readonly RpcClient rpcClient;
-    private readonly Nep17API nep17API;
+    private readonly TokenManagementAPI tokenManagementAPI;
+    //private readonly Nep17API nep17API;
 
     /// <summary>
     /// WalletAPI Constructor
@@ -34,7 +36,8 @@ public class WalletAPI
     public WalletAPI(RpcClient rpc)
     {
         rpcClient = rpc;
-        nep17API = new Nep17API(rpc);
+        tokenManagementAPI = new TokenManagementAPI(rpc);
+        //nep17API = new Nep17API(rpc);
     }
 
     /// <summary>
@@ -56,11 +59,11 @@ public class WalletAPI
     /// <returns></returns>
     public async Task<decimal> GetUnclaimedGasAsync(UInt160 account)
     {
-        UInt160 scriptHash = NativeContract.NEO.Hash;
         var blockCount = await rpcClient.GetBlockCountAsync().ConfigureAwait(false);
-        var result = await nep17API.TestInvokeAsync(scriptHash, "unclaimedGas", account, blockCount - 1).ConfigureAwait(false);
+        byte[] script = NativeContract.Governance.Hash.MakeScript("unclaimedGas", account, blockCount - 1);
+        var result = await rpcClient.InvokeScriptAsync(script).ConfigureAwait(false);
         BigInteger balance = result.Stack.Single().GetInteger();
-        return ((decimal)balance) / (long)NativeContract.GAS.Factor;
+        return ((decimal)balance) / (long)Governance.GasTokenFactor;
     }
 
     /// <summary>
@@ -71,7 +74,7 @@ public class WalletAPI
     /// <returns></returns>
     public async Task<uint> GetNeoBalanceAsync(string account)
     {
-        BigInteger balance = await GetTokenBalanceAsync(NativeContract.NEO.Hash.ToString(), account).ConfigureAwait(false);
+        BigInteger balance = await tokenManagementAPI.BalanceOfAsync(NativeContract.Governance.NeoTokenId, account).ConfigureAwait(false);
         return (uint)balance;
     }
 
@@ -83,22 +86,19 @@ public class WalletAPI
     /// <returns></returns>
     public async Task<decimal> GetGasBalanceAsync(string account)
     {
-        BigInteger balance = await GetTokenBalanceAsync(NativeContract.GAS.Hash.ToString(), account).ConfigureAwait(false);
-        return ((decimal)balance) / (long)NativeContract.GAS.Factor;
+        BigInteger balance = await tokenManagementAPI.BalanceOfAsync(NativeContract.Governance.GasTokenId, account).ConfigureAwait(false);
+        return ((decimal)balance) / (long)Governance.GasTokenFactor;
     }
 
     /// <summary>
-    /// Get token balance with string parameters
+    /// Get token balance by asset id
     /// </summary>
-    /// <param name="tokenHash">token script hash, Example: "0x43cf98eddbe047e198a3e5d57006311442a0ca15"(NEO)</param>
-    /// <param name="account">address, scripthash or public key string
-    /// Example: address ("Ncm9TEzrp8SSer6Wa3UCSLTRnqzwVhCfuE"), scripthash ("0xb0a31817c80ad5f87b6ed390ecb3f9d312f7ceb8"), public key ("02f9ec1fd0a98796cf75b586772a4ddd41a0af07a1dbdf86a7238f74fb72503575")</param>
+    /// <param name="assetId">token asset id</param>
+    /// <param name="account">address, scripthash or public key string</param>
     /// <returns></returns>
-    public Task<BigInteger> GetTokenBalanceAsync(string tokenHash, string account)
+    public Task<BigInteger> GetTokenBalanceAsync(UInt160 assetId, string account)
     {
-        UInt160 scriptHash = Utility.GetScriptHash(tokenHash, rpcClient.protocolSettings);
-        UInt160 accountHash = Utility.GetScriptHash(account, rpcClient.protocolSettings);
-        return nep17API.BalanceOfAsync(scriptHash, accountHash);
+        return tokenManagementAPI.BalanceOfAsync(assetId, account);
     }
 
     /// <summary>
@@ -125,8 +125,8 @@ public class WalletAPI
     public async Task<Transaction> ClaimGasAsync(KeyPair keyPair, bool addAssert = true)
     {
         UInt160 toHash = Contract.CreateSignatureRedeemScript(keyPair.PublicKey).ToScriptHash();
-        BigInteger balance = await nep17API.BalanceOfAsync(NativeContract.NEO.Hash, toHash).ConfigureAwait(false);
-        Transaction transaction = await nep17API.CreateTransferTxAsync(NativeContract.NEO.Hash, keyPair, toHash, balance, null, addAssert).ConfigureAwait(false);
+        BigInteger balance = await tokenManagementAPI.BalanceOfAsync(NativeContract.Governance.NeoTokenId, toHash).ConfigureAwait(false);
+        Transaction transaction = await tokenManagementAPI.CreateTransferTxAsync(NativeContract.Governance.NeoTokenId, keyPair, toHash, balance, null, addAssert).ConfigureAwait(false);
         await rpcClient.SendRawTransactionAsync(transaction).ConfigureAwait(false);
         return transaction;
     }
@@ -145,7 +145,7 @@ public class WalletAPI
     public async Task<Transaction> TransferAsync(string tokenHash, string fromKey, string toAddress, decimal amount, object? data = null, bool addAssert = true)
     {
         UInt160 scriptHash = Utility.GetScriptHash(tokenHash, rpcClient.protocolSettings);
-        var decimals = await nep17API.DecimalsAsync(scriptHash).ConfigureAwait(false);
+        var decimals = await tokenManagementAPI.DecimalsAsync(scriptHash).ConfigureAwait(false);
 
         KeyPair from = Utility.GetKeyPair(fromKey);
         UInt160 to = Utility.GetScriptHash(toAddress, rpcClient.protocolSettings);
@@ -165,7 +165,7 @@ public class WalletAPI
     /// <returns></returns>
     public async Task<Transaction> TransferAsync(UInt160 scriptHash, KeyPair from, UInt160 to, BigInteger amountInteger, object? data = null, bool addAssert = true)
     {
-        Transaction transaction = await nep17API.CreateTransferTxAsync(scriptHash, from, to, amountInteger, data, addAssert).ConfigureAwait(false);
+        Transaction transaction = await tokenManagementAPI.CreateTransferTxAsync(scriptHash, from, to, amountInteger, data, addAssert).ConfigureAwait(false);
         await rpcClient.SendRawTransactionAsync(transaction).ConfigureAwait(false);
         return transaction;
     }
@@ -184,9 +184,16 @@ public class WalletAPI
     /// <returns></returns>
     public async Task<Transaction> TransferAsync(UInt160 scriptHash, int m, ECPoint[] pubKeys, KeyPair[] keys, UInt160 to, BigInteger amountInteger, object? data = null, bool addAssert = true)
     {
-        Transaction transaction = await nep17API.CreateTransferTxAsync(scriptHash, m, pubKeys, keys, to, amountInteger, data, addAssert).ConfigureAwait(false);
+        Transaction transaction = await tokenManagementAPI.CreateTransferTxAsync(scriptHash, m, pubKeys, keys, to, amountInteger, data, addAssert).ConfigureAwait(false);
         await rpcClient.SendRawTransactionAsync(transaction).ConfigureAwait(false);
         return transaction;
+    }
+
+    public async Task<Transaction> TransferAsync(UInt160 assetId, string fromKey, string toAddress, BigInteger amountInteger, object? data = null, bool addAssert = true)
+    {
+        KeyPair from = Utility.GetKeyPair(fromKey);
+        UInt160 to = Utility.GetScriptHash(toAddress, rpcClient.protocolSettings);
+        return await TransferAsync(assetId, from, to, amountInteger, data, addAssert).ConfigureAwait(false);
     }
 
     /// <summary>

@@ -90,16 +90,14 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         RegisterCommandHandler<JToken, JArray>(obj => (JArray)obj);
 
         RegisterCommand(this);
-
-        Initialize_Logger();
     }
 
     internal UInt160 StringToAddress(string input, byte version)
     {
         switch (input.ToLowerInvariant())
         {
-            case "neo": return NativeContract.NEO.Hash;
-            case "gas": return NativeContract.GAS.Hash;
+            case "neo": return NativeContract.Governance.NeoTokenId;
+            case "gas": return NativeContract.Governance.GasTokenId;
         }
 
         if (input.IndexOf('.') > 0 && input.LastIndexOf('.') < input.Length)
@@ -341,8 +339,12 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         var protocol = ProtocolSettings.Load("config.json");
         CustomProtocolSettings(options, protocol);
         CustomApplicationSettings(options, Settings.Default);
-        var engine = Settings.Default.Storage.Engine;
+        if (!string.IsNullOrEmpty(Settings.Default.Logger.Path) && Settings.Default.Logger.Active)
+        {
+            SetupLogger(Settings.Default.Logger.Path, options.Verbose, Settings.Default.Logger.ConsoleOutput);
+        }
 
+        var engine = Settings.Default.Storage.Engine;
         if (string.IsNullOrWhiteSpace(engine))
         {
             ConsoleHelper.Warning("No persistence engine specified, using MemoryStore now");
@@ -440,7 +442,6 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
 
     public void Stop()
     {
-        Dispose_Logger();
         Interlocked.Exchange(ref _neoSystem, null)?.Dispose();
     }
 
@@ -459,7 +460,7 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         if (account != null)
         {
             signers = CurrentWallet!.GetAccounts()
-            .Where(p => !p.Lock && !p.WatchOnly && p.ScriptHash == account && NativeContract.GAS.BalanceOf(snapshot, p.ScriptHash).Sign > 0)
+            .Where(p => !p.Lock && !p.WatchOnly && p.ScriptHash == account && NativeContract.TokenManagement.BalanceOf(snapshot, NativeContract.Governance.GasTokenId, p.ScriptHash).Sign > 0)
             .Select(p => new Signer { Account = p.ScriptHash, Scopes = WitnessScope.CalledByEntry })
             .ToArray();
         }
@@ -552,7 +553,7 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
     private void PrintExecutionOutput(ApplicationEngine engine, bool showStack = true)
     {
         ConsoleHelper.Info("VM State: ", engine.State.ToString());
-        ConsoleHelper.Info("Gas Consumed: ", new BigDecimal((BigInteger)engine.FeeConsumed, NativeContract.GAS.Decimals).ToString());
+        ConsoleHelper.Info("Gas Consumed: ", new BigDecimal((BigInteger)engine.FeeConsumed, Governance.GasTokenDecimals).ToString());
 
         if (showStack)
             ConsoleHelper.Info("Result Stack: ", new JArray(engine.ResultStack.Select(p => p.ToJson())).ToString());

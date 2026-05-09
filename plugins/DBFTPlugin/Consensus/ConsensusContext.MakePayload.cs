@@ -60,7 +60,7 @@ partial class ConsensusContext
         }
         catch (InvalidOperationException ex)
         {
-            Utility.Log(nameof(ConsensusContext), LogLevel.Debug, ex.ToString());
+            DBFTPlugin.PluginLogger?.Information("Error signing payload {Exception}", ex.ToString());
             return;
         }
     }

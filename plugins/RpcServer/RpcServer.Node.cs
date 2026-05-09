@@ -105,7 +105,6 @@ partial class RpcServer
                 throw new RpcException(RpcError.PolicyFailed.WithData(reason.ToString()));
             default:
                 throw new RpcException(RpcError.VerificationFailed.WithData(reason.ToString()));
-
         }
     }
 
@@ -149,7 +148,7 @@ partial class RpcServer
     {
         JObject json = new();
         json["tcpport"] = localNode.ListenerTcpPort;
-        json["nonce"] = LocalNode.Nonce;
+        json["nonce"] = localNode.NodeId.ToString();
         json["useragent"] = LocalNode.UserAgent;
         // rpc settings
         JObject rpc = new();

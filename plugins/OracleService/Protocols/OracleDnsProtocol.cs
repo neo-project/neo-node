@@ -47,11 +47,11 @@ class OracleDnsProtocol : IOracleProtocol
     /// </summary>
     private sealed class DnsResourceRecord
     {
-        public string Name { get; set; }
+        public required string Name { get; set; }
         public ushort Type { get; set; }
         public ushort Class { get; set; }
         public uint Ttl { get; set; }
-        public byte[] RData { get; set; }
+        public required byte[] RData { get; set; }
     }
 
     /// <summary>
@@ -62,15 +62,15 @@ class OracleDnsProtocol : IOracleProtocol
         public ushort Id { get; set; }
         public ushort Flags { get; set; }
         public int ResponseCode => Flags & 0x0F;
-        public List<DnsResourceRecord> Answers { get; set; } = [];
+        public List<DnsResourceRecord> Answers { get; } = [];
     }
 
     private sealed class ResultAnswer
     {
-        public string Name { get; set; }
-        public string Type { get; set; }
+        public required string Name { get; set; }
+        public required string Type { get; set; }
         public uint Ttl { get; set; }
-        public string Data { get; set; }
+        public required string Data { get; set; }
     }
 
     private static readonly IReadOnlyDictionary<string, int> RecordTypeLookup = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
@@ -94,14 +94,14 @@ class OracleDnsProtocol : IOracleProtocol
     private readonly HttpClient client;
     private readonly object syncRoot = new();
     private bool configured;
-    private Uri endpoint;
+    private Uri? endpoint;
 
-    public OracleDnsProtocol(HttpMessageHandler handler = null)
+    public OracleDnsProtocol(HttpMessageHandler? handler = null)
     {
         // Do not allow automatic redirects; resolver endpoints must be explicitly allowed.
         client = handler is null ? new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) : new HttpClient(handler);
         CustomAttributeData attribute = Assembly.GetExecutingAssembly().CustomAttributes.First(p => p.AttributeType == typeof(AssemblyInformationalVersionAttribute));
-        string version = (string)attribute.ConstructorArguments[0].Value;
+        string version = attribute.ConstructorArguments[0].Value as string ?? "unknown";
         client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("NeoOracleService", version));
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/dns-message"));
     }
@@ -116,7 +116,7 @@ class OracleDnsProtocol : IOracleProtocol
         client.Dispose();
     }
 
-    public async Task<(OracleResponseCode, string)> ProcessAsync(Uri uri, CancellationToken cancellation)
+    public async Task<(OracleResponseCode, string?)> ProcessAsync(Uri uri, CancellationToken cancellation)
     {
         EnsureConfigured();
 
@@ -177,13 +177,13 @@ class OracleDnsProtocol : IOracleProtocol
         if (dnsResponse.ResponseCode != 0)
             return (OracleResponseCode.Error, $"DNS error (RCODE {dnsResponse.ResponseCode})");
 
-        if (dnsResponse.Answers is null || dnsResponse.Answers.Count == 0)
+        if (dnsResponse.Answers.Count == 0)
             return (OracleResponseCode.NotFound, null);
 
         ResultAnswer[] answers = dnsResponse.Answers
             .Select(a => new ResultAnswer
             {
-                Name = a.Name?.TrimEnd('.'),
+                Name = a.Name.TrimEnd('.'),
                 Type = GetRecordTypeLabel(a.Type),
                 Ttl = a.Ttl,
                 Data = FormatRData(a.Type, a.RData)
@@ -295,7 +295,7 @@ class OracleDnsProtocol : IOracleProtocol
         if (host.Equals("localhost", StringComparison.OrdinalIgnoreCase))
             return true;
 
-        if (IPAddress.TryParse(host, out IPAddress address))
+        if (IPAddress.TryParse(host, out IPAddress? address))
             return address.IsInternal();
 
         return false;
@@ -326,7 +326,7 @@ class OracleDnsProtocol : IOracleProtocol
         }
 
         // Fall back to configured endpoint
-        return endpoint;
+        return endpoint ?? throw new InvalidOperationException("DNS settings are not loaded.");
     }
 
     /// <summary>
@@ -604,7 +604,7 @@ class OracleDnsProtocol : IOracleProtocol
         }
     }
 
-    internal static string BuildQueryName(Uri uri, NameValueCollection queryParameters = null)
+    internal static string BuildQueryName(Uri uri, NameValueCollection? queryParameters = null)
     {
         queryParameters ??= ParseQueryString(uri.Query);
         string dnsName = NormalizeDnsName(uri.GetComponents(UriComponents.Path, UriFormat.Unescaped));
@@ -622,11 +622,11 @@ class OracleDnsProtocol : IOracleProtocol
         return HttpUtility.ParseQueryString(normalized);
     }
 
-    private static string GetQueryValue(NameValueCollection query, string key)
+    private static string? GetQueryValue(NameValueCollection? query, string key)
     {
         if (query is null)
             return null;
-        foreach (string existing in query)
+        foreach (string? existing in query.AllKeys)
         {
             if (existing is null)
                 continue;
@@ -638,7 +638,7 @@ class OracleDnsProtocol : IOracleProtocol
 
     private static void ValidateClass(NameValueCollection query)
     {
-        string classRaw = GetQueryValue(query, "class");
+        string? classRaw = GetQueryValue(query, "class");
         if (string.IsNullOrWhiteSpace(classRaw))
             return;
         classRaw = classRaw.Trim();
@@ -647,9 +647,9 @@ class OracleDnsProtocol : IOracleProtocol
         throw new FormatException($"Unsupported DNS class '{classRaw}', only IN is supported.");
     }
 
-    private static string NormalizeDnsName(string value)
+    private static string NormalizeDnsName(string? value)
     {
-        string normalized = NormalizeLabel(value?.Trim('/'));
+        string? normalized = NormalizeLabel(value?.Trim('/'));
         if (string.IsNullOrEmpty(normalized))
             throw new FormatException("dns: URI must include a dnsname.");
         if (normalized.Contains('/'))
@@ -657,7 +657,7 @@ class OracleDnsProtocol : IOracleProtocol
         return normalized;
     }
 
-    private static string NormalizeLabel(string value)
+    private static string? NormalizeLabel(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
             return null;
@@ -666,7 +666,7 @@ class OracleDnsProtocol : IOracleProtocol
 
     private static int ParseRecordType(NameValueCollection query)
     {
-        string typeRaw = GetQueryValue(query, "type");
+        string? typeRaw = GetQueryValue(query, "type");
         if (string.IsNullOrWhiteSpace(typeRaw))
             return RecordTypeLookup["A"];
         typeRaw = typeRaw.Trim();
@@ -683,7 +683,7 @@ class OracleDnsProtocol : IOracleProtocol
 
     private static string GetRecordTypeLabel(int type)
     {
-        if (ReverseRecordTypeLookup.TryGetValue(type, out string label))
+        if (ReverseRecordTypeLookup.TryGetValue(type, out string? label))
             return label;
         return type.ToString(CultureInfo.InvariantCulture);
     }

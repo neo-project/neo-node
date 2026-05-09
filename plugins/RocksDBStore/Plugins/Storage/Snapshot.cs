@@ -73,6 +73,51 @@ internal class Snapshot : IStoreSnapshot
                 yield return (it.Key(), it.Value());
     }
 
+    public IEnumerable<(byte[] Key, byte[] Value)> FindRange(byte[] start, byte[] end, SeekDirection direction = SeekDirection.Forward)
+    {
+        ArgumentNullException.ThrowIfNull(start);
+        ArgumentNullException.ThrowIfNull(end);
+
+        if (Helper.CompareLex(start, end) >= 0)
+            yield break;
+
+        using var it = _db.NewIterator(readOptions: _options);
+
+        if (direction == SeekDirection.Forward)
+        {
+            for (it.Seek(start); it.Valid(); it.Next())
+            {
+                var key = it.Key();
+                if (Helper.CompareLex(key, end) >= 0)
+                    break;
+
+                yield return (key, it.Value());
+            }
+        }
+        else
+        {
+            it.Seek(end);
+
+            if (!it.Valid())
+            {
+                it.SeekToLast();
+            }
+            else
+            {
+                it.Prev();
+            }
+
+            for (; it.Valid(); it.Prev())
+            {
+                var key = it.Key();
+                if (Helper.CompareLex(key, start) < 0)
+                    break;
+
+                yield return (key, it.Value());
+            }
+        }
+    }
+
     public bool Contains(byte[] key)
     {
         return _db.Get(key, Array.Empty<byte>(), 0, 0, readOptions: _options) >= 0;

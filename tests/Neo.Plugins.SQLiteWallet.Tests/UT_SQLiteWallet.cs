@@ -44,6 +44,7 @@ public class UT_SQLiteWallet
     {
         var path = GetTestWalletPath();
         var wallet = SQLiteWallet.Create(path, TestPassword, TestSettings);
+        Assert.IsTrue(wallet.IsUnlocked);
 
         Assert.IsNotNull(wallet);
         Assert.AreEqual(Path.GetFileNameWithoutExtension(path), wallet.Name);
@@ -53,6 +54,10 @@ public class UT_SQLiteWallet
         var openedWallet = SQLiteWallet.Open(path, TestPassword, TestSettings);
         Assert.IsNotNull(openedWallet);
         Assert.AreEqual(wallet.Name, openedWallet.Name);
+
+        // Test that wallet name can be changed
+        openedWallet.Name = "WalletName";
+        Assert.AreEqual("WalletName", openedWallet.Name);
     }
 
     [TestMethod]

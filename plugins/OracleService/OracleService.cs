@@ -17,7 +17,6 @@ using Neo.Cryptography.ECC;
 using Neo.Extensions;
 using Neo.Extensions.Collections;
 using Neo.Extensions.IO;
-using Neo.IEventHandlers;
 using Neo.Json;
 using Neo.Ledger;
 using Neo.Network.P2P;
@@ -31,13 +30,14 @@ using Neo.SmartContract.Manifest;
 using Neo.SmartContract.Native;
 using Neo.VM;
 using Neo.Wallets;
+using Serilog;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace Neo.Plugins.OracleService;
 
-public sealed class OracleService : Plugin, ICommittingHandler
+public sealed class OracleService : Plugin
 {
     private const int RefreshIntervalMilliSeconds = 1000 * 60 * 3;
 
@@ -65,9 +65,11 @@ public sealed class OracleService : Plugin, ICommittingHandler
 
     public override string ConfigFile => System.IO.Path.Combine(RootPath, "OracleService.json");
 
+    internal static ILogger? PluginLogger { get; private set; }
+
     public OracleService()
     {
-        Blockchain.Committing += ((ICommittingHandler)this).Blockchain_Committing_Handler;
+        Blockchain.Committing += Blockchain_Committing_Handler;
     }
 
     protected override void Configure()
@@ -83,8 +85,8 @@ public sealed class OracleService : Plugin, ICommittingHandler
         _system = system;
         _system.ServiceAdded += NeoSystem_ServiceAdded_Handler;
         RpcServerPlugin.RegisterMethods(this, OracleSettings.Default.Network);
+        PluginLogger ??= Logs.GetLogger($"Plugin_{Name}");
     }
-
 
     void NeoSystem_ServiceAdded_Handler(object? sender, object service)
     {
@@ -112,7 +114,7 @@ public sealed class OracleService : Plugin, ICommittingHandler
     {
         if (disposing)
         {
-            Blockchain.Committing -= ((ICommittingHandler)this).Blockchain_Committing_Handler;
+            Blockchain.Committing -= Blockchain_Committing_Handler;
             OnStop();
             while (status != OracleStatus.Stopped)
                 Thread.Sleep(100);
@@ -177,7 +179,7 @@ public sealed class OracleService : Plugin, ICommittingHandler
         ConsoleHelper.Info($"Oracle status: ", $"{status}");
     }
 
-    void ICommittingHandler.Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
+    void Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
         IReadOnlyList<Blockchain.ApplicationExecuted> applicationExecutedList)
     {
         if (system.Settings.Network != OracleSettings.Default.Network) return;
@@ -222,9 +224,9 @@ public sealed class OracleService : Plugin, ICommittingHandler
                 if (TimeProvider.Current.UtcNow - value > TimeSpan.FromDays(3))
                     finishedCache.TryRemove(key, out _);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            Log(e, LogLevel.Error);
+            PluginLogger?.Error(ex, "Error in timer: {ErrorMessage}", ex.Message);
         }
         finally
         {
@@ -269,23 +271,23 @@ public sealed class OracleService : Plugin, ICommittingHandler
         return new JObject();
     }
 
-    private static async Task SendContentAsync(Uri url, string content)
+    private async Task SendContentAsync(Uri url, string content)
     {
         try
         {
             using HttpResponseMessage response = await httpClient.PostAsync(url, new StringContent(content, Encoding.UTF8, "application/json"));
             response.EnsureSuccessStatusCode();
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            Log($"Failed to send the response signature to {url}, as {e.Message}", LogLevel.Warning);
+            PluginLogger?.Warning("Failed to send the response signature to {Url}, as {ErrorMessage}", url.AbsoluteUri, ex.Message);
         }
     }
 
     private async Task SendResponseSignatureAsync(ulong requestId, byte[] txSign, KeyPair keyPair)
     {
         byte[] message = [.. keyPair.PublicKey.ToArray(), .. BitConverter.GetBytes(requestId), .. txSign];
-        var sign = Crypto.Sign(message, keyPair.PrivateKey);
+        var sign = Crypto.Sign(message, keyPair);
         var param = "\"" + Convert.ToBase64String(keyPair.PublicKey.ToArray()) + "\", " + requestId + ", \"" + Convert.ToBase64String(txSign) + "\",\"" + Convert.ToBase64String(sign) + "\"";
         var content = "{\"id\":" + Interlocked.Increment(ref counter) + ",\"jsonrpc\":\"2.0\",\"method\":\"submitoracleresponse\",\"params\":[" + param + "]}";
 
@@ -295,15 +297,16 @@ public sealed class OracleService : Plugin, ICommittingHandler
 
     private async Task ProcessRequestAsync(DataCache snapshot, OracleRequest req)
     {
-        Log($"[{req.OriginalTxid}] Process oracle request start:<{req.Url}>");
+        PluginLogger?.Information("Process oracle request start: {OriginalTxid} <{Url}>", req.OriginalTxid, req.Url);
 
         uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
 
         (OracleResponseCode code, string? data) = await ProcessUrlAsync(req.Url);
 
-        Uri.TryCreate(req.Url, UriKind.Absolute, out Uri requestUri);
+        Uri.TryCreate(req.Url, UriKind.Absolute, out Uri? requestUri);
         bool dnsStackOutput = requestUri is not null && requestUri.Scheme.Equals("dns", StringComparison.OrdinalIgnoreCase);
-        Log($"[{req.OriginalTxid}] Process oracle request end:<{req.Url}>, responseCode:{code}, response:{FormatResponseForLog(code, data, dnsStackOutput)}");
+        PluginLogger?.Information("Process oracle request end: {OriginalTxid} <{Url}>, responseCode:{ResponseCode}, response:{Response}",
+            req.OriginalTxid, req.Url, code, FormatResponseForLog(code, data, dnsStackOutput));
 
         byte[]? dnsStackBytes = null;
         if (code == OracleResponseCode.Success && dnsStackOutput)
@@ -311,7 +314,7 @@ public sealed class OracleService : Plugin, ICommittingHandler
             if (!TryDecodeDnsStackItemPayload(data, out dnsStackBytes))
             {
                 code = OracleResponseCode.Error;
-                Log($"[{req.OriginalTxid}] Invalid DNS stack item payload.", LogLevel.Warning);
+                PluginLogger?.Warning("Invalid DNS stack item payload: {OriginalTxid}", req.OriginalTxid);
             }
         }
 
@@ -335,20 +338,26 @@ public sealed class OracleService : Plugin, ICommittingHandler
                     }
                     else
                     {
-                        result = Filter(data, request.Filter);
+                        result = Filter(data ?? string.Empty, request.Filter);
                     }
                 }
                 catch (Exception ex)
                 {
                     code = OracleResponseCode.Error;
-                    Log($"[{req.OriginalTxid}] Filter '{request.Filter}' error:{ex.Message}");
+                    PluginLogger?.Warning("Filter '{Filter}' error: {ErrorMessage}", request.Filter, ex.Message);
                 }
             }
             var response = new OracleResponse() { Id = requestId, Code = code, Result = result };
             var responseTx = CreateResponseTx(snapshot, request, response, oracleNodes, _system.Settings);
-            var backupTx = CreateResponseTx(snapshot, request, new OracleResponse() { Code = OracleResponseCode.ConsensusUnreachable, Id = requestId, Result = Array.Empty<byte>() }, oracleNodes, _system.Settings, true);
+            var backupTx = CreateResponseTx(snapshot, request, new OracleResponse()
+            {
+                Code = OracleResponseCode.ConsensusUnreachable,
+                Id = requestId,
+                Result = Array.Empty<byte>()
+            }, oracleNodes, _system.Settings, true);
 
-            Log($"[{req.OriginalTxid}]-({requestId}) Built response tx[[{responseTx.Hash}]], responseCode:{code}, result:{result.ToHexString()}, validUntilBlock:{responseTx.ValidUntilBlock}, backupTx:{backupTx.Hash}-{backupTx.ValidUntilBlock}");
+            PluginLogger?.Information("Built response tx: {OriginalTxid}-({RequestId}) {ResponseTxHash}, responseCode:{ResponseCode}, result:{Result}, validUntilBlock:{ValidUntilBlock}, backupTx:{BackupTxHash}-{BackupValidUntilBlock}",
+                req.OriginalTxid, requestId, responseTx.Hash, code, result.ToHexString(), responseTx.ValidUntilBlock, backupTx.Hash, backupTx.ValidUntilBlock);
 
             var tasks = new List<Task>();
             ECPoint[] oraclePublicKeys = NativeContract.RoleManagement.GetDesignatedByRole(snapshot, Role.Oracle, height);
@@ -364,7 +373,8 @@ public sealed class OracleService : Plugin, ICommittingHandler
                 AddResponseTxSign(snapshot, requestId, key.PublicKey, txSign, responseTx, backupTx, backTxSign);
                 tasks.Add(SendResponseSignatureAsync(requestId, txSign, key));
 
-                Log($"[{request.OriginalTxid}]-[[{responseTx.Hash}]] Send oracle sign data, Oracle node: {key.PublicKey}, Sign: {txSign.ToHexString()}");
+                PluginLogger?.Information("Send oracle sign data: {OriginalTxid}-[{ResponseTxHash}] Oracle node: {OracleNode}, Sign: {Sign}",
+                    request.OriginalTxid, responseTx.Hash, key.PublicKey.ToString(), txSign.ToHexString());
             }
             await Task.WhenAll(tasks);
         }
@@ -390,7 +400,6 @@ public sealed class OracleService : Plugin, ICommittingHandler
 
         status = OracleStatus.Stopped;
     }
-
 
     private void SyncPendingQueue(DataCache snapshot)
     {
@@ -422,7 +431,8 @@ public sealed class OracleService : Plugin, ICommittingHandler
         }
     }
 
-    public static Transaction CreateResponseTx(DataCache snapshot, OracleRequest request, OracleResponse response, ECPoint[] oracleNodes, ProtocolSettings settings, bool useCurrentHeight = false)
+    public static Transaction CreateResponseTx(DataCache snapshot, OracleRequest request, OracleResponse response,
+        ECPoint[] oracleNodes, ProtocolSettings settings, bool useCurrentHeight = false)
     {
         var requestTx = NativeContract.Ledger.GetTransactionState(snapshot, request.OriginalTxid)!;
         var n = oracleNodes.Length;
@@ -504,7 +514,8 @@ public sealed class OracleService : Plugin, ICommittingHandler
         return tx;
     }
 
-    private void AddResponseTxSign(DataCache snapshot, ulong requestId, ECPoint oraclePub, byte[] sign, Transaction? responseTx = null, Transaction? backupTx = null, byte[]? backupSign = null)
+    private void AddResponseTxSign(DataCache snapshot, ulong requestId, ECPoint oraclePub, byte[] sign,
+        Transaction? responseTx = null, Transaction? backupTx = null, byte[]? backupSign = null)
     {
         var task = pendingQueue.GetOrAdd(requestId, _ => new OracleTask
         {
@@ -558,7 +569,7 @@ public sealed class OracleService : Plugin, ICommittingHandler
         return afterObjects.ToByteArray(false);
     }
 
-    private static string FormatResponseForLog(OracleResponseCode code, string data, bool dnsStackOutput)
+    private static string? FormatResponseForLog(OracleResponseCode code, string? data, bool dnsStackOutput)
     {
         if (code != OracleResponseCode.Success)
             return data;
@@ -573,8 +584,14 @@ public sealed class OracleService : Plugin, ICommittingHandler
         return data.Length <= maxLen ? data : data[..maxLen] + "...";
     }
 
-    internal static bool TryDecodeDnsStackItemPayload(string payload, [NotNullWhen(true)] out byte[]? result)
+    internal static bool TryDecodeDnsStackItemPayload(string? payload, [NotNullWhen(true)] out byte[]? result)
     {
+        if (payload is null)
+        {
+            result = null;
+            return false;
+        }
+
         try
         {
             result = Convert.FromBase64String(payload);
@@ -608,7 +625,7 @@ public sealed class OracleService : Plugin, ICommittingHandler
             var idx = tx.GetScriptHashesForVerifying(snapshot)[0] == contract.ScriptHash ? 0 : 1;
             tx.Witnesses[idx].InvocationScript = sb.ToArray();
 
-            Log($"Send response tx: responseTx={tx.Hash}");
+            PluginLogger?.Information("Send response tx: responseTx={ResponseTxHash}", tx.Hash);
 
             _system.Blockchain.Tell(tx);
             return true;
@@ -626,11 +643,6 @@ public sealed class OracleService : Plugin, ICommittingHandler
     private static bool CheckOracleAccount(ISigner signer, ECPoint[] oracles)
     {
         return signer is not null && oracles.Any(p => signer.ContainsSignable(p));
-    }
-
-    private static void Log(string message, LogLevel level = LogLevel.Info)
-    {
-        Utility.Log(nameof(OracleService), level, message);
     }
 
     class OracleTask

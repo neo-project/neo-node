@@ -19,6 +19,7 @@ using Neo.Wallets;
 using Neo.Wallets.NEP6;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Reflection;
 using System.Text;
 
 namespace Neo.Plugins.RpcServer.Tests;
@@ -49,10 +50,10 @@ public partial class UT_RpcServer
         };
         _rpcServer = new RpcServer(_neoSystem, _rpcServerSettings);
         _walletAccount = _wallet.Import("KxuRSsHgJMb3AMSN6B9P3JHNGMFtxmuimqgR9MmXPcv3CLLfusTd");
-        var key = new KeyBuilder(NativeContract.GAS.Id, 20).Add(_walletAccount.ScriptHash);
+        var key = new KeyBuilder(NativeContract.TokenManagement.Id, 20).Add(_walletAccount.ScriptHash).Add(NativeContract.Governance.GasTokenId);
         var snapshot = _neoSystem.GetSnapshotCache();
         var entry = snapshot.GetAndChange(key, () => new StorageItem(new AccountState()));
-        entry.GetInteroperable<AccountState>().Balance = 100_000_000 * NativeContract.GAS.Factor;
+        entry.GetInteroperable<AccountState>().Balance = 100_000_000 * Governance.GasTokenFactor;
         snapshot.Commit();
     }
 
@@ -63,9 +64,9 @@ public partial class UT_RpcServer
         _neoSystem.MemPool.Clear();
         _memoryStore.Reset();
         var snapshot = _neoSystem.GetSnapshotCache();
-        var key = new KeyBuilder(NativeContract.GAS.Id, 20).Add(_walletAccount.ScriptHash);
+        var key = new KeyBuilder(NativeContract.TokenManagement.Id, 20).Add(_walletAccount.ScriptHash).Add(NativeContract.Governance.GasTokenId);
         var entry = snapshot.GetAndChange(key, () => new StorageItem(new AccountState()));
-        entry.GetInteroperable<AccountState>().Balance = 100_000_000 * NativeContract.GAS.Factor;
+        entry.GetInteroperable<AccountState>().Balance = 100_000_000 * Governance.GasTokenFactor;
         snapshot.Commit();
     }
 
@@ -235,6 +236,46 @@ public partial class UT_RpcServer
         Assert.IsNull(batchResults[3]!["error"]);
         Assert.IsNotNull(batchResults[3]!["result"]);
         Assert.AreEqual(4, batchResults[3]!["id"]!.AsNumber());
+    }
+
+    [TestMethod]
+    public void TestRpcServerPluginStartsWithCorsMisconfiguration()
+    {
+        var plugin = new RpcServerPlugin();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Plugin:Servers:0:Network"] = _neoSystem.Settings.Network.ToString(),
+                ["Plugin:Servers:0:BindAddress"] = IPAddress.Loopback.ToString(),
+                ["Plugin:Servers:0:Port"] = "0",
+                ["Plugin:Servers:0:EnableCors"] = "true",
+                ["Plugin:Servers:0:RpcUser"] = "user",
+                ["Plugin:Servers:0:RpcPass"] = "pass"
+            })
+            .Build();
+
+        var settings = new RpcServerSettings(config.GetSection("Plugin"));
+        typeof(RpcServerPlugin)
+            .GetField("settings", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .SetValue(plugin, settings);
+
+        try
+        {
+            typeof(RpcServerPlugin)
+                .GetMethod("OnSystemLoaded", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(plugin, [_neoSystem]);
+
+            var servers = (Dictionary<uint, RpcServer>)typeof(RpcServerPlugin)
+                .GetField("servers", BindingFlags.Static | BindingFlags.NonPublic)!
+                .GetValue(null)!;
+
+            Assert.IsTrue(servers.ContainsKey(_neoSystem.Settings.Network));
+        }
+        finally
+        {
+            plugin.Dispose();
+            Plugin.Plugins.Remove(plugin);
+        }
     }
 
     private class MockRpcMethods

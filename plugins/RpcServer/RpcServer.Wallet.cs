@@ -10,10 +10,13 @@
 // modifications are permitted.
 
 using Akka.Actor;
+using Akka.Configuration.Hocon;
+using Neo.Cryptography;
 using Neo.Extensions;
 using Neo.Extensions.IO;
 using Neo.Extensions.VM;
 using Neo.Json;
+using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.Plugins.RpcServer.Model;
@@ -23,32 +26,18 @@ using Neo.VM;
 using Neo.Wallets;
 using Neo.Wallets.NEP6;
 using System.Numerics;
+using System.Security.Cryptography;
+using System.Text;
+using static Neo.SmartContract.Helper;
 using Address = Neo.Plugins.RpcServer.Model.Address;
+using ECCurve = Neo.Cryptography.ECC.ECCurve;
+using ECPoint = Neo.Cryptography.ECC.ECPoint;
 using Helper = Neo.Wallets.Helper;
 
 namespace Neo.Plugins.RpcServer;
 
 partial class RpcServer
 {
-    private class DummyWallet : Wallet
-    {
-        public DummyWallet(ProtocolSettings settings) : base(null!, settings) { }
-        public override string Name => "";
-        public override Version Version => new();
-
-        public override bool ChangePassword(string oldPassword, string newPassword) => false;
-        public override bool Contains(UInt160 scriptHash) => false;
-        public override WalletAccount CreateAccount(byte[] privateKey) => null!;
-        public override WalletAccount CreateAccount(Contract contract, KeyPair? key = null) => null!;
-        public override WalletAccount CreateAccount(UInt160 scriptHash) => null!;
-        public override void Delete() { }
-        public override bool DeleteAccount(UInt160 scriptHash) => false;
-        public override WalletAccount? GetAccount(UInt160 scriptHash) => null;
-        public override IEnumerable<WalletAccount> GetAccounts() => [];
-        public override bool VerifyPassword(string password) => false;
-        public override void Save() { }
-    }
-
     protected internal Wallet? wallet;
 
     /// <summary>
@@ -154,9 +143,10 @@ partial class RpcServer
         var datoshi = BigInteger.Zero;
         using (var snapshot = system.GetSnapshotCache())
         {
+            using var engine = ApplicationEngine.Create(TriggerType.Application, null, snapshot);
             uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
             foreach (var account in wallet.GetAccounts().Select(p => p.ScriptHash))
-                datoshi += NativeContract.NEO.UnclaimedGas(snapshot, account, height);
+                datoshi += NativeContract.Governance.UnclaimedGas(engine, account, height);
         }
         return datoshi.ToString();
     }
@@ -275,6 +265,138 @@ partial class RpcServer
     }
 
     /// <summary>
+    /// Signs a message with all standard accounts in the opened wallet.
+    /// <para>Request format:</para>
+    /// <code>{"jsonrpc": "2.0", "id": 1, "method": "signmsg", "params": ["message", false]}</code>
+    /// </summary>
+    /// <param name="message">The message to sign.</param>
+    /// <param name="avoidSignatureReplay">Whether to sign with replay-avoid mode.</param>
+    /// <returns>A JSON object that contains payload metadata and signatures.</returns>
+    [RpcMethod(Name = "signmsg")]
+    protected internal virtual JToken SignMsg(string message, bool avoidSignatureReplay = false)
+    {
+        var wallet = CheckWallet();
+        if (message is null) throw new RpcException(RpcErrorFactory.InvalidParams("Null message"));
+
+        var saltBytes = RandomNumberGenerator.GetBytes(16);
+        var saltHex = Convert.ToHexStringLower(saltBytes);
+
+        var paramBytes = Encoding.UTF8.GetBytes(saltHex + message);
+        byte[] payload;
+        using (var ms = new MemoryStream())
+        using (var w = new BinaryWriter(ms, Encoding.UTF8, true))
+        {
+            w.Write((byte)0x01);
+            w.Write((byte)0x00);
+            w.Write((byte)0x01);
+            w.Write((byte)0xF0);
+            w.WriteVarBytes(paramBytes);
+            w.Write((ushort)0);
+            w.Flush();
+            payload = ms.ToArray();
+        }
+
+        var signData = payload;
+        if (avoidSignatureReplay)
+        {
+            var hash = new UInt256(Crypto.Hash256(payload));
+            signData = hash.GetSignData(system.Settings.Network);
+        }
+
+        var signatures = wallet.GetAccounts()
+            .Where(p => p.HasKey && p.Contract != null && !IsMultiSigContract(p.Contract.Script))
+            .Select(p =>
+            {
+                var key = p.GetKey()!;
+                var signature = Crypto.Sign(signData, key);
+                return (JToken)new JObject
+                {
+                    ["address"] = p.Address,
+                    ["publickey"] = key.PublicKey.EncodePoint(true).ToHexString(),
+                    ["signature"] = signature.ToHexString(),
+                    ["salt"] = saltHex
+                };
+            }).ToArray();
+
+        return new JObject
+        {
+            ["curve"] = "secp256r1",
+            ["algorithm"] = "payload = 010001f0 + VarBytes(Salt + Message) + 0000",
+            ["mode"] = avoidSignatureReplay ? "Sign(SHA256(network || Hash256(payload)))" : "Sign(payload)",
+            ["payload"] = payload.ToHexString(),
+            ["signatures"] = new JArray(signatures)
+        };
+    }
+
+    /// <summary>
+    /// Verifies a message signature generated by signmsg.
+    /// <para>Request format:</para>
+    /// <code>{"jsonrpc": "2.0", "id": 1, "method": "verifymsg", "params": ["message", "signatureHex", "publicKeyHex", "saltHex", false]}</code>
+    /// </summary>
+    /// <param name="message">The original message that was signed.</param>
+    /// <param name="signature">The signature in hex format.</param>
+    /// <param name="publicKey">The compressed public key in hex format.</param>
+    /// <param name="salt">The salt in hex format.</param>
+    /// <param name="avoidSignatureReplay">Whether replay-avoid mode was used during signing.</param>
+    /// <returns>A JSON object with verification result and metadata.</returns>
+    [RpcMethod(Name = "verifymsg")]
+    protected internal virtual JToken VerifyMsg(string message, string signature, string publicKey, string salt, bool avoidSignatureReplay = false)
+    {
+        if (message is null) throw new RpcException(RpcErrorFactory.InvalidParams("Null message"));
+
+        if (!ECPoint.TryParse(publicKey, ECCurve.Secp256r1, out var pubKey))
+            throw new RpcException(RpcErrorFactory.InvalidParams("Invalid public key format"));
+
+        byte[] signatureBytes;
+        try
+        {
+            signatureBytes = signature.HexToBytes();
+        }
+        catch
+        {
+            throw new RpcException(RpcErrorFactory.InvalidParams("Invalid signature format (must be hex string)"));
+        }
+
+        if (string.IsNullOrEmpty(salt))
+            throw new RpcException(RpcErrorFactory.InvalidParams("Salt cannot be empty"));
+
+        var saltHex = salt.ToLowerInvariant();
+        var paramBytes = Encoding.UTF8.GetBytes(saltHex + message);
+        byte[] payload;
+        using (var ms = new MemoryStream())
+        using (var w = new BinaryWriter(ms, Encoding.UTF8, true))
+        {
+            w.Write((byte)0x01);
+            w.Write((byte)0x00);
+            w.Write((byte)0x01);
+            w.Write((byte)0xF0);
+            w.WriteVarBytes(paramBytes);
+            w.Write((ushort)0);
+            w.Flush();
+            payload = ms.ToArray();
+        }
+
+        var signData = payload;
+        if (avoidSignatureReplay)
+        {
+            var hash = new UInt256(Crypto.Hash256(payload));
+            signData = hash.GetSignData(system.Settings.Network);
+        }
+
+        var isValid = Crypto.VerifySignature(signData, signatureBytes, pubKey);
+        var address = Contract.CreateSignatureContract(pubKey).ScriptHash.ToAddress(system.Settings.AddressVersion);
+
+        return new JObject
+        {
+            ["address"] = address,
+            ["publickey"] = pubKey.EncodePoint(true).ToHexString(),
+            ["signature"] = signature,
+            ["salt"] = saltHex,
+            ["status"] = isValid ? "Valid" : "Invalid"
+        };
+    }
+
+    /// <summary>
     /// Processes the result of an invocation with wallet for signing.
     /// </summary>
     /// <param name="result">The result object to process.</param>
@@ -357,7 +479,7 @@ partial class RpcServer
         var wallet = CheckWallet();
 
         using var snapshot = system.GetSnapshotCache();
-        var descriptor = new AssetDescriptor(snapshot, system.Settings, assetId);
+        var descriptor = NativeContract.TokenManagement.GetTokenInfo(snapshot, assetId).NotNull_Or(RpcError.UnknownContract);
 
         var amountDecimal = new BigDecimal(BigInteger.Parse(amount), descriptor.Decimals);
         (amountDecimal.Sign > 0).True_Or(RpcErrorFactory.InvalidParams("Amount can't be negative."));
@@ -467,7 +589,8 @@ partial class RpcServer
             var address = item["address"].NotNull_Or(RpcErrorFactory.InvalidParams($"no 'address' parameter at 'to[{i}]'."));
 
             var assetId = UInt160.Parse(asset.AsString());
-            var descriptor = new AssetDescriptor(snapshot, system.Settings, assetId);
+            var descriptor = NativeContract.TokenManagement.GetTokenInfo(snapshot, assetId).NotNull_Or(RpcError.UnknownContract);
+
             outputs[i] = new TransferOutput
             {
                 AssetId = assetId,
@@ -528,8 +651,8 @@ partial class RpcServer
         var wallet = CheckWallet();
 
         using var snapshot = system.GetSnapshotCache();
-        var descriptor = new AssetDescriptor(snapshot, system.Settings, assetId);
-        var amountDecimal = new BigDecimal(BigInteger.Parse(amount), descriptor.Decimals);
+        var descriptor = NativeContract.TokenManagement.GetTokenInfo(snapshot, assetId);
+        var amountDecimal = new BigDecimal(BigInteger.Parse(amount), descriptor!.Decimals);
         (amountDecimal.Sign > 0).True_Or(RpcErrorFactory.InvalidParams("Amount can't be negative."));
 
         var tx = wallet.MakeTransaction(snapshot, [new() { AssetId = assetId, Value = amountDecimal, ScriptHash = to.ScriptHash }])
@@ -620,8 +743,7 @@ partial class RpcServer
         }
         else if (extraFee is not null)
         {
-            var descriptor = new AssetDescriptor(system.StoreView, system.Settings, NativeContract.GAS.Hash);
-            (BigDecimal.TryParse(extraFee, descriptor.Decimals, out var decimalExtraFee) && decimalExtraFee.Sign > 0)
+            (BigDecimal.TryParse(extraFee, Governance.GasTokenDecimals, out var decimalExtraFee) && decimalExtraFee.Sign > 0)
                 .True_Or(RpcErrorFactory.InvalidParams("Incorrect amount format."));
 
             tx.NetworkFee += (long)decimalExtraFee.Value;

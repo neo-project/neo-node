@@ -125,14 +125,25 @@ public abstract class ConsoleServiceBase
         var possibleHelp = "";
         var tokens = commandLine.Tokenize();
         var availableCommands = new List<(ConsoleCommandMethod Command, object?[] Arguments)>();
+        var parseErrors = new List<string>();
+        var bestConsumed = 0;
         foreach (var entries in _verbs.Values)
         {
             foreach (var command in entries)
             {
                 var consumed = command.IsThisCommand(tokens);
-                if (consumed <= 0) continue;
+                if (consumed <= 0 || consumed < bestConsumed) continue;
 
                 var args = tokens.Skip(consumed).ToList().Trim();
+
+                if (consumed > bestConsumed)
+                {
+                    availableCommands.Clear();
+                    parseErrors.Clear();
+                    possibleHelp = "";
+                    bestConsumed = consumed;
+                }
+
                 try
                 {
                     if (args.Any(u => u.IsIndicator))
@@ -144,7 +155,7 @@ public abstract class ConsoleServiceBase
                 {
                     // Skip parse errors
                     possibleHelp = command.Key;
-                    ConsoleHelper.Error($"{ex.InnerException?.Message ?? ex.Message}");
+                    parseErrors.Add(ex.InnerException?.Message ?? ex.Message);
                 }
             }
         }
@@ -153,6 +164,9 @@ public abstract class ConsoleServiceBase
         {
             if (!string.IsNullOrEmpty(possibleHelp))
             {
+                foreach (var error in parseErrors.Distinct())
+                    ConsoleHelper.Error(error);
+
                 OnHelpCommand(possibleHelp);
                 return true;
             }
@@ -170,7 +184,8 @@ public abstract class ConsoleServiceBase
 
         // Show Ambiguous call
         var ambiguousCommands = availableCommands.Select(u => u.Command.Key).Distinct().ToList();
-        throw new ArgumentException($"Ambiguous calls for: {string.Join(',', ambiguousCommands)}");
+        var ambiguousCommandsQuoted = ambiguousCommands.Select(u => $"'{u}'").ToList();
+        throw new ArgumentException($"Ambiguous calls for: {string.Join(',', ambiguousCommandsQuoted)}");
     }
 
     private bool TryProcessValue(Type parameterType, IList<CommandToken> args, bool consumeAll, out object? value)

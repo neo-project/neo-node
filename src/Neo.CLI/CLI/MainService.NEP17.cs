@@ -25,18 +25,25 @@ partial class MainService
     /// <summary>
     /// Process "transfer" command
     /// </summary>
-    /// <param name="tokenHash">Script hash</param>
+    /// <param name="tokenId">Token Id</param>
     /// <param name="to">To</param>
     /// <param name="amount">Amount</param>
     /// <param name="from">From</param>
     /// <param name="data">Data</param>
     /// <param name="signersAccounts">Signer's accounts</param>
     [ConsoleCommand("transfer", Category = "NEP17 Commands")]
-    private void OnTransferCommand(UInt160 tokenHash, UInt160 to, decimal amount, UInt160? from = null, string? data = null, UInt160[]? signersAccounts = null)
+    private void OnTransferCommand(UInt160 tokenId, UInt160 to, decimal amount, UInt160? from = null, string? data = null, UInt160[]? signersAccounts = null)
     {
         var snapshot = NeoSystem.StoreView;
-        var asset = new AssetDescriptor(snapshot, NeoSystem.Settings, tokenHash);
-        var value = new BigDecimal(amount, asset.Decimals);
+        var descriptor = NativeContract.TokenManagement.GetTokenInfo(snapshot, tokenId);
+
+        if (descriptor == null)
+        {
+            ConsoleHelper.Error($"No token found for token id {tokenId}");
+            return;
+        }
+
+        var value = new BigDecimal(amount, descriptor!.Decimals);
 
         if (NoWallet()) return;
 
@@ -47,7 +54,7 @@ partial class MainService
             {
                 new TransferOutput
                 {
-                    AssetId = tokenHash,
+                    AssetId = tokenId,
                     Value = value,
                     ScriptHash = to,
                     Data = data
@@ -75,25 +82,35 @@ partial class MainService
     /// <summary>
     /// Process "balanceOf" command
     /// </summary>
-    /// <param name="tokenHash">Script hash</param>
+    /// <param name="tokenId">Token Id</param>
     /// <param name="address">Address</param>
     [ConsoleCommand("balanceOf", Category = "NEP17 Commands")]
-    private void OnBalanceOfCommand(UInt160 tokenHash, UInt160 address)
+    private void OnBalanceOfCommand(UInt160 tokenId, UInt160 address)
     {
-        var arg = new JObject
+        var snapshot = NeoSystem.StoreView;
+        var descriptor = NativeContract.TokenManagement.GetTokenInfo(snapshot, tokenId);
+
+        if (descriptor == null)
         {
-            ["type"] = "Hash160",
-            ["value"] = address.ToString()
-        };
+            ConsoleHelper.Error($"No token found for token id {tokenId}");
+            return;
+        }
 
-        var asset = new AssetDescriptor(NeoSystem.StoreView, NeoSystem.Settings, tokenHash);
+        if (!OnInvokeWithResult(NativeContract.TokenManagement.Hash, "balanceOf", out StackItem balanceResult, null,
+            new JArray([new JObject
+            {
+                ["type"] = "Hash160",
+                ["value"] = tokenId.ToString()
+            },new JObject
+            {
+                ["type"] = "Hash160",
+                ["value"] = address.ToString()
+            }]))) return;
 
-        if (!OnInvokeWithResult(tokenHash, "balanceOf", out StackItem balanceResult, null, new JArray(arg))) return;
-
-        var balance = new BigDecimal(((PrimitiveType)balanceResult).GetInteger(), asset.Decimals);
+        var balance = new BigDecimal(((PrimitiveType)balanceResult).GetInteger(), descriptor.Decimals);
 
         Console.WriteLine();
-        ConsoleHelper.Info($"{asset.AssetName} balance: ", $"{balance}");
+        ConsoleHelper.Info($"{descriptor.Name} balance: ", $"{balance}");
     }
 
     /// <summary>
@@ -123,14 +140,19 @@ partial class MainService
     /// <summary>
     /// Process "totalSupply" command
     /// </summary>
-    /// <param name="tokenHash">Script hash</param>
+    /// <param name="tokenId">Token Id</param>
     [ConsoleCommand("totalSupply", Category = "NEP17 Commands")]
-    private void OnTotalSupplyCommand(UInt160 tokenHash)
+    private void OnTotalSupplyCommand(UInt160 tokenId)
     {
-        if (!OnInvokeWithResult(tokenHash, "totalSupply", out StackItem result)) return;
+        var snapshot = NeoSystem.StoreView;
+        var descriptor = NativeContract.TokenManagement.GetTokenInfo(snapshot, tokenId);
 
-        var asset = new AssetDescriptor(NeoSystem.StoreView, NeoSystem.Settings, tokenHash);
-        var totalSupply = new BigDecimal(((PrimitiveType)result).GetInteger(), asset.Decimals);
+        if (descriptor == null)
+        {
+            ConsoleHelper.Error($"No token found for token id {tokenId}");
+            return;
+        }
+        var totalSupply = new BigDecimal(descriptor.TotalSupply, descriptor.Decimals);
 
         ConsoleHelper.Info("Result: ", $"{totalSupply}");
     }

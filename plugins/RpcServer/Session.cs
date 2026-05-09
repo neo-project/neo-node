@@ -11,6 +11,7 @@
 
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
+using Neo.Plugins.RpcServer.Diagnostics;
 using Neo.SmartContract;
 using Neo.SmartContract.Iterators;
 using Neo.SmartContract.Native;

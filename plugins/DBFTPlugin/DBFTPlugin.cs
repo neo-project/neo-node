@@ -11,16 +11,16 @@
 
 using Akka.Actor;
 using Neo.ConsoleService;
-using Neo.IEventHandlers;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.Plugins.DBFTPlugin.Consensus;
 using Neo.Sign;
 using Neo.Wallets;
+using Serilog;
 
 namespace Neo.Plugins.DBFTPlugin;
 
-public sealed class DBFTPlugin : Plugin, IMessageReceivedHandler
+public sealed class DBFTPlugin : Plugin
 {
     private IWalletProvider? walletProvider;
     private IActorRef consensus = null!;
@@ -34,9 +34,11 @@ public sealed class DBFTPlugin : Plugin, IMessageReceivedHandler
 
     protected override UnhandledExceptionPolicy ExceptionPolicy => settings.ExceptionPolicy;
 
+    internal static ILogger? PluginLogger { get; private set; }
+
     public DBFTPlugin()
     {
-        RemoteNode.MessageReceived += ((IMessageReceivedHandler)this).RemoteNode_MessageReceived_Handler;
+        RemoteNode.MessageReceived += RemoteNode_MessageReceived_Handler;
     }
 
     public DBFTPlugin(DbftSettings settings) : this()
@@ -47,7 +49,9 @@ public sealed class DBFTPlugin : Plugin, IMessageReceivedHandler
     protected override void Dispose(bool disposing)
     {
         if (disposing)
-            RemoteNode.MessageReceived -= ((IMessageReceivedHandler)this).RemoteNode_MessageReceived_Handler;
+        {
+            RemoteNode.MessageReceived -= RemoteNode_MessageReceived_Handler;
+        }
         base.Dispose(disposing);
     }
 
@@ -61,6 +65,7 @@ public sealed class DBFTPlugin : Plugin, IMessageReceivedHandler
         if (system.Settings.Network != settings.Network) return;
         neoSystem = system;
         neoSystem.ServiceAdded += NeoSystem_ServiceAdded_Handler;
+        PluginLogger ??= Logs.GetLogger($"Plugin_{Name}");
     }
 
     void NeoSystem_ServiceAdded_Handler(object? sender, object service)
@@ -109,12 +114,11 @@ public sealed class DBFTPlugin : Plugin, IMessageReceivedHandler
         consensus = neoSystem.ActorSystem.ActorOf(ConsensusService.Props(neoSystem, settings, signer));
         consensus.Tell(new ConsensusService.Start());
     }
-
-    bool IMessageReceivedHandler.RemoteNode_MessageReceived_Handler(NeoSystem system, Message message)
+    bool RemoteNode_MessageReceived_Handler(NeoSystem system, Message message)
     {
         if (message.Command == MessageCommand.Transaction)
         {
-            Transaction tx = (Transaction)message.Payload!;
+            Transaction tx = (Transaction)message.Payload;
             if (tx.SystemFee > settings.MaxBlockSystemFee)
                 return false;
             consensus?.Tell(tx);

@@ -111,13 +111,13 @@ class VerificationContext
         if (index < 0 || verifiers.Length <= index) return false;
         if (signatures.ContainsKey(index)) return false;
 
-        Utility.Log(nameof(VerificationContext), LogLevel.Info, $"vote received, height={rootIndex}, index={index}");
+        StatePlugin.PluginLogger?.Information("Vote received, height={RootIndex}, index={Index}", rootIndex, index);
 
         var validator = verifiers[index];
         var hashData = StateRoot?.GetSignData(StatePlugin.NeoSystem.Settings.Network);
         if (hashData is null || !Crypto.VerifySignature(hashData, sig, validator))
         {
-            Utility.Log(nameof(VerificationContext), LogLevel.Info, "incorrect vote, invalid signature");
+            StatePlugin.PluginLogger?.Information("Incorrect vote, invalid signature");
             return false;
         }
         return signatures.TryAdd(index, sig);

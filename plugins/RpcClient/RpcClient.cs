@@ -564,7 +564,8 @@ public class RpcClient : IDisposable
     {
         var result = await RpcSendAsync(GetRpcName(), assetId).ConfigureAwait(false);
         BigInteger balance = BigInteger.Parse(result["balance"]!.AsString());
-        byte decimals = await new Nep17API(this).DecimalsAsync(UInt160.Parse(assetId.AsScriptHash())).ConfigureAwait(false);
+        UInt160 parsedAssetId = UInt160.Parse(assetId);
+        byte decimals = await new TokenManagementAPI(this).DecimalsAsync(parsedAssetId).ConfigureAwait(false);
         return new BigDecimal(balance, decimals);
     }
 
@@ -574,7 +575,7 @@ public class RpcClient : IDisposable
     public async Task<BigDecimal> GetWalletUnclaimedGasAsync()
     {
         var result = await RpcSendAsync(GetRpcName()).ConfigureAwait(false);
-        return BigDecimal.Parse(result.AsString(), NativeContract.GAS.Decimals);
+        return BigDecimal.Parse(result.AsString(), Governance.GasTokenDecimals);
     }
 
     /// <summary>
