@@ -434,6 +434,19 @@ public partial class UT_RpcServer
     }
 
     [TestMethod]
+    public void TestRpcServerSettings_LoadPluginConfiguration()
+    {
+        var settings = new RpcServerSettings(new ConfigurationBuilder()
+            .AddJsonFile("RpcServer.json")
+            .Build()
+            .GetSection("PluginConfiguration"));
+
+        Assert.AreEqual(UnhandledExceptionPolicy.Ignore, settings.ExceptionPolicy);
+        Assert.HasCount(1, settings.Servers);
+        Assert.AreEqual(860833102u, settings.Servers[0].Network);
+    }
+
+    [TestMethod]
     public void TestRpcServerSettings_LoadMissingGasLimitsUsesDefaultDatoshiValues()
     {
         const string json = """
