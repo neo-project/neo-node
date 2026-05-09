@@ -76,7 +76,7 @@ For neo-gui, you just need to enter the `neo-node/neo-gui` folder and follow the
 Clone the neo-node repository.
 
 ```sh
-cd neo-node
+cd neo-node/src/Neo.CLI/Docker
 docker build -t neo-cli .
 docker run -p 10332:10332 -p 10333:10333 --name=neo-cli-mainnet neo-cli
 ```
@@ -85,7 +85,7 @@ After start the container successfully, use the following scripts to open neo-cl
 
 ```sh
 docker exec -it neo-cli-mainnet /bin/bash
-screen -r node
+screen -r neo
 ```
 
 ## Logging
@@ -100,4 +100,3 @@ In order to synchronize the network faster, please check [here](https://docs.neo
 ## Usage
 
 For more information about these two nodes, you can refer to [documentation](https://docs.neo.org/docs/en-us/node/introduction.html) to try out more features. 
-
