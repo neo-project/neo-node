@@ -14,6 +14,7 @@ using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence.Providers;
 using Neo.SmartContract;
+using Neo.SmartContract.Native;
 using Neo.VM;
 
 namespace Neo.Plugins.RpcServer.Tests;
@@ -49,5 +50,25 @@ public class UT_PendingValidUntilRelayRpcBridge
         };
         Assert.IsFalse(PendingValidUntilRelayRpcBridge.TryOffer(neo, tx, VerifyResult.Expired));
         Assert.IsFalse(PendingValidUntilRelayRpcBridge.TryOffer(neo, tx, VerifyResult.Succeed));
+    }
+
+    [TestMethod]
+    public void TryOffer_ReturnsFalse_WhenValidUntilNotBeyondAllowedWindow()
+    {
+        var neo = new NeoSystem(TestProtocolSettings.SoleNode, new TestMemoryStoreProvider(new MemoryStore()));
+        var snapshot = neo.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(neo.Settings);
+        var tx = new Transaction
+        {
+            Version = 0,
+            Nonce = 1,
+            ValidUntilBlock = height + maxInc,
+            Signers = [],
+            Attributes = [],
+            Script = new byte[] { (byte)OpCode.RET },
+            Witnesses = [],
+        };
+        Assert.IsFalse(PendingValidUntilRelayRpcBridge.TryOffer(neo, tx, VerifyResult.Expired));
     }
 }

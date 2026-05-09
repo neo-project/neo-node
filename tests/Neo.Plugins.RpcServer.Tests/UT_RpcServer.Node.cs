@@ -11,13 +11,16 @@
 
 using Akka.Actor;
 using Neo.Extensions;
+using Neo.IO;
 using Neo.Json;
+using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence.Providers;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using System.Net;
+using System.Reflection;
 
 namespace Neo.Plugins.RpcServer.Tests;
 
@@ -41,6 +44,34 @@ partial class UT_RpcServer
         // RpcServer runs without neo-cli assembly — bridge reports unavailable.
         Assert.IsTrue(json["unavailable"]!.GetBoolean());
         Assert.IsFalse(json["enabled"]!.GetBoolean());
+    }
+
+    [TestMethod]
+    public void GetRelayResult_ExpiredWithQueuedLocally_UsesQueuedLocallyData()
+    {
+        var m = typeof(RpcServer).GetMethod("GetRelayResult",
+            BindingFlags.NonPublic | BindingFlags.Static, null,
+            [typeof(VerifyResult), typeof(UInt256), typeof(bool)], null);
+        Assert.IsNotNull(m);
+        var hash = UInt256.Zero;
+        var ex = Assert.ThrowsExactly<TargetInvocationException>(() =>
+            m.Invoke(null, [VerifyResult.Expired, hash, true]));
+        var rpc = Assert.IsInstanceOfType<RpcException>(ex.InnerException);
+        Assert.AreEqual(PendingValidUntilRelayRpcBridge.RpcExpiredDataWhenQueuedLocally, rpc.GetError().Data);
+    }
+
+    [TestMethod]
+    public void GetRelayResult_ExpiredWithoutQueuedLocally_UsesReasonString()
+    {
+        var m = typeof(RpcServer).GetMethod("GetRelayResult",
+            BindingFlags.NonPublic | BindingFlags.Static, null,
+            [typeof(VerifyResult), typeof(UInt256), typeof(bool)], null);
+        Assert.IsNotNull(m);
+        var hash = UInt256.Zero;
+        var ex = Assert.ThrowsExactly<TargetInvocationException>(() =>
+            m.Invoke(null, [VerifyResult.Expired, hash, false]));
+        var rpc = Assert.IsInstanceOfType<RpcException>(ex.InnerException);
+        Assert.AreEqual(VerifyResult.Expired.ToString(), rpc.GetError().Data);
     }
 
     [TestMethod]
