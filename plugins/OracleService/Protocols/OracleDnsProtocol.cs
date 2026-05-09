@@ -12,10 +12,12 @@
 using Neo.Network.P2P.Payloads;
 using Neo.VM;
 using System;
+using System.Buffers;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Globalization;
+using System.IO.Pipelines;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -253,18 +255,37 @@ class OracleDnsProtocol : IOracleProtocol
             throw new ResponseTooLargeException();
 
         using Stream stream = await response.Content.ReadAsStreamAsync(cancellation);
-        using MemoryStream buffer = new();
-        byte[] chunk = new byte[8 * 1024];
-        int read;
-        while ((read = await stream.ReadAsync(chunk.AsMemory(0, chunk.Length), cancellation)) > 0)
-        {
-            if (buffer.Length + read > OracleResponse.MaxResultSize)
-                throw new ResponseTooLargeException();
-            buffer.Write(chunk, 0, read);
-        }
-
-        byte[] responseData = buffer.ToArray();
+        byte[] responseData = await ReadResponseContentAsync(stream, cancellation);
         return ParseDnsResponse(responseData);
+    }
+
+    private static async Task<byte[]> ReadResponseContentAsync(Stream stream, CancellationToken cancellation)
+    {
+        PipeReader reader = PipeReader.Create(stream);
+        try
+        {
+            using MemoryStream buffer = new();
+            while (true)
+            {
+                ReadResult result = await reader.ReadAsync(cancellation);
+                ReadOnlySequence<byte> sequence = result.Buffer;
+
+                if (buffer.Length + sequence.Length > OracleResponse.MaxResultSize)
+                    throw new ResponseTooLargeException();
+
+                foreach (ReadOnlyMemory<byte> segment in sequence)
+                    buffer.Write(segment.Span);
+
+                reader.AdvanceTo(sequence.End);
+
+                if (result.IsCompleted)
+                    return buffer.ToArray();
+            }
+        }
+        finally
+        {
+            await reader.CompleteAsync();
+        }
     }
 
     private async Task EnsureEndpointAllowed(Uri resolverEndpoint, CancellationToken cancellation)
