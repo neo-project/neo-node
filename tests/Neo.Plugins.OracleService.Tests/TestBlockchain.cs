@@ -10,6 +10,7 @@
 // modifications are permitted.
 
 using Akka.Actor;
+using Neo.Cryptography;
 using Neo.Extensions;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
@@ -105,6 +106,65 @@ public static class TestBlockchain
         engine.SnapshotCache.Commit();
         var result = (VM.Types.Array)engine.ResultStack.Peek();
         return new UInt160(result[2].GetSpan());
+    }
+
+    public static void DesignateOracleRole()
+    {
+        byte[] script;
+        using (ScriptBuilder sb = new())
+        {
+            sb.EmitDynamicCall(NativeContract.RoleManagement.Hash, "designateAsRole",
+                [Role.Oracle,
+                    new ContractParameter()
+                    {
+                        Type = ContractParameterType.Array,
+                        Value = TestUtils.settings.StandbyCommittee.Select(
+                            p => new ContractParameter() { Type = ContractParameterType.PublicKey, Value = p }).ToList()
+                    }]);
+            script = sb.ToArray();
+        }
+
+        Transaction[] txs = [
+            new Transaction
+            {
+                Nonce = 233,
+                ValidUntilBlock = NativeContract.Ledger.CurrentIndex(s_theNeoSystem.GetSnapshotCache()) + s_theNeoSystem.Settings.MaxValidUntilBlockIncrement,
+                Signers = [new Signer() { Account = TestUtils.MultisigScriptHash, Scopes = WitnessScope.CalledByEntry }],
+                Attributes = [],
+                Script = script,
+                NetworkFee = 1000_0000,
+                SystemFee = 2_0000_0000,
+                Witnesses = []
+            }
+        ];
+        byte[] signature = txs[0].Sign(s_walletAccount.GetKey(), TestUtils.settings.Network);
+        txs[0].Witnesses = [new Witness
+        {
+            InvocationScript = new byte[] { (byte)OpCode.PUSHDATA1, (byte)signature.Length }.Concat(signature).ToArray(),
+            VerificationScript = TestUtils.MultisigScript,
+        }];
+        var block = new Block
+        {
+            Header = new Header
+            {
+                Version = 0,
+                PrevHash = s_theNeoSystem.GenesisBlock.Hash,
+                MerkleRoot = null!,
+                Timestamp = s_theNeoSystem.GenesisBlock.Timestamp + 15_000,
+                Index = 1,
+                NextConsensus = s_theNeoSystem.GenesisBlock.NextConsensus,
+                Witness = null!
+            },
+            Transactions = txs,
+        };
+        block.Header.MerkleRoot ??= MerkleTree.ComputeRoot(block.Transactions.Select(t => t.Hash).ToArray());
+        signature = block.Sign(s_walletAccount.GetKey(), TestUtils.settings.Network);
+        block.Header.Witness = new Witness
+        {
+            InvocationScript = new byte[] { (byte)OpCode.PUSHDATA1, (byte)signature.Length }.Concat(signature).ToArray(),
+            VerificationScript = TestUtils.MultisigScript,
+        };
+        s_theNeoSystem.Blockchain.Ask(block, cancellationToken: CancellationToken.None).ConfigureAwait(false).GetAwaiter().GetResult();
     }
 
     internal static void ResetStore()

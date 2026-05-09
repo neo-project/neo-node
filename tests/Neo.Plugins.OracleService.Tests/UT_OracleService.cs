@@ -12,6 +12,7 @@
 using Neo.Cryptography.ECC;
 using Neo.Extensions;
 using Neo.Network.P2P.Payloads;
+using Neo.Plugins.OracleService.Protocols;
 using Neo.SmartContract.Native;
 using System.Collections.Concurrent;
 using System.Reflection;
@@ -123,6 +124,7 @@ public class UT_OracleService
     {
         ResetStore();
         InitializeContract();
+        DesignateOracleRole();
 
         var oracle = new OracleService();
         SetPrivateField(oracle, "_system", s_theNeoSystem);
@@ -148,6 +150,34 @@ public class UT_OracleService
         }
     }
 
+    [TestMethod]
+    public async Task TestStartDisposesStaleProtocols()
+    {
+        ResetStore();
+        InitializeContract();
+        DesignateOracleRole();
+
+        var oracle = new OracleService();
+        var protocol = new TrackingProtocol();
+        SetPrivateField(oracle, "_system", s_theNeoSystem);
+        GetPrivateField<Dictionary<string, IOracleProtocol>>(oracle, "protocols")["stale"] = protocol;
+
+        Task run = Task.CompletedTask;
+        try
+        {
+            run = oracle.Start(s_wallet);
+            await Task.Delay(100);
+
+            Assert.IsTrue(protocol.Disposed);
+        }
+        finally
+        {
+            StopOracle(oracle);
+            await run.WaitAsync(TimeSpan.FromSeconds(5));
+            oracle.Dispose();
+        }
+    }
+
     private static T GetPrivateField<T>(object instance, string name)
     {
         return (T)instance.GetType()
@@ -167,5 +197,24 @@ public class UT_OracleService
         typeof(OracleService)
             .GetMethod("OnStop", BindingFlags.Instance | BindingFlags.NonPublic)!
             .Invoke(oracle, []);
+    }
+
+    private sealed class TrackingProtocol : IOracleProtocol
+    {
+        public bool Disposed { get; private set; }
+
+        public void Configure()
+        {
+        }
+
+        public void Dispose()
+        {
+            Disposed = true;
+        }
+
+        public Task<(OracleResponseCode, string)> ProcessAsync(Uri uri, CancellationToken cancellation)
+        {
+            return Task.FromResult((OracleResponseCode.Success, string.Empty));
+        }
     }
 }

@@ -111,8 +111,7 @@ public sealed class OracleService : Plugin
         OnStop();
         while (status != OracleStatus.Stopped)
             Thread.Sleep(100);
-        foreach (var p in protocols)
-            p.Value.Dispose();
+        DisposeProtocols();
         base.Dispose();
     }
 
@@ -125,7 +124,7 @@ public sealed class OracleService : Plugin
     public Task Start(Wallet wallet)
     {
         if (status == OracleStatus.Running) return Task.CompletedTask;
-        ResetCancellationSource();
+        DisposeProtocols();
 
         if (wallet is null)
         {
@@ -145,6 +144,7 @@ public sealed class OracleService : Plugin
             return Task.CompletedTask;
         }
 
+        ResetCancellationSource();
         this.wallet = wallet;
         protocols["https"] = new OracleHttpsProtocol();
         protocols["neofs"] = new OracleNeoFSProtocol(wallet, oracles);
@@ -158,6 +158,13 @@ public sealed class OracleService : Plugin
     {
         if (cancelSource.IsCancellationRequested)
             cancelSource = new CancellationTokenSource();
+    }
+
+    private void DisposeProtocols()
+    {
+        foreach (var protocol in protocols.Values)
+            protocol.Dispose();
+        protocols.Clear();
     }
 
     [ConsoleCommand("stop oracle", Category = "Oracle", Description = "Stop oracle service")]
