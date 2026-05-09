@@ -31,6 +31,19 @@ partial class UT_RpcServer
     }
 
     [TestMethod]
+    public void TestGetPendingValidUntilRelay()
+    {
+        var result = _rpcServer.GetPendingValidUntilRelay();
+        Assert.IsInstanceOfType(result, typeof(JObject));
+        var json = (JObject)result;
+        Assert.IsTrue(json.ContainsProperty("pending"));
+        Assert.IsTrue(json.ContainsProperty("count"));
+        // RpcServer runs without neo-cli assembly — bridge reports unavailable.
+        Assert.IsTrue(json["unavailable"]!.GetBoolean());
+        Assert.IsFalse(json["enabled"]!.GetBoolean());
+    }
+
+    [TestMethod]
     public void TestGetPeers()
     {
         var settings = TestProtocolSettings.SoleNode;

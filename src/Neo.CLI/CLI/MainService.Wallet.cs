@@ -15,6 +15,7 @@ using Neo.Cryptography;
 using Neo.Extensions;
 using Neo.Extensions.Factories;
 using Neo.Json;
+using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
@@ -969,8 +970,16 @@ partial class MainService
         if (context.Completed)
         {
             tx.Witnesses = context.GetWitnesses();
-            NeoSystem.Blockchain.Tell(tx);
-            ConsoleHelper.Info("Signed and relayed transaction with hash:\n", $"{tx.Hash}");
+            var relayResult = NeoSystem.Blockchain.Ask<Blockchain.RelayResult>(tx, TimeSpan.FromSeconds(30))
+                .ConfigureAwait(false).GetAwaiter().GetResult();
+            var pendingHost = NeoSystem.GetService<PendingValidUntilRelayHost>();
+            bool queuedLocally = PendingValidUntilRelay.TryOffer(NeoSystem, pendingHost, tx, relayResult.Result);
+            if (queuedLocally)
+                ConsoleHelper.Info(PendingValidUntilRelay.CliQueuedLocallyHint, $"{tx.Hash}");
+            if (relayResult.Result == VerifyResult.Succeed)
+                ConsoleHelper.Info("Signed and relayed transaction with hash:\n", $"{tx.Hash}");
+            else if (!queuedLocally)
+                ConsoleHelper.Error($"Relay failed: {relayResult.Result}");
         }
         else
         {

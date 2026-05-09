@@ -85,7 +85,8 @@ public partial class MainService
                 Path = options.Wallet ?? tempSetting.UnlockWallet.Path,
                 Password = options.Password ?? tempSetting.UnlockWallet.Password
             },
-            Contracts = tempSetting.Contracts
+            Contracts = tempSetting.Contracts,
+            Plugins = tempSetting.Plugins
         };
         if (options.IsValid) Settings.Custom = customSetting;
     }

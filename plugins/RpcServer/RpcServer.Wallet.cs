@@ -13,6 +13,7 @@ using Akka.Actor;
 using Neo.Cryptography;
 using Neo.Extensions;
 using Neo.Json;
+using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
@@ -943,7 +944,8 @@ partial class RpcServer
         if (context.Completed)
         {
             tx.Witnesses = context.GetWitnesses();
-            system.Blockchain.Tell(tx);
+            var relayResult = system.Blockchain.Ask<Blockchain.RelayResult>(tx, TimeSpan.FromSeconds(30)).Result;
+            PendingValidUntilRelayRpcBridge.TryOffer(system, tx, relayResult.Result);
             return tx.ToJson(system.Settings);
         }
         else

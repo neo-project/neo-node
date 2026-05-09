@@ -14,6 +14,7 @@ using Neo.ConsoleService;
 using Neo.Extensions;
 using Neo.IO;
 using Neo.Json;
+using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.SmartContract;
@@ -159,12 +160,31 @@ partial class MainService
                 return;
             }
             tx.Witnesses = context.GetWitnesses();
-            NeoSystem.Blockchain.Tell(tx);
-            Console.WriteLine($"Data relay success, the hash is shown as follows: {Environment.NewLine}{tx.Hash}");
+            var relayResult = NeoSystem.Blockchain.Ask<Blockchain.RelayResult>(tx, TimeSpan.FromSeconds(30))
+                .ConfigureAwait(false).GetAwaiter().GetResult();
+            var pendingHost = NeoSystem.GetService<PendingValidUntilRelayHost>();
+            bool queuedLocally = PendingValidUntilRelay.TryOffer(NeoSystem, pendingHost, tx, relayResult.Result);
+            if (queuedLocally)
+                ConsoleHelper.Info(PendingValidUntilRelay.CliQueuedLocallyHint, $"{Environment.NewLine}{tx.Hash}");
+            if (relayResult.Result == VerifyResult.Succeed)
+                Console.WriteLine($"Data relay success, the hash is shown as follows: {Environment.NewLine}{tx.Hash}");
+            else if (!queuedLocally)
+                ConsoleHelper.Error($"Relay failed: {relayResult.Result}");
         }
         catch (Exception e)
         {
             ConsoleHelper.Error(GetExceptionMessage(e));
         }
+    }
+
+    /// <summary>
+    /// Lists transactions stored for local deferred ValidUntil relay (see <c>config.json</c> P2P <c>PendingRelay</c>).
+    /// </summary>
+    [ConsoleCommand("list pending validuntil", Category = "Network Commands")]
+    private void OnListPendingValidUntilCommand()
+    {
+        var host = NeoSystem.GetService<PendingValidUntilRelayHost>();
+        JObject json = PendingValidUntilRelay.GetPendingState(NeoSystem, host);
+        Console.WriteLine(json.ToString(true));
     }
 }

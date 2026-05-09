@@ -15,7 +15,9 @@
       "MinDesiredConnections": 10,
       "MaxConnections": 40,
       "MaxKnownHashes": 1000,
-      "MaxConnectionsPerAddress": 3
+      "MaxConnectionsPerAddress": 3,
+      "PendingRelay": false,
+      "PendingCheckFrequency": 0
     },
     "UnlockWallet": {
       "Path": "",

@@ -73,12 +73,25 @@ partial class RpcServer
     }
 
     /// <summary>
+    /// Returns locally queued transactions whose <c>ValidUntilBlock</c> was too far ahead at submission time
+    /// (same store as CLI <c>list pending validuntil</c>), plus height and P2P pending-relay settings.
+    /// <para>Request format:</para>
+    /// <code>{ "jsonrpc": "2.0", "id": 1, "method": "getpendingvaliduntilrelay", "params": [] }</code>
+    /// </summary>
+    [RpcMethod]
+    protected internal virtual JToken GetPendingValidUntilRelay()
+    {
+        return PendingValidUntilRelayRpcBridge.GetPendingState(system);
+    }
+
+    /// <summary>
     /// Processes the result of a transaction or block relay and returns appropriate response or throws an exception.
     /// </summary>
     /// <param name="reason">The verification result of the relay.</param>
     /// <param name="hash">The hash of the transaction or block.</param>
+    /// <param name="expiredQueuedLocally">When <paramref name="reason"/> is <see cref="VerifyResult.Expired"/>, whether the tx was stored for local deferred relay (short <c>error.data</c>).</param>
     /// <returns>A JObject containing the hash if successful, otherwise throws an RpcException.</returns>
-    private static JObject GetRelayResult(VerifyResult reason, UInt256 hash)
+    private static JObject GetRelayResult(VerifyResult reason, UInt256 hash, bool expiredQueuedLocally = false)
     {
         switch (reason)
         {
@@ -99,7 +112,8 @@ partial class RpcServer
             case VerifyResult.OverSize:
                 throw new RpcException(RpcError.InvalidSize.WithData(reason.ToString()));
             case VerifyResult.Expired:
-                throw new RpcException(RpcError.ExpiredTransaction.WithData(reason.ToString()));
+                throw new RpcException(RpcError.ExpiredTransaction.WithData(
+                    expiredQueuedLocally ? PendingValidUntilRelayRpcBridge.RpcExpiredDataWhenQueuedLocally : reason.ToString()));
             case VerifyResult.InsufficientFunds:
                 throw new RpcException(RpcError.InsufficientFunds.WithData(reason.ToString()));
             case VerifyResult.PolicyFail:
@@ -210,8 +224,9 @@ partial class RpcServer
         var tx = Result.Ok_Or(
             () => Convert.FromBase64String(base64Tx).AsSerializable<Transaction>(),
             RpcError.InvalidParams.WithData($"Invalid Transaction Format: {base64Tx}"));
-        var reason = system.Blockchain.Ask<RelayResult>(tx).Result;
-        return GetRelayResult(reason.Result, tx.Hash);
+        var relayResult = system.Blockchain.Ask<RelayResult>(tx, TimeSpan.FromSeconds(30)).Result;
+        bool queued = PendingValidUntilRelayRpcBridge.TryOffer(system, tx, relayResult.Result);
+        return GetRelayResult(relayResult.Result, tx.Hash, queued);
     }
 
     /// <summary>
@@ -268,8 +283,9 @@ partial class RpcServer
             throw new RpcException(RpcErrorFactory.InvalidParams("Only support to relay transaction."));
 
         tx.Witnesses = context.GetWitnesses();
-        var reason = system.Blockchain.Ask<RelayResult>(tx).Result;
-        return GetRelayResult(reason.Result, tx.Hash);
+        var relayResult = system.Blockchain.Ask<RelayResult>(tx, TimeSpan.FromSeconds(30)).Result;
+        bool queued = PendingValidUntilRelayRpcBridge.TryOffer(system, tx, relayResult.Result);
+        return GetRelayResult(relayResult.Result, tx.Hash, queued);
     }
 
     /// <summary>
@@ -288,7 +304,7 @@ partial class RpcServer
         var block = Result.Ok_Or(
             () => Convert.FromBase64String(base64Block).AsSerializable<Block>(),
             RpcError.InvalidParams.WithData($"Invalid Block Format: {base64Block}"));
-        var reason = system.Blockchain.Ask<RelayResult>(block).Result;
-        return GetRelayResult(reason.Result, block.Hash);
+        var relayResult = system.Blockchain.Ask<RelayResult>(block).Result;
+        return GetRelayResult(relayResult.Result, block.Hash);
     }
 }
