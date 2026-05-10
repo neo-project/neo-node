@@ -432,4 +432,40 @@ public partial class UT_RpcServer
         Assert.AreEqual(5 * 1024 * 1024, settings.MaxRequestBodySize);
         Assert.AreEqual(50, settings.FindStoragePageSize);
     }
+
+    [TestMethod]
+    public void TestRpcServerSettings_LoadPluginConfiguration()
+    {
+        var settings = new RpcServerSettings(new ConfigurationBuilder()
+            .AddJsonFile("RpcServer.json")
+            .Build()
+            .GetSection("PluginConfiguration"));
+
+        Assert.AreEqual(UnhandledExceptionPolicy.Ignore, settings.ExceptionPolicy);
+        Assert.HasCount(1, settings.Servers);
+        Assert.AreEqual(860833102u, settings.Servers[0].Network);
+    }
+
+    [TestMethod]
+    public void TestRpcServerSettings_LoadMissingGasLimitsUsesDefaultDatoshiValues()
+    {
+        const string json = """
+        {
+          "Server": {
+            "Network": 860833102,
+            "BindAddress": "127.0.0.1",
+            "Port": 10332
+          }
+        }
+        """;
+        var config = new ConfigurationBuilder()
+            .AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
+            .Build()
+            .GetSection("Server");
+
+        var settings = RpcServersSettings.Load(config);
+
+        Assert.AreEqual(RpcServersSettings.Default.MaxGasInvoke, settings.MaxGasInvoke);
+        Assert.AreEqual(RpcServersSettings.Default.MaxFee, settings.MaxFee);
+    }
 }
