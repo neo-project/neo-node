@@ -88,8 +88,8 @@ public record RpcServersSettings
             AllowOrigins = GetStrings(section, "AllowOrigins"),
             KeepAliveTimeout = section.GetValue(nameof(KeepAliveTimeout), @default.KeepAliveTimeout),
             RequestHeadersTimeout = section.GetValue(nameof(RequestHeadersTimeout), @default.RequestHeadersTimeout),
-            MaxGasInvoke = (long)new BigDecimal(section.GetValue<decimal>("MaxGasInvoke", @default.MaxGasInvoke), NativeContract.GAS.Decimals).Value,
-            MaxFee = (long)new BigDecimal(section.GetValue<decimal>("MaxFee", @default.MaxFee), NativeContract.GAS.Decimals).Value,
+            MaxGasInvoke = GetGasAmount(section, "MaxGasInvoke", @default.MaxGasInvoke),
+            MaxFee = GetGasAmount(section, "MaxFee", @default.MaxFee),
             MaxIteratorResultItems = section.GetValue("MaxIteratorResultItems", @default.MaxIteratorResultItems),
             MaxStackSize = section.GetValue("MaxStackSize", @default.MaxStackSize),
             DisabledMethods = GetStrings(section, "DisabledMethods"),
@@ -99,6 +99,12 @@ public record RpcServersSettings
             SessionExpirationTime = TimeSpan.FromSeconds(section.GetValue("SessionExpirationTime", (long)@default.SessionExpirationTime.TotalSeconds)),
             FindStoragePageSize = section.GetValue("FindStoragePageSize", @default.FindStoragePageSize)
         };
+    }
+
+    private static long GetGasAmount(IConfigurationSection section, string key, long defaultValue)
+    {
+        if (!section.GetSection(key).Exists()) return defaultValue;
+        return (long)new BigDecimal(section.GetValue<decimal>(key), NativeContract.GAS.Decimals).Value;
     }
 
     private static string[] GetStrings(IConfigurationSection section, string key)
