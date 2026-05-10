@@ -303,8 +303,8 @@ public sealed class OracleService : Plugin
 
         (OracleResponseCode code, string? data) = await ProcessUrlAsync(req.Url);
 
-        Uri.TryCreate(req.Url, UriKind.Absolute, out Uri? requestUri);
-        bool dnsStackOutput = requestUri is not null && requestUri.Scheme.Equals("dns", StringComparison.OrdinalIgnoreCase);
+        bool dnsStackOutput = Uri.TryCreate(req.Url, UriKind.Absolute, out Uri? requestUri)
+            && requestUri.Scheme.Equals("dns", StringComparison.OrdinalIgnoreCase);
         PluginLogger?.Information("Process oracle request end: {OriginalTxid} <{Url}>, responseCode:{ResponseCode}, response:{Response}",
             req.OriginalTxid, req.Url, code, FormatResponseForLog(code, data, dnsStackOutput));
 
