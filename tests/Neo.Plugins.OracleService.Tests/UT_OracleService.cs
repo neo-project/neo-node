@@ -128,13 +128,15 @@ public class UT_OracleService
 
         var oracle = new OracleService();
         SetPrivateField(oracle, "_system", s_theNeoSystem);
+        Task firstRun = Task.CompletedTask;
         Task secondRun = Task.CompletedTask;
 
         try
         {
-            _ = oracle.Start(s_wallet);
+            firstRun = oracle.Start(s_wallet);
             await Task.Delay(100);
             StopOracle(oracle);
+            await firstRun.WaitAsync(TimeSpan.FromSeconds(5));
 
             secondRun = oracle.Start(s_wallet);
             await Task.Delay(100);
@@ -148,6 +150,26 @@ public class UT_OracleService
             await secondRun.WaitAsync(TimeSpan.FromSeconds(5));
             oracle.Dispose();
         }
+    }
+
+    [TestMethod]
+    public void TestStartWhileStoppingDoesNotResetCurrentRun()
+    {
+        var oracle = new OracleService();
+        var statusType = typeof(OracleService).GetNestedType("OracleStatus", BindingFlags.NonPublic);
+        Assert.IsNotNull(statusType);
+
+        var currentRun = Task.CompletedTask;
+        SetPrivateField(oracle, "status", Enum.Parse(statusType, "Stopping"));
+        SetPrivateField(oracle, "processingTask", currentRun);
+        var cancellationSource = GetPrivateField<CancellationTokenSource>(oracle, "cancelSource");
+
+        Task returnedRun = oracle.Start(null!);
+
+        Assert.AreSame(currentRun, returnedRun);
+        Assert.AreSame(cancellationSource, GetPrivateField<CancellationTokenSource>(oracle, "cancelSource"));
+        SetPrivateField(oracle, "status", Enum.Parse(statusType, "Stopped"));
+        oracle.Dispose();
     }
 
     [TestMethod]
