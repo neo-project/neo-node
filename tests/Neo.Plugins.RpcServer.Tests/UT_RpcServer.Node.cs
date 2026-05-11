@@ -41,9 +41,11 @@ partial class UT_RpcServer
         var json = (JObject)result;
         Assert.IsTrue(json.ContainsProperty("pending"));
         Assert.IsTrue(json.ContainsProperty("count"));
-        // RpcServer runs without neo-cli assembly — bridge reports unavailable.
+        // RpcServer.Tests does not reference neo-cli; the bridge cannot resolve the host type and
+        // reports the plugin-only fallback (same as deploying RpcServer without neo-cli on disk).
         Assert.IsTrue(json["unavailable"]!.GetBoolean());
         Assert.IsFalse(json["enabled"]!.GetBoolean());
+        Assert.AreEqual(0, json["count"]!.AsNumber());
     }
 
     [TestMethod]
