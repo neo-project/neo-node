@@ -139,9 +139,9 @@ public class P2PSettings
     public int MaxConnections { get; }
     public int MaxConnectionsPerAddress { get; }
     public int MaxKnownHashes { get; }
-    /// <summary>When <see langword="true"/>, transactions rejected as expired only because ValidUntilBlock is too far ahead may be stored locally and relayed later.</summary>
-    public bool PendingRelay { get; }
-    /// <summary>Scan interval in persisted blocks for the local pending store; 0 disables storing such transactions.</summary>
+    /// <summary>Maximum distinct transactions in the local PendingValidUntil relay store; 0 disables the feature (with <see cref="PendingCheckFrequency"/>).</summary>
+    public uint PendingRelayMaxTransactions { get; }
+    /// <summary>Scan interval in persisted blocks when <see cref="PendingRelayMaxTransactions"/> is non-zero; 0 disables.</summary>
     public uint PendingCheckFrequency { get; }
 
     public P2PSettings(IConfigurationSection section)
@@ -152,7 +152,7 @@ public class P2PSettings
         MaxConnections = section.GetValue(nameof(MaxConnections), ChannelsConfig.DefaultMaxConnections);
         MaxKnownHashes = section.GetValue(nameof(MaxKnownHashes), ChannelsConfig.DefaultMaxKnownHashes);
         MaxConnectionsPerAddress = section.GetValue(nameof(MaxConnectionsPerAddress), ChannelsConfig.DefaultMaxConnectionsPerAddress);
-        PendingRelay = section.GetValue(nameof(PendingRelay), false);
+        PendingRelayMaxTransactions = section.GetValue(nameof(PendingRelayMaxTransactions), 0u);
         PendingCheckFrequency = section.GetValue(nameof(PendingCheckFrequency), 0u);
     }
 

@@ -96,7 +96,7 @@ public class UT_MainService_Network
         var wallet = TestUtils.GenerateTestWallet("pwd");
         var account = wallet.CreateAccount();
 
-        var host = new PendingValidUntilRelayHost(new MemoryStore(), new PendingValidUntilRelayConfiguration(true, 1u));
+        var host = new PendingValidUntilRelayHost(new MemoryStore(), new PendingValidUntilRelayConfiguration(10000u, 1u));
         _neoSystem.AddService(host);
 
         var snapshot = _neoSystem.StoreView;
@@ -181,7 +181,7 @@ public class UT_MainService_Network
         var wallet = TestUtils.GenerateTestWallet("pwd");
         var account = wallet.CreateAccount();
 
-        var host = new PendingValidUntilRelayHost(new MemoryStore(), new PendingValidUntilRelayConfiguration(true, 1u));
+        var host = new PendingValidUntilRelayHost(new MemoryStore(), new PendingValidUntilRelayConfiguration(10000u, 1u));
         _neoSystem.AddService(host);
 
         var snapshot = _neoSystem.StoreView;

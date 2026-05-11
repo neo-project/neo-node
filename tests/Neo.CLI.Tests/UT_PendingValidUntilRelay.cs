@@ -44,13 +44,13 @@ public class UT_PendingValidUntilRelay
         _account = _wallet.CreateAccount();
     }
 
-    private Transaction CreateSignedTx(uint validUntilBlock)
+    private Transaction CreateSignedTx(uint validUntilBlock, uint nonce = 42)
     {
         var snapshot = _system.StoreView;
         var tx = new Transaction
         {
             Version = 0,
-            Nonce = 42,
+            Nonce = nonce,
             ValidUntilBlock = validUntilBlock,
             Signers = [new Signer { Account = _account.ScriptHash, Scopes = WitnessScope.CalledByEntry }],
             Attributes = [],
@@ -68,6 +68,7 @@ public class UT_PendingValidUntilRelay
     {
         JObject j = PendingValidUntilRelay.GetPendingState(_system, null);
         Assert.IsFalse(j["enabled"]!.AsBoolean());
+        Assert.AreEqual(0u, (uint)j["pendingrelaymaxtransactions"]!.AsNumber());
         Assert.AreEqual(0, j["count"]!.AsNumber());
         Assert.IsInstanceOfType(j["pending"], typeof(JArray));
         Assert.AreEqual(0, ((JArray)j["pending"]!).Count);
@@ -76,7 +77,7 @@ public class UT_PendingValidUntilRelay
     [TestMethod]
     public void GetPendingState_DisabledFeature_EmptyPending()
     {
-        var host = new PendingValidUntilRelayHost(new MemoryStore(), new PendingValidUntilRelayConfiguration(false, 1u));
+        var host = new PendingValidUntilRelayHost(new MemoryStore(), new PendingValidUntilRelayConfiguration(0u, 1u));
         JObject j = PendingValidUntilRelay.GetPendingState(_system, host);
         Assert.IsFalse(j["enabled"]!.AsBoolean());
         Assert.AreEqual(0, ((JArray)j["pending"]!).Count);
@@ -87,7 +88,7 @@ public class UT_PendingValidUntilRelay
     public void GetPendingState_WithQueuedEntry_ListsHashAndVub()
     {
         var store = new MemoryStore();
-        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(true, 1u));
+        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(10000u, 1u));
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
@@ -128,10 +129,11 @@ public class UT_PendingValidUntilRelay
     [TestMethod]
     public void GetPendingState_EnabledWithNoEntries_ExposesP2PFlags()
     {
-        var host = new PendingValidUntilRelayHost(new MemoryStore(), new PendingValidUntilRelayConfiguration(true, 3u));
+        var host = new PendingValidUntilRelayHost(new MemoryStore(), new PendingValidUntilRelayConfiguration(10000u, 3u));
         JObject j = PendingValidUntilRelay.GetPendingState(_system, host);
         Assert.IsTrue(j["enabled"]!.AsBoolean());
         Assert.IsTrue(j["pendingrelay"]!.AsBoolean());
+        Assert.AreEqual(10000u, (uint)j["pendingrelaymaxtransactions"]!.AsNumber());
         Assert.AreEqual(3u, (uint)j["pendingcheckfrequency"]!.AsNumber());
         Assert.AreEqual(0, j["count"]!.AsNumber());
         Assert.AreEqual(0, ((JArray)j["pending"]!).Count);
@@ -142,7 +144,7 @@ public class UT_PendingValidUntilRelay
     {
         var store = new MemoryStore();
         store.Put([1, 2], [0x00]);
-        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(true, 1u));
+        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(10000u, 1u));
         JObject j = PendingValidUntilRelay.GetPendingState(_system, host);
         Assert.AreEqual(0, j["count"]!.AsNumber());
     }
@@ -153,7 +155,7 @@ public class UT_PendingValidUntilRelay
         var store = new MemoryStore();
         var key = new byte[UInt256.Length]; // all-zero hash key
         store.Put(key, [0xFF, 0xFE]);
-        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(true, 1u));
+        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(10000u, 1u));
         JObject j = PendingValidUntilRelay.GetPendingState(_system, host);
         Assert.AreEqual(0, j["count"]!.AsNumber());
     }
@@ -183,27 +185,27 @@ public class UT_PendingValidUntilRelay
     public void PendingValidUntilRelayHost_NullStore_Throws()
     {
         Assert.ThrowsExactly<ArgumentNullException>(() =>
-            _ = new PendingValidUntilRelayHost(null!, new PendingValidUntilRelayConfiguration(true, 1u)));
+            _ = new PendingValidUntilRelayHost(null!, new PendingValidUntilRelayConfiguration(10000u, 1u)));
     }
 
     [TestMethod]
     public void OnPersistCompleted_Disabled_DoesNotThrow()
     {
-        var host = new PendingValidUntilRelayHost(new MemoryStore(), new PendingValidUntilRelayConfiguration(false, 1u));
+        var host = new PendingValidUntilRelayHost(new MemoryStore(), new PendingValidUntilRelayConfiguration(0u, 1u));
         PendingValidUntilRelay.OnPersistCompleted(_system, host, CreateBlockWithIndex(10));
     }
 
     [TestMethod]
     public void OnPersistCompleted_GenesisIndex_DoesNotThrow()
     {
-        var host = new PendingValidUntilRelayHost(new MemoryStore(), new PendingValidUntilRelayConfiguration(true, 1u));
+        var host = new PendingValidUntilRelayHost(new MemoryStore(), new PendingValidUntilRelayConfiguration(10000u, 1u));
         PendingValidUntilRelay.OnPersistCompleted(_system, host, CreateBlockWithIndex(0));
     }
 
     [TestMethod]
     public void OnPersistCompleted_BlockIndexNotOnFrequency_DoesNotThrow()
     {
-        var host = new PendingValidUntilRelayHost(new MemoryStore(), new PendingValidUntilRelayConfiguration(true, 5u));
+        var host = new PendingValidUntilRelayHost(new MemoryStore(), new PendingValidUntilRelayConfiguration(10000u, 5u));
         PendingValidUntilRelay.OnPersistCompleted(_system, host, CreateBlockWithIndex(3));
     }
 
@@ -231,7 +233,7 @@ public class UT_PendingValidUntilRelay
     public void TryOffer_RequiresExpiredAndFarFuture()
     {
         var store = new MemoryStore();
-        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(true, 1u));
+        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(10000u, 1u));
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
@@ -244,10 +246,23 @@ public class UT_PendingValidUntilRelay
     }
 
     [TestMethod]
+    public void TryOffer_MaxTransactionsZero_NoStore()
+    {
+        var store = new MemoryStore();
+        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(0u, 5u));
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
+        var tx = CreateSignedTx(height + maxInc + 5);
+        Assert.IsFalse(PendingValidUntilRelay.TryOffer(_system, host, tx, VerifyResult.Expired));
+        Assert.AreEqual(0, store.Find(null).Count());
+    }
+
+    [TestMethod]
     public void TryOffer_FrequencyZero_NoStore()
     {
         var store = new MemoryStore();
-        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(true, 0u));
+        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(100u, 0u));
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
@@ -259,7 +274,7 @@ public class UT_PendingValidUntilRelay
     public void TryOffer_AlreadyInLocalPendingStore_SecondCallStillTrue_NoExtraEntry()
     {
         var store = new MemoryStore();
-        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(true, 1u));
+        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(10000u, 1u));
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
@@ -271,6 +286,34 @@ public class UT_PendingValidUntilRelay
         int entries2 = store.Find(null).Count();
         Assert.AreEqual(1, entries1);
         Assert.AreEqual(1, entries2);
+    }
+
+    [TestMethod]
+    public void TryOffer_WhenAtMaxPendingTransactions_RejectsNewHash()
+    {
+        var store = new MemoryStore();
+        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(2u, 1u));
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
+        uint vub = height + maxInc + 10;
+        var tx1 = CreateSignedTx(vub, nonce: 1);
+        var tx2 = CreateSignedTx(vub, nonce: 2);
+        var tx3 = CreateSignedTx(vub, nonce: 3);
+
+        Assert.IsTrue(PendingValidUntilRelay.TryOffer(_system, host, tx1, VerifyResult.Expired));
+        Assert.IsTrue(PendingValidUntilRelay.TryOffer(_system, host, tx2, VerifyResult.Expired));
+        Assert.IsFalse(PendingValidUntilRelay.TryOffer(_system, host, tx3, VerifyResult.Expired));
+        Assert.AreEqual(2, store.Find(null).Count());
+        Assert.IsTrue(PendingValidUntilRelay.TryOffer(_system, host, tx1, VerifyResult.Expired), "Same hash must remain idempotent at cap.");
+    }
+
+    [TestMethod]
+    public void GetPendingState_IncludesPendingRelayMaxTransactions()
+    {
+        var host = new PendingValidUntilRelayHost(new MemoryStore(), new PendingValidUntilRelayConfiguration(500u, 1u));
+        JObject j = PendingValidUntilRelay.GetPendingState(_system, host);
+        Assert.AreEqual(500u, (uint)j["pendingrelaymaxtransactions"]!.AsNumber());
     }
 
     [TestMethod]
@@ -313,7 +356,7 @@ public class UT_PendingValidUntilRelay
         // A tx whose ValidUntilBlock has already passed must be dropped from the local pending store
         // the next time the periodic ProcessQueued pass runs.
         var store = new MemoryStore();
-        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(true, 1u));
+        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(10000u, 1u));
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
 
@@ -334,7 +377,7 @@ public class UT_PendingValidUntilRelay
         // A store entry under a well-formed hash-shaped key whose payload no longer
         // deserializes as a Transaction must be considered corrupt and pruned.
         var store = new MemoryStore();
-        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(true, 1u));
+        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(10000u, 1u));
         var key = new byte[UInt256.Length];
         new Random(7).NextBytes(key);
         store.Put(key, [0xFF, 0xFE, 0xFD]); // garbage payload
@@ -352,7 +395,7 @@ public class UT_PendingValidUntilRelay
         // via Blockchain.Ask. For our synthetic tx the verifier returns a non-success result
         // (e.g. InsufficientFunds / InvalidSignature), and ProcessQueued must keep the entry.
         var store = new MemoryStore();
-        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(true, 1u));
+        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(10000u, 1u));
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
@@ -373,7 +416,7 @@ public class UT_PendingValidUntilRelay
         // While the tx is still in the "too far ahead" range it must NOT be sent to Blockchain.Ask
         // and must remain in the pending store untouched.
         var store = new MemoryStore();
-        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(true, 1u));
+        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(10000u, 1u));
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
@@ -393,7 +436,7 @@ public class UT_PendingValidUntilRelay
         // Cover the branch where `ledgerReady && height < tx.ValidUntilBlock` is false:
         // listing must still succeed and just omit the "blocksuntildeadline" field for that entry.
         var store = new MemoryStore();
-        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(true, 1u));
+        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(10000u, 1u));
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
 
@@ -415,7 +458,7 @@ public class UT_PendingValidUntilRelay
     {
         // TryOffer must ignore any relay result other than Expired, even if the validity window check would pass.
         var store = new MemoryStore();
-        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(true, 1u));
+        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(10000u, 1u));
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
@@ -438,12 +481,12 @@ public class UT_PendingValidUntilRelay
     [TestMethod]
     public void GetPendingState_FrequencyZero_TreatedAsDisabled()
     {
-        // PendingRelay=true but frequency=0 still means feature disabled per the same `enabled` rule used by TryOffer.
+        // Positive max with frequency=0 still disables the feature (same `enabled` rule as TryOffer).
         var store = new MemoryStore();
-        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(true, 0u));
+        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(100u, 0u));
         JObject j = PendingValidUntilRelay.GetPendingState(_system, host);
         Assert.IsFalse(j["enabled"]!.AsBoolean());
-        Assert.IsTrue(j["pendingrelay"]!.AsBoolean());
+        Assert.IsFalse(j["pendingrelay"]!.AsBoolean());
         Assert.AreEqual(0u, (uint)j["pendingcheckfrequency"]!.AsNumber());
         Assert.AreEqual(0, j["count"]!.AsNumber());
     }
@@ -454,7 +497,7 @@ public class UT_PendingValidUntilRelay
         // The host owns the store lifetime; Dispose must propagate so leveldb / rocksdb file handles
         // get released when MainService.Stop runs.
         var store = new MemoryStore();
-        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(true, 1u));
+        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(10000u, 1u));
         host.Dispose();
         Assert.AreSame(store, host.Store);
     }
@@ -466,7 +509,7 @@ public class UT_PendingValidUntilRelay
         // cause ProcessQueued to run; we observe this by seeding the store with an expired entry
         // and asserting it is pruned after the event is processed.
         var store = new MemoryStore();
-        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(true, 1u));
+        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(10000u, 1u));
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         var expiredTx = CreateRawTx(height);
@@ -498,7 +541,7 @@ public class UT_PendingValidUntilRelay
     {
         // The actor must silently ignore any message other than Blockchain.PersistCompleted.
         var store = new MemoryStore();
-        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(true, 1u));
+        var host = new PendingValidUntilRelayHost(store, new PendingValidUntilRelayConfiguration(10000u, 1u));
 
         var actorType = typeof(PendingValidUntilRelay).Assembly.GetType("Neo.CLI.PendingValidUntilRelayActor")!;
         var actor = _system.ActorSystem.ActorOf(Props.Create(actorType, _system, host));

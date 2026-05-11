@@ -26,8 +26,9 @@ namespace Neo.CLI;
 /// Configuration for locally queueing transactions whose <see cref="Transaction.ValidUntilBlock"/> is beyond
 /// the allowed forward window at the current height (verification returns <see cref="VerifyResult.Expired"/>).
 /// Values come from the same <c>config.json</c> P2P section as RpcServer (see <see cref="Neo.P2PSettings"/>).
+/// <c>PendingRelayMaxTransactions</c> of 0 disables the feature; when positive, <c>PendingCheckFrequency</c> must also be non-zero to run.
 /// </summary>
-public sealed record PendingValidUntilRelayConfiguration(bool PendingRelay, uint PendingCheckFrequency);
+public sealed record PendingValidUntilRelayConfiguration(uint PendingRelayMaxTransactions, uint PendingCheckFrequency);
 
 /// <summary>
 /// Holds a dedicated <see cref="IStore"/> (e.g. LevelDB directory) for deferred relay of such transactions.
@@ -85,15 +86,17 @@ public static class PendingValidUntilRelay
             root["enabled"] = false;
             root["pendingrelay"] = false;
             root["pendingcheckfrequency"] = 0u;
+            root["pendingrelaymaxtransactions"] = 0u;
             root["count"] = 0;
             return root;
         }
 
         PendingValidUntilRelayConfiguration cfg = host.Configuration;
-        bool enabled = cfg.PendingRelay && cfg.PendingCheckFrequency != 0;
+        bool enabled = cfg.PendingRelayMaxTransactions > 0 && cfg.PendingCheckFrequency != 0;
         root["enabled"] = enabled;
-        root["pendingrelay"] = cfg.PendingRelay;
+        root["pendingrelay"] = enabled;
         root["pendingcheckfrequency"] = cfg.PendingCheckFrequency;
+        root["pendingrelaymaxtransactions"] = cfg.PendingRelayMaxTransactions;
 
         var arr = (JArray)root["pending"]!;
         if (!enabled)
@@ -150,7 +153,7 @@ public static class PendingValidUntilRelay
     /// </returns>
     public static bool TryOffer(NeoSystem system, PendingValidUntilRelayHost? host, Transaction tx, VerifyResult relayResult)
     {
-        if (host is null || !host.Configuration.PendingRelay || host.Configuration.PendingCheckFrequency == 0)
+        if (host is null || host.Configuration.PendingRelayMaxTransactions == 0 || host.Configuration.PendingCheckFrequency == 0)
             return false;
         if (relayResult != VerifyResult.Expired)
             return false;
@@ -163,6 +166,10 @@ public static class PendingValidUntilRelay
         byte[] key = hash.GetSpan().ToArray();
         if (host.Store.Contains(key))
             return true;
+
+        uint cap = host.Configuration.PendingRelayMaxTransactions;
+        if (CountPendingRelayEntries(host.Store) >= cap)
+            return false;
 
         using var ms = new MemoryStream();
         using (var writer = new BinaryWriter(ms))
@@ -179,7 +186,7 @@ public static class PendingValidUntilRelay
     /// </summary>
     public static void OnPersistCompleted(NeoSystem system, PendingValidUntilRelayHost host, Block block)
     {
-        if (!host.Configuration.PendingRelay || host.Configuration.PendingCheckFrequency == 0)
+        if (host.Configuration.PendingRelayMaxTransactions == 0 || host.Configuration.PendingCheckFrequency == 0)
             return;
         if (block.Index == 0)
             return;
@@ -226,5 +233,15 @@ public static class PendingValidUntilRelay
 
         foreach (byte[] key in toRemove)
             host.Store.Delete(key);
+    }
+
+    private static int CountPendingRelayEntries(IStore store)
+    {
+        int n = 0;
+        foreach ((byte[] key, _) in store.Find())
+        {
+            if (key.Length == UInt256.Length) n++;
+        }
+        return n;
     }
 }

@@ -440,14 +440,16 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         });
 
         if (!engine.Equals(nameof(MemoryStore), StringComparison.OrdinalIgnoreCase)
-            && Settings.Default.P2P.PendingRelay
+            && Settings.Default.P2P.PendingRelayMaxTransactions > 0
             && Settings.Default.P2P.PendingCheckFrequency > 0)
         {
             try
             {
                 string pendingPath = Path.Combine(fullStoragePath, "PendingValidUntilRelay");
                 IStore pendingStore = NeoSystem.LoadStore(pendingPath);
-                var cfg = new PendingValidUntilRelayConfiguration(Settings.Default.P2P.PendingRelay, Settings.Default.P2P.PendingCheckFrequency);
+                var cfg = new PendingValidUntilRelayConfiguration(
+                    Settings.Default.P2P.PendingRelayMaxTransactions,
+                    Settings.Default.P2P.PendingCheckFrequency);
                 _pendingRelayHost = new PendingValidUntilRelayHost(pendingStore, cfg);
                 NeoSystem.AddService(_pendingRelayHost);
                 _pendingRelayActor = NeoSystem.ActorSystem.ActorOf(

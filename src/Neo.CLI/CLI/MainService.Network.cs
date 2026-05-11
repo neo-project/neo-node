@@ -178,7 +178,7 @@ partial class MainService
     }
 
     /// <summary>
-    /// Lists transactions stored for local deferred ValidUntil relay (see <c>config.json</c> P2P <c>PendingRelay</c>).
+    /// Lists transactions stored for local deferred ValidUntil relay (see <c>config.json</c> P2P <c>PendingRelayMaxTransactions</c>, <c>PendingCheckFrequency</c>).
     /// </summary>
     [ConsoleCommand("list pending", Category = "Network Commands")]
     private void OnListPendingCommand()

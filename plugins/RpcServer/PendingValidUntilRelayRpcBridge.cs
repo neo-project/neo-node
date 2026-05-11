@@ -95,7 +95,7 @@ internal static class PendingValidUntilRelayRpcBridge
     }
 
     /// <summary>
-    /// Same rules as <c>Neo.CLI.PendingValidUntilRelay.TryOffer</c> (including skipping <see cref="IStore.Put"/> when the hash is already in the pending store); keep in sync when that method changes.
+    /// Same rules as <c>Neo.CLI.PendingValidUntilRelay.TryOffer</c> (including <c>PendingRelayMaxTransactions</c> on the host, which neo-cli loads from <c>config.json</c> <c>ApplicationConfiguration</c>→<c>P2P</c>); keep in sync when that method changes.
     /// </summary>
     internal static bool TryOffer(NeoSystem system, Transaction tx, VerifyResult relayResult)
     {
@@ -110,13 +110,13 @@ internal static class PendingValidUntilRelayRpcBridge
         object? cfg = cfgProp.GetValue(host);
         if (cfg is null) return false;
         Type cfgType = cfg.GetType();
-        PropertyInfo? relayProp = cfgType.GetProperty("PendingRelay", BindingFlags.Public | BindingFlags.Instance);
         PropertyInfo? freqProp = cfgType.GetProperty("PendingCheckFrequency", BindingFlags.Public | BindingFlags.Instance);
-        if (relayProp is null || freqProp is null) return false;
+        PropertyInfo? maxProp = cfgType.GetProperty("PendingRelayMaxTransactions", BindingFlags.Public | BindingFlags.Instance);
+        if (freqProp is null || maxProp is null) return false;
 
-        bool pendingRelay = (bool)(relayProp.GetValue(cfg) ?? false);
+        uint pendingRelayMaxTransactions = Convert.ToUInt32(maxProp.GetValue(cfg) ?? 0u);
         uint pendingCheckFrequency = Convert.ToUInt32(freqProp.GetValue(cfg) ?? 0u);
-        if (!pendingRelay || pendingCheckFrequency == 0)
+        if (pendingRelayMaxTransactions == 0 || pendingCheckFrequency == 0)
             return false;
         if (relayResult != VerifyResult.Expired)
             return false;
@@ -133,6 +133,13 @@ internal static class PendingValidUntilRelayRpcBridge
         byte[] key = hash.GetSpan().ToArray();
         if (store.Contains(key))
             return true;
+
+        int count = 0;
+        foreach ((byte[] k, _) in store.Find())
+        {
+            if (k.Length == UInt256.Length) count++;
+        }
+        if (count >= pendingRelayMaxTransactions) return false;
 
         using var ms = new MemoryStream();
         using (var writer = new BinaryWriter(ms))

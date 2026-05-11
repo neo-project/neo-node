@@ -26,24 +26,22 @@ public class UT_Settings
     }
 
     [TestMethod]
-    public void P2PSettings_Defaults_HaveNoPendingRelay()
+    public void P2PSettings_Defaults_DisablePendingValidUntilRelay()
     {
-        // The parameterless ctor must produce the documented default of "feature disabled".
         var p2p = new P2PSettings();
-        Assert.IsFalse(p2p.PendingRelay);
+        Assert.AreEqual(0u, p2p.PendingRelayMaxTransactions);
         Assert.AreEqual(0u, p2p.PendingCheckFrequency);
     }
 
     [TestMethod]
-    public void P2PSettings_LoadsPendingRelayFromConfiguration()
+    public void P2PSettings_LoadsPendingRelayLimitsFromConfiguration()
     {
-        // When ApplicationConfiguration.P2P sets both flags, the Settings record must surface them.
         const string json = """
         {
           "ApplicationConfiguration": {
             "P2P": {
               "Port": 10333,
-              "PendingRelay": true,
+              "PendingRelayMaxTransactions": 8192,
               "PendingCheckFrequency": 5
             }
           }
@@ -51,7 +49,7 @@ public class UT_Settings
         """;
         var section = BuildSection(json, "ApplicationConfiguration");
         var settings = new Settings(section);
-        Assert.IsTrue(settings.P2P.PendingRelay);
+        Assert.AreEqual(8192u, settings.P2P.PendingRelayMaxTransactions);
         Assert.AreEqual(5u, settings.P2P.PendingCheckFrequency);
         Assert.AreEqual((ushort)10333, settings.P2P.Port);
     }
@@ -59,7 +57,6 @@ public class UT_Settings
     [TestMethod]
     public void P2PSettings_OmittedKeys_FallBackToDefaults()
     {
-        // Configuration that omits the new keys must not change the previous defaults.
         const string json = """
         {
           "ApplicationConfiguration": {
@@ -71,7 +68,7 @@ public class UT_Settings
         """;
         var section = BuildSection(json, "ApplicationConfiguration");
         var settings = new Settings(section);
-        Assert.IsFalse(settings.P2P.PendingRelay);
+        Assert.AreEqual(0u, settings.P2P.PendingRelayMaxTransactions);
         Assert.AreEqual(0u, settings.P2P.PendingCheckFrequency);
     }
 

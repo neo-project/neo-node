@@ -16,7 +16,7 @@
       "MaxConnections": 40,
       "MaxKnownHashes": 1000,
       "MaxConnectionsPerAddress": 3,
-      "PendingRelay": false,
+      "PendingRelayMaxTransactions": 0,
       "PendingCheckFrequency": 0
     },
     "UnlockWallet": {
