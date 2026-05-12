@@ -99,6 +99,7 @@ partial class RpcServer
             case VerifyResult.OverSize:
                 throw new RpcException(RpcError.InvalidSize.WithData(reason.ToString()));
             case VerifyResult.Expired:
+            case VerifyResult.NotYetValid:
                 throw new RpcException(RpcError.ExpiredTransaction.WithData(reason.ToString()));
             case VerifyResult.InsufficientFunds:
                 throw new RpcException(RpcError.InsufficientFunds.WithData(reason.ToString()));
