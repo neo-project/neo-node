@@ -21,6 +21,7 @@ using Neo.SmartContract;
 using Neo.SmartContract.Manifest;
 using Neo.SmartContract.Native;
 using Neo.VM;
+using System.Reflection;
 
 namespace Neo.Plugins.StateService.Tests;
 
@@ -174,12 +175,33 @@ public class UT_StatePlugin
         Assert.IsFalse(jsonResult["truncated"]?.AsBoolean());
     }
 
+    [TestMethod]
+    public void TestDuplicateFutureStateRoot_ShouldBeIgnored()
+    {
+        var futureRoot = new StateRoot
+        {
+            Version = StateRoot.CurrentVersion,
+            Index = 2,
+            RootHash = UInt256.Parse(RootHashHex),
+            Witness = Witness.Empty
+        };
+
+        Assert.IsTrue(AddStateRoot(futureRoot));
+        Assert.IsFalse(AddStateRoot(futureRoot));
+    }
+
     private static void SetupMockStateRoot(uint index, UInt256 rootHash)
     {
         var stateRoot = new StateRoot { Index = index, RootHash = rootHash, Witness = Witness.Empty };
         using var store = StateStore.Singleton.GetSnapshot();
         store.AddLocalStateRoot(stateRoot);
         store.Commit();
+    }
+
+    private static bool AddStateRoot(StateRoot stateRoot)
+    {
+        var method = typeof(StateStore).GetMethod("OnNewStateRoot", BindingFlags.Instance | BindingFlags.NonPublic);
+        return (bool)method!.Invoke(StateStore.Singleton, [stateRoot])!;
     }
 
     private static UInt256 SetupMockContractAndStorage(UInt160 scriptHash)
@@ -229,4 +251,3 @@ public class UT_StatePlugin
         return trie.Root.Hash;
     }
 }
-
