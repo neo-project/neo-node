@@ -109,8 +109,7 @@ class StateStore : UntypedActor
         if (LocalRootIndex is null) throw new InvalidOperationException(nameof(StateStore) + " could not get local root index");
         if (LocalRootIndex < stateRoot.Index && stateRoot.Index < LocalRootIndex + MaxCacheCount)
         {
-            _cache.Add(stateRoot.Index, stateRoot);
-            return true;
+            return _cache.TryAdd(stateRoot.Index, stateRoot);
         }
 
         using var stateSnapshot = Singleton.GetSnapshot();
