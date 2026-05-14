@@ -46,17 +46,17 @@ public sealed class OracleService : Plugin
 
     private Wallet wallet;
     private readonly ConcurrentDictionary<ulong, OracleTask> pendingQueue = new();
-    private readonly ConcurrentDictionary<ulong, DateTime> finishedCache = new();
+    internal readonly ConcurrentDictionary<ulong, DateTime> finishedCache = new();
     private Timer timer;
     internal CancellationTokenSource cancelSource = new();
-    private OracleStatus status = OracleStatus.Unstarted;
-    private Task processingTask;
-    private readonly object lifecycleLock = new();
+    internal OracleStatus status = OracleStatus.Unstarted;
+    internal Task processingTask;
+    private readonly Lock lifecycleLock = new();
     private IWalletProvider walletProvider;
     private int counter;
-    private NeoSystem _system;
+    internal NeoSystem _system;
 
-    private readonly Dictionary<string, IOracleProtocol> protocols = new();
+    internal readonly Dictionary<string, IOracleProtocol> protocols = new();
 
     public override string Description => "Built-in oracle plugin";
 
@@ -178,7 +178,7 @@ public sealed class OracleService : Plugin
     }
 
     [ConsoleCommand("stop oracle", Category = "Oracle", Description = "Stop oracle service")]
-    private void OnStop()
+    internal void OnStop()
     {
         lock (lifecycleLock)
         {
@@ -585,7 +585,7 @@ public sealed class OracleService : Plugin
         }
     }
 
-    private void MarkRequestFinished(ulong requestId)
+    internal void MarkRequestFinished(ulong requestId)
     {
         finishedCache.TryAdd(requestId, TimeProvider.Current.UtcNow);
     }
@@ -652,7 +652,7 @@ public sealed class OracleService : Plugin
         public readonly DateTime Timestamp = TimeProvider.Current.UtcNow;
     }
 
-    enum OracleStatus
+    internal enum OracleStatus
     {
         Unstarted,
         Running,

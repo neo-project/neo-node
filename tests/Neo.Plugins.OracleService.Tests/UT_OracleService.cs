@@ -15,7 +15,6 @@ using Neo.Network.P2P.Payloads;
 using Neo.Plugins.OracleService.Protocols;
 using Neo.SmartContract.Native;
 using System.Collections.Concurrent;
-using System.Reflection;
 using static Neo.Plugins.OracleService.Tests.TestBlockchain;
 
 namespace Neo.Plugins.OracleService.Tests;
@@ -107,14 +106,12 @@ public class UT_OracleService
     public void TestMarkRequestFinishedUsesCurrentTimestamp()
     {
         var oracle = new OracleService();
-        var markRequestFinished = typeof(OracleService).GetMethod("MarkRequestFinished", BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.IsNotNull(markRequestFinished);
 
         var before = TimeProvider.Current.UtcNow;
-        markRequestFinished.Invoke(oracle, [1ul]);
+        oracle.MarkRequestFinished(1ul);
         var after = TimeProvider.Current.UtcNow;
 
-        var finishedCache = GetPrivateField<ConcurrentDictionary<ulong, DateTime>>(oracle, "finishedCache");
+        var finishedCache = oracle.finishedCache;
         Assert.IsTrue(finishedCache.TryGetValue(1ul, out var timestamp));
         Assert.IsTrue(timestamp >= before && timestamp <= after);
     }
@@ -127,7 +124,7 @@ public class UT_OracleService
         DesignateOracleRole();
 
         var oracle = new OracleService();
-        SetPrivateField(oracle, "_system", s_theNeoSystem);
+        oracle._system = s_theNeoSystem;
         Task firstRun = Task.CompletedTask;
         Task secondRun = Task.CompletedTask;
 
@@ -141,8 +138,7 @@ public class UT_OracleService
             secondRun = oracle.Start(s_wallet);
             await Task.Delay(100);
 
-            var cancelSource = GetPrivateField<CancellationTokenSource>(oracle, "cancelSource");
-            Assert.IsFalse(cancelSource.IsCancellationRequested);
+            Assert.IsFalse(oracle.cancelSource.IsCancellationRequested);
         }
         finally
         {
@@ -156,19 +152,17 @@ public class UT_OracleService
     public void TestStartWhileStoppingDoesNotResetCurrentRun()
     {
         var oracle = new OracleService();
-        var statusType = typeof(OracleService).GetNestedType("OracleStatus", BindingFlags.NonPublic);
-        Assert.IsNotNull(statusType);
 
         var currentRun = Task.CompletedTask;
-        SetPrivateField(oracle, "status", Enum.Parse(statusType, "Stopping"));
-        SetPrivateField(oracle, "processingTask", currentRun);
-        var cancellationSource = GetPrivateField<CancellationTokenSource>(oracle, "cancelSource");
+        oracle.status = OracleService.OracleStatus.Stopping;
+        oracle.processingTask = currentRun;
+        var cancellationSource = oracle.cancelSource;
 
         Task returnedRun = oracle.Start(null!);
 
         Assert.AreSame(currentRun, returnedRun);
-        Assert.AreSame(cancellationSource, GetPrivateField<CancellationTokenSource>(oracle, "cancelSource"));
-        SetPrivateField(oracle, "status", Enum.Parse(statusType, "Stopped"));
+        Assert.AreSame(cancellationSource, oracle.cancelSource);
+        oracle.status = OracleService.OracleStatus.Stopped;
         oracle.Dispose();
     }
 
@@ -181,8 +175,8 @@ public class UT_OracleService
 
         var oracle = new OracleService();
         var protocol = new TrackingProtocol();
-        SetPrivateField(oracle, "_system", s_theNeoSystem);
-        GetPrivateField<Dictionary<string, IOracleProtocol>>(oracle, "protocols")["stale"] = protocol;
+        oracle._system = s_theNeoSystem;
+        oracle.protocols["stale"] = protocol;
 
         Task run = Task.CompletedTask;
         try
@@ -200,25 +194,9 @@ public class UT_OracleService
         }
     }
 
-    private static T GetPrivateField<T>(object instance, string name)
-    {
-        return (T)instance.GetType()
-            .GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!
-            .GetValue(instance)!;
-    }
-
-    private static void SetPrivateField(object instance, string name, object value)
-    {
-        instance.GetType()
-            .GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!
-            .SetValue(instance, value);
-    }
-
     private static void StopOracle(OracleService oracle)
     {
-        typeof(OracleService)
-            .GetMethod("OnStop", BindingFlags.Instance | BindingFlags.NonPublic)!
-            .Invoke(oracle, []);
+        oracle.OnStop();
     }
 
     private sealed class TrackingProtocol : IOracleProtocol
