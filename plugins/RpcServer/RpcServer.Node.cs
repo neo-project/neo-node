@@ -99,6 +99,7 @@ partial class RpcServer
             case VerifyResult.OverSize:
                 throw new RpcException(RpcError.InvalidSize.WithData(reason.ToString()));
             case VerifyResult.Expired:
+            case VerifyResult.NotYetValid: // TODO: return different value when https://github.com/neo-project/proposals/pull/231 merged
                 throw new RpcException(RpcError.ExpiredTransaction.WithData(reason.ToString()));
             case VerifyResult.InsufficientFunds:
                 throw new RpcException(RpcError.InsufficientFunds.WithData(reason.ToString()));
