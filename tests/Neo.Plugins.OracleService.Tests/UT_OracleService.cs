@@ -123,8 +123,10 @@ public class UT_OracleService
         InitializeContract();
         DesignateOracleRole();
 
-        var oracle = new OracleService();
-        oracle._system = s_theNeoSystem;
+        var oracle = new OracleService
+        {
+            _system = s_theNeoSystem
+        };
         Task firstRun = Task.CompletedTask;
         Task secondRun = Task.CompletedTask;
 
