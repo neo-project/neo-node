@@ -46,15 +46,17 @@ public sealed class OracleService : Plugin
 
     private Wallet wallet;
     private readonly ConcurrentDictionary<ulong, OracleTask> pendingQueue = new();
-    private readonly ConcurrentDictionary<ulong, DateTime> finishedCache = new();
+    internal readonly ConcurrentDictionary<ulong, DateTime> finishedCache = new();
     private Timer timer;
-    internal readonly CancellationTokenSource cancelSource = new();
-    private OracleStatus status = OracleStatus.Unstarted;
+    internal CancellationTokenSource cancelSource = new();
+    internal OracleStatus status = OracleStatus.Unstarted;
+    internal Task processingTask;
+    private readonly Lock lifecycleLock = new();
     private IWalletProvider walletProvider;
     private int counter;
-    private NeoSystem _system;
+    internal NeoSystem _system;
 
-    private readonly Dictionary<string, IOracleProtocol> protocols = new();
+    internal readonly Dictionary<string, IOracleProtocol> protocols = new();
 
     public override string Description => "Built-in oracle plugin";
 
@@ -111,8 +113,7 @@ public sealed class OracleService : Plugin
         OnStop();
         while (status != OracleStatus.Stopped)
             Thread.Sleep(100);
-        foreach (var p in protocols)
-            p.Value.Dispose();
+        DisposeProtocols();
         base.Dispose();
     }
 
@@ -124,45 +125,78 @@ public sealed class OracleService : Plugin
 
     public Task Start(Wallet wallet)
     {
-        if (status == OracleStatus.Running) return Task.CompletedTask;
-
-        if (wallet is null)
+        lock (lifecycleLock)
         {
-            ConsoleHelper.Warning("Please open wallet first!");
-            this.wallet = null;
-            return Task.CompletedTask;
-        }
+            if (status == OracleStatus.Running || status == OracleStatus.Stopping)
+                return processingTask ?? Task.CompletedTask;
 
-        if (!CheckOracleAvailable(_system.StoreView, out ECPoint[] oracles))
-        {
-            ConsoleHelper.Warning("The oracle service is unavailable");
-            return Task.CompletedTask;
-        }
-        if (!CheckOracleAccount(wallet, oracles))
-        {
-            ConsoleHelper.Warning("There is no oracle account in wallet");
-            return Task.CompletedTask;
-        }
+            if (wallet is null)
+            {
+                ConsoleHelper.Warning("Please open wallet first!");
+                this.wallet = null;
+                return Task.CompletedTask;
+            }
 
-        this.wallet = wallet;
-        protocols["https"] = new OracleHttpsProtocol();
-        protocols["neofs"] = new OracleNeoFSProtocol(wallet, oracles);
-        status = OracleStatus.Running;
-        timer = new Timer(OnTimer, null, RefreshIntervalMilliSeconds, Timeout.Infinite);
-        ConsoleHelper.Info($"Oracle started");
-        return ProcessRequestsAsync();
+            if (!CheckOracleAvailable(_system.StoreView, out ECPoint[] oracles))
+            {
+                ConsoleHelper.Warning("The oracle service is unavailable");
+                return Task.CompletedTask;
+            }
+            if (!CheckOracleAccount(wallet, oracles))
+            {
+                ConsoleHelper.Warning("There is no oracle account in wallet");
+                return Task.CompletedTask;
+            }
+
+            ResetCancellationSource();
+            DisposeProtocols();
+            this.wallet = wallet;
+            protocols["https"] = new OracleHttpsProtocol();
+            protocols["neofs"] = new OracleNeoFSProtocol(wallet, oracles);
+            status = OracleStatus.Running;
+            timer = new Timer(OnTimer, null, RefreshIntervalMilliSeconds, Timeout.Infinite);
+            ConsoleHelper.Info($"Oracle started");
+            processingTask = ProcessRequestsAsync(cancelSource.Token);
+            return processingTask;
+        }
+    }
+
+    private void ResetCancellationSource()
+    {
+        if (cancelSource.IsCancellationRequested)
+        {
+            cancelSource.Dispose();
+            cancelSource = new CancellationTokenSource();
+        }
+    }
+
+    private void DisposeProtocols()
+    {
+        foreach (var protocol in protocols.Values)
+            protocol.Dispose();
+        protocols.Clear();
     }
 
     [ConsoleCommand("stop oracle", Category = "Oracle", Description = "Stop oracle service")]
-    private void OnStop()
+    internal void OnStop()
     {
-        cancelSource.Cancel();
-        if (timer != null)
+        lock (lifecycleLock)
         {
-            timer.Dispose();
-            timer = null;
+            if (status == OracleStatus.Stopped)
+                return;
+
+            if (status == OracleStatus.Unstarted)
+                status = OracleStatus.Stopped;
+            else if (status == OracleStatus.Running)
+                status = OracleStatus.Stopping;
+
+            cancelSource.Cancel();
+            if (timer != null)
+            {
+                timer.Dispose();
+                timer = null;
+            }
         }
-        status = OracleStatus.Stopped;
     }
 
     [ConsoleCommand("oracle status", Category = "Oracle", Description = "Show oracle status")]
@@ -187,6 +221,7 @@ public sealed class OracleService : Plugin
 
     private async void OnTimer(object state)
     {
+        var cancellation = cancelSource.Token;
         try
         {
             List<ulong> outOfDate = new();
@@ -222,7 +257,7 @@ public sealed class OracleService : Plugin
         }
         finally
         {
-            if (!cancelSource.IsCancellationRequested)
+            if (!cancellation.IsCancellationRequested)
                 timer?.Change(RefreshIntervalMilliSeconds, Timeout.Infinite);
         }
     }
@@ -287,13 +322,13 @@ public sealed class OracleService : Plugin
         await Task.WhenAll(tasks);
     }
 
-    private async Task ProcessRequestAsync(DataCache snapshot, OracleRequest req)
+    private async Task ProcessRequestAsync(DataCache snapshot, OracleRequest req, CancellationToken cancellation)
     {
         PluginLogger?.Information("Process oracle request start: {OriginalTxid} <{Url}>", req.OriginalTxid, req.Url);
 
         uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
 
-        (OracleResponseCode code, string data) = await ProcessUrlAsync(req.Url);
+        (OracleResponseCode code, string data) = await ProcessUrlAsync(req.Url, cancellation);
 
         PluginLogger?.Information("Process oracle request end: {OriginalTxid} <{Url}>, responseCode:{ResponseCode}, response:{Response}",
             req.OriginalTxid, req.Url, code, data);
@@ -346,25 +381,43 @@ public sealed class OracleService : Plugin
         }
     }
 
-    private async Task ProcessRequestsAsync()
+    private async Task ProcessRequestsAsync(CancellationToken cancellation)
     {
-        while (!cancelSource.IsCancellationRequested)
+        try
         {
-            using (var snapshot = _system.GetSnapshotCache())
+            while (!cancellation.IsCancellationRequested)
             {
-                SyncPendingQueue(snapshot);
-                foreach (var (id, request) in NativeContract.Oracle.GetRequests(snapshot))
+                using (var snapshot = _system.GetSnapshotCache())
                 {
-                    if (cancelSource.IsCancellationRequested) break;
-                    if (!finishedCache.ContainsKey(id) && (!pendingQueue.TryGetValue(id, out OracleTask task) || task.Tx is null))
-                        await ProcessRequestAsync(snapshot, request);
+                    SyncPendingQueue(snapshot);
+                    foreach (var (id, request) in NativeContract.Oracle.GetRequests(snapshot))
+                    {
+                        if (cancellation.IsCancellationRequested) break;
+                        if (!finishedCache.ContainsKey(id) && (!pendingQueue.TryGetValue(id, out OracleTask task) || task.Tx is null))
+                            await ProcessRequestAsync(snapshot, request, cancellation);
+                    }
                 }
+                if (cancellation.IsCancellationRequested) break;
+                await Task.Delay(500, cancellation);
             }
-            if (cancelSource.IsCancellationRequested) break;
-            await Task.Delay(500);
         }
-
-        status = OracleStatus.Stopped;
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            lock (lifecycleLock)
+            {
+                DisposeProtocols();
+                if (cancelSource.IsCancellationRequested)
+                {
+                    cancelSource.Dispose();
+                    cancelSource = new CancellationTokenSource();
+                }
+                processingTask = null;
+                status = OracleStatus.Stopped;
+            }
+        }
     }
 
 
@@ -378,7 +431,7 @@ public sealed class OracleService : Plugin
         }
     }
 
-    private async Task<(OracleResponseCode, string)> ProcessUrlAsync(string url)
+    private async Task<(OracleResponseCode, string)> ProcessUrlAsync(string url, CancellationToken cancellation)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
             return (OracleResponseCode.Error, $"Invalid url:<{url}>");
@@ -386,11 +439,17 @@ public sealed class OracleService : Plugin
             return (OracleResponseCode.ProtocolNotSupported, $"Invalid Protocol:<{url}>");
 
         using CancellationTokenSource ctsTimeout = new(OracleSettings.Default.MaxOracleTimeout);
-        using CancellationTokenSource ctsLinked = CancellationTokenSource.CreateLinkedTokenSource(cancelSource.Token, ctsTimeout.Token);
+        using CancellationTokenSource ctsLinked = CancellationTokenSource.CreateLinkedTokenSource(cancellation, ctsTimeout.Token);
 
         try
         {
-            return await protocol.ProcessAsync(uri, ctsLinked.Token);
+            var result = await protocol.ProcessAsync(uri, ctsLinked.Token);
+            cancellation.ThrowIfCancellationRequested();
+            return result;
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -521,9 +580,14 @@ public sealed class OracleService : Plugin
 
         if (CheckTxSign(snapshot, task.Tx, task.Signs) || CheckTxSign(snapshot, task.BackupTx, task.BackupSigns))
         {
-            finishedCache.TryAdd(requestId, new DateTime());
+            MarkRequestFinished(requestId);
             pendingQueue.TryRemove(requestId, out _);
         }
+    }
+
+    internal void MarkRequestFinished(ulong requestId)
+    {
+        finishedCache.TryAdd(requestId, TimeProvider.Current.UtcNow);
     }
 
     public static byte[] Filter(string input, string filterArgs)
@@ -588,10 +652,11 @@ public sealed class OracleService : Plugin
         public readonly DateTime Timestamp = TimeProvider.Current.UtcNow;
     }
 
-    enum OracleStatus
+    internal enum OracleStatus
     {
         Unstarted,
         Running,
+        Stopping,
         Stopped,
     }
 }

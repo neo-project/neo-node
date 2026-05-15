@@ -112,7 +112,7 @@ partial class RpcServer
             case VerifyResult.OverSize:
                 throw new RpcException(RpcError.InvalidSize.WithData(reason.ToString()));
             case VerifyResult.Expired:
-                throw new RpcException(RpcError.ExpiredTransaction.WithData(
+            case VerifyResult.NotYetValid: // TODO: return different value when https://github.com/neo-project/proposals/pull/231 merged
                     expiredQueuedLocally ? PendingValidUntilRelayRpcBridge.RpcExpiredDataWhenQueuedLocally : reason.ToString()));
             case VerifyResult.InsufficientFunds:
                 throw new RpcException(RpcError.InsufficientFunds.WithData(reason.ToString()));

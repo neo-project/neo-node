@@ -12,7 +12,10 @@
 using Neo.Cryptography.ECC;
 using Neo.Extensions;
 using Neo.Network.P2P.Payloads;
+using Neo.Plugins.OracleService.Protocols;
 using Neo.SmartContract.Native;
+using System.Collections.Concurrent;
+using static Neo.Plugins.OracleService.Tests.TestBlockchain;
 
 namespace Neo.Plugins.OracleService.Tests;
 
@@ -97,5 +100,123 @@ public class UT_OracleService
         Assert.AreEqual(OracleResponseCode.InsufficientFunds, response.Code);
         Assert.AreEqual(2197650, tx.NetworkFee);
         Assert.AreEqual(7802350, tx.SystemFee);
+    }
+
+    [TestMethod]
+    public void TestMarkRequestFinishedUsesCurrentTimestamp()
+    {
+        var oracle = new OracleService();
+
+        var before = TimeProvider.Current.UtcNow;
+        oracle.MarkRequestFinished(1ul);
+        var after = TimeProvider.Current.UtcNow;
+
+        var finishedCache = oracle.finishedCache;
+        Assert.IsTrue(finishedCache.TryGetValue(1ul, out var timestamp));
+        Assert.IsTrue(timestamp >= before && timestamp <= after);
+    }
+
+    [TestMethod]
+    public async Task TestStartAfterStopUsesFreshCancellationSource()
+    {
+        ResetStore();
+        InitializeContract();
+        DesignateOracleRole();
+
+        var oracle = new OracleService
+        {
+            _system = s_theNeoSystem
+        };
+        Task firstRun = Task.CompletedTask;
+        Task secondRun = Task.CompletedTask;
+
+        try
+        {
+            firstRun = oracle.Start(s_wallet);
+            await Task.Delay(100);
+            StopOracle(oracle);
+            await firstRun.WaitAsync(TimeSpan.FromSeconds(5));
+
+            secondRun = oracle.Start(s_wallet);
+            await Task.Delay(100);
+
+            Assert.IsFalse(oracle.cancelSource.IsCancellationRequested);
+        }
+        finally
+        {
+            StopOracle(oracle);
+            await secondRun.WaitAsync(TimeSpan.FromSeconds(5));
+            oracle.Dispose();
+        }
+    }
+
+    [TestMethod]
+    public void TestStartWhileStoppingDoesNotResetCurrentRun()
+    {
+        var oracle = new OracleService();
+
+        var currentRun = Task.CompletedTask;
+        oracle.status = OracleService.OracleStatus.Stopping;
+        oracle.processingTask = currentRun;
+        var cancellationSource = oracle.cancelSource;
+
+        Task returnedRun = oracle.Start(null!);
+
+        Assert.AreSame(currentRun, returnedRun);
+        Assert.AreSame(cancellationSource, oracle.cancelSource);
+        oracle.status = OracleService.OracleStatus.Stopped;
+        oracle.Dispose();
+    }
+
+    [TestMethod]
+    public async Task TestStartDisposesStaleProtocols()
+    {
+        ResetStore();
+        InitializeContract();
+        DesignateOracleRole();
+
+        var oracle = new OracleService();
+        var protocol = new TrackingProtocol();
+        oracle._system = s_theNeoSystem;
+        oracle.protocols["stale"] = protocol;
+
+        Task run = Task.CompletedTask;
+        try
+        {
+            run = oracle.Start(s_wallet);
+            await Task.Delay(100);
+
+            Assert.IsTrue(protocol.Disposed);
+        }
+        finally
+        {
+            StopOracle(oracle);
+            await run.WaitAsync(TimeSpan.FromSeconds(5));
+            oracle.Dispose();
+        }
+    }
+
+    private static void StopOracle(OracleService oracle)
+    {
+        oracle.OnStop();
+    }
+
+    private sealed class TrackingProtocol : IOracleProtocol
+    {
+        public bool Disposed { get; private set; }
+
+        public void Configure()
+        {
+        }
+
+        public void Dispose()
+        {
+            Disposed = true;
+        }
+
+        public Task<(OracleResponseCode, string)> ProcessAsync(Uri uri, CancellationToken cancellation)
+        {
+            return Task.FromResult((OracleResponseCode.Success, string.Empty));
+        }
     }
 }
