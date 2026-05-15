@@ -597,7 +597,7 @@ public sealed class OracleService : Plugin
             result = Convert.FromBase64String(payload);
             return true;
         }
-        catch (Exception ex) when (ex is ArgumentNullException or FormatException)
+        catch (Exception)
         {
             result = null;
             return false;

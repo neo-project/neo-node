@@ -87,28 +87,14 @@ public class UT_OracleDnsProtocol
     public void BuildQueryName_ThrowsWithoutDnsName()
     {
         var uri = new Uri("dns://resolver.example/");
-        try
-        {
-            OracleDnsProtocol.BuildQueryName(uri);
-            Assert.Fail("Expected FormatException for missing dnsname.");
-        }
-        catch (FormatException)
-        {
-        }
+        Assert.ThrowsExactly<FormatException>(() => OracleDnsProtocol.BuildQueryName(uri));
     }
 
     [TestMethod]
     public void BuildQueryName_RejectsPathSegments()
     {
         var uri = new Uri("dns:example.com/extra");
-        try
-        {
-            OracleDnsProtocol.BuildQueryName(uri);
-            Assert.Fail("Expected FormatException for path segments.");
-        }
-        catch (FormatException)
-        {
-        }
+        Assert.ThrowsExactly<FormatException>(() => OracleDnsProtocol.BuildQueryName(uri));
     }
 
     [TestMethod]
