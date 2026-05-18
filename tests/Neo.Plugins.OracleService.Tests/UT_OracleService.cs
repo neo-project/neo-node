@@ -45,6 +45,18 @@ public class UT_OracleService
     }
 
     [TestMethod]
+    public void FormatResponseForLog_UsesErrorPayloadForDnsStackFailures()
+    {
+        Assert.AreEqual("invalid-base64", OracleService.FormatResponseForLog(OracleResponseCode.Error, "invalid-base64", true));
+    }
+
+    [TestMethod]
+    public void FormatResponseForLog_RedactsSuccessfulDnsStackPayload()
+    {
+        Assert.AreEqual("<stackitem:base64:8 chars>", OracleService.FormatResponseForLog(OracleResponseCode.Success, "ABCDEFGH", true));
+    }
+
+    [TestMethod]
     public void TestCreateOracleResponseTx()
     {
         var snapshotCache = TestBlockchain.GetTestSnapshotCache();
