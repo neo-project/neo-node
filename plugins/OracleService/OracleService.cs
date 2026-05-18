@@ -305,9 +305,6 @@ public sealed class OracleService : Plugin
 
         bool dnsStackOutput = Uri.TryCreate(req.Url, UriKind.Absolute, out Uri? requestUri)
             && requestUri.Scheme.Equals("dns", StringComparison.OrdinalIgnoreCase);
-        PluginLogger?.Information("Process oracle request end: {OriginalTxid} <{Url}>, responseCode:{ResponseCode}, response:{Response}",
-            req.OriginalTxid, req.Url, code, FormatResponseForLog(code, data, dnsStackOutput));
-
         byte[]? dnsStackBytes = null;
         if (code == OracleResponseCode.Success && dnsStackOutput)
         {
@@ -317,6 +314,9 @@ public sealed class OracleService : Plugin
                 PluginLogger?.Warning("Invalid DNS stack item payload: {OriginalTxid}", req.OriginalTxid);
             }
         }
+
+        PluginLogger?.Information("Process oracle request end: {OriginalTxid} <{Url}>, responseCode:{ResponseCode}, response:{Response}",
+            req.OriginalTxid, req.Url, code, FormatResponseForLog(code, data, dnsStackOutput));
 
         var oracleNodes = NativeContract.RoleManagement.GetDesignatedByRole(snapshot, Role.Oracle, height);
         foreach (var (requestId, request) in NativeContract.Oracle.GetRequestsByUrl(snapshot, req.Url))
@@ -569,7 +569,7 @@ public sealed class OracleService : Plugin
         return afterObjects.ToByteArray(false);
     }
 
-    private static string? FormatResponseForLog(OracleResponseCode code, string? data, bool dnsStackOutput)
+    internal static string? FormatResponseForLog(OracleResponseCode code, string? data, bool dnsStackOutput)
     {
         if (code != OracleResponseCode.Success)
             return data;

@@ -169,9 +169,6 @@ class OracleDnsProtocol : IOracleProtocol
             return (OracleResponseCode.Error, ex.Message);
         }
 
-        if (dnsResponse is null)
-            return (OracleResponseCode.Error, "Invalid DNS response.");
-
         // RCODE 3 = NXDOMAIN
         if (dnsResponse.ResponseCode == 3)
             return (OracleResponseCode.NotFound, null);
@@ -313,7 +310,9 @@ class OracleDnsProtocol : IOracleProtocol
         if (string.IsNullOrWhiteSpace(host))
             return false;
 
-        if (host.Equals("localhost", StringComparison.OrdinalIgnoreCase))
+        host = host.TrimEnd('.');
+        if (host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+            || host.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase))
             return true;
 
         if (IPAddress.TryParse(host, out IPAddress? address))
@@ -402,11 +401,17 @@ class OracleDnsProtocol : IOracleProtocol
         }
 
         string[] labels = name.TrimEnd('.').Split('.');
+        int wireLength = 1; // Root label.
         foreach (string label in labels)
         {
+            if (label.Length == 0)
+                throw new FormatException("DNS name contains an empty label.");
             if (label.Length > 63)
                 throw new FormatException($"DNS label exceeds 63 characters: {label}");
             byte[] labelBytes = Encoding.ASCII.GetBytes(label);
+            wireLength += labelBytes.Length + 1;
+            if (wireLength > 255)
+                throw new FormatException("DNS name exceeds 255 octets.");
             buffer.Add((byte)labelBytes.Length);
             buffer.AddRange(labelBytes);
         }

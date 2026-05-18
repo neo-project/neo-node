@@ -336,6 +336,29 @@ public class UT_OracleDnsProtocol
     }
 
     [TestMethod]
+    public void BuildDnsQuery_AllowsMaximumLengthWireName()
+    {
+        string maxName = $"{new string('a', 63)}.{new string('b', 63)}.{new string('c', 63)}.{new string('d', 61)}";
+        byte[] query = OracleDnsProtocol.BuildDnsQuery(maxName, 1);
+
+        Assert.HasCount(12 + 255 + 4, query);
+    }
+
+    [TestMethod]
+    public void BuildDnsQuery_RejectsOverlongWireName()
+    {
+        string tooLongName = $"{new string('a', 63)}.{new string('b', 63)}.{new string('c', 63)}.{new string('d', 63)}";
+
+        Assert.ThrowsExactly<FormatException>(() => OracleDnsProtocol.BuildDnsQuery(tooLongName, 1));
+    }
+
+    [TestMethod]
+    public void BuildDnsQuery_RejectsEmptyLabels()
+    {
+        Assert.ThrowsExactly<FormatException>(() => OracleDnsProtocol.BuildDnsQuery("example..com", 1));
+    }
+
+    [TestMethod]
     public void BuildDnsQuery_SetsCorrectRecordType()
     {
         // Test A record (type 1)
@@ -588,6 +611,17 @@ public class UT_OracleDnsProtocol
         var handler = new StubHandler(_ => throw new InvalidOperationException("Should not send"));
         using var protocol = new OracleDnsProtocol(handler);
         (OracleResponseCode code, string? message) = await protocol.ProcessAsync(new Uri("dns://127.0.0.1/example.com?TYPE=A"), CancellationToken.None);
+
+        Assert.AreEqual(OracleResponseCode.Error, code);
+        StringAssert.Contains(message, "Private resolver");
+    }
+
+    [TestMethod]
+    public async Task ProcessAsync_RejectsLocalhostResolverSuffix()
+    {
+        var handler = new StubHandler(_ => throw new InvalidOperationException("Should not send"));
+        using var protocol = new OracleDnsProtocol(handler);
+        (OracleResponseCode code, string? message) = await protocol.ProcessAsync(new Uri("dns://sub.localhost/example.com?TYPE=A"), CancellationToken.None);
 
         Assert.AreEqual(OracleResponseCode.Error, code);
         StringAssert.Contains(message, "Private resolver");
