@@ -75,61 +75,6 @@ public class UT_MainService_Network
     }
 
     [TestMethod]
-    public void OnListPendingCommand_NoHost_PrintsDisabledShape()
-    {
-        // Without a PendingValidUntilRelayHost registered, `list pending` should still produce
-        // a valid JSON document reporting enabled=false and an empty list.
-        var service = CreateService(_neoSystem);
-        var output = CaptureConsoleOut(() => InvokeNonPublic(service, "OnListPendingCommand"));
-
-        Assert.IsFalse(string.IsNullOrWhiteSpace(output));
-        var json = (JObject)JToken.Parse(output)!;
-        Assert.IsFalse(json["enabled"]!.AsBoolean());
-        Assert.AreEqual(0, json["count"]!.AsNumber());
-        Assert.IsInstanceOfType(json["pending"], typeof(JArray));
-    }
-
-    [TestMethod]
-    public void OnListPendingCommand_WithHostAndQueuedEntry_PrintsEntry()
-    {
-        // When a host is registered as a service, the CLI must list the queued entries with hash and VUB.
-        var wallet = TestUtils.GenerateTestWallet("pwd");
-        var account = wallet.CreateAccount();
-
-        var host = new PendingValidUntilRelayHost(new MemoryStore(), new PendingValidUntilRelayConfiguration(10000u, 1u));
-        _neoSystem.AddService(host);
-
-        var snapshot = _neoSystem.StoreView;
-        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
-        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_neoSystem.Settings);
-        var tx = new Transaction
-        {
-            Version = 0,
-            Nonce = 1,
-            ValidUntilBlock = height + maxInc + 10,
-            Signers = [new Signer { Account = account.ScriptHash, Scopes = WitnessScope.CalledByEntry }],
-            Attributes = [],
-            Script = new byte[] { (byte)OpCode.RET },
-            Witnesses = [],
-        };
-        var ctx = new ContractParametersContext(snapshot, tx, _neoSystem.Settings.Network);
-        Assert.IsTrue(wallet.Sign(ctx));
-        tx.Witnesses = ctx.GetWitnesses();
-
-        Assert.IsTrue(PendingValidUntilRelay.TryOffer(_neoSystem, host, tx, VerifyResult.Expired));
-
-        var service = CreateService(_neoSystem, wallet);
-        var output = CaptureConsoleOut(() => InvokeNonPublic(service, "OnListPendingCommand"));
-
-        var json = (JObject)JToken.Parse(output)!;
-        Assert.IsTrue(json["enabled"]!.AsBoolean());
-        Assert.AreEqual(1, json["count"]!.AsNumber());
-        var arr = (JArray)json["pending"]!;
-        Assert.AreEqual(1, arr.Count);
-        Assert.AreEqual(tx.Hash.ToString(), arr[0]!["hash"]!.AsString());
-    }
-
-    [TestMethod]
     public void OnRelayCommand_NullInput_WarnsAndReturns()
     {
         var service = CreateService(_neoSystem);
@@ -173,44 +118,6 @@ public class UT_MainService_Network
     }
 
     [TestMethod]
-    public void OnRelayCommand_FarFutureValidUntil_QueuesLocally_WhenHostConfigured()
-    {
-        // Build a fully-signed tx whose ValidUntilBlock is beyond the allowed forward window.
-        // Blockchain.Ask should reject it as Expired, and PendingValidUntilRelay.TryOffer should
-        // pick it up and queue it locally (covering the queuedLocally branch in OnRelayCommand).
-        var wallet = TestUtils.GenerateTestWallet("pwd");
-        var account = wallet.CreateAccount();
-
-        var host = new PendingValidUntilRelayHost(new MemoryStore(), new PendingValidUntilRelayConfiguration(10000u, 1u));
-        _neoSystem.AddService(host);
-
-        var snapshot = _neoSystem.StoreView;
-        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
-        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_neoSystem.Settings);
-        var tx = new Transaction
-        {
-            Version = 0,
-            Nonce = 99,
-            ValidUntilBlock = height + maxInc + 100,
-            Signers = [new Signer { Account = account.ScriptHash, Scopes = WitnessScope.CalledByEntry }],
-            Attributes = [],
-            Script = new byte[] { (byte)OpCode.RET },
-            Witnesses = [],
-        };
-        var ctx = new ContractParametersContext(snapshot, tx, _neoSystem.Settings.Network);
-        Assert.IsTrue(wallet.Sign(ctx));
-        Assert.IsTrue(ctx.Completed);
-
-        var json = (JObject)JToken.Parse(ctx.ToString())!;
-        var service = CreateService(_neoSystem, wallet);
-        var output = CaptureConsoleOut(() => InvokeNonPublic(service, "OnRelayCommand", json));
-
-        Assert.Contains(PendingValidUntilRelay.CliQueuedLocallyHint, output,
-            "Far-future tx should be reported as queued locally.");
-        Assert.AreEqual(1, host.Store.Find(null).Count(), "Tx must end up in the local pending store.");
-    }
-
-    [TestMethod]
     public void OnRelayCommand_HappyPath_PrintsRelaySuccessOrFailure()
     {
         // Build a fully-signed tx within the allowed window. Blockchain.Ask will respond with some
@@ -245,8 +152,6 @@ public class UT_MainService_Network
         bool reportedFailure = output.Contains("Relay failed");
         Assert.IsTrue(reportedSuccess || reportedFailure,
             "OnRelayCommand should report either a relay success or a relay failure for an in-window tx.");
-        Assert.DoesNotContain(PendingValidUntilRelay.CliQueuedLocallyHint, output,
-            "In-window tx must not be queued locally.");
     }
 
     [TestMethod]

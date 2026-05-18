@@ -972,13 +972,9 @@ partial class MainService
             tx.Witnesses = context.GetWitnesses();
             var relayResult = NeoSystem.Blockchain.Ask<Blockchain.RelayResult>(tx, TimeSpan.FromSeconds(30))
                 .ConfigureAwait(false).GetAwaiter().GetResult();
-            var pendingHost = NeoSystem.GetService<PendingValidUntilRelayHost>();
-            bool queuedLocally = PendingValidUntilRelay.TryOffer(NeoSystem, pendingHost, tx, relayResult.Result);
-            if (queuedLocally)
-                ConsoleHelper.Info(PendingValidUntilRelay.CliQueuedLocallyHint, $"{tx.Hash}");
             if (relayResult.Result == VerifyResult.Succeed)
                 ConsoleHelper.Info("Signed and relayed transaction with hash:\n", $"{tx.Hash}");
-            else if (!queuedLocally)
+            else
                 ConsoleHelper.Error($"Relay failed: {relayResult.Result}");
         }
         else

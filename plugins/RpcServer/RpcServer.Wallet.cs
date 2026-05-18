@@ -944,8 +944,7 @@ partial class RpcServer
         if (context.Completed)
         {
             tx.Witnesses = context.GetWitnesses();
-            var relayResult = system.Blockchain.Ask<Blockchain.RelayResult>(tx, TimeSpan.FromSeconds(30)).Result;
-            PendingValidUntilRelayRpcBridge.TryOffer(system, tx, relayResult.Result);
+            _ = system.Blockchain.Ask<Blockchain.RelayResult>(tx, TimeSpan.FromSeconds(30)).Result;
             return tx.ToJson(system.Settings);
         }
         else

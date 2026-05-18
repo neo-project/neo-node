@@ -162,29 +162,14 @@ partial class MainService
             tx.Witnesses = context.GetWitnesses();
             var relayResult = NeoSystem.Blockchain.Ask<Blockchain.RelayResult>(tx, TimeSpan.FromSeconds(30))
                 .ConfigureAwait(false).GetAwaiter().GetResult();
-            var pendingHost = NeoSystem.GetService<PendingValidUntilRelayHost>();
-            bool queuedLocally = PendingValidUntilRelay.TryOffer(NeoSystem, pendingHost, tx, relayResult.Result);
-            if (queuedLocally)
-                ConsoleHelper.Info(PendingValidUntilRelay.CliQueuedLocallyHint, $"{Environment.NewLine}{tx.Hash}");
             if (relayResult.Result == VerifyResult.Succeed)
                 Console.WriteLine($"Data relay success, the hash is shown as follows: {Environment.NewLine}{tx.Hash}");
-            else if (!queuedLocally)
+            else
                 ConsoleHelper.Error($"Relay failed: {relayResult.Result}");
         }
         catch (Exception e)
         {
             ConsoleHelper.Error(GetExceptionMessage(e));
         }
-    }
-
-    /// <summary>
-    /// Lists transactions stored for local deferred ValidUntil relay (see <c>config.json</c> P2P <c>PendingRelayMaxTransactions</c>, <c>PendingCheckFrequency</c>).
-    /// </summary>
-    [ConsoleCommand("list pending", Category = "Network Commands")]
-    private void OnListPendingCommand()
-    {
-        var host = NeoSystem.GetService<PendingValidUntilRelayHost>();
-        JObject json = PendingValidUntilRelay.GetPendingState(NeoSystem, host);
-        Console.WriteLine(json.ToString(true));
     }
 }

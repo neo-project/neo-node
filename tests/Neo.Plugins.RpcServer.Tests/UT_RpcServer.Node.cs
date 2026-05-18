@@ -34,46 +34,20 @@ partial class UT_RpcServer
     }
 
     [TestMethod]
-    public void TestGetPendingValidUntilRelay()
-    {
-        var result = _rpcServer.GetPendingValidUntilRelay();
-        Assert.IsInstanceOfType(result, typeof(JObject));
-        var json = (JObject)result;
-        Assert.IsTrue(json.ContainsProperty("pending"));
-        Assert.IsTrue(json.ContainsProperty("count"));
-        // RpcServer.Tests does not reference neo-cli; the bridge cannot resolve the host type and
-        // reports the plugin-only fallback (same as deploying RpcServer without neo-cli on disk).
-        Assert.IsTrue(json["unavailable"]!.GetBoolean());
-        Assert.IsFalse(json["enabled"]!.GetBoolean());
-        Assert.AreEqual(0, json["count"]!.AsNumber());
-    }
-
-    [TestMethod]
-    public void GetRelayResult_ExpiredWithQueuedLocally_UsesQueuedLocallyData()
+    public void GetRelayResult_ExpiredAndNotYetValid_UseExpiredTransactionError()
     {
         var m = typeof(RpcServer).GetMethod("GetRelayResult",
             BindingFlags.NonPublic | BindingFlags.Static, null,
-            [typeof(VerifyResult), typeof(UInt256), typeof(bool)], null);
+            [typeof(VerifyResult), typeof(UInt256)], null);
         Assert.IsNotNull(m);
         var hash = UInt256.Zero;
-        var ex = Assert.ThrowsExactly<TargetInvocationException>(() =>
-            m.Invoke(null, [VerifyResult.Expired, hash, true]));
-        var rpc = Assert.IsInstanceOfType<RpcException>(ex.InnerException);
-        Assert.AreEqual(PendingValidUntilRelayRpcBridge.RpcExpiredDataWhenQueuedLocally, rpc.GetError().Data);
-    }
-
-    [TestMethod]
-    public void GetRelayResult_ExpiredWithoutQueuedLocally_UsesReasonString()
-    {
-        var m = typeof(RpcServer).GetMethod("GetRelayResult",
-            BindingFlags.NonPublic | BindingFlags.Static, null,
-            [typeof(VerifyResult), typeof(UInt256), typeof(bool)], null);
-        Assert.IsNotNull(m);
-        var hash = UInt256.Zero;
-        var ex = Assert.ThrowsExactly<TargetInvocationException>(() =>
-            m.Invoke(null, [VerifyResult.Expired, hash, false]));
-        var rpc = Assert.IsInstanceOfType<RpcException>(ex.InnerException);
-        Assert.AreEqual(VerifyResult.Expired.ToString(), rpc.GetError().Data);
+        foreach (var reason in new[] { VerifyResult.Expired, VerifyResult.NotYetValid })
+        {
+            var ex = Assert.ThrowsExactly<TargetInvocationException>(() =>
+                m.Invoke(null, [reason, hash]));
+            var rpc = Assert.IsInstanceOfType<RpcException>(ex.InnerException);
+            Assert.AreEqual(reason.ToString(), rpc.GetError().Data);
+        }
     }
 
     [TestMethod]

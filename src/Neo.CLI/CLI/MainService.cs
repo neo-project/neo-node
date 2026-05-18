@@ -63,9 +63,6 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
 
     private LocalNode? _localNode;
 
-    private PendingValidUntilRelayHost? _pendingRelayHost;
-    private IActorRef? _pendingRelayActor;
-
     public LocalNode LocalNode
     {
         get => _localNode!;
@@ -439,31 +436,6 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
             MaxConnectionsPerAddress = Settings.Default.P2P.MaxConnectionsPerAddress
         });
 
-        if (!engine.Equals(nameof(MemoryStore), StringComparison.OrdinalIgnoreCase)
-            && Settings.Default.P2P.PendingRelayMaxTransactions > 0
-            && Settings.Default.P2P.PendingCheckFrequency > 0)
-        {
-            try
-            {
-                string pendingPath = Path.Combine(fullStoragePath, "PendingValidUntilRelay");
-                IStore pendingStore = NeoSystem.LoadStore(pendingPath);
-                var cfg = new PendingValidUntilRelayConfiguration(
-                    Settings.Default.P2P.PendingRelayMaxTransactions,
-                    Settings.Default.P2P.PendingCheckFrequency);
-                _pendingRelayHost = new PendingValidUntilRelayHost(pendingStore, cfg);
-                NeoSystem.AddService(_pendingRelayHost);
-                _pendingRelayActor = NeoSystem.ActorSystem.ActorOf(
-                    Akka.Actor.Props.Create(() => new PendingValidUntilRelayActor(NeoSystem, _pendingRelayHost)));
-            }
-            catch (Exception ex)
-            {
-                ConsoleHelper.Warning($"Could not initialize local pending ValidUntil relay store: {ex.Message}");
-                _pendingRelayHost?.Dispose();
-                _pendingRelayHost = null;
-                _pendingRelayActor = null;
-            }
-        }
-
         if (Settings.Default.UnlockWallet.IsActive)
         {
             try
@@ -501,14 +473,6 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         var sys = Interlocked.Exchange(ref _neoSystem, null);
         if (sys is null)
             return;
-        if (_pendingRelayActor is not null)
-        {
-            sys.ActorSystem.EventStream.Unsubscribe(_pendingRelayActor);
-            sys.EnsureStopped(_pendingRelayActor);
-            _pendingRelayActor = null;
-        }
-        _pendingRelayHost?.Dispose();
-        _pendingRelayHost = null;
         sys.Dispose();
     }
 
