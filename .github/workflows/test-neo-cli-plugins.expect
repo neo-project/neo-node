@@ -16,7 +16,7 @@ expect {
 
 #
 # Test 'plugins' command and verify all plugins are installed
-# Expected count is passed as argv[0] (plugins/* dirs except MPTTrie).
+# Expected count is passed as argv[0] (plugins/*/*.csproj except MPTTrie and RpcClient).
 #
 send "plugins\n"
 
