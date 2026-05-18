@@ -43,7 +43,6 @@ internal static class DeferredRelayEngine
         if (store is null || !settings.Enabled)
         {
             root["enabled"] = false;
-            root["pendingrelay"] = false;
             root["pendingcheckfrequency"] = 0u;
             root["pendingrelaymaxtransactions"] = 0u;
             root["count"] = 0;
@@ -51,7 +50,6 @@ internal static class DeferredRelayEngine
         }
 
         root["enabled"] = true;
-        root["pendingrelay"] = true;
         root["pendingcheckfrequency"] = settings.CheckFrequency;
         root["pendingrelaymaxtransactions"] = settings.MaxTransactions;
 

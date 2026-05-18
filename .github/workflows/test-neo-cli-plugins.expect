@@ -15,13 +15,17 @@ expect {
 }
 
 #
-# Test 'plugins' command and verify all 12 plugins are installed
+# Test 'plugins' command and verify all plugins are installed
+# Expected count is passed as argv[0] (plugins/* dirs except MPTTrie).
 #
 send "plugins\n"
 
-# Count [Installed] occurrences - we need 12
 set count 0
-set expected_count 12
+if {[llength $argv] >= 1} {
+    set expected_count [lindex $argv 0]
+} else {
+    set expected_count 13
+}
 
 # Match [Installed] pattern multiple times until we reach the prompt
 expect {
