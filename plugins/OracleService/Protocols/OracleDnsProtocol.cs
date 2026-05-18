@@ -101,7 +101,7 @@ class OracleDnsProtocol : IOracleProtocol
     public OracleDnsProtocol(HttpMessageHandler? handler = null)
     {
         // Do not allow automatic redirects; resolver endpoints must be explicitly allowed.
-        client = handler is null ? new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) : new HttpClient(handler);
+        client = handler is null ? new HttpClient(CreateDefaultHandler()) : new HttpClient(handler);
         CustomAttributeData attribute = Assembly.GetExecutingAssembly().CustomAttributes.First(p => p.AttributeType == typeof(AssemblyInformationalVersionAttribute));
         string version = attribute.ConstructorArguments[0].Value as string ?? "unknown";
         client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("NeoOracleService", version));
@@ -290,19 +290,70 @@ class OracleDnsProtocol : IOracleProtocol
         if (OracleSettings.Default.AllowPrivateHost)
             return;
 
-        if (IsPrivateEndpoint(resolverEndpoint.Host))
+        _ = await ResolveEndpointAddressesAsync(resolverEndpoint.Host, cancellation);
+    }
+
+    private static HttpMessageHandler CreateDefaultHandler()
+    {
+        return new SocketsHttpHandler
+        {
+            AllowAutoRedirect = false,
+            ConnectCallback = ConnectToAllowedEndpointAsync
+        };
+    }
+
+    private static async ValueTask<Stream> ConnectToAllowedEndpointAsync(SocketsHttpConnectionContext context, CancellationToken cancellation)
+    {
+        IPAddress[] addresses = await ResolveEndpointAddressesAsync(context.DnsEndPoint.Host, cancellation);
+        SocketException? lastSocketException = null;
+
+        foreach (IPAddress address in addresses)
+        {
+            Socket socket = new(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            try
+            {
+                await socket.ConnectAsync(new IPEndPoint(address, context.DnsEndPoint.Port), cancellation);
+                return new NetworkStream(socket, ownsSocket: true);
+            }
+            catch (SocketException ex)
+            {
+                socket.Dispose();
+                lastSocketException = ex;
+            }
+        }
+
+        throw lastSocketException ?? new SocketException((int)SocketError.HostUnreachable);
+    }
+
+    internal static async Task<IPAddress[]> ResolveEndpointAddressesAsync(string host, CancellationToken cancellation)
+    {
+        if (!OracleSettings.Default.AllowPrivateHost && IsPrivateEndpoint(host))
             throw new InvalidOperationException("Private resolver endpoints are not allowed.");
 
+        IPAddress[] addresses;
         try
         {
-            IPHostEntry entry = await Dns.GetHostEntryAsync(resolverEndpoint.Host, cancellation);
-            if (entry.IsInternal())
-                throw new InvalidOperationException("Private resolver endpoints are not allowed.");
+            addresses = IPAddress.TryParse(host, out IPAddress? address)
+                ? [address]
+                : await Dns.GetHostAddressesAsync(host, cancellation);
         }
         catch (SocketException ex)
         {
             throw new InvalidOperationException($"Failed to resolve resolver endpoint: {ex.Message}", ex);
         }
+
+        if (addresses.Length == 0)
+            throw new InvalidOperationException("Failed to resolve resolver endpoint.");
+
+        return ValidateEndpointAddresses(addresses);
+    }
+
+    internal static IPAddress[] ValidateEndpointAddresses(IPAddress[] addresses)
+    {
+        if (!OracleSettings.Default.AllowPrivateHost && addresses.Any(p => p.IsInternal()))
+            throw new InvalidOperationException("Private resolver endpoints are not allowed.");
+
+        return addresses;
     }
 
     private static bool IsPrivateEndpoint(string host)

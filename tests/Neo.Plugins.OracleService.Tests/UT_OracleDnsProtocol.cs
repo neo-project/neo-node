@@ -628,6 +628,18 @@ public class UT_OracleDnsProtocol
     }
 
     [TestMethod]
+    public void ValidateEndpointAddresses_RejectsAnyResolvedPrivateAddress()
+    {
+        IPAddress[] addresses =
+        [
+            IPAddress.Parse("1.1.1.1"),
+            IPAddress.Parse("10.0.0.10")
+        ];
+
+        Assert.ThrowsExactly<InvalidOperationException>(() => OracleDnsProtocol.ValidateEndpointAddresses(addresses));
+    }
+
+    [TestMethod]
     public async Task ProcessAsync_RejectsUnsupportedRecordType()
     {
         using var protocol = new OracleDnsProtocol(new StubHandler(_ => throw new InvalidOperationException("Should not send")));
