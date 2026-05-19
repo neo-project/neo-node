@@ -15,6 +15,7 @@ using Neo.Extensions;
 using Neo.Json;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
+using Neo.Persistence;
 using Neo.Persistence.Providers;
 using Neo.Plugins;
 using Neo.Sign;
@@ -469,7 +470,10 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
 
     public void Stop()
     {
-        Interlocked.Exchange(ref _neoSystem, null)?.Dispose();
+        var sys = Interlocked.Exchange(ref _neoSystem, null);
+        if (sys is null)
+            return;
+        sys.Dispose();
     }
 
     /// <summary>

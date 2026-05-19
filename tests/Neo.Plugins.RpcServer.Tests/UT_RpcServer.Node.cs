@@ -11,13 +11,16 @@
 
 using Akka.Actor;
 using Neo.Extensions;
+using Neo.IO;
 using Neo.Json;
+using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence.Providers;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using System.Net;
+using System.Reflection;
 
 namespace Neo.Plugins.RpcServer.Tests;
 
@@ -28,6 +31,23 @@ partial class UT_RpcServer
     {
         var result = _rpcServer.GetConnectionCount();
         Assert.IsInstanceOfType(result, typeof(JNumber));
+    }
+
+    [TestMethod]
+    public void GetRelayResult_ExpiredAndNotYetValid_UseExpiredTransactionError()
+    {
+        var m = typeof(RpcServer).GetMethod("GetRelayResult",
+            BindingFlags.NonPublic | BindingFlags.Static, null,
+            [typeof(VerifyResult), typeof(UInt256)], null);
+        Assert.IsNotNull(m);
+        var hash = UInt256.Zero;
+        foreach (var reason in new[] { VerifyResult.Expired, VerifyResult.NotYetValid })
+        {
+            var ex = Assert.ThrowsExactly<TargetInvocationException>(() =>
+                m.Invoke(null, [reason, hash]));
+            var rpc = Assert.IsInstanceOfType<RpcException>(ex.InnerException);
+            Assert.AreEqual(reason.ToString(), rpc.GetError().Data);
+        }
     }
 
     [TestMethod]

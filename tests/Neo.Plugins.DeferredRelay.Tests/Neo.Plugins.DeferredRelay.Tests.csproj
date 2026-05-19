@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\plugins\DeferredRelay\DeferredRelay.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Neo.CLI.Tests\TestBlockchain.cs" Link="Shared\TestBlockchain.cs" />
+    <Compile Include="..\Neo.CLI.Tests\TestProtocolSettings.cs" Link="Shared\TestProtocolSettings.cs" />
+    <Compile Include="..\Neo.CLI.Tests\TestUtils.cs" Link="Shared\TestUtils.cs" />
+  </ItemGroup>
+
+</Project>
