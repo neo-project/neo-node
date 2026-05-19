@@ -59,4 +59,59 @@ public class UT_DeferredRelaySettings
         Assert.AreEqual(5u, DeferredRelaySettings.Default.CheckFrequency);
         Assert.IsTrue(DeferredRelaySettings.Default.Enabled);
     }
+
+    [TestMethod]
+    public void LoadsNetworkDefault_WhenOmitted()
+    {
+        const string json = """
+        {
+          "PluginConfiguration": {
+            "Path": "DeferredRelay_{0}"
+          }
+        }
+        """;
+        DeferredRelaySettings.Load(BuildSection(json));
+        Assert.AreEqual(860833102u, DeferredRelaySettings.Default.Network);
+    }
+
+    [TestMethod]
+    public void Enabled_RequiresBothMaxTransactionsAndCheckFrequency()
+    {
+        DeferredRelaySettings.Load(BuildSection("""
+        {
+          "PluginConfiguration": {
+            "Network": 860833102,
+            "MaxTransactions": 10,
+            "CheckFrequency": 0
+          }
+        }
+        """));
+        Assert.IsFalse(DeferredRelaySettings.Default.Enabled);
+
+        DeferredRelaySettings.Load(BuildSection("""
+        {
+          "PluginConfiguration": {
+            "Network": 860833102,
+            "MaxTransactions": 0,
+            "CheckFrequency": 5
+          }
+        }
+        """));
+        Assert.IsFalse(DeferredRelaySettings.Default.Enabled);
+    }
+
+    [TestMethod]
+    public void LoadsExceptionPolicy()
+    {
+        const string json = """
+        {
+          "PluginConfiguration": {
+            "Network": 860833102,
+            "UnhandledExceptionPolicy": "StopPlugin"
+          }
+        }
+        """;
+        DeferredRelaySettings.Load(BuildSection(json));
+        Assert.AreEqual(UnhandledExceptionPolicy.StopPlugin, DeferredRelaySettings.Default.ExceptionPolicy);
+    }
 }

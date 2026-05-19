@@ -28,7 +28,7 @@ internal sealed class DeferredRelaySettings : IPluginSettings
     private DeferredRelaySettings(IConfigurationSection section)
         : this(
             section.GetValue("Path", "DeferredRelay_{0}")!,
-            section.GetValue("Network", 5195086u),
+            section.GetValue("Network", 860833102u),
             section.GetValue("MaxTransactions", 0u),
             section.GetValue("CheckFrequency", 0u),
             section.GetValue("UnhandledExceptionPolicy", UnhandledExceptionPolicy.Ignore))

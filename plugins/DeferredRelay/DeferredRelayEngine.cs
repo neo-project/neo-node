@@ -18,6 +18,8 @@ using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.SmartContract.Native;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Neo.Plugins.DeferredRelay;
 
@@ -109,27 +111,30 @@ internal static class DeferredRelayEngine
         return true;
     }
 
-    public static void OnPersistCompleted(NeoSystem system, IStore store, DeferredRelaySettings settings, Block block)
+    public static bool ShouldProcessPersist(Block block, DeferredRelaySettings settings)
     {
         if (!settings.Enabled)
-            return;
+            return false;
         if (block.Index == 0)
-            return;
-        if (block.Index % settings.CheckFrequency != 0)
-            return;
-
-        ProcessQueued(system, store);
+            return false;
+        return block.Index % settings.CheckFrequency == 0;
     }
 
-    private static void ProcessQueued(NeoSystem system, IStore store)
+    /// <summary>
+    /// Scans the local queue, removes expired or corrupt entries, and relays txs that entered the allowed window.
+    /// </summary>
+    public static async Task ProcessQueuedAsync(NeoSystem system, IStore store, CancellationToken cancellationToken = default)
     {
         var snapshot = system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(system.Settings);
         List<byte[]> toRemove = [];
+        List<Transaction> toRelay = [];
 
         foreach ((byte[] key, byte[] value) in store.Find())
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             Transaction tx;
             try
             {
@@ -148,16 +153,35 @@ internal static class DeferredRelayEngine
             }
 
             if (height < tx.ValidUntilBlock && tx.ValidUntilBlock <= height + maxInc)
-            {
-                var relayResult = system.Blockchain.Ask<Blockchain.RelayResult>(tx, TimeSpan.FromSeconds(30))
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
-                if (relayResult.Result is VerifyResult.Succeed or VerifyResult.AlreadyInPool or VerifyResult.AlreadyExists)
-                    toRemove.Add(key);
-            }
+                toRelay.Add(tx);
         }
 
         foreach (byte[] key in toRemove)
             store.Delete(key);
+
+        foreach (Transaction tx in toRelay)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!await TryRelayAsync(system, tx).ConfigureAwait(false))
+                continue;
+            store.Delete(tx.Hash.GetSpan().ToArray());
+        }
+    }
+
+    private static async Task<bool> TryRelayAsync(NeoSystem system, Transaction tx)
+    {
+        try
+        {
+            var relayResult = await system.Blockchain
+                .Ask<Blockchain.RelayResult>(tx, TimeSpan.FromSeconds(30))
+                .ConfigureAwait(false);
+            return relayResult.Result is VerifyResult.Succeed or VerifyResult.AlreadyInPool or VerifyResult.AlreadyExists;
+        }
+        catch (Exception ex)
+        {
+            Logs.RuntimeLogger.Debug(ex, "Deferred relay attempt failed for {Hash}", tx.Hash);
+            return false;
+        }
     }
 
     private static int CountEntries(IStore store)

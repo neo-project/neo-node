@@ -54,7 +54,7 @@ class OracleSettings : IPluginSettings
 
     private OracleSettings(IConfigurationSection section)
     {
-        Network = section.GetValue("Network", 5195086u);
+        Network = section.GetValue("Network", 860833102u);
         Nodes = section.GetSection("Nodes").GetChildren().Select(p => new Uri(p.Get<string>(), UriKind.Absolute)).ToArray();
         MaxTaskTimeout = TimeSpan.FromMilliseconds(section.GetValue("MaxTaskTimeout", 432000000));
         MaxOracleTimeout = TimeSpan.FromMilliseconds(section.GetValue("MaxOracleTimeout", 15000));

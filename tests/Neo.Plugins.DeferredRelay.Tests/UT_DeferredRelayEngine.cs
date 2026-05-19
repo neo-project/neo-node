@@ -17,6 +17,7 @@ using Neo.IO;
 using Neo.Json;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
+using Neo.Persistence;
 using Neo.Persistence.Providers;
 using Neo.Plugins.DeferredRelay;
 using Neo.SmartContract;
@@ -51,6 +52,13 @@ public class UT_DeferredRelayEngine
 
     private static DeferredRelaySettings DisabledSettings(uint? network = null) =>
         DeferredRelaySettings.Create(network ?? TestProtocolSettings.Default.Network, 0u, 1u);
+
+    private static void RunPersistProcessing(NeoSystem system, IStore store, DeferredRelaySettings settings, Block block)
+    {
+        if (!DeferredRelayEngine.ShouldProcessPersist(block, settings))
+            return;
+        DeferredRelayEngine.ProcessQueuedAsync(system, store).GetAwaiter().GetResult();
+    }
 
     private Transaction CreateSignedTx(uint validUntilBlock, uint nonce = 42)
     {
@@ -92,6 +100,21 @@ public class UT_DeferredRelayEngine
     }
 
     [TestMethod]
+    public void GetPendingState_Enabled_IncludesChainAndPluginFields()
+    {
+        var store = new MemoryStore();
+        var settings = EnabledSettings(max: 8192u, freq: 5u, network: _network);
+        JObject j = DeferredRelayEngine.GetPendingState(_system, store, settings);
+
+        Assert.IsTrue(j["enabled"]!.AsBoolean());
+        Assert.AreEqual(8192u, (uint)j["pendingrelaymaxtransactions"]!.AsNumber());
+        Assert.AreEqual(5u, (uint)j["pendingcheckfrequency"]!.AsNumber());
+        Assert.IsNotNull(j["height"]);
+        Assert.IsNotNull(j["maxvaliduntilblockincrement"]);
+        Assert.IsNull(j["pendingrelay"]);
+    }
+
+    [TestMethod]
     public void GetPendingState_WithQueuedEntry_ListsHashAndVub()
     {
         var store = new MemoryStore();
@@ -129,6 +152,33 @@ public class UT_DeferredRelayEngine
     };
 
     [TestMethod]
+    public void TryOffer_WhenDisabled_ReturnsFalse()
+    {
+        var store = new MemoryStore();
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
+        var tx = CreateSignedTx(height + maxInc + 5);
+
+        Assert.IsFalse(DeferredRelayEngine.TryOffer(_system, store, DisabledSettings(_network), tx, VerifyResult.NotYetValid));
+    }
+
+    [TestMethod]
+    public void TryOffer_WhenAlreadyQueued_ReturnsTrueWithoutDuplicate()
+    {
+        var store = new MemoryStore();
+        var settings = EnabledSettings(network: _network);
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
+        var tx = CreateSignedTx(height + maxInc + 5);
+
+        Assert.IsTrue(DeferredRelayEngine.TryOffer(_system, store, settings, tx, VerifyResult.NotYetValid));
+        Assert.IsTrue(DeferredRelayEngine.TryOffer(_system, store, settings, tx, VerifyResult.NotYetValid));
+        Assert.AreEqual(1, store.Find(null).Count());
+    }
+
+    [TestMethod]
     public void TryOffer_RequiresNotYetValid()
     {
         var store = new MemoryStore();
@@ -163,7 +213,83 @@ public class UT_DeferredRelayEngine
     }
 
     [TestMethod]
-    public void OnPersistCompleted_ProcessQueued_RemovesExpiredEntry()
+    public void GetPendingState_SkipsInvalidKeysAndCorruptEntries()
+    {
+        var store = new MemoryStore();
+        var settings = EnabledSettings(network: _network);
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
+        var tx = CreateSignedTx(height + maxInc + 10);
+        Assert.IsTrue(DeferredRelayEngine.TryOffer(_system, store, settings, tx, VerifyResult.NotYetValid));
+
+        store.Put([1, 2, 3], [0xFF]);
+        store.Put(UInt256.Parse("0x0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20").GetSpan().ToArray(), [0xFF, 0xFE]);
+
+        JObject j = DeferredRelayEngine.GetPendingState(_system, store, settings);
+        Assert.AreEqual(1, j["count"]!.AsNumber());
+        Assert.AreEqual(tx.Hash.ToString(), ((JArray)j["pending"]!)[0]!["hash"]!.AsString());
+    }
+
+    [TestMethod]
+    public void ShouldProcessPersist_RespectsEnabledBlockZeroAndFrequency()
+    {
+        var settings = EnabledSettings(freq: 5u, network: _network);
+        Assert.IsFalse(DeferredRelayEngine.ShouldProcessPersist(CreateBlockWithIndex(2), DisabledSettings(_network)));
+        Assert.IsFalse(DeferredRelayEngine.ShouldProcessPersist(CreateBlockWithIndex(0), settings));
+        Assert.IsFalse(DeferredRelayEngine.ShouldProcessPersist(CreateBlockWithIndex(3), settings));
+        Assert.IsTrue(DeferredRelayEngine.ShouldProcessPersist(CreateBlockWithIndex(5), settings));
+    }
+
+    [TestMethod]
+    public void ProcessQueued_WhenDisabled_DoesNotProcess()
+    {
+        var store = new MemoryStore();
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        var expiredTx = CreateRawTx(height);
+        byte[] key = expiredTx.Hash.GetSpan().ToArray();
+        store.Put(key, SerializeTx(expiredTx));
+
+        RunPersistProcessing(_system, store, DisabledSettings(_network), CreateBlockWithIndex(2));
+        Assert.IsTrue(store.Contains(key));
+    }
+
+    [TestMethod]
+    public void ProcessQueued_BlockZero_DoesNotProcess()
+    {
+        var store = new MemoryStore();
+        var settings = EnabledSettings(network: _network);
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        var expiredTx = CreateRawTx(height);
+        byte[] key = expiredTx.Hash.GetSpan().ToArray();
+        store.Put(key, SerializeTx(expiredTx));
+
+        RunPersistProcessing(_system, store, settings, CreateBlockWithIndex(0));
+        Assert.IsTrue(store.Contains(key));
+    }
+
+    [TestMethod]
+    public void ProcessQueued_CheckFrequency_SkipsNonMatchingBlock()
+    {
+        var store = new MemoryStore();
+        var settings = EnabledSettings(freq: 5u, network: _network);
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        var expiredTx = CreateRawTx(height);
+        byte[] key = expiredTx.Hash.GetSpan().ToArray();
+        store.Put(key, SerializeTx(expiredTx));
+
+        RunPersistProcessing(_system, store, settings, CreateBlockWithIndex(3));
+        Assert.IsTrue(store.Contains(key));
+
+        RunPersistProcessing(_system, store, settings, CreateBlockWithIndex(5));
+        Assert.IsFalse(store.Contains(key));
+    }
+
+    [TestMethod]
+    public void ProcessQueued_RemovesExpiredEntry()
     {
         var store = new MemoryStore();
         var settings = EnabledSettings(network: _network);
@@ -174,8 +300,43 @@ public class UT_DeferredRelayEngine
         byte[] key = expiredTx.Hash.GetSpan().ToArray();
         store.Put(key, SerializeTx(expiredTx));
 
-        DeferredRelayEngine.OnPersistCompleted(_system, store, settings, CreateBlockWithIndex(2));
+        RunPersistProcessing(_system, store, settings, CreateBlockWithIndex(2));
         Assert.IsFalse(store.Contains(key));
+    }
+
+    [TestMethod]
+    public void ProcessQueued_RemovesCorruptEntry()
+    {
+        var store = new MemoryStore();
+        var settings = EnabledSettings(network: _network);
+        byte[] key = UInt256.Zero.GetSpan().ToArray();
+        store.Put(key, [0xFF]);
+
+        RunPersistProcessing(_system, store, settings, CreateBlockWithIndex(1));
+        Assert.IsFalse(store.Contains(key));
+    }
+
+    [TestMethod]
+    public void DeferredRelayActor_IgnoresNonNotYetValidRelayResult()
+    {
+        var store = new MemoryStore();
+        var settings = EnabledSettings(network: _network);
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
+        var tx = CreateSignedTx(height + maxInc + 20);
+
+        var actor = _system.ActorSystem.ActorOf(Props.Create(() => new DeferredRelayActor(_system, store, settings)));
+        try
+        {
+            _system.ActorSystem.EventStream.Publish(new Blockchain.RelayResult(tx, VerifyResult.Expired));
+            Thread.Sleep(200);
+            Assert.IsFalse(store.Contains(tx.Hash.GetSpan().ToArray()));
+        }
+        finally
+        {
+            _system.EnsureStopped(actor);
+        }
     }
 
     [TestMethod]
@@ -221,7 +382,7 @@ public class UT_DeferredRelayEngine
             {
                 _system.ActorSystem.EventStream.Publish(new Blockchain.PersistCompleted(CreateBlockWithIndex(2)));
                 return !store.Contains(key);
-            }, TimeSpan.FromSeconds(5)));
+            }, TimeSpan.FromSeconds(10)));
         }
         finally
         {

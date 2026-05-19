@@ -30,7 +30,7 @@ class RpcServerSettings : IPluginSettings
 
 public record RpcServersSettings
 {
-    public uint Network { get; init; } = 5195086u;
+    public uint Network { get; init; } = 860833102u;
     public IPAddress BindAddress { get; init; } = IPAddress.Loopback;
     public ushort Port { get; init; } = 10332;
     public string SslCert { get; init; } = string.Empty;

@@ -13,14 +13,18 @@ using Akka.Actor;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
+using System.Threading.Tasks;
 
 namespace Neo.Plugins.DeferredRelay;
 
 internal sealed class DeferredRelayActor : UntypedActor
 {
+    private sealed class ProcessQueuedCompleted;
+
     private readonly NeoSystem _neo;
     private readonly IStore _store;
     private readonly DeferredRelaySettings _settings;
+    private bool _processingQueued;
 
     public DeferredRelayActor(NeoSystem neo, IStore store, DeferredRelaySettings settings)
     {
@@ -46,8 +50,32 @@ internal sealed class DeferredRelayActor : UntypedActor
                 DeferredRelayEngine.TryOffer(_neo, _store, _settings, tx, rr.Result);
                 break;
             case Blockchain.PersistCompleted pc:
-                DeferredRelayEngine.OnPersistCompleted(_neo, _store, _settings, pc.Block);
+                ScheduleProcessQueued(pc.Block);
+                break;
+            case ProcessQueuedCompleted:
+                _processingQueued = false;
+                break;
+            case Status.Failure failure:
+                _processingQueued = false;
+                Logs.RuntimeLogger.Warning(failure.Cause, "Deferred relay queue processing failed");
                 break;
         }
+    }
+
+    private void ScheduleProcessQueued(Block block)
+    {
+        if (_processingQueued || !DeferredRelayEngine.ShouldProcessPersist(block, _settings))
+            return;
+
+        _processingQueued = true;
+        var self = Self;
+        _ = DeferredRelayEngine.ProcessQueuedAsync(_neo, _store)
+            .ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                    self.Tell(new Status.Failure(t.Exception!.GetBaseException()));
+                else
+                    self.Tell(new ProcessQueuedCompleted());
+            }, TaskScheduler.Default);
     }
 }
