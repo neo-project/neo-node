@@ -29,7 +29,7 @@ internal class StateServiceSettings : IPluginSettings
     {
         Path = section.GetValue("Path", "Data_MPT_{0}");
         FullState = section.GetValue("FullState", false);
-        Network = section.GetValue("Network", 860833102u);
+        Network = section.GetValue("Network", 5195086u);
         AutoVerify = section.GetValue("AutoVerify", false);
         MaxFindResultItems = section.GetValue("MaxFindResultItems", 100);
         ExceptionPolicy = section.GetValue("UnhandledExceptionPolicy", UnhandledExceptionPolicy.StopPlugin);

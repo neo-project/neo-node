@@ -130,7 +130,7 @@ partial class RpcServer
     ///      },
     ///      "protocol": {
     ///       "addressversion": 0x35, // The address version,
-    ///       "network": 860833102, // The network,
+    ///       "network": 5195086, // The network,
     ///       "validatorscount": 0, // The number of validators,
     ///       "msperblock": 15000, // The time per block in milliseconds,
     ///       "maxtraceableblocks": 2102400, // The maximum traceable blocks,
