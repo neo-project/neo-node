@@ -163,7 +163,7 @@ partial class MainService
             var relayResult = NeoSystem.Blockchain.Ask<Blockchain.RelayResult>(tx, TimeSpan.FromSeconds(30))
                 .ConfigureAwait(false).GetAwaiter().GetResult();
             if (relayResult.Result == VerifyResult.Succeed)
-                Console.WriteLine($"Data relay success, the hash is shown as follows: {Environment.NewLine}{tx.Hash}");
+                Console.WriteLine($"Data relay success, the hash is shown as follows:{Environment.NewLine}{tx.Hash}");
             else
                 ConsoleHelper.Error($"Relay failed: {relayResult.Result}");
         }
