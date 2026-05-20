@@ -61,7 +61,7 @@ class OracleHttpsProtocol : IOracleProtocol
                 if (message.Headers.Location is not null)
                 {
                     uri = message.Headers.Location;
-                    if (uri.Scheme != "https")
+                    if (uri.Scheme != Uri.UriSchemeHttps)
                         return (OracleResponseCode.ProtocolNotSupported, null);
                     message = null;
                 }
