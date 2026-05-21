@@ -80,9 +80,24 @@ jobs:
         rm -f ./out/Plugins/TokensTracker/RpcServer.dll
         rm -f ./out/Plugins/StateService/RpcServer.dll
     - name: Install dependencies
-      run: sudo apt-get install -y libleveldb-dev expect
+      run: sudo apt-get install -y libleveldb-dev expect jq
     - name: Run tests with expect
       run: expect ./.github/workflows/test-neo-cli-plugins.expect
+    - name: Start neo-cli with plugins
+      run: |
+        dotnet out/neo-cli.dll &
+        NEO_PID=$!
+        echo "NEO_PID=$NEO_PID" >> $GITHUB_ENV
+        sleep 10
+    - name: Test RPC calls
+      run: |
+        chmod +x ./.github/workflows/test-rpc-calls.sh
+        ./.github/workflows/test-rpc-calls.sh
+    - name: Stop neo-cli
+      run: |
+        if [ -n "$NEO_PID" ]; then
+          kill $NEO_PID || true
+        fi
       
   Release:
     if: github.ref == 'refs/heads/master-n3' && github.repository == 'neo-project/neo-node'
