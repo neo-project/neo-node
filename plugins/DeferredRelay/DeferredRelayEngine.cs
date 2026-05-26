@@ -111,9 +111,16 @@ internal static class DeferredRelayEngine
         return true;
     }
 
+    /// <summary>
+    /// Indicates whether the deferred relay queue should be scanned after the given block is persisted.
+    /// Returns <c>false</c> when the plugin is disabled, at genesis, or when <see cref="DeferredRelaySettings.CheckFrequency"/>
+    /// is zero (which would otherwise throw <see cref="DivideByZeroException"/> on the modulo operation).
+    /// </summary>
     public static bool ShouldProcessPersist(Block block, DeferredRelaySettings settings)
     {
         if (!settings.Enabled)
+            return false;
+        if (settings.CheckFrequency == 0)
             return false;
         if (block.Index == 0)
             return false;
