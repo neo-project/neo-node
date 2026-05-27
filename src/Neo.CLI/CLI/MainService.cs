@@ -470,10 +470,7 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
 
     public void Stop()
     {
-        var sys = Interlocked.Exchange(ref _neoSystem, null);
-        if (sys is null)
-            return;
-        sys.Dispose();
+        Interlocked.Exchange(ref _neoSystem, null)?.Dispose();
     }
 
     /// <summary>
