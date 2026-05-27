@@ -17,9 +17,6 @@ using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.SmartContract.Native;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Neo.Plugins.DeferredRelay;
 
@@ -59,14 +56,12 @@ internal static class DeferredRelayEngine
         foreach ((byte[] key, byte[] value) in store.Find())
         {
             if (key.Length != UInt256.Length) continue;
-            UInt256 hash;
-            try { hash = new UInt256(key); } catch { continue; }
             try
             {
                 Transaction tx = value.AsSerializable<Transaction>();
                 var o = new JObject
                 {
-                    ["hash"] = hash.ToString(),
+                    ["hash"] = tx.Hash.ToString(),
                     ["validuntilblock"] = tx.ValidUntilBlock,
                     ["size"] = value.Length,
                 };

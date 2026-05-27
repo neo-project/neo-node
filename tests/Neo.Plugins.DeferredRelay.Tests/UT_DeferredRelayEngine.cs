@@ -399,6 +399,138 @@ public class UT_DeferredRelayEngine
         Assert.AreEqual("list pending", string.Join(' ', attr.Verbs));
     }
 
+    // Captures Blockchain.RelayResult events from the actor system EventStream, so that tests can
+    // distinguish between "ProcessQueuedAsync removed an entry via toRemove (no relay attempt)" and
+    // "ProcessQueuedAsync attempted to relay an entry (Blockchain published a RelayResult)".
+    private sealed class RelayResultProbe : UntypedActor
+    {
+        private readonly Action<Blockchain.RelayResult> _onReceived;
+        public RelayResultProbe(Action<Blockchain.RelayResult> onReceived) => _onReceived = onReceived;
+        protected override void OnReceive(object message)
+        {
+            if (message is Blockchain.RelayResult rr) _onReceived(rr);
+        }
+    }
+
+    private (IActorRef probe, List<Blockchain.RelayResult> observed, object locker) SubscribeRelayResults()
+    {
+        var observed = new List<Blockchain.RelayResult>();
+        var locker = new object();
+        Action<Blockchain.RelayResult> onReceived = rr => { lock (locker) observed.Add(rr); };
+        var probe = _system.ActorSystem.ActorOf(Props.Create(() => new RelayResultProbe(onReceived)));
+        _system.ActorSystem.EventStream.Subscribe(probe, typeof(Blockchain.RelayResult));
+        return (probe, observed, locker);
+    }
+
+    [TestMethod]
+    public void ProcessQueued_TooFarInFuture_KeepsEntryAndDoesNotAttemptRelay()
+    {
+        // Covers: height < tx.ValidUntilBlock AND tx.ValidUntilBlock > height + maxInc.
+        // The entry is still NotYetValid (outside the relay window), so it must stay in the store
+        // AND no Blockchain relay attempt should occur for it.
+        var store = new MemoryStore();
+        var settings = EnabledSettings(network: _network);
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
+
+        var tx = CreateRawTx(height + maxInc + 100);
+        byte[] key = tx.Hash.GetSpan().ToArray();
+        store.Put(key, SerializeTx(tx));
+
+        var (probe, observed, locker) = SubscribeRelayResults();
+        try
+        {
+            DeferredRelayEngine.ProcessQueuedAsync(_system, store).GetAwaiter().GetResult();
+            // Give the actor system a brief window to publish any stray RelayResult events.
+            Thread.Sleep(200);
+
+            Assert.IsTrue(store.Contains(key), "Tx beyond the relay window must remain in store");
+            lock (locker)
+            {
+                Assert.IsFalse(
+                    observed.Any(rr => rr.Inventory is Transaction t && t.Hash == tx.Hash),
+                    "Tx beyond the relay window must not trigger a Blockchain relay attempt");
+            }
+        }
+        finally
+        {
+            _system.EnsureStopped(probe);
+        }
+    }
+
+    [TestMethod]
+    public void ProcessQueued_InRelayWindow_AttemptsRelay()
+    {
+        // Covers: height < tx.ValidUntilBlock AND tx.ValidUntilBlock <= height + maxInc.
+        // The entry just entered the allowed forward window, so a Blockchain.Ask<RelayResult>
+        // must be issued (observed as a RelayResult published on the EventStream by the Blockchain actor).
+        var store = new MemoryStore();
+        var settings = EnabledSettings(network: _network);
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
+        Assert.AreNotEqual(0u, maxInc, "Test precondition: MaxValidUntilBlockIncrement must be positive");
+
+        uint vub = height + 1; // height < vub <= height + maxInc
+        Assert.IsTrue(vub > height && vub <= height + maxInc);
+        var tx = CreateRawTx(vub);
+        byte[] key = tx.Hash.GetSpan().ToArray();
+        store.Put(key, SerializeTx(tx));
+
+        var (probe, observed, locker) = SubscribeRelayResults();
+        try
+        {
+            DeferredRelayEngine.ProcessQueuedAsync(_system, store).GetAwaiter().GetResult();
+
+            bool relayAttempted = SpinWait.SpinUntil(() =>
+            {
+                lock (locker)
+                    return observed.Any(rr => rr.Inventory is Transaction t && t.Hash == tx.Hash);
+            }, TimeSpan.FromSeconds(5));
+            Assert.IsTrue(relayAttempted, "Tx inside the relay window must trigger a Blockchain relay attempt");
+        }
+        finally
+        {
+            _system.EnsureStopped(probe);
+        }
+    }
+
+    [TestMethod]
+    public void ProcessQueued_ExpiredEntry_DoesNotAttemptRelay()
+    {
+        // Strengthens ProcessQueued_RemovesExpiredEntry: confirms expired txs are removed via the
+        // toRemove path (no Blockchain relay attempt), so the `height < tx.ValidUntilBlock` guard
+        // in the second `if` is observably exercised.
+        var store = new MemoryStore();
+        var settings = EnabledSettings(network: _network);
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+
+        var expiredTx = CreateRawTx(height);
+        byte[] key = expiredTx.Hash.GetSpan().ToArray();
+        store.Put(key, SerializeTx(expiredTx));
+
+        var (probe, observed, locker) = SubscribeRelayResults();
+        try
+        {
+            DeferredRelayEngine.ProcessQueuedAsync(_system, store).GetAwaiter().GetResult();
+            Thread.Sleep(200);
+
+            Assert.IsFalse(store.Contains(key), "Expired tx should be removed");
+            lock (locker)
+            {
+                Assert.IsFalse(
+                    observed.Any(rr => rr.Inventory is Transaction t && t.Hash == expiredTx.Hash),
+                    "Expired tx should be removed via toRemove without a Blockchain relay attempt");
+            }
+        }
+        finally
+        {
+            _system.EnsureStopped(probe);
+        }
+    }
+
     private static byte[] SerializeTx(Transaction tx)
     {
         using var ms = new MemoryStream();

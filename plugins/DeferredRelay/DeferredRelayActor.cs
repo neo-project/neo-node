@@ -13,7 +13,6 @@ using Akka.Actor;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
-using System.Threading.Tasks;
 
 namespace Neo.Plugins.DeferredRelay;
 

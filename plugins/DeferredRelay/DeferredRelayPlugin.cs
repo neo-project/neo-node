@@ -51,7 +51,7 @@ public class DeferredRelayPlugin : Plugin
         var pluginPath = string.Format(DeferredRelaySettings.Default.Path, networkId);
         var path = PluginHelper.ApplyUnifiedStoragePath(pluginPath);
         var fullPath = GetFullPath(path);
-        System.IO.Directory.CreateDirectory(System.IO.Path.GetFullPath(fullPath));
+        Directory.CreateDirectory(fullPath);
         _store = system.LoadStore(fullPath);
         _actor = system.ActorSystem.ActorOf(
             Props.Create(() => new DeferredRelayActor(system, _store, DeferredRelaySettings.Default)));
