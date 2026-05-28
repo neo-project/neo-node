@@ -27,7 +27,6 @@ public class TokensTracker : Plugin
     private string _dbPath = "TokensBalanceData";
     private bool _shouldTrackHistory;
     private uint _maxResults;
-    private uint _network;
     private string[] _enabledTrackers = [];
     private IStore? _db;
     private UnhandledExceptionPolicy _exceptionPolicy;
@@ -60,7 +59,6 @@ public class TokensTracker : Plugin
         _dbPath = config.GetValue("DBPath", "TokensBalanceData");
         _shouldTrackHistory = config.GetValue("TrackHistory", true);
         _maxResults = config.GetValue("MaxResults", 1000u);
-        _network = config.GetValue("Network", 860833102u);
         _enabledTrackers = config.GetSection("EnabledTrackers")
             .GetChildren()
             .Select(p => p.Value)
@@ -75,7 +73,6 @@ public class TokensTracker : Plugin
 
     protected override void OnSystemLoaded(NeoSystem system)
     {
-        if (system.Settings.Network != _network) return;
         neoSystem = system;
         // Get path from plugin's own configuration, optionally combined with base path from config.json
         var networkId = neoSystem.Settings.Network.ToString("X8");
@@ -91,7 +88,7 @@ public class TokensTracker : Plugin
         if (_enabledTrackers.Contains("NEP-17"))
             trackers.Add(new Nep17Tracker(_db, _maxResults, _shouldTrackHistory, neoSystem));
         foreach (TrackerBase tracker in trackers)
-            RpcServerPlugin.RegisterMethods(tracker, _network);
+            RpcServerPlugin.RegisterMethods(tracker, system.Settings.Network);
         PluginLogger ??= Logs.GetLogger($"Plugin_{Name}");
     }
 
@@ -106,7 +103,6 @@ public class TokensTracker : Plugin
     void Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
         IReadOnlyList<Blockchain.ApplicationExecuted> applicationExecutedList)
     {
-        if (system.Settings.Network != _network) return;
         // Start freshly with a new DBCache for each block.
         ResetBatch();
         foreach (var tracker in trackers)
@@ -117,7 +113,6 @@ public class TokensTracker : Plugin
 
     void Blockchain_Committed_Handler(NeoSystem system, Block block)
     {
-        if (system.Settings.Network != _network) return;
         foreach (var tracker in trackers)
         {
             tracker.Commit();

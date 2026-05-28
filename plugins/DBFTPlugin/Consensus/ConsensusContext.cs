@@ -134,7 +134,7 @@ public sealed partial class ConsensusContext : IDisposable, ISerializable
     {
         EnsureHeader();
         var contract = Contract.CreateMultiSigContract(M, Validators);
-        var sc = new ContractParametersContext(neoSystem.StoreView, Block.Header, dbftSettings.Network);
+        var sc = new ContractParametersContext(neoSystem.StoreView, Block.Header, neoSystem.Settings.Network);
         for (int i = 0, j = 0; i < Validators.Length && j < M; i++)
         {
             if (GetMessage(CommitPayloads[i])?.ViewNumber != ViewNumber) continue;

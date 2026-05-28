@@ -16,7 +16,6 @@ namespace Neo.Plugins.ApplicationLogs;
 internal class ApplicationLogsSettings : IPluginSettings
 {
     public string Path { get; }
-    public uint Network { get; }
     public int MaxStackSize { get; }
 
     public bool Debug { get; }
@@ -28,7 +27,6 @@ internal class ApplicationLogsSettings : IPluginSettings
     private ApplicationLogsSettings(IConfigurationSection section)
     {
         Path = section.GetValue("Path", "ApplicationLogs_{0}");
-        Network = section.GetValue("Network", 5195086u);
         MaxStackSize = section.GetValue("MaxStackSize", (int)ushort.MaxValue);
         Debug = section.GetValue("Debug", false);
         ExceptionPolicy = section.GetValue("UnhandledExceptionPolicy", UnhandledExceptionPolicy.Ignore);
