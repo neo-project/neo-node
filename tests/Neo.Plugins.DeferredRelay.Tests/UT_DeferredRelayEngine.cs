@@ -135,6 +135,32 @@ public class UT_DeferredRelayEngine
         Assert.AreEqual((double)(tx.ValidUntilBlock - height), arr[0]!["blocksuntildeadline"]!.AsNumber(), 0.001);
     }
 
+    [TestMethod]
+    public void TryGetPendingTx_ReturnsBytesForQueuedHash()
+    {
+        var store = new MemoryStore();
+        var settings = EnabledSettings(network: _network);
+        var snapshot = _system.StoreView;
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        var tx = CreateSignedTx(height + maxInc + 10);
+        Assert.IsTrue(DeferredRelayEngine.TryOffer(_system, store, settings, tx, VerifyResult.NotYetValid));
+
+        var raw = DeferredRelayEngine.TryGetPendingTx(store, tx.Hash);
+        Assert.IsNotNull(raw);
+        // Round-trip the bytes through Transaction deserialization and verify identity by hash.
+        Assert.AreEqual(tx.Hash, raw.AsSerializable<Transaction>().Hash);
+    }
+
+    [TestMethod]
+    public void TryGetPendingTx_ReturnsNullForUnknownHash()
+    {
+        var store = new MemoryStore();
+        var unknown = UInt256.Parse("0x0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20");
+
+        Assert.IsNull(DeferredRelayEngine.TryGetPendingTx(store, unknown));
+    }
+
     private static Block CreateBlockWithIndex(uint index) => new()
     {
         Header = new Header

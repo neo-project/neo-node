@@ -11,9 +11,13 @@
 
 using Akka.Actor;
 using Neo.ConsoleService;
+using Neo.Extensions;
+using Neo.IO;
 using Neo.Json;
+using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.Plugins.RpcServer;
+using Neo.SmartContract.Native;
 using static System.IO.Path;
 
 namespace Neo.Plugins.DeferredRelay;
@@ -91,5 +95,60 @@ public class DeferredRelayPlugin : Plugin
         }
         JObject json = DeferredRelayEngine.GetPendingState(_neoSystem, _store, DeferredRelaySettings.Default);
         Console.WriteLine(json.ToString(true));
+    }
+
+    /// <summary>
+    /// Gets a locally queued NotYetValid transaction by its hash.
+    /// <para>Request format:</para>
+    /// <code>
+    /// {"jsonrpc": "2.0", "id": 1, "method": "getrawpendingtx", "params": ["The tx hash", true/*verbose, optional*/]}
+    /// </code>
+    /// <para>Response format:</para>
+    /// If verbose is false, returns the Base64-encoded serialized transaction.
+    /// If verbose is true, returns a JSON object with the same fields as <c>getrawtransaction</c> (verbose),
+    /// minus on-chain-only fields (<c>blockhash</c>/<c>confirmations</c>/<c>blocktime</c>), plus
+    /// <c>blocksuntildeadline</c> when the current height is less than the transaction's <c>ValidUntilBlock</c>.
+    /// </summary>
+    /// <param name="hash">The transaction hash.</param>
+    /// <param name="verbose">Optional, defaults to false.</param>
+    /// <returns>The transaction as Base64 (verbose=false) or as a JSON object (verbose=true).</returns>
+    /// <exception cref="RpcException">
+    /// <see cref="RpcError.UnknownTransaction"/> when the plugin is disabled, the store is unavailable,
+    /// the hash is not queued, or the stored entry is corrupt.
+    /// </exception>
+    [RpcMethod]
+    public JToken GetRawPendingTx(UInt256 hash, bool verbose = false)
+    {
+        if (_neoSystem is null)
+            throw new InvalidOperationException("NeoSystem is not loaded.");
+        hash.NotNull_Or(RpcError.InvalidParams.WithData($"Invalid 'hash'"));
+
+        if (_store is null || !DeferredRelaySettings.Default.Enabled)
+            throw new RpcException(RpcError.UnknownTransaction.WithData(hash.ToString()));
+
+        byte[]? raw = DeferredRelayEngine.TryGetPendingTx(_store, hash);
+        raw.NotNull_Or(RpcError.UnknownTransaction.WithData(hash.ToString()));
+
+        if (!verbose) return Convert.ToBase64String(raw);
+
+        Transaction tx;
+        try
+        {
+            tx = raw.AsSerializable<Transaction>();
+        }
+        catch
+        {
+            throw new RpcException(RpcError.UnknownTransaction.WithData($"Corrupt entry for {hash}."));
+        }
+
+        var json = tx.ToJson(_neoSystem.Settings);
+        var snapshot = _neoSystem.StoreView;
+        if (NativeContract.Ledger.ContainsBlock(snapshot, _neoSystem.GenesisBlock.Hash))
+        {
+            uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+            if (height < tx.ValidUntilBlock)
+                json["blocksuntildeadline"] = tx.ValidUntilBlock - height;
+        }
+        return json;
     }
 }

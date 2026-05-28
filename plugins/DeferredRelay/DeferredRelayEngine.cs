@@ -108,6 +108,18 @@ internal static class DeferredRelayEngine
     }
 
     /// <summary>
+    /// Looks up a queued transaction by its hash and returns the raw serialized blob, or <c>null</c> if not queued.
+    /// </summary>
+    /// <param name="store">The plugin's local store.</param>
+    /// <param name="hash">The transaction hash (UInt256).</param>
+    /// <returns>The serialized <see cref="Transaction"/> bytes if queued; otherwise <c>null</c>.</returns>
+    public static byte[]? TryGetPendingTx(IStore store, UInt256 hash)
+    {
+        byte[] key = hash.GetSpan().ToArray();
+        return store.TryGet(key, out byte[]? value) ? value : null;
+    }
+
+    /// <summary>
     /// Indicates whether the deferred relay queue should be scanned after the given block is persisted.
     /// Returns <c>false</c> when the plugin is disabled, at genesis, or when <see cref="DeferredRelaySettings.CheckFrequency"/>
     /// is zero (which would otherwise throw <see cref="DivideByZeroException"/> on the modulo operation).
