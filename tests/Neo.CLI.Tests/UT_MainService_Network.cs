@@ -12,9 +12,7 @@
 #nullable enable
 
 using Neo.Json;
-using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
-using Neo.Persistence.Providers;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;

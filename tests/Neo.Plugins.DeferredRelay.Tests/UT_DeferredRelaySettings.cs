@@ -10,7 +10,6 @@
 // modifications are permitted.
 
 using Microsoft.Extensions.Configuration;
-using Neo.Plugins.DeferredRelay;
 using System.Text;
 
 namespace Neo.Plugins.DeferredRelay.Tests;

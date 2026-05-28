@@ -11,7 +11,6 @@
 
 using Akka.Actor;
 using Neo.Extensions;
-using Neo.IO;
 using Neo.Json;
 using Neo.Ledger;
 using Neo.Network.P2P;

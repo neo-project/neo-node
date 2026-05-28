@@ -11,19 +11,14 @@
 
 using Microsoft.Extensions.Configuration;
 using Neo.CLI.Tests;
-using Neo.Extensions;
 using Neo.IO;
 using Neo.Json;
-using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
-using Neo.Plugins.DeferredRelay;
 using Neo.Plugins.RpcServer;
 using Neo.SmartContract;
-using Neo.SmartContract.Native;
+using Neo.SmartContract.Native; 
 using Neo.VM;
-using Neo.Wallets;
-using Neo.Wallets.NEP6;
 using System.Reflection;
 using System.Text;
 

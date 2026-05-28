@@ -19,13 +19,11 @@ using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.Persistence.Providers;
-using Neo.Plugins.DeferredRelay;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;
 using Neo.Wallets;
 using Neo.Wallets.NEP6;
-using System.IO;
 using System.Reflection;
 
 namespace Neo.Plugins.DeferredRelay.Tests;
@@ -356,7 +354,7 @@ public class UT_DeferredRelayEngine
         try
         {
             _system.ActorSystem.EventStream.Publish(new Blockchain.RelayResult(tx, VerifyResult.Expired));
-            Thread.Sleep(200);
+            Thread.Sleep(100);
             Assert.IsFalse(store.Contains(tx.Hash.GetSpan().ToArray()));
         }
         finally
@@ -469,7 +467,7 @@ public class UT_DeferredRelayEngine
         {
             DeferredRelayEngine.ProcessQueuedAsync(_system, store).GetAwaiter().GetResult();
             // Give the actor system a brief window to publish any stray RelayResult events.
-            Thread.Sleep(200);
+            Thread.Sleep(100);
 
             Assert.IsTrue(store.Contains(key), "Tx beyond the relay window must remain in store");
             lock (locker)
@@ -541,7 +539,7 @@ public class UT_DeferredRelayEngine
         try
         {
             DeferredRelayEngine.ProcessQueuedAsync(_system, store).GetAwaiter().GetResult();
-            Thread.Sleep(200);
+            Thread.Sleep(100);
 
             Assert.IsFalse(store.Contains(key), "Expired tx should be removed");
             lock (locker)
