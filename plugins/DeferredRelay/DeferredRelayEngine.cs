@@ -55,6 +55,7 @@ internal static class DeferredRelayEngine
         var arr = (JArray)root["pending"]!;
         foreach ((byte[] key, byte[] value) in store.Find())
         {
+            // Schema guard: only 32-byte (UInt256) keys are transaction entries; see CountEntries.
             if (key.Length != UInt256.Length) continue;
             try
             {
@@ -136,6 +137,9 @@ internal static class DeferredRelayEngine
         foreach ((byte[] key, byte[] value) in store.Find())
         {
             cancellationToken.ThrowIfCancellationRequested();
+            // Schema guard: only 32-byte (UInt256) keys are transaction entries; see CountEntries.
+            // Non-tx entries are left untouched (not added to toRemove) to keep future metadata safe.
+            if (key.Length != UInt256.Length) continue;
 
             Transaction tx;
             try
@@ -188,6 +192,12 @@ internal static class DeferredRelayEngine
 
     private static int CountEntries(IStore store)
     {
+        // Schema: every queued entry is written by TryOffer as
+        //   key   = tx.Hash (UInt256, 32 bytes)
+        //   value = serialized Transaction (ISerializable blob)
+        // The length filter is a schema guard: any key whose length is not UInt256.Length
+        // is not a transaction (e.g. future metadata keys with a different prefix/length,
+        // or externally-injected entries) and must be ignored, not counted or deserialized.
         int n = 0;
         foreach ((byte[] key, _) in store.Find())
         {
