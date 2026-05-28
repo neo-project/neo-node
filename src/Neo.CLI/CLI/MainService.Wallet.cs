@@ -975,7 +975,6 @@ partial class MainService
         if (context.Completed)
         {
             tx.Witnesses = context.GetWitnesses();
-            NeoSystem.Blockchain.Tell(tx);
             var reason = NeoSystem.Blockchain.Ask<RelayResult>(tx).Result;
 
             if (reason.Result == Ledger.VerifyResult.Succeed)
