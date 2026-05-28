@@ -211,7 +211,6 @@ partial class RpcServer
         var tx = Result.Ok_Or(
             () => Convert.FromBase64String(base64Tx).AsSerializable<Transaction>(),
             RpcError.InvalidParams.WithData($"Invalid Transaction Format: {base64Tx}"));
-
         var reason = system.Blockchain.Ask<RelayResult>(tx).Result;
         return GetRelayResult(reason.Result, tx.Hash);
     }
