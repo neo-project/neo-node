@@ -27,6 +27,7 @@ using Neo.Wallets.NEP6;
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
+using static Neo.Ledger.Blockchain;
 using static Neo.SmartContract.Helper;
 using ECCurve = Neo.Cryptography.ECC.ECCurve;
 using ECPoint = Neo.Cryptography.ECC.ECPoint;
@@ -965,12 +966,25 @@ partial class MainService
             ConsoleHelper.Error("Failed creating contract params: " + GetExceptionMessage(e));
             throw;
         }
+        if (tx.Size > Transaction.MaxTransactionSize)
+        {
+            ConsoleHelper.Error($"Transaction size exceeds the maximum allowed size of {Transaction.MaxTransactionSize} bytes.");
+            return;
+        }
         CurrentWallet!.Sign(context);
         if (context.Completed)
         {
             tx.Witnesses = context.GetWitnesses();
             NeoSystem.Blockchain.Tell(tx);
-            ConsoleHelper.Info("Signed and relayed transaction with hash:\n", $"{tx.Hash}");
+            var reason = NeoSystem.Blockchain.Ask<RelayResult>(tx).Result;
+
+            if (reason.Result == Ledger.VerifyResult.Succeed)
+            {
+                ConsoleHelper.Info("Signed and relayed transaction with hash:\n", $"{tx.Hash}");
+                return;
+            }
+
+            ConsoleHelper.Error($"Failed to relay transaction with hash {tx.Hash}. Status: {reason.Result}");
         }
         else
         {
