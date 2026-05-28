@@ -17,7 +17,7 @@ using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.Plugins.RpcServer;
 using Neo.SmartContract;
-using Neo.SmartContract.Native; 
+using Neo.SmartContract.Native;
 using Neo.VM;
 using System.Reflection;
 using System.Text;
