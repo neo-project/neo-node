@@ -28,9 +28,8 @@ internal static class DeferredRelayEngine
     public static JObject GetPendingState(NeoSystem system, IStore? store, DeferredRelaySettings settings)
     {
         var snapshot = system.StoreView;
-        bool ledgerReady = NativeContract.Ledger.ContainsBlock(snapshot, system.GenesisBlock.Hash);
-        uint height = ledgerReady ? NativeContract.Ledger.CurrentIndex(snapshot) : 0;
-        uint maxInc = ledgerReady ? snapshot.GetMaxValidUntilBlockIncrement(system.Settings) : 0;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(system.Settings);
 
         var root = new JObject
         {
@@ -66,7 +65,7 @@ internal static class DeferredRelayEngine
                     ["validuntilblock"] = tx.ValidUntilBlock,
                     ["size"] = value.Length,
                 };
-                if (ledgerReady && height < tx.ValidUntilBlock)
+                if (height < tx.ValidUntilBlock)
                     o["blocksuntildeadline"] = tx.ValidUntilBlock - height;
                 arr.Add(o);
             }
@@ -80,7 +79,12 @@ internal static class DeferredRelayEngine
     /// <summary>
     /// Persists the transaction when relay verification returned <see cref="VerifyResult.NotYetValid"/>.
     /// </summary>
-    public static bool TryOffer(NeoSystem system, IStore store, DeferredRelaySettings settings, Transaction tx, VerifyResult relayResult)
+    /// <param name="counter">
+    /// Optional in-memory entry counter. When supplied, the capacity check uses the counter value
+    /// instead of scanning the store, and the counter is incremented on a successful <c>Put</c>.
+    /// Callers that do not maintain a counter (e.g. tests) pass <c>null</c>, falling back to <see cref="CountEntries"/>.
+    /// </param>
+    public static bool TryOffer(NeoSystem system, IStore store, DeferredRelaySettings settings, Transaction tx, VerifyResult relayResult, EntryCounter? counter = null)
     {
         if (!settings.Enabled)
             return false;
@@ -95,15 +99,12 @@ internal static class DeferredRelayEngine
         if (store.Contains(key))
             return true;
 
-        if (CountEntries(store) >= settings.MaxTransactions)
+        int currentCount = counter?.Value ?? CountEntries(store);
+        if (currentCount >= settings.MaxTransactions)
             return false;
 
-        using var ms = new MemoryStream();
-        using (var writer = new BinaryWriter(ms))
-        {
-            ((ISerializable)tx).Serialize(writer);
-        }
-        store.Put(key, ms.ToArray());
+        store.Put(key, tx.ToArray());
+        counter?.Increment();
         return true;
     }
 
@@ -137,8 +138,15 @@ internal static class DeferredRelayEngine
 
     /// <summary>
     /// Scans the local queue, removes expired or corrupt entries, and relays txs that entered the allowed window.
+    /// The number of relay attempts is capped at <see cref="DeferredRelaySettings.MaxRelayPerCycle"/> so a single
+    /// drain pass cannot monopolize the Blockchain actor mailbox when the queue is near capacity; the unrelayed
+    /// remainder stays in the store and is picked up by the next <see cref="ShouldProcessPersist"/>-eligible block.
     /// </summary>
-    public static async Task ProcessQueuedAsync(NeoSystem system, IStore store, CancellationToken cancellationToken = default)
+    /// <param name="counter">
+    /// Optional in-memory entry counter; decremented on every successful <c>Delete</c> so that
+    /// <see cref="TryOffer"/> can perform its capacity check without re-scanning the store.
+    /// </param>
+    public static async Task ProcessQueuedAsync(NeoSystem system, IStore store, DeferredRelaySettings settings, CancellationToken cancellationToken = default, EntryCounter? counter = null)
     {
         var snapshot = system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
@@ -175,14 +183,25 @@ internal static class DeferredRelayEngine
         }
 
         foreach (byte[] key in toRemove)
+        {
             store.Delete(key);
+            counter?.Decrement();
+        }
 
+        int relayCap = (int)settings.MaxRelayPerCycle;
+        int attempts = 0;
         foreach (Transaction tx in toRelay)
         {
+            if (attempts >= relayCap) break;
             cancellationToken.ThrowIfCancellationRequested();
+            // Count attempts (not just successes): the cap protects the Blockchain actor mailbox,
+            // and every Ask -- whether it eventually returns Succeed, AlreadyInPool, or a failure --
+            // already occupies one slot in that mailbox.
+            attempts++;
             if (!await TryRelayAsync(system, tx).ConfigureAwait(false))
                 continue;
             store.Delete(tx.Hash.GetSpan().ToArray());
+            counter?.Decrement();
         }
     }
 
@@ -202,7 +221,13 @@ internal static class DeferredRelayEngine
         }
     }
 
-    private static int CountEntries(IStore store)
+    /// <summary>
+    /// Performs an O(N) scan of the store to count queued transaction entries.
+    /// Used as a fallback when no <see cref="EntryCounter"/> is supplied, and to bootstrap
+    /// the actor's counter on startup. Hot-path callers should keep an <see cref="EntryCounter"/>
+    /// in memory and maintain it incrementally so each <see cref="TryOffer"/> stays O(1).
+    /// </summary>
+    internal static int CountEntries(IStore store)
     {
         // Schema: every queued entry is written by TryOffer as
         //   key   = tx.Hash (UInt256, 32 bytes)
@@ -217,4 +242,24 @@ internal static class DeferredRelayEngine
         }
         return n;
     }
+}
+
+/// <summary>
+/// In-memory counter of queued transaction entries maintained by <see cref="DeferredRelayActor"/>.
+/// Allows <see cref="DeferredRelayEngine.TryOffer"/> to perform the capacity check in O(1) instead of
+/// re-scanning the store on every offer. The counter is mutated via <see cref="Interlocked"/> so it
+/// is safe between the (single-threaded) actor mailbox and the background <c>ProcessQueuedAsync</c>
+/// continuation that runs on <see cref="TaskScheduler.Default"/>.
+/// </summary>
+internal sealed class EntryCounter
+{
+    private int _value;
+
+    public EntryCounter(int initial) => _value = initial;
+
+    public int Value => Volatile.Read(ref _value);
+
+    public void Increment() => Interlocked.Increment(ref _value);
+
+    public void Decrement() => Interlocked.Decrement(ref _value);
 }

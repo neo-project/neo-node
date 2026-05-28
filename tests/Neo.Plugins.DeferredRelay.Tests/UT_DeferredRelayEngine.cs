@@ -55,7 +55,7 @@ public class UT_DeferredRelayEngine
     {
         if (!DeferredRelayEngine.ShouldProcessPersist(block, settings))
             return;
-        DeferredRelayEngine.ProcessQueuedAsync(system, store).GetAwaiter().GetResult();
+        DeferredRelayEngine.ProcessQueuedAsync(system, store, settings).GetAwaiter().GetResult();
     }
 
     private Transaction CreateSignedTx(uint validUntilBlock, uint nonce = 42)
@@ -234,6 +234,177 @@ public class UT_DeferredRelayEngine
         Assert.IsTrue(DeferredRelayEngine.TryOffer(_system, store, settings, tx2, VerifyResult.NotYetValid));
         Assert.IsFalse(DeferredRelayEngine.TryOffer(_system, store, settings, tx3, VerifyResult.NotYetValid));
         Assert.AreEqual(2, store.Find(null).Count());
+    }
+
+    [TestMethod]
+    public void EntryCounter_InitialValue_AndIncrementDecrement()
+    {
+        var c = new EntryCounter(7);
+        Assert.AreEqual(7, c.Value);
+        c.Increment();
+        c.Increment();
+        Assert.AreEqual(9, c.Value);
+        c.Decrement();
+        Assert.AreEqual(8, c.Value);
+    }
+
+    [TestMethod]
+    public void TryOffer_WithCounter_IncrementsOnAcceptAndNotOnReject()
+    {
+        var store = new MemoryStore();
+        var settings = EnabledSettings(network: _network);
+        var counter = new EntryCounter(0);
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
+        var tx = CreateSignedTx(height + maxInc + 5);
+
+        Assert.IsTrue(DeferredRelayEngine.TryOffer(_system, store, settings, tx, VerifyResult.NotYetValid, counter));
+        Assert.AreEqual(1, counter.Value);
+
+        // Same hash again: TryOffer returns true (already queued) but must NOT double-count.
+        Assert.IsTrue(DeferredRelayEngine.TryOffer(_system, store, settings, tx, VerifyResult.NotYetValid, counter));
+        Assert.AreEqual(1, counter.Value);
+
+        // Non-NotYetValid relay results never increment.
+        Assert.IsFalse(DeferredRelayEngine.TryOffer(_system, store, settings, tx, VerifyResult.Succeed, counter));
+        Assert.AreEqual(1, counter.Value);
+    }
+
+    [TestMethod]
+    public void TryOffer_WithCounter_UsesCounterForCapacityCheckNotStoreScan()
+    {
+        // Empty store but counter pre-seeded at the cap: capacity check must consult the counter
+        // (the whole point of the optimization) and reject without touching the store.
+        var store = new MemoryStore();
+        var settings = EnabledSettings(max: 1u, network: _network);
+        var counter = new EntryCounter(1);
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
+        var tx = CreateSignedTx(height + maxInc + 5);
+
+        Assert.IsFalse(DeferredRelayEngine.TryOffer(_system, store, settings, tx, VerifyResult.NotYetValid, counter));
+        Assert.AreEqual(0, store.Find(null).Count());
+        Assert.AreEqual(1, counter.Value);
+    }
+
+    [TestMethod]
+    public void ProcessQueuedAsync_WithCounter_DecrementsOnExpiredAndCorruptDeletes()
+    {
+        var store = new MemoryStore();
+        var settings = EnabledSettings(network: _network);
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+
+        // 1 expired (32-byte key) + 1 corrupt (32-byte key) entries; counter starts at 2.
+        var expired = CreateRawTx(height);
+        store.Put(expired.Hash.GetSpan().ToArray(), SerializeTx(expired));
+        var corruptKey = UInt256.Parse("0x0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20").GetSpan().ToArray();
+        store.Put(corruptKey, [0xFF]);
+        var counter = new EntryCounter(2);
+
+        DeferredRelayEngine.ProcessQueuedAsync(_system, store, settings, counter: counter).GetAwaiter().GetResult();
+
+        Assert.AreEqual(0, counter.Value);
+        Assert.IsFalse(store.Contains(expired.Hash.GetSpan().ToArray()));
+        Assert.IsFalse(store.Contains(corruptKey));
+    }
+
+    [TestMethod]
+    public void DeferredRelayActor_BootstrapsCounter_FromExistingStoreEntries()
+    {
+        // Pre-seed store with `max` entries before starting the actor: the actor must bootstrap its
+        // counter via CountEntries and reject the next NotYetValid offer instead of letting the
+        // store grow past `max`.
+        var store = new MemoryStore();
+        var settings = EnabledSettings(max: 2u, freq: 1u, network: _network);
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
+        uint vub = height + maxInc + 100;
+
+        var seed1 = CreateSignedTx(vub, nonce: 91);
+        var seed2 = CreateSignedTx(vub, nonce: 92);
+        store.Put(seed1.Hash.GetSpan().ToArray(), SerializeTx(seed1));
+        store.Put(seed2.Hash.GetSpan().ToArray(), SerializeTx(seed2));
+
+        var newTx = CreateSignedTx(vub, nonce: 93);
+        var actor = _system.ActorSystem.ActorOf(Props.Create(() => new DeferredRelayActor(_system, store, settings)));
+        try
+        {
+            // Publish a NotYetValid RelayResult; if the bootstrap is wrong (counter==0), the actor would accept it.
+            // With a correct bootstrap (counter==2), the offer is rejected and the new hash never lands in the store.
+            for (int i = 0; i < 10; i++)
+            {
+                _system.ActorSystem.EventStream.Publish(new Blockchain.RelayResult(newTx, VerifyResult.NotYetValid));
+                Thread.Sleep(20);
+            }
+
+            Assert.IsFalse(store.Contains(newTx.Hash.GetSpan().ToArray()),
+                "Bootstrapped counter should be at the cap, so the new tx must be rejected");
+            Assert.IsTrue(store.Contains(seed1.Hash.GetSpan().ToArray()));
+            Assert.IsTrue(store.Contains(seed2.Hash.GetSpan().ToArray()));
+        }
+        finally
+        {
+            _system.EnsureStopped(actor);
+        }
+    }
+
+    [TestMethod]
+    public void DeferredRelaySettings_MaxRelayPerCycle_FoldsToMin()
+    {
+        // Below the global default: cap equals MaxTransactions so a single cycle can still drain the whole queue.
+        Assert.AreEqual(3u, DeferredRelaySettings.Create(_network, maxTransactions: 3u, checkFrequency: 1u).MaxRelayPerCycle);
+        // At the boundary: still equals the default.
+        Assert.AreEqual(DeferredRelaySettings.DefaultMaxRelayPerCycle,
+            DeferredRelaySettings.Create(_network, maxTransactions: DeferredRelaySettings.DefaultMaxRelayPerCycle, checkFrequency: 1u).MaxRelayPerCycle);
+        // Above the default: cap stays at the default so the Blockchain actor mailbox is never flooded.
+        Assert.AreEqual(DeferredRelaySettings.DefaultMaxRelayPerCycle,
+            DeferredRelaySettings.Create(_network, maxTransactions: 50000u, checkFrequency: 1u).MaxRelayPerCycle);
+    }
+
+    [TestMethod]
+    public void ProcessQueuedAsync_RespectsMaxRelayPerCycleCap()
+    {
+        // MaxRelayPerCycle == min(MaxTransactions, 256). Setting MaxTransactions=3 collapses the cap to 3,
+        // so even when 5 in-window entries are queued, a single ProcessQueuedAsync cycle must publish at
+        // most 3 RelayResult events (one per Blockchain.Ask attempt observed on the EventStream).
+        var store = new MemoryStore();
+        var settings = EnabledSettings(max: 3u, network: _network);
+        Assert.AreEqual(3u, settings.MaxRelayPerCycle, "Precondition: MaxRelayPerCycle should fold to MaxTransactions when it is below the default");
+
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
+        Assert.AreNotEqual(0u, maxInc);
+
+        var seededHashes = new List<UInt256>();
+        for (uint i = 0; i < 5; i++)
+        {
+            var tx = CreateRawTx(height + 1, nonce: 1000u + i);
+            store.Put(tx.Hash.GetSpan().ToArray(), SerializeTx(tx));
+            seededHashes.Add(tx.Hash);
+        }
+        Assert.AreEqual(5, store.Find(null).Count());
+
+        var (probe, observed, locker) = SubscribeRelayResults();
+        try
+        {
+            DeferredRelayEngine.ProcessQueuedAsync(_system, store, settings).GetAwaiter().GetResult();
+            // Allow any in-flight RelayResult events the Blockchain actor may still be publishing to surface.
+            Thread.Sleep(200);
+
+            int attempts;
+            lock (locker)
+                attempts = observed.Count(rr => rr.Inventory is Transaction t && seededHashes.Contains(t.Hash));
+            Assert.IsLessThanOrEqualTo(3, attempts, $"Cap exceeded: observed {attempts} relay attempts for cap=3");
+        }
+        finally
+        {
+            _system.EnsureStopped(probe);
+        }
     }
 
     [TestMethod]
@@ -465,7 +636,7 @@ public class UT_DeferredRelayEngine
         var (probe, observed, locker) = SubscribeRelayResults();
         try
         {
-            DeferredRelayEngine.ProcessQueuedAsync(_system, store).GetAwaiter().GetResult();
+            DeferredRelayEngine.ProcessQueuedAsync(_system, store, settings).GetAwaiter().GetResult();
             // Give the actor system a brief window to publish any stray RelayResult events.
             Thread.Sleep(100);
 
@@ -505,7 +676,7 @@ public class UT_DeferredRelayEngine
         var (probe, observed, locker) = SubscribeRelayResults();
         try
         {
-            DeferredRelayEngine.ProcessQueuedAsync(_system, store).GetAwaiter().GetResult();
+            DeferredRelayEngine.ProcessQueuedAsync(_system, store, settings).GetAwaiter().GetResult();
 
             bool relayAttempted = SpinWait.SpinUntil(() =>
             {
@@ -538,7 +709,7 @@ public class UT_DeferredRelayEngine
         var (probe, observed, locker) = SubscribeRelayResults();
         try
         {
-            DeferredRelayEngine.ProcessQueuedAsync(_system, store).GetAwaiter().GetResult();
+            DeferredRelayEngine.ProcessQueuedAsync(_system, store, settings).GetAwaiter().GetResult();
             Thread.Sleep(100);
 
             Assert.IsFalse(store.Contains(key), "Expired tx should be removed");
@@ -563,10 +734,12 @@ public class UT_DeferredRelayEngine
         return ms.ToArray();
     }
 
-    private Transaction CreateRawTx(uint validUntilBlock) => new()
+    private Transaction CreateRawTx(uint validUntilBlock, uint nonce = 0) => new()
     {
         Version = 0,
-        Nonce = (uint)Environment.TickCount,
+        // Default nonce uses TickCount for one-off tests; callers that seed multiple txs
+        // must pass distinct nonce values to avoid hash collisions in the store.
+        Nonce = nonce == 0 ? (uint)Environment.TickCount : nonce,
         ValidUntilBlock = validUntilBlock,
         Signers = [new Signer { Account = _account.ScriptHash, Scopes = WitnessScope.CalledByEntry }],
         Attributes = [],

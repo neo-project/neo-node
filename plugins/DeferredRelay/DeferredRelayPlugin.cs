@@ -142,13 +142,9 @@ public class DeferredRelayPlugin : Plugin
         }
 
         var json = tx.ToJson(_neoSystem.Settings);
-        var snapshot = _neoSystem.StoreView;
-        if (NativeContract.Ledger.ContainsBlock(snapshot, _neoSystem.GenesisBlock.Hash))
-        {
-            uint height = NativeContract.Ledger.CurrentIndex(snapshot);
-            if (height < tx.ValidUntilBlock)
-                json["blocksuntildeadline"] = tx.ValidUntilBlock - height;
-        }
+        uint height = NativeContract.Ledger.CurrentIndex(_neoSystem.StoreView);
+        if (height < tx.ValidUntilBlock)
+            json["blocksuntildeadline"] = tx.ValidUntilBlock - height;
         return json;
     }
 }

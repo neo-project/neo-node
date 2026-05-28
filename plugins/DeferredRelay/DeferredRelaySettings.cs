@@ -15,6 +15,14 @@ namespace Neo.Plugins.DeferredRelay;
 
 internal sealed class DeferredRelaySettings : IPluginSettings
 {
+    /// <summary>
+    /// Default upper bound for the number of in-window transactions relayed per
+    /// <see cref="DeferredRelayEngine.ProcessQueuedAsync"/> cycle. Matches the
+    /// same order of magnitude as Neo's typical <c>MaxTransactionsPerBlock</c> so a
+    /// single drain pass cannot monopolize the Blockchain actor mailbox.
+    /// </summary>
+    public const uint DefaultMaxRelayPerCycle = 256u;
+
     public string Path { get; }
     public uint Network { get; }
     public uint MaxTransactions { get; }
@@ -24,6 +32,13 @@ internal sealed class DeferredRelaySettings : IPluginSettings
     public static DeferredRelaySettings Default { get; private set; } = default!;
 
     public bool Enabled => MaxTransactions > 0 && CheckFrequency > 0;
+
+    /// <summary>
+    /// Effective per-cycle relay cap. Capped at <see cref="DefaultMaxRelayPerCycle"/>;
+    /// for small queues (<see cref="MaxTransactions"/> &lt; cap) the value collapses to
+    /// <see cref="MaxTransactions"/> so a single cycle can still drain the whole queue.
+    /// </summary>
+    public uint MaxRelayPerCycle => Math.Min(MaxTransactions, DefaultMaxRelayPerCycle);
 
     private DeferredRelaySettings(IConfigurationSection section)
         : this(

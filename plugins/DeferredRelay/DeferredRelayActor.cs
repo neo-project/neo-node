@@ -23,6 +23,7 @@ internal sealed class DeferredRelayActor : UntypedActor
     private readonly NeoSystem _neo;
     private readonly IStore _store;
     private readonly DeferredRelaySettings _settings;
+    private readonly EntryCounter _counter;
     private bool _processingQueued;
 
     public DeferredRelayActor(NeoSystem neo, IStore store, DeferredRelaySettings settings)
@@ -30,6 +31,9 @@ internal sealed class DeferredRelayActor : UntypedActor
         _neo = neo;
         _store = store;
         _settings = settings;
+        // Bootstrap once at startup; afterwards the counter is maintained incrementally
+        // by TryOffer (++) and ProcessQueuedAsync (--), so the per-offer capacity check is O(1).
+        _counter = new EntryCounter(DeferredRelayEngine.CountEntries(store));
     }
 
     protected override void PreStart()
@@ -46,7 +50,7 @@ internal sealed class DeferredRelayActor : UntypedActor
         switch (message)
         {
             case Blockchain.RelayResult { Inventory: Transaction tx, Result: VerifyResult.NotYetValid } rr:
-                DeferredRelayEngine.TryOffer(_neo, _store, _settings, tx, rr.Result);
+                DeferredRelayEngine.TryOffer(_neo, _store, _settings, tx, rr.Result, _counter);
                 break;
             case Blockchain.PersistCompleted pc:
                 ScheduleProcessQueued(pc.Block);
@@ -68,7 +72,7 @@ internal sealed class DeferredRelayActor : UntypedActor
 
         _processingQueued = true;
         var self = Self;
-        _ = DeferredRelayEngine.ProcessQueuedAsync(_neo, _store)
+        _ = DeferredRelayEngine.ProcessQueuedAsync(_neo, _store, _settings, counter: _counter)
             .ContinueWith(t =>
             {
                 if (t.IsFaulted)
