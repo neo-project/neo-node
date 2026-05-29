@@ -231,7 +231,7 @@ public class UT_StatePlugin
             Key = new byte[] { 8 }.Concat(scriptHash.ToArray()).ToArray(),
         };
 
-        var contractValue = BinarySerializer.Serialize(contractState.ToStackItem(null), ExecutionEngineLimits.Default);
+        var contractValue = BinarySerializer.Serialize(contractState.ToStackItem(), ExecutionEngineLimits.Default);
 
         using var storeSnapshot = StateStore.Singleton.GetStoreSnapshot();
         var trie = new Trie(storeSnapshot, null);
