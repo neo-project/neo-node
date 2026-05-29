@@ -58,14 +58,11 @@ public class MockWallet : Wallet
 
 public class TestWalletAccount : WalletAccount
 {
-    private readonly ECPoint publicKey;
     private readonly KeyPair keyPair;
 
     public TestWalletAccount(UInt160 scriptHash, ECPoint publicKey, ProtocolSettings settings)
         : base(scriptHash, settings)
     {
-        this.publicKey = publicKey;
-
         // Create a unique private key based on the script hash for testing
         var fakePrivateKey = new byte[32];
         var hashBytes = scriptHash.ToArray();
@@ -73,6 +70,9 @@ public class TestWalletAccount : WalletAccount
             fakePrivateKey[i] = (byte)(hashBytes[i % 20] + i + 1);
 
         keyPair = new KeyPair(fakePrivateKey);
+
+        // Create contract for signature verification
+        Contract = Contract.CreateSignatureContract(publicKey);
     }
 
     public override bool HasKey => true;

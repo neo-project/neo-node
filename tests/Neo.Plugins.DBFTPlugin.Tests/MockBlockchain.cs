@@ -50,7 +50,6 @@ public static class MockBlockchain
                 ["ApplicationConfiguration:DBFTPlugin:RecoveryLogs"] = "ConsensusState",
                 ["ApplicationConfiguration:DBFTPlugin:IgnoreRecoveryLogs"] = "false",
                 ["ApplicationConfiguration:DBFTPlugin:AutoStart"] = "false",
-                ["ApplicationConfiguration:DBFTPlugin:Network"] = "5195086",
                 ["ApplicationConfiguration:DBFTPlugin:MaxBlockSize"] = "262144",
                 ["ApplicationConfiguration:DBFTPlugin:MaxBlockSystemFee"] = "150000000000"
             })
