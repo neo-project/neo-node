@@ -16,15 +16,13 @@ namespace Neo.Plugins.RpcServer.Tests;
 [TestClass]
 public class UT_ParameterConverter_WitnessSize
 {
-    private const int MaxVerificationScriptLength = 1024;
-    private const int MaxInvocationScriptLength = 1024;
     private readonly byte _addressVersion = TestProtocolSettings.Default.AddressVersion;
 
     [TestMethod]
     public void TestWitnessSize_ValidInvocationScript_MaxLength()
     {
         // Arrange: Create a witness with invocation script at max length
-        var invocationScript = new byte[MaxInvocationScriptLength];
+        var invocationScript = new byte[ParameterConverter.MaxInvocationScriptLength];
         var invocationBase64 = Convert.ToBase64String(invocationScript);
         var json = new JArray
         {
@@ -43,14 +41,14 @@ public class UT_ParameterConverter_WitnessSize
         // Assert
         Assert.HasCount(1, result.Signers);
         Assert.HasCount(1, result.Witnesses);
-        Assert.AreEqual(MaxInvocationScriptLength, result.Witnesses[0].InvocationScript.Length);
+        Assert.AreEqual(ParameterConverter.MaxInvocationScriptLength, result.Witnesses[0].InvocationScript.Length);
     }
 
     [TestMethod]
     public void TestWitnessSize_InvalidInvocationScript_ExceedsMaxLength()
     {
         // Arrange: Create a witness with invocation script exceeding max length
-        var invocationScript = new byte[MaxInvocationScriptLength + 1];
+        var invocationScript = new byte[ParameterConverter.MaxInvocationScriptLength + 1];
         var invocationBase64 = Convert.ToBase64String(invocationScript);
         var json = new JArray
         {
@@ -72,7 +70,7 @@ public class UT_ParameterConverter_WitnessSize
     public void TestWitnessSize_ValidVerificationScript_MaxLength()
     {
         // Arrange: Create a witness with verification script at max length
-        var verificationScript = new byte[MaxVerificationScriptLength];
+        var verificationScript = new byte[ParameterConverter.MaxVerificationScriptLength];
         var verificationBase64 = Convert.ToBase64String(verificationScript);
         var json = new JArray
         {
@@ -91,14 +89,14 @@ public class UT_ParameterConverter_WitnessSize
         // Assert
         Assert.HasCount(1, result.Signers);
         Assert.HasCount(1, result.Witnesses);
-        Assert.AreEqual(MaxVerificationScriptLength, result.Witnesses[0].VerificationScript.Length);
+        Assert.AreEqual(ParameterConverter.MaxVerificationScriptLength, result.Witnesses[0].VerificationScript.Length);
     }
 
     [TestMethod]
     public void TestWitnessSize_InvalidVerificationScript_ExceedsMaxLength()
     {
         // Arrange: Create a witness with verification script exceeding max length
-        var verificationScript = new byte[MaxVerificationScriptLength + 1];
+        var verificationScript = new byte[ParameterConverter.MaxVerificationScriptLength + 1];
         var verificationBase64 = Convert.ToBase64String(verificationScript);
         var json = new JArray
         {
@@ -120,8 +118,8 @@ public class UT_ParameterConverter_WitnessSize
     public void TestWitnessSize_BothScripts_ValidMaxLength()
     {
         // Arrange: Create a witness with both scripts at max length
-        var invocationScript = new byte[MaxInvocationScriptLength];
-        var verificationScript = new byte[MaxVerificationScriptLength];
+        var invocationScript = new byte[ParameterConverter.MaxInvocationScriptLength];
+        var verificationScript = new byte[ParameterConverter.MaxVerificationScriptLength];
         var invocationBase64 = Convert.ToBase64String(invocationScript);
         var verificationBase64 = Convert.ToBase64String(verificationScript);
         var json = new JArray
@@ -141,16 +139,16 @@ public class UT_ParameterConverter_WitnessSize
         // Assert
         Assert.HasCount(1, result.Signers);
         Assert.HasCount(1, result.Witnesses);
-        Assert.AreEqual(MaxInvocationScriptLength, result.Witnesses[0].InvocationScript.Length);
-        Assert.AreEqual(MaxVerificationScriptLength, result.Witnesses[0].VerificationScript.Length);
+        Assert.AreEqual(ParameterConverter.MaxInvocationScriptLength, result.Witnesses[0].InvocationScript.Length);
+        Assert.AreEqual(ParameterConverter.MaxVerificationScriptLength, result.Witnesses[0].VerificationScript.Length);
     }
 
     [TestMethod]
     public void TestWitnessSize_BothScripts_InvocationExceedsMax()
     {
         // Arrange: Invocation exceeds, verification is valid
-        var invocationScript = new byte[MaxInvocationScriptLength + 1];
-        var verificationScript = new byte[MaxVerificationScriptLength];
+        var invocationScript = new byte[ParameterConverter.MaxInvocationScriptLength + 1];
+        var verificationScript = new byte[ParameterConverter.MaxVerificationScriptLength];
         var invocationBase64 = Convert.ToBase64String(invocationScript);
         var verificationBase64 = Convert.ToBase64String(verificationScript);
         var json = new JArray
@@ -173,8 +171,8 @@ public class UT_ParameterConverter_WitnessSize
     public void TestWitnessSize_BothScripts_VerificationExceedsMax()
     {
         // Arrange: Verification exceeds, invocation is valid
-        var invocationScript = new byte[MaxInvocationScriptLength];
-        var verificationScript = new byte[MaxVerificationScriptLength + 1];
+        var invocationScript = new byte[ParameterConverter.MaxInvocationScriptLength];
+        var verificationScript = new byte[ParameterConverter.MaxVerificationScriptLength + 1];
         var invocationBase64 = Convert.ToBase64String(invocationScript);
         var verificationBase64 = Convert.ToBase64String(verificationScript);
         var json = new JArray
@@ -236,7 +234,7 @@ public class UT_ParameterConverter_WitnessSize
     {
         // Arrange: Second witness has invalid invocation script size
         var validInvocationScript = new byte[512];
-        var invalidInvocationScript = new byte[MaxInvocationScriptLength + 1];
+        var invalidInvocationScript = new byte[ParameterConverter.MaxInvocationScriptLength + 1];
         var verificationScript = new byte[512];
         var validInvocationBase64 = Convert.ToBase64String(validInvocationScript);
         var invalidInvocationBase64 = Convert.ToBase64String(invalidInvocationScript);
@@ -293,7 +291,7 @@ public class UT_ParameterConverter_WitnessSize
     public void TestWitnessSize_OneByteOverLimit_InvocationScript()
     {
         // Arrange: Test boundary condition - exactly 1 byte over limit
-        var invocationScript = new byte[MaxInvocationScriptLength + 1];
+        var invocationScript = new byte[ParameterConverter.MaxInvocationScriptLength + 1];
         var invocationBase64 = Convert.ToBase64String(invocationScript);
         var json = new JArray
         {
@@ -315,7 +313,7 @@ public class UT_ParameterConverter_WitnessSize
     public void TestWitnessSize_OneByteOverLimit_VerificationScript()
     {
         // Arrange: Test boundary condition - exactly 1 byte over limit
-        var verificationScript = new byte[MaxVerificationScriptLength + 1];
+        var verificationScript = new byte[ParameterConverter.MaxVerificationScriptLength + 1];
         var verificationBase64 = Convert.ToBase64String(verificationScript);
         var json = new JArray
         {

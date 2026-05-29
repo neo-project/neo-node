@@ -24,8 +24,8 @@ namespace Neo.Plugins.RpcServer;
 public static class ParameterConverter
 {
     private static readonly Dictionary<Type, Func<JToken, object>> s_conversions;
-    private const int MaxVerificationScriptLength = 1024;
-    private const int MaxInvocationScriptLength = 1024;
+    internal const int MaxVerificationScriptLength = ushort.MaxValue;
+    internal const int MaxInvocationScriptLength = ushort.MaxValue;
 
     static ParameterConverter()
     {
@@ -271,7 +271,12 @@ public static class ParameterConverter
         }
 
         // Validate format
-        _ = signers.ToByteArray().AsSerializableArray<Signer>();
+        var signerData = signers.ToByteArray();
+        _ = signerData.AsSerializableArray<Signer>();
+
+        if (signerData.Length > Transaction.MaxTransactionSize)
+            throw new RpcException(RpcError.InvalidParams.WithData("Max transaction size exceeded."));
+
         return signers;
     }
 
@@ -320,6 +325,14 @@ public static class ParameterConverter
 
             witnesses.Add(witness);
         }
+
+        // Validate format
+        var witnessArray = witnesses.ToArray();
+        var witnessData = witnessArray.ToByteArray();
+        _ = witnessData.AsSerializableArray<Witness>();
+
+        if (witnessData.Length > Transaction.MaxTransactionSize)
+            throw new RpcException(RpcError.InvalidParams.WithData("Max transaction size exceeded."));
 
         return witnesses.ToArray();
     }
