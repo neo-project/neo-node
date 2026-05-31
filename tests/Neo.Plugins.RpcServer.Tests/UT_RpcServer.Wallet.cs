@@ -12,12 +12,14 @@
 using Microsoft.AspNetCore.Http;
 using Neo.Extensions;
 using Neo.Json;
+using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
 using Neo.Plugins.RpcServer.Model;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;
 using Neo.Wallets;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 
@@ -621,6 +623,45 @@ partial class UT_RpcServer
         Assert.AreEqual(RpcError.InvalidParams.Code, ex.HResult);
         Assert.Contains("Argument 'to' can't be empty", ex.Message);
         TestUtilCloseWallet();
+    }
+
+    [TestMethod]
+    public void TestSignAndRelay_RelayFailure_ThrowsRpcException()
+    {
+        // Ensures wallet RPCs that go through SignAndRelay propagate Blockchain relay failures
+        // (e.g. AlreadyInPool / NotYetValid / PolicyFail / ...) as RpcException, matching the
+        // behavior of sendrawtransaction/submitblock instead of silently returning tx JSON.
+        _rpcServer.wallet = _wallet;
+        try
+        {
+            var snapshot = _neoSystem.GetSnapshotCache();
+            var tx = TestUtils.CreateValidTx(snapshot, _wallet, _walletAccount);
+
+            // Pre-seed the mempool with the same transaction so the Blockchain actor responds
+            // with VerifyResult.AlreadyInPool when SignAndRelay submits it.
+            Assert.AreEqual(VerifyResult.Succeed, _neoSystem.MemPool.TryAdd(tx, snapshot),
+                "Pre-seeding the mempool with the test tx should succeed.");
+
+            var signAndRelay = typeof(RpcServer).GetMethod(
+                "SignAndRelay", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.IsNotNull(signAndRelay, "SignAndRelay private method should exist.");
+
+            var invokeException = Assert.ThrowsExactly<TargetInvocationException>(
+                () => signAndRelay.Invoke(_rpcServer, [snapshot, tx]),
+                "SignAndRelay should propagate Blockchain relay failures as exceptions.");
+            Assert.IsInstanceOfType<RpcException>(invokeException.InnerException,
+                "Inner exception should be RpcException (mapped from VerifyResult by GetRelayResult).");
+
+            var rpcException = (RpcException)invokeException.InnerException;
+            Assert.AreEqual(RpcError.AlreadyInPool.Code, rpcException.HResult,
+                "RpcException should carry the AlreadyInPool error code.");
+            Assert.Contains(VerifyResult.AlreadyInPool.ToString(), rpcException.Message,
+                "RpcException data should include the underlying VerifyResult name.");
+        }
+        finally
+        {
+            _rpcServer.wallet = null;
+        }
     }
 
     [TestMethod]
