@@ -13,6 +13,7 @@ using Akka.Actor;
 using Neo.Cryptography;
 using Neo.Extensions;
 using Neo.Json;
+using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
@@ -934,7 +935,16 @@ partial class RpcServer
     /// </summary>
     /// <param name="snapshot">The data snapshot.</param>
     /// <param name="tx">The transaction to sign and relay.</param>
-    /// <returns>A JSON object containing the transaction details.</returns>
+    /// <returns>
+    /// On success, a JSON object containing the full transaction details.
+    /// If the wallet could not complete the signature, the partial <see cref="ContractParametersContext"/> JSON.
+    /// </returns>
+    /// <exception cref="RpcException">
+    /// Thrown when the blockchain rejects the relay (e.g. <see cref="VerifyResult.NotYetValid"/>,
+    /// <see cref="VerifyResult.Expired"/>, <see cref="VerifyResult.PolicyFail"/>, ...). This keeps wallet
+    /// RPCs consistent with <c>sendrawtransaction</c>/<c>submitblock</c>, which also surface relay failures
+    /// to the caller instead of silently returning a "successful" payload.
+    /// </exception>
     private JObject SignAndRelay(DataCache snapshot, Transaction tx)
     {
         var wallet = CheckWallet();
@@ -943,7 +953,10 @@ partial class RpcServer
         if (context.Completed)
         {
             tx.Witnesses = context.GetWitnesses();
-            system.Blockchain.Tell(tx);
+            var relayResult = system.Blockchain.Ask<Blockchain.RelayResult>(tx, TimeSpan.FromSeconds(30)).Result;
+            // GetRelayResult throws RpcException for any non-Succeed reason; its JObject return value
+            // (only { "hash": ... }) is discarded because wallet RPCs return the full tx JSON.
+            GetRelayResult(relayResult.Result, tx.Hash);
             return tx.ToJson(system.Settings);
         }
         else
