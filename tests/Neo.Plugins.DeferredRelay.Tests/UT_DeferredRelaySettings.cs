@@ -29,8 +29,7 @@ public class UT_DeferredRelaySettings
         const string json = """
         {
           "PluginConfiguration": {
-            "Path": "DeferredRelay_{0}",
-            "Network": 860833102
+            "Path": "DeferredRelay_{0}"
           }
         }
         """;
@@ -47,7 +46,6 @@ public class UT_DeferredRelaySettings
         {
           "PluginConfiguration": {
             "Path": "DeferredRelay_{0}",
-            "Network": 860833102,
             "MaxTransactions": 8192,
             "CheckFrequency": 5
           }
@@ -60,26 +58,11 @@ public class UT_DeferredRelaySettings
     }
 
     [TestMethod]
-    public void LoadsNetworkDefault_WhenOmitted()
-    {
-        const string json = """
-        {
-          "PluginConfiguration": {
-            "Path": "DeferredRelay_{0}"
-          }
-        }
-        """;
-        DeferredRelaySettings.Load(BuildSection(json));
-        Assert.AreEqual(860833102u, DeferredRelaySettings.Default.Network);
-    }
-
-    [TestMethod]
     public void Enabled_RequiresBothMaxTransactionsAndCheckFrequency()
     {
         DeferredRelaySettings.Load(BuildSection("""
         {
           "PluginConfiguration": {
-            "Network": 860833102,
             "MaxTransactions": 10,
             "CheckFrequency": 0
           }
@@ -90,7 +73,6 @@ public class UT_DeferredRelaySettings
         DeferredRelaySettings.Load(BuildSection("""
         {
           "PluginConfiguration": {
-            "Network": 860833102,
             "MaxTransactions": 0,
             "CheckFrequency": 5
           }
@@ -105,7 +87,6 @@ public class UT_DeferredRelaySettings
         const string json = """
         {
           "PluginConfiguration": {
-            "Network": 860833102,
             "UnhandledExceptionPolicy": "StopPlugin"
           }
         }

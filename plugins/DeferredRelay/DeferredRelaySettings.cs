@@ -24,7 +24,6 @@ internal sealed class DeferredRelaySettings : IPluginSettings
     public const uint DefaultMaxRelayPerCycle = 256u;
 
     public string Path { get; }
-    public uint Network { get; }
     public uint MaxTransactions { get; }
     public uint CheckFrequency { get; }
     public UnhandledExceptionPolicy ExceptionPolicy { get; }
@@ -43,17 +42,15 @@ internal sealed class DeferredRelaySettings : IPluginSettings
     private DeferredRelaySettings(IConfigurationSection section)
         : this(
             section.GetValue("Path", "DeferredRelay_{0}")!,
-            section.GetValue("Network", 860833102u),
             section.GetValue("MaxTransactions", 0u),
             section.GetValue("CheckFrequency", 0u),
             section.GetValue("UnhandledExceptionPolicy", UnhandledExceptionPolicy.Ignore))
     {
     }
 
-    private DeferredRelaySettings(string path, uint network, uint maxTransactions, uint checkFrequency, UnhandledExceptionPolicy exceptionPolicy)
+    private DeferredRelaySettings(string path, uint maxTransactions, uint checkFrequency, UnhandledExceptionPolicy exceptionPolicy)
     {
         Path = path;
-        Network = network;
         MaxTransactions = maxTransactions;
         CheckFrequency = checkFrequency;
         ExceptionPolicy = exceptionPolicy;
@@ -62,6 +59,6 @@ internal sealed class DeferredRelaySettings : IPluginSettings
     public static void Load(IConfigurationSection section) =>
         Default = new DeferredRelaySettings(section);
 
-    internal static DeferredRelaySettings Create(uint network, uint maxTransactions, uint checkFrequency) =>
-        new("DeferredRelay_{0}", network, maxTransactions, checkFrequency, UnhandledExceptionPolicy.Ignore);
+    internal static DeferredRelaySettings Create(uint maxTransactions, uint checkFrequency) =>
+        new("DeferredRelay_{0}", maxTransactions, checkFrequency, UnhandledExceptionPolicy.Ignore);
 }
