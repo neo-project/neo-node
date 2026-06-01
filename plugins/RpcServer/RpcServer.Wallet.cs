@@ -780,7 +780,9 @@ partial class RpcServer
     protected internal virtual JToken CancelTransaction(UInt256 txid, Address[] signers, string? extraFee = null)
     {
         var wallet = CheckWallet();
-        NativeContract.Ledger.GetTransactionState(system.StoreView, txid)
+        using var snapshot = system.GetSnapshotCache();
+
+        NativeContract.Ledger.GetTransactionState(snapshot, txid)
             .Null_Or(RpcErrorFactory.AlreadyExists("This tx is already confirmed, can't be cancelled."));
 
         if (signers is null || signers.Length == 0) throw new RpcException(RpcErrorFactory.BadRequest("No signer."));
@@ -795,7 +797,7 @@ partial class RpcServer
         };
 
         tx = Result.Ok_Or(
-            () => wallet.MakeTransaction(system.StoreView, new[] { (byte)OpCode.RET }, noneSigners[0].Account, noneSigners, conflict),
+            () => wallet.MakeTransaction(snapshot, new[] { (byte)OpCode.RET }, noneSigners[0].Account, noneSigners, conflict),
             RpcError.InsufficientFunds, true);
         if (system.MemPool.TryGetValue(txid, out var conflictTx))
         {
@@ -803,13 +805,14 @@ partial class RpcServer
         }
         else if (extraFee is not null)
         {
-            var descriptor = new AssetDescriptor(system.StoreView, system.Settings, NativeContract.GAS.Hash);
+            var descriptor = new AssetDescriptor(snapshot, system.Settings, NativeContract.GAS.Hash);
             (BigDecimal.TryParse(extraFee, descriptor.Decimals, out var decimalExtraFee) && decimalExtraFee.Sign > 0)
                 .True_Or(RpcErrorFactory.InvalidParams("Incorrect amount format."));
 
             tx.NetworkFee += (long)decimalExtraFee.Value;
         }
-        return SignAndRelay(system.StoreView, tx);
+        EnsureNetworkFee(snapshot, tx);
+        return SignAndRelay(snapshot, tx);
     }
 
     /// <summary>
