@@ -493,7 +493,6 @@ partial class RpcServer
         if (!transContext.Completed) return transContext.ToJson();
 
         tx.Witnesses = transContext.GetWitnesses();
-        EnsureNetworkFee(snapshot, tx);
         return SignAndRelay(snapshot, tx);
     }
 
@@ -604,7 +603,6 @@ partial class RpcServer
         if (!transContext.Completed) return transContext.ToJson();
 
         tx.Witnesses = transContext.GetWitnesses();
-        EnsureNetworkFee(snapshot, tx);
         return SignAndRelay(snapshot, tx);
     }
 
@@ -661,16 +659,7 @@ partial class RpcServer
             return transContext.ToJson();
 
         tx.Witnesses = transContext.GetWitnesses();
-        EnsureNetworkFee(snapshot, tx);
         return SignAndRelay(snapshot, tx);
-    }
-
-    private void EnsureNetworkFee(StoreCache snapshot, Transaction tx)
-    {
-        long calFee = tx.Size * NativeContract.Policy.GetFeePerByte(snapshot) + 100000;
-        if (tx.NetworkFee < calFee)
-            tx.NetworkFee = calFee;
-        (tx.NetworkFee <= settings.MaxFee).True_Or(RpcError.WalletFeeLimit);
     }
 
     /// <summary>
@@ -811,7 +800,6 @@ partial class RpcServer
 
             tx.NetworkFee += (long)decimalExtraFee.Value;
         }
-        EnsureNetworkFee(snapshot, tx);
         return SignAndRelay(snapshot, tx);
     }
 
@@ -956,6 +944,12 @@ partial class RpcServer
         if (context.Completed)
         {
             tx.Witnesses = context.GetWitnesses();
+            // Check MaxFee
+            long calFee = tx.Size * NativeContract.Policy.GetFeePerByte(snapshot) + 100000;
+            if (tx.NetworkFee < calFee)
+                tx.NetworkFee = calFee;
+            (tx.NetworkFee <= settings.MaxFee).True_Or(RpcError.WalletFeeLimit);
+            // Relay it
             var relayResult = system.Blockchain.Ask<Blockchain.RelayResult>(tx, TimeSpan.FromSeconds(30)).Result;
             // GetRelayResult throws RpcException for any non-Succeed reason; its JObject return value
             // (only { "hash": ... }) is discarded because wallet RPCs return the full tx JSON.
