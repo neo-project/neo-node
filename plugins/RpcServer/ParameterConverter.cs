@@ -24,8 +24,6 @@ namespace Neo.Plugins.RpcServer;
 public static class ParameterConverter
 {
     private static readonly Dictionary<Type, Func<JToken, object>> s_conversions;
-    internal const int MaxVerificationScriptLength = ushort.MaxValue;
-    internal const int MaxInvocationScriptLength = ushort.MaxValue;
 
     static ParameterConverter()
     {
@@ -318,9 +316,9 @@ public static class ParameterConverter
                 VerificationScript = Convert.FromBase64String(verification?.AsString() ?? string.Empty)
             };
 
-            if (witness.InvocationScript.Length > MaxInvocationScriptLength)
+            if (witness.InvocationScript.Length > Witness.MaxInvocationScript)
                 throw new RpcException(RpcError.InvalidParams.WithData($"Invocation script length exceeds the maximum allowed length at {i}."));
-            if (witness.VerificationScript.Length > MaxVerificationScriptLength)
+            if (witness.VerificationScript.Length > Witness.MaxVerificationScript)
                 throw new RpcException(RpcError.InvalidParams.WithData($"Verification script length exceeds the maximum allowed length at {i}."));
 
             witnesses.Add(witness);
