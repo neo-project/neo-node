@@ -45,7 +45,6 @@ public class UT_StatePlugin
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["PluginConfiguration:FullState"] = "true",
-                ["PluginConfiguration:Network"] = TestNetwork.ToString(),
             })
             .Build()
             .GetSection("PluginConfiguration");
