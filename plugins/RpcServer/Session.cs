@@ -27,9 +27,10 @@ class Session : IDisposable
 
     public Session(NeoSystem system, byte[] script, Signer[]? signers, Witness[]? witnesses, long datoshi, Diagnostic? diagnostic)
     {
+        signers ??= new[] { new Signer { Account = UInt160.Zero, Scopes = WitnessScope.None } };
         Random random = new();
         Snapshot = system.GetSnapshotCache();
-        var tx = signers == null ? null : new Transaction
+        var tx = new Transaction
         {
             Version = 0,
             Nonce = (uint)random.Next(),
