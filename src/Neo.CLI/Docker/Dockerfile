@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS Build
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 RUN apt-get update && apt-get install -y \
     net-tools \
     telnet \
@@ -19,7 +19,7 @@ WORKDIR /neo
 COPY prepare-node.sh .
 RUN dos2unix prepare-node.sh && chmod +x prepare-node.sh
 
-ARG CLI_VERSION=v3.9.2
+ARG CLI_VERSION=v4.0.0
 ARG PLUGIN_VERSION=
 RUN if [ -z "$PLUGIN_VERSION" ]; then \
         ./prepare-node.sh $CLI_VERSION; \
