@@ -13,6 +13,7 @@ using Akka.Actor;
 using Neo.Cryptography;
 using Neo.Extensions;
 using Neo.Json;
+using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
@@ -492,7 +493,6 @@ partial class RpcServer
         if (!transContext.Completed) return transContext.ToJson();
 
         tx.Witnesses = transContext.GetWitnesses();
-        EnsureNetworkFee(snapshot, tx);
         return SignAndRelay(snapshot, tx);
     }
 
@@ -603,7 +603,6 @@ partial class RpcServer
         if (!transContext.Completed) return transContext.ToJson();
 
         tx.Witnesses = transContext.GetWitnesses();
-        EnsureNetworkFee(snapshot, tx);
         return SignAndRelay(snapshot, tx);
     }
 
@@ -660,16 +659,7 @@ partial class RpcServer
             return transContext.ToJson();
 
         tx.Witnesses = transContext.GetWitnesses();
-        EnsureNetworkFee(snapshot, tx);
         return SignAndRelay(snapshot, tx);
-    }
-
-    private void EnsureNetworkFee(StoreCache snapshot, Transaction tx)
-    {
-        long calFee = tx.Size * NativeContract.Policy.GetFeePerByte(snapshot) + 100000;
-        if (tx.NetworkFee < calFee)
-            tx.NetworkFee = calFee;
-        (tx.NetworkFee <= settings.MaxFee).True_Or(RpcError.WalletFeeLimit);
     }
 
     /// <summary>
@@ -779,7 +769,9 @@ partial class RpcServer
     protected internal virtual JToken CancelTransaction(UInt256 txid, Address[] signers, string? extraFee = null)
     {
         var wallet = CheckWallet();
-        NativeContract.Ledger.GetTransactionState(system.StoreView, txid)
+        using var snapshot = system.GetSnapshotCache();
+
+        NativeContract.Ledger.GetTransactionState(snapshot, txid)
             .Null_Or(RpcErrorFactory.AlreadyExists("This tx is already confirmed, can't be cancelled."));
 
         if (signers is null || signers.Length == 0) throw new RpcException(RpcErrorFactory.BadRequest("No signer."));
@@ -794,7 +786,7 @@ partial class RpcServer
         };
 
         tx = Result.Ok_Or(
-            () => wallet.MakeTransaction(system.StoreView, new[] { (byte)OpCode.RET }, noneSigners[0].Account, noneSigners, conflict),
+            () => wallet.MakeTransaction(snapshot, new[] { (byte)OpCode.RET }, noneSigners[0].Account, noneSigners, conflict),
             RpcError.InsufficientFunds, true);
         if (system.MemPool.TryGetValue(txid, out var conflictTx))
         {
@@ -802,13 +794,13 @@ partial class RpcServer
         }
         else if (extraFee is not null)
         {
-            var descriptor = new AssetDescriptor(system.StoreView, system.Settings, NativeContract.GAS.Hash);
+            var descriptor = new AssetDescriptor(snapshot, system.Settings, NativeContract.GAS.Hash);
             (BigDecimal.TryParse(extraFee, descriptor.Decimals, out var decimalExtraFee) && decimalExtraFee.Sign > 0)
                 .True_Or(RpcErrorFactory.InvalidParams("Incorrect amount format."));
 
             tx.NetworkFee += (long)decimalExtraFee.Value;
         }
-        return SignAndRelay(system.StoreView, tx);
+        return SignAndRelay(snapshot, tx);
     }
 
     /// <summary>
@@ -934,7 +926,16 @@ partial class RpcServer
     /// </summary>
     /// <param name="snapshot">The data snapshot.</param>
     /// <param name="tx">The transaction to sign and relay.</param>
-    /// <returns>A JSON object containing the transaction details.</returns>
+    /// <returns>
+    /// On success, a JSON object containing the full transaction details.
+    /// If the wallet could not complete the signature, the partial <see cref="ContractParametersContext"/> JSON.
+    /// </returns>
+    /// <exception cref="RpcException">
+    /// Thrown when the blockchain rejects the relay (e.g. <see cref="VerifyResult.NotYetValid"/>,
+    /// <see cref="VerifyResult.Expired"/>, <see cref="VerifyResult.PolicyFail"/>, ...). This keeps wallet
+    /// RPCs consistent with <c>sendrawtransaction</c>/<c>submitblock</c>, which also surface relay failures
+    /// to the caller instead of silently returning a "successful" payload.
+    /// </exception>
     private JObject SignAndRelay(DataCache snapshot, Transaction tx)
     {
         var wallet = CheckWallet();
@@ -943,7 +944,16 @@ partial class RpcServer
         if (context.Completed)
         {
             tx.Witnesses = context.GetWitnesses();
-            system.Blockchain.Tell(tx);
+            // Check MaxFee
+            long calFee = tx.Size * NativeContract.Policy.GetFeePerByte(snapshot) + 100000;
+            if (tx.NetworkFee < calFee)
+                tx.NetworkFee = calFee;
+            (tx.NetworkFee <= settings.MaxFee).True_Or(RpcError.WalletFeeLimit);
+            // Relay it
+            var relayResult = system.Blockchain.Ask<Blockchain.RelayResult>(tx, TimeSpan.FromSeconds(30)).Result;
+            // GetRelayResult throws RpcException for any non-Succeed reason; its JObject return value
+            // (only { "hash": ... }) is discarded because wallet RPCs return the full tx JSON.
+            GetRelayResult(relayResult.Result, tx.Hash);
             return tx.ToJson(system.Settings);
         }
         else
