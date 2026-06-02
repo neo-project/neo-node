@@ -14,6 +14,7 @@ using Neo.ConsoleService;
 using Neo.Extensions;
 using Neo.IO;
 using Neo.Json;
+using Neo.Ledger;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.SmartContract;
@@ -159,8 +160,12 @@ partial class MainService
                 return;
             }
             tx.Witnesses = context.GetWitnesses();
-            NeoSystem.Blockchain.Tell(tx);
-            Console.WriteLine($"Data relay success, the hash is shown as follows: {Environment.NewLine}{tx.Hash}");
+            var relayResult = NeoSystem.Blockchain.Ask<Blockchain.RelayResult>(tx, TimeSpan.FromSeconds(30))
+                .ConfigureAwait(false).GetAwaiter().GetResult();
+            if (relayResult.Result == VerifyResult.Succeed)
+                Console.WriteLine($"Data relay success, the hash is shown as follows:{Environment.NewLine}{tx.Hash}");
+            else
+                ConsoleHelper.Error($"Relay failed: {relayResult.Result}");
         }
         catch (Exception e)
         {

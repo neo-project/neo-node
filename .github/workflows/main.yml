@@ -82,7 +82,17 @@ jobs:
     - name: Install dependencies
       run: sudo apt-get install -y libleveldb-dev expect
     - name: Run tests with expect
-      run: expect ./.github/workflows/test-neo-cli-plugins.expect
+      run: |
+        # Count loadable plugins only (exclude MPTTrie dependency and RpcClient library).
+        expected_count=0
+        for csproj in plugins/*/*.csproj; do
+          plugin_name=$(basename "$(dirname "$csproj")")
+          case "$plugin_name" in
+            MPTTrie|RpcClient) continue ;;
+          esac
+          expected_count=$((expected_count + 1))
+        done
+        expect ./.github/workflows/test-neo-cli-plugins.expect "$expected_count"
       
   Release:
     if: github.ref == 'refs/heads/master-n3' && github.repository == 'neo-project/neo-node'
@@ -210,7 +220,7 @@ jobs:
         declare -A cli_dll_set
         for f in "${cli_dlls[@]}"; do cli_dll_set["$f"]=1; done
 
-        # Package every plugin project under plugins/*/*.csproj (stage only, zip after all are staged)
+        # Package every plugin project under plugins/*/*.csproj (e.g. DeferredRelay), except MPTTrie (StateService dependency only).
         for csproj in plugins/*/*.csproj; do
           plugin_dir="$(dirname "$csproj")"
           plugin_name="$(basename "$plugin_dir")"
