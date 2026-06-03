@@ -38,7 +38,6 @@ class NeoFSSettings
 
 class OracleSettings : IPluginSettings
 {
-    public uint Network { get; }
     public Uri[] Nodes { get; }
     public TimeSpan MaxTaskTimeout { get; }
     public TimeSpan MaxOracleTimeout { get; }
@@ -54,7 +53,6 @@ class OracleSettings : IPluginSettings
 
     private OracleSettings(IConfigurationSection section)
     {
-        Network = section.GetValue("Network", 5195086u);
         Nodes = section.GetSection("Nodes").GetChildren().Select(p => new Uri(p.Get<string>(), UriKind.Absolute)).ToArray();
         MaxTaskTimeout = TimeSpan.FromMilliseconds(section.GetValue("MaxTaskTimeout", 432000000));
         MaxOracleTimeout = TimeSpan.FromMilliseconds(section.GetValue("MaxOracleTimeout", 15000));

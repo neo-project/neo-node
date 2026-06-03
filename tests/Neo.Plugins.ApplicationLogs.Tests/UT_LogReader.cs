@@ -61,7 +61,7 @@ public class UT_LogReader
             _memoryStoreProvider = new TestMemoryStoreProvider(_memoryStore);
             logReader = new LogReader();
             Plugin.Plugins.Add(logReader);  // initialize before NeoSystem to let NeoSystem load the plugin
-            _neoSystem = new NeoSystem(TestProtocolSettings.SoleNode with { Network = ApplicationLogsSettings.Default.Network }, _memoryStoreProvider);
+            _neoSystem = new NeoSystem(TestProtocolSettings.SoleNode, _memoryStoreProvider);
             _walletAccount = _wallet.Import("KxuRSsHgJMb3AMSN6B9P3JHNGMFtxmuimqgR9MmXPcv3CLLfusTd");
 
             NeoSystem system = _neoSystem;
@@ -78,7 +78,7 @@ public class UT_LogReader
                     Witnesses = []
                 }
             ];
-            byte[] signature = txs[0].Sign(_walletAccount.GetKey(), ApplicationLogsSettings.Default.Network);
+            byte[] signature = txs[0].Sign(_walletAccount.GetKey(), _neoSystem.Settings.Network);
             txs[0].Witnesses = [new Witness
             {
                 InvocationScript = new byte[] { (byte)OpCode.PUSHDATA1, (byte)signature.Length }.Concat(signature).ToArray(),
@@ -99,7 +99,7 @@ public class UT_LogReader
                 Transactions = txs,
             };
             block.Header.MerkleRoot ??= MerkleTree.ComputeRoot(block.Transactions.Select(t => t.Hash).ToArray());
-            signature = block.Sign(_walletAccount.GetKey(), ApplicationLogsSettings.Default.Network);
+            signature = block.Sign(_walletAccount.GetKey(), _neoSystem.Settings.Network);
             block.Header.Witness = new Witness
             {
                 InvocationScript = new byte[] { (byte)OpCode.PUSHDATA1, (byte)signature.Length }.Concat(signature).ToArray(),

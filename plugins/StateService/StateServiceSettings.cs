@@ -17,7 +17,6 @@ internal class StateServiceSettings : IPluginSettings
 {
     public string Path { get; }
     public bool FullState { get; }
-    public uint Network { get; }
     public bool AutoVerify { get; }
     public int MaxFindResultItems { get; }
 
@@ -29,7 +28,6 @@ internal class StateServiceSettings : IPluginSettings
     {
         Path = section.GetValue("Path", "Data_MPT_{0}");
         FullState = section.GetValue("FullState", false);
-        Network = section.GetValue("Network", 5195086u);
         AutoVerify = section.GetValue("AutoVerify", false);
         MaxFindResultItems = section.GetValue("MaxFindResultItems", 100);
         ExceptionPolicy = section.GetValue("UnhandledExceptionPolicy", UnhandledExceptionPolicy.StopPlugin);

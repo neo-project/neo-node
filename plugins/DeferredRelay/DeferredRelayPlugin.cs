@@ -12,7 +12,6 @@
 using Akka.Actor;
 using Neo.ConsoleService;
 using Neo.Extensions;
-using Neo.IO;
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
@@ -42,11 +41,8 @@ public class DeferredRelayPlugin : Plugin
 
     protected override void OnSystemLoaded(NeoSystem system)
     {
-        if (system.Settings.Network != DeferredRelaySettings.Default.Network)
-            return;
-
         _neoSystem = system;
-        RpcServerPlugin.RegisterMethods(this, DeferredRelaySettings.Default.Network);
+        RpcServerPlugin.RegisterMethods(this, system.Settings.Network);
 
         if (!DeferredRelaySettings.Default.Enabled)
             return;

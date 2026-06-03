@@ -80,10 +80,9 @@ public sealed class OracleService : Plugin
 
     protected override void OnSystemLoaded(NeoSystem system)
     {
-        if (system.Settings.Network != OracleSettings.Default.Network) return;
         _system = system;
         _system.ServiceAdded += NeoSystem_ServiceAdded_Handler;
-        RpcServerPlugin.RegisterMethods(this, OracleSettings.Default.Network);
+        RpcServerPlugin.RegisterMethods(this, system.Settings.Network);
         PluginLogger ??= Logs.GetLogger($"Plugin_{Name}");
     }
 
@@ -208,8 +207,6 @@ public sealed class OracleService : Plugin
     void Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
         IReadOnlyList<Blockchain.ApplicationExecuted> applicationExecutedList)
     {
-        if (system.Settings.Network != OracleSettings.Default.Network) return;
-
         if (OracleSettings.Default.AutoStart && status == OracleStatus.Unstarted)
         {
             OnStart();
