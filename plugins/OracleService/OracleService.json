@@ -1,6 +1,5 @@
 {
   "PluginConfiguration": {
-    "Network": 860833102,
     "Nodes": [],
     "MaxTaskTimeout": 432000000,
     "MaxOracleTimeout": 10000,

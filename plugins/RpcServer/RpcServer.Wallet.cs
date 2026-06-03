@@ -416,7 +416,7 @@ partial class RpcServer
             return;
         }
 
-        var context = new ContractParametersContext(system.StoreView, tx, settings.Network);
+        var context = new ContractParametersContext(system.StoreView, tx, system.Settings.Network);
         wallet.Sign(context);
         if (context.Completed)
         {
@@ -487,7 +487,7 @@ partial class RpcServer
         var tx = Result.Ok_Or(() => wallet.MakeTransaction(snapshot, [transfer], from.ScriptHash, callSigners),
             RpcError.InvalidRequest.WithData("Can not process this request.")).NotNull_Or(RpcError.InsufficientFunds);
 
-        var transContext = new ContractParametersContext(snapshot, tx, settings.Network);
+        var transContext = new ContractParametersContext(snapshot, tx, system.Settings.Network);
         wallet.Sign(transContext);
 
         if (!transContext.Completed) return transContext.ToJson();
@@ -597,7 +597,7 @@ partial class RpcServer
         }
 
         var tx = wallet.MakeTransaction(snapshot, outputs, from, signers).NotNull_Or(RpcError.InsufficientFunds);
-        var transContext = new ContractParametersContext(snapshot, tx, settings.Network);
+        var transContext = new ContractParametersContext(snapshot, tx, system.Settings.Network);
         wallet.Sign(transContext);
 
         if (!transContext.Completed) return transContext.ToJson();
@@ -653,7 +653,7 @@ partial class RpcServer
         var tx = wallet.MakeTransaction(snapshot, [new() { AssetId = assetId, Value = amountDecimal, ScriptHash = to.ScriptHash }])
             .NotNull_Or(RpcError.InsufficientFunds);
 
-        var transContext = new ContractParametersContext(snapshot, tx, settings.Network);
+        var transContext = new ContractParametersContext(snapshot, tx, system.Settings.Network);
         wallet.Sign(transContext);
         if (!transContext.Completed)
             return transContext.ToJson();
@@ -939,7 +939,7 @@ partial class RpcServer
     private JObject SignAndRelay(DataCache snapshot, Transaction tx)
     {
         var wallet = CheckWallet();
-        var context = new ContractParametersContext(snapshot, tx, settings.Network);
+        var context = new ContractParametersContext(snapshot, tx, system.Settings.Network);
         wallet.Sign(context);
         if (context.Completed)
         {

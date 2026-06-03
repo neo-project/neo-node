@@ -34,22 +34,17 @@ public class UT_DeferredRelayEngine
     private NeoSystem _system = null!;
     private NEP6Wallet _wallet = null!;
     private WalletAccount _account = null!;
-    private uint _network;
 
     [TestInitialize]
     public void Setup()
     {
         _system = TestBlockchain.GetSystem();
-        _network = _system.Settings.Network;
         _wallet = TestUtils.GenerateTestWallet("pwd");
         _account = _wallet.CreateAccount();
     }
 
-    private static DeferredRelaySettings EnabledSettings(uint max = 10000u, uint freq = 1u, uint? network = null) =>
-        DeferredRelaySettings.Create(network ?? TestProtocolSettings.Default.Network, max, freq);
-
-    private static DeferredRelaySettings DisabledSettings(uint? network = null) =>
-        DeferredRelaySettings.Create(network ?? TestProtocolSettings.Default.Network, 0u, 1u);
+    private static DeferredRelaySettings EnabledSettings(uint max = 10000u, uint freq = 1u) => DeferredRelaySettings.Create(max, freq);
+    private static DeferredRelaySettings DisabledSettings() => DeferredRelaySettings.Create(0u, 1u);
 
     private static void RunPersistProcessing(NeoSystem system, IStore store, DeferredRelaySettings settings, Block block)
     {
@@ -80,11 +75,11 @@ public class UT_DeferredRelayEngine
     [TestMethod]
     public void GetPendingState_NoStore_DisabledShape()
     {
-        JObject j = DeferredRelayEngine.GetPendingState(_system, null, DisabledSettings(_network));
+        JObject j = DeferredRelayEngine.GetPendingState(_system, null, DisabledSettings());
         Assert.IsFalse(j["enabled"]!.AsBoolean());
         Assert.AreEqual(0u, (uint)j["pendingrelaymaxtransactions"]!.AsNumber());
         Assert.AreEqual(0, j["count"]!.AsNumber());
-        Assert.IsInstanceOfType(j["pending"], typeof(JArray));
+        Assert.IsInstanceOfType<JArray>(j["pending"]);
         Assert.AreEqual(0, ((JArray)j["pending"]!).Count);
     }
 
@@ -92,7 +87,7 @@ public class UT_DeferredRelayEngine
     public void GetPendingState_DisabledFeature_EmptyPending()
     {
         var store = new MemoryStore();
-        JObject j = DeferredRelayEngine.GetPendingState(_system, store, DisabledSettings(_network));
+        JObject j = DeferredRelayEngine.GetPendingState(_system, store, DisabledSettings());
         Assert.IsFalse(j["enabled"]!.AsBoolean());
         Assert.AreEqual(0, ((JArray)j["pending"]!).Count);
     }
@@ -101,7 +96,7 @@ public class UT_DeferredRelayEngine
     public void GetPendingState_Enabled_IncludesChainAndPluginFields()
     {
         var store = new MemoryStore();
-        var settings = EnabledSettings(max: 8192u, freq: 5u, network: _network);
+        var settings = EnabledSettings(max: 8192u, freq: 5u);
         JObject j = DeferredRelayEngine.GetPendingState(_system, store, settings);
 
         Assert.IsTrue(j["enabled"]!.AsBoolean());
@@ -116,7 +111,7 @@ public class UT_DeferredRelayEngine
     public void GetPendingState_WithQueuedEntry_ListsHashAndVub()
     {
         var store = new MemoryStore();
-        var settings = EnabledSettings(network: _network);
+        var settings = EnabledSettings();
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
@@ -137,7 +132,7 @@ public class UT_DeferredRelayEngine
     public void TryGetPendingTx_ReturnsBytesForQueuedHash()
     {
         var store = new MemoryStore();
-        var settings = EnabledSettings(network: _network);
+        var settings = EnabledSettings();
         var snapshot = _system.StoreView;
         uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
@@ -184,14 +179,14 @@ public class UT_DeferredRelayEngine
         uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
         var tx = CreateSignedTx(height + maxInc + 5);
 
-        Assert.IsFalse(DeferredRelayEngine.TryOffer(_system, store, DisabledSettings(_network), tx, VerifyResult.NotYetValid));
+        Assert.IsFalse(DeferredRelayEngine.TryOffer(_system, store, DisabledSettings(), tx, VerifyResult.NotYetValid));
     }
 
     [TestMethod]
     public void TryOffer_WhenAlreadyQueued_ReturnsTrueWithoutDuplicate()
     {
         var store = new MemoryStore();
-        var settings = EnabledSettings(network: _network);
+        var settings = EnabledSettings();
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
@@ -206,7 +201,7 @@ public class UT_DeferredRelayEngine
     public void TryOffer_RequiresNotYetValid()
     {
         var store = new MemoryStore();
-        var settings = EnabledSettings(network: _network);
+        var settings = EnabledSettings();
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
@@ -221,7 +216,7 @@ public class UT_DeferredRelayEngine
     public void TryOffer_WhenAtMaxTransactions_RejectsNewHash()
     {
         var store = new MemoryStore();
-        var settings = EnabledSettings(max: 2u, network: _network);
+        var settings = EnabledSettings(max: 2u);
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
@@ -252,7 +247,7 @@ public class UT_DeferredRelayEngine
     public void TryOffer_WithCounter_IncrementsOnAcceptAndNotOnReject()
     {
         var store = new MemoryStore();
-        var settings = EnabledSettings(network: _network);
+        var settings = EnabledSettings();
         var counter = new EntryCounter(0);
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
@@ -277,7 +272,7 @@ public class UT_DeferredRelayEngine
         // Empty store but counter pre-seeded at the cap: capacity check must consult the counter
         // (the whole point of the optimization) and reject without touching the store.
         var store = new MemoryStore();
-        var settings = EnabledSettings(max: 1u, network: _network);
+        var settings = EnabledSettings(max: 1u);
         var counter = new EntryCounter(1);
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
@@ -293,7 +288,7 @@ public class UT_DeferredRelayEngine
     public void ProcessQueuedAsync_WithCounter_DecrementsOnExpiredAndCorruptDeletes()
     {
         var store = new MemoryStore();
-        var settings = EnabledSettings(network: _network);
+        var settings = EnabledSettings();
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
 
@@ -318,7 +313,7 @@ public class UT_DeferredRelayEngine
         // counter via CountEntries and reject the next NotYetValid offer instead of letting the
         // store grow past `max`.
         var store = new MemoryStore();
-        var settings = EnabledSettings(max: 2u, freq: 1u, network: _network);
+        var settings = EnabledSettings(max: 2u, freq: 1u);
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
@@ -356,13 +351,13 @@ public class UT_DeferredRelayEngine
     public void DeferredRelaySettings_MaxRelayPerCycle_FoldsToMin()
     {
         // Below the global default: cap equals MaxTransactions so a single cycle can still drain the whole queue.
-        Assert.AreEqual(3u, DeferredRelaySettings.Create(_network, maxTransactions: 3u, checkFrequency: 1u).MaxRelayPerCycle);
+        Assert.AreEqual(3u, DeferredRelaySettings.Create(maxTransactions: 3u, checkFrequency: 1u).MaxRelayPerCycle);
         // At the boundary: still equals the default.
         Assert.AreEqual(DeferredRelaySettings.DefaultMaxRelayPerCycle,
-            DeferredRelaySettings.Create(_network, maxTransactions: DeferredRelaySettings.DefaultMaxRelayPerCycle, checkFrequency: 1u).MaxRelayPerCycle);
+            DeferredRelaySettings.Create(maxTransactions: DeferredRelaySettings.DefaultMaxRelayPerCycle, checkFrequency: 1u).MaxRelayPerCycle);
         // Above the default: cap stays at the default so the Blockchain actor mailbox is never flooded.
         Assert.AreEqual(DeferredRelaySettings.DefaultMaxRelayPerCycle,
-            DeferredRelaySettings.Create(_network, maxTransactions: 50000u, checkFrequency: 1u).MaxRelayPerCycle);
+            DeferredRelaySettings.Create(maxTransactions: 50000u, checkFrequency: 1u).MaxRelayPerCycle);
     }
 
     [TestMethod]
@@ -372,7 +367,7 @@ public class UT_DeferredRelayEngine
         // so even when 5 in-window entries are queued, a single ProcessQueuedAsync cycle must publish at
         // most 3 RelayResult events (one per Blockchain.Ask attempt observed on the EventStream).
         var store = new MemoryStore();
-        var settings = EnabledSettings(max: 3u, network: _network);
+        var settings = EnabledSettings(max: 3u);
         Assert.AreEqual(3u, settings.MaxRelayPerCycle, "Precondition: MaxRelayPerCycle should fold to MaxTransactions when it is below the default");
 
         var snapshot = _system.StoreView;
@@ -411,7 +406,7 @@ public class UT_DeferredRelayEngine
     public void GetPendingState_SkipsInvalidKeysAndCorruptEntries()
     {
         var store = new MemoryStore();
-        var settings = EnabledSettings(network: _network);
+        var settings = EnabledSettings();
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
@@ -429,8 +424,8 @@ public class UT_DeferredRelayEngine
     [TestMethod]
     public void ShouldProcessPersist_RespectsEnabledBlockZeroAndFrequency()
     {
-        var settings = EnabledSettings(freq: 5u, network: _network);
-        Assert.IsFalse(DeferredRelayEngine.ShouldProcessPersist(CreateBlockWithIndex(2), DisabledSettings(_network)));
+        var settings = EnabledSettings(freq: 5u);
+        Assert.IsFalse(DeferredRelayEngine.ShouldProcessPersist(CreateBlockWithIndex(2), DisabledSettings()));
         Assert.IsFalse(DeferredRelayEngine.ShouldProcessPersist(CreateBlockWithIndex(0), settings));
         Assert.IsFalse(DeferredRelayEngine.ShouldProcessPersist(CreateBlockWithIndex(3), settings));
         Assert.IsTrue(DeferredRelayEngine.ShouldProcessPersist(CreateBlockWithIndex(5), settings));
@@ -446,7 +441,7 @@ public class UT_DeferredRelayEngine
         byte[] key = expiredTx.Hash.GetSpan().ToArray();
         store.Put(key, SerializeTx(expiredTx));
 
-        RunPersistProcessing(_system, store, DisabledSettings(_network), CreateBlockWithIndex(2));
+        RunPersistProcessing(_system, store, DisabledSettings(), CreateBlockWithIndex(2));
         Assert.IsTrue(store.Contains(key));
     }
 
@@ -454,7 +449,7 @@ public class UT_DeferredRelayEngine
     public void ProcessQueued_BlockZero_DoesNotProcess()
     {
         var store = new MemoryStore();
-        var settings = EnabledSettings(network: _network);
+        var settings = EnabledSettings();
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         var expiredTx = CreateRawTx(height);
@@ -469,7 +464,7 @@ public class UT_DeferredRelayEngine
     public void ProcessQueued_CheckFrequency_SkipsNonMatchingBlock()
     {
         var store = new MemoryStore();
-        var settings = EnabledSettings(freq: 5u, network: _network);
+        var settings = EnabledSettings(freq: 5u);
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         var expiredTx = CreateRawTx(height);
@@ -487,7 +482,7 @@ public class UT_DeferredRelayEngine
     public void ProcessQueued_RemovesExpiredEntry()
     {
         var store = new MemoryStore();
-        var settings = EnabledSettings(network: _network);
+        var settings = EnabledSettings();
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
 
@@ -503,7 +498,7 @@ public class UT_DeferredRelayEngine
     public void ProcessQueued_RemovesCorruptEntry()
     {
         var store = new MemoryStore();
-        var settings = EnabledSettings(network: _network);
+        var settings = EnabledSettings();
         byte[] key = UInt256.Zero.GetSpan().ToArray();
         store.Put(key, [0xFF]);
 
@@ -515,7 +510,7 @@ public class UT_DeferredRelayEngine
     public void DeferredRelayActor_IgnoresNonNotYetValidRelayResult()
     {
         var store = new MemoryStore();
-        var settings = EnabledSettings(network: _network);
+        var settings = EnabledSettings();
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
@@ -538,7 +533,7 @@ public class UT_DeferredRelayEngine
     public void DeferredRelayActor_QueuesNotYetValidRelayResult()
     {
         var store = new MemoryStore();
-        var settings = EnabledSettings(network: _network);
+        var settings = EnabledSettings();
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
@@ -563,7 +558,7 @@ public class UT_DeferredRelayEngine
     public void DeferredRelayActor_HandlesPersistCompleted_ViaEventStream()
     {
         var store = new MemoryStore();
-        var settings = EnabledSettings(network: _network);
+        var settings = EnabledSettings();
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         var expiredTx = CreateRawTx(height);
@@ -624,7 +619,7 @@ public class UT_DeferredRelayEngine
         // The entry is still NotYetValid (outside the relay window), so it must stay in the store
         // AND no Blockchain relay attempt should occur for it.
         var store = new MemoryStore();
-        var settings = EnabledSettings(network: _network);
+        var settings = EnabledSettings();
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
@@ -661,7 +656,7 @@ public class UT_DeferredRelayEngine
         // The entry just entered the allowed forward window, so a Blockchain.Ask<RelayResult>
         // must be issued (observed as a RelayResult published on the EventStream by the Blockchain actor).
         var store = new MemoryStore();
-        var settings = EnabledSettings(network: _network);
+        var settings = EnabledSettings();
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
@@ -698,7 +693,7 @@ public class UT_DeferredRelayEngine
         // toRemove path (no Blockchain relay attempt), so the `height < tx.ValidUntilBlock` guard
         // in the second `if` is observably exercised.
         var store = new MemoryStore();
-        var settings = EnabledSettings(network: _network);
+        var settings = EnabledSettings();
         var snapshot = _system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
 

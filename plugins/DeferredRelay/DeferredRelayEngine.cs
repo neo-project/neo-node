@@ -146,7 +146,7 @@ internal static class DeferredRelayEngine
     /// Optional in-memory entry counter; decremented on every successful <c>Delete</c> so that
     /// <see cref="TryOffer"/> can perform its capacity check without re-scanning the store.
     /// </param>
-    public static async Task ProcessQueuedAsync(NeoSystem system, IStore store, DeferredRelaySettings settings, CancellationToken cancellationToken = default, EntryCounter? counter = null)
+    public static async Task ProcessQueuedAsync(NeoSystem system, IStore store, DeferredRelaySettings settings, EntryCounter? counter = null, CancellationToken cancellationToken = default)
     {
         var snapshot = system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);

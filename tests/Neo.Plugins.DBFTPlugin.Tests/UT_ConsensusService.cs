@@ -269,7 +269,6 @@ public class UT_ConsensusService : TestKit
         var viewNumber = context.ViewNumber;
         var primaryIndex = context.Block.PrimaryIndex;
         var validTimestamp = Math.Max(context.PrevHeader.Timestamp + 1, TimeProvider.Current.UtcNow.ToTimestampMS());
-
         var prepareRequest = new PrepareRequest
         {
             BlockIndex = blockIndex,

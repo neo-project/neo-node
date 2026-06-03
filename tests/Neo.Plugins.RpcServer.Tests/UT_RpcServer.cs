@@ -46,7 +46,6 @@ public partial class UT_RpcServer
             SessionEnabled = true,
             SessionExpirationTime = TimeSpan.FromSeconds(0.3),
             MaxGasInvoke = 1500_0000_0000,
-            Network = TestProtocolSettings.SoleNode.Network,
         };
         _rpcServer = new RpcServer(_neoSystem, _rpcServerSettings);
         _walletAccount = _wallet.Import("KxuRSsHgJMb3AMSN6B9P3JHNGMFtxmuimqgR9MmXPcv3CLLfusTd");
@@ -92,7 +91,6 @@ public partial class UT_RpcServer
             SessionEnabled = true,
             SessionExpirationTime = TimeSpan.FromSeconds(0.3),
             MaxGasInvoke = 1500_0000_0000,
-            Network = TestProtocolSettings.SoleNode.Network,
             RpcUser = "testuser",
             RpcPass = "testpass",
         };
@@ -407,7 +405,6 @@ public partial class UT_RpcServer
             .First();
 
         var settings = RpcServersSettings.Load(config);
-        Assert.AreEqual(860833102u, settings.Network);
         Assert.AreEqual(10332, settings.Port);
         Assert.AreEqual(IPAddress.Parse("127.0.0.1"), settings.BindAddress);
         Assert.AreEqual(string.Empty, settings.SslCert);
@@ -443,7 +440,6 @@ public partial class UT_RpcServer
 
         Assert.AreEqual(UnhandledExceptionPolicy.Ignore, settings.ExceptionPolicy);
         Assert.HasCount(1, settings.Servers);
-        Assert.AreEqual(860833102u, settings.Servers[0].Network);
     }
 
     [TestMethod]
