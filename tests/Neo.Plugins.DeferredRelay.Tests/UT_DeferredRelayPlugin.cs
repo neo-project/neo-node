@@ -33,8 +33,7 @@ public class UT_DeferredRelayPlugin
         return new ConfigurationBuilder().AddJsonStream(stream).Build().GetSection("PluginConfiguration");
     }
 
-    private static void LoadSettings(string json) =>
-        DeferredRelaySettings.Load(BuildSection(json));
+    private static void LoadSettings(string json) => DeferredRelaySettings.Load(BuildSection(json));
 
     private static void InvokeOnSystemLoaded(DeferredRelayPlugin plugin, NeoSystem system) =>
         typeof(DeferredRelayPlugin).GetMethod("OnSystemLoaded", BindingFlags.Instance | BindingFlags.NonPublic)!
@@ -82,33 +81,12 @@ public class UT_DeferredRelayPlugin
         LoadSettings("""
         {
           "PluginConfiguration": {
-            "Network": 860833102,
             "MaxTransactions": 10,
             "CheckFrequency": 1
           }
         }
         """);
         Assert.ThrowsExactly<InvalidOperationException>(() => _plugin.GetPendingValidUntilRelay());
-    }
-
-    [TestMethod]
-    public void OnSystemLoaded_NetworkMismatch_DoesNotBindNeoSystem()
-    {
-        _system = TestBlockchain.GetSystem();
-        _plugin = new DeferredRelayPlugin();
-        LoadSettings("""
-        {
-          "PluginConfiguration": {
-            "Network": 1,
-            "MaxTransactions": 10,
-            "CheckFrequency": 1
-          }
-        }
-        """);
-        InvokeOnSystemLoaded(_plugin, _system);
-
-        Assert.IsNull(GetPrivateField(_plugin, "_neoSystem"));
-        Assert.IsNull(GetPrivateField(_plugin, "_store"));
     }
 
     [TestMethod]
@@ -119,7 +97,6 @@ public class UT_DeferredRelayPlugin
         LoadSettings("""
         {
           "PluginConfiguration": {
-            "Network": 860833102,
             "MaxTransactions": 0,
             "CheckFrequency": 1
           }
@@ -140,7 +117,6 @@ public class UT_DeferredRelayPlugin
         LoadSettings("""
         {
           "PluginConfiguration": {
-            "Network": 860833102,
             "MaxTransactions": 0,
             "CheckFrequency": 1
           }
@@ -161,7 +137,6 @@ public class UT_DeferredRelayPlugin
         LoadSettings("""
         {
           "PluginConfiguration": {
-            "Network": 860833102,
             "MaxTransactions": 100,
             "CheckFrequency": 1
           }
@@ -181,7 +156,6 @@ public class UT_DeferredRelayPlugin
         LoadSettings("""
         {
           "PluginConfiguration": {
-            "Network": 860833102,
             "MaxTransactions": 100,
             "CheckFrequency": 1
           }
@@ -210,7 +184,6 @@ public class UT_DeferredRelayPlugin
         LoadSettings("""
         {
           "PluginConfiguration": {
-            "Network": 860833102,
             "MaxTransactions": 10,
             "CheckFrequency": 1
           }
@@ -227,7 +200,6 @@ public class UT_DeferredRelayPlugin
         LoadSettings("""
         {
           "PluginConfiguration": {
-            "Network": 860833102,
             "MaxTransactions": 0,
             "CheckFrequency": 1
           }
@@ -247,7 +219,6 @@ public class UT_DeferredRelayPlugin
         LoadSettings("""
         {
           "PluginConfiguration": {
-            "Network": 860833102,
             "MaxTransactions": 100,
             "CheckFrequency": 1
           }
@@ -268,7 +239,6 @@ public class UT_DeferredRelayPlugin
         LoadSettings("""
         {
           "PluginConfiguration": {
-            "Network": 860833102,
             "MaxTransactions": 100,
             "CheckFrequency": 1
           }
@@ -290,7 +260,6 @@ public class UT_DeferredRelayPlugin
         LoadSettings("""
         {
           "PluginConfiguration": {
-            "Network": 860833102,
             "MaxTransactions": 100,
             "CheckFrequency": 1
           }
@@ -324,8 +293,7 @@ public class UT_DeferredRelayPlugin
 
         var wallet = TestUtils.GenerateTestWallet("pwd");
         var account = wallet.CreateAccount();
-
-        uint height = NativeContract.Ledger.CurrentIndex(system.StoreView);
+        var height = NativeContract.Ledger.CurrentIndex(system.StoreView);
         var tx = new Transaction
         {
             Version = 0,
@@ -343,7 +311,7 @@ public class UT_DeferredRelayPlugin
         using var ms = new MemoryStream();
         using (var writer = new BinaryWriter(ms))
             ((ISerializable)tx).Serialize(writer);
-        byte[] raw = ms.ToArray();
+        var raw = ms.ToArray();
         store.Put(tx.Hash.GetSpan().ToArray(), raw);
         return (tx, raw);
     }

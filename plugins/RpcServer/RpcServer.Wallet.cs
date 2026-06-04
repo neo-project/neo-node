@@ -416,7 +416,7 @@ partial class RpcServer
             return;
         }
 
-        var context = new ContractParametersContext(system.StoreView, tx, settings.Network);
+        var context = new ContractParametersContext(system.StoreView, tx, system.Settings.Network);
         wallet.Sign(context);
         if (context.Completed)
         {
@@ -487,13 +487,12 @@ partial class RpcServer
         var tx = Result.Ok_Or(() => wallet.MakeTransaction(snapshot, [transfer], from.ScriptHash, callSigners),
             RpcError.InvalidRequest.WithData("Can not process this request.")).NotNull_Or(RpcError.InsufficientFunds);
 
-        var transContext = new ContractParametersContext(snapshot, tx, settings.Network);
+        var transContext = new ContractParametersContext(snapshot, tx, system.Settings.Network);
         wallet.Sign(transContext);
 
         if (!transContext.Completed) return transContext.ToJson();
 
         tx.Witnesses = transContext.GetWitnesses();
-        EnsureNetworkFee(snapshot, tx);
         return SignAndRelay(snapshot, tx);
     }
 
@@ -598,13 +597,12 @@ partial class RpcServer
         }
 
         var tx = wallet.MakeTransaction(snapshot, outputs, from, signers).NotNull_Or(RpcError.InsufficientFunds);
-        var transContext = new ContractParametersContext(snapshot, tx, settings.Network);
+        var transContext = new ContractParametersContext(snapshot, tx, system.Settings.Network);
         wallet.Sign(transContext);
 
         if (!transContext.Completed) return transContext.ToJson();
 
         tx.Witnesses = transContext.GetWitnesses();
-        EnsureNetworkFee(snapshot, tx);
         return SignAndRelay(snapshot, tx);
     }
 
@@ -655,22 +653,13 @@ partial class RpcServer
         var tx = wallet.MakeTransaction(snapshot, [new() { AssetId = assetId, Value = amountDecimal, ScriptHash = to.ScriptHash }])
             .NotNull_Or(RpcError.InsufficientFunds);
 
-        var transContext = new ContractParametersContext(snapshot, tx, settings.Network);
+        var transContext = new ContractParametersContext(snapshot, tx, system.Settings.Network);
         wallet.Sign(transContext);
         if (!transContext.Completed)
             return transContext.ToJson();
 
         tx.Witnesses = transContext.GetWitnesses();
-        EnsureNetworkFee(snapshot, tx);
         return SignAndRelay(snapshot, tx);
-    }
-
-    private void EnsureNetworkFee(StoreCache snapshot, Transaction tx)
-    {
-        long calFee = tx.Size * NativeContract.Policy.GetFeePerByte(snapshot) + 100000;
-        if (tx.NetworkFee < calFee)
-            tx.NetworkFee = calFee;
-        (tx.NetworkFee <= settings.MaxFee).True_Or(RpcError.WalletFeeLimit);
     }
 
     /// <summary>
@@ -780,7 +769,9 @@ partial class RpcServer
     protected internal virtual JToken CancelTransaction(UInt256 txid, Address[] signers, string? extraFee = null)
     {
         var wallet = CheckWallet();
-        NativeContract.Ledger.GetTransactionState(system.StoreView, txid)
+        using var snapshot = system.GetSnapshotCache();
+
+        NativeContract.Ledger.GetTransactionState(snapshot, txid)
             .Null_Or(RpcErrorFactory.AlreadyExists("This tx is already confirmed, can't be cancelled."));
 
         if (signers is null || signers.Length == 0) throw new RpcException(RpcErrorFactory.BadRequest("No signer."));
@@ -795,7 +786,7 @@ partial class RpcServer
         };
 
         tx = Result.Ok_Or(
-            () => wallet.MakeTransaction(system.StoreView, new[] { (byte)OpCode.RET }, noneSigners[0].Account, noneSigners, conflict),
+            () => wallet.MakeTransaction(snapshot, new[] { (byte)OpCode.RET }, noneSigners[0].Account, noneSigners, conflict),
             RpcError.InsufficientFunds, true);
         if (system.MemPool.TryGetValue(txid, out var conflictTx))
         {
@@ -803,13 +794,13 @@ partial class RpcServer
         }
         else if (extraFee is not null)
         {
-            var descriptor = new AssetDescriptor(system.StoreView, system.Settings, NativeContract.GAS.Hash);
+            var descriptor = new AssetDescriptor(snapshot, system.Settings, NativeContract.GAS.Hash);
             (BigDecimal.TryParse(extraFee, descriptor.Decimals, out var decimalExtraFee) && decimalExtraFee.Sign > 0)
                 .True_Or(RpcErrorFactory.InvalidParams("Incorrect amount format."));
 
             tx.NetworkFee += (long)decimalExtraFee.Value;
         }
-        return SignAndRelay(system.StoreView, tx);
+        return SignAndRelay(snapshot, tx);
     }
 
     /// <summary>
@@ -948,11 +939,17 @@ partial class RpcServer
     private JObject SignAndRelay(DataCache snapshot, Transaction tx)
     {
         var wallet = CheckWallet();
-        var context = new ContractParametersContext(snapshot, tx, settings.Network);
+        var context = new ContractParametersContext(snapshot, tx, system.Settings.Network);
         wallet.Sign(context);
         if (context.Completed)
         {
             tx.Witnesses = context.GetWitnesses();
+            // Check MaxFee
+            long calFee = tx.Size * NativeContract.Policy.GetFeePerByte(snapshot) + 100000;
+            if (tx.NetworkFee < calFee)
+                tx.NetworkFee = calFee;
+            (tx.NetworkFee <= settings.MaxFee).True_Or(RpcError.WalletFeeLimit);
+            // Relay it
             var relayResult = system.Blockchain.Ask<Blockchain.RelayResult>(tx, TimeSpan.FromSeconds(30)).Result;
             // GetRelayResult throws RpcException for any non-Succeed reason; its JObject return value
             // (only { "hash": ... }) is discarded because wallet RPCs return the full tx JSON.

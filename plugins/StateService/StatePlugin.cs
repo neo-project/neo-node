@@ -61,7 +61,6 @@ public class StatePlugin : Plugin
 
     protected override void OnSystemLoaded(NeoSystem system)
     {
-        if (system.Settings.Network != StateServiceSettings.Default.Network) return;
         _system = system;
         // Get path from plugin's own configuration, optionally combined with base path from config.json
         var networkId = system.Settings.Network.ToString("X8");
@@ -72,7 +71,7 @@ public class StatePlugin : Plugin
 
         Store = _system.ActorSystem.ActorOf(StateStore.Props(this, fullPath));
         _system.ServiceAdded += NeoSystem_ServiceAdded_Handler;
-        RpcServerPlugin.RegisterMethods(this, StateServiceSettings.Default.Network);
+        RpcServerPlugin.RegisterMethods(this, system.Settings.Network);
         PluginLogger ??= Logs.GetLogger($"Plugin_{Name}");
     }
 
@@ -107,7 +106,7 @@ public class StatePlugin : Plugin
     void Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
         IReadOnlyList<ApplicationExecuted> applicationExecutedList)
     {
-        if (system.Settings.Network != StateServiceSettings.Default.Network) return;
+        if (system.Settings.Network != _system.Settings.Network) return;
         StateStore.Singleton.UpdateLocalStateRootSnapshot(block.Index,
             snapshot.GetChangeSet()
                 .Where(p => p.Value.State != TrackState.None && p.Key.Id != NativeContract.Ledger.Id)
@@ -116,21 +115,13 @@ public class StatePlugin : Plugin
 
     void Blockchain_Committed_Handler(NeoSystem system, Block block)
     {
-        if (system.Settings.Network != StateServiceSettings.Default.Network) return;
+        if (system.Settings.Network != _system.Settings.Network) return;
         StateStore.Singleton.UpdateLocalStateRoot(block.Index);
-    }
-
-    private void CheckNetwork()
-    {
-        var network = StateServiceSettings.Default.Network;
-        if (_system is null || _system.Settings.Network != network)
-            throw new InvalidOperationException($"Network doesn't match: {_system?.Settings.Network} != {network}");
     }
 
     [ConsoleCommand("start states", Category = "StateService", Description = "Start as a state verifier if wallet is open")]
     private void OnStartVerifyingState()
     {
-        CheckNetwork();
         Start(walletProvider.GetWallet());
     }
 
@@ -153,8 +144,6 @@ public class StatePlugin : Plugin
     [ConsoleCommand("state root", Category = "StateService", Description = "Get state root by index")]
     private void OnGetStateRoot(uint index)
     {
-        CheckNetwork();
-
         using var snapshot = StateStore.Singleton.GetSnapshot();
         var stateRoot = snapshot.GetStateRoot(index);
         if (stateRoot is null)
@@ -166,8 +155,6 @@ public class StatePlugin : Plugin
     [ConsoleCommand("state height", Category = "StateService", Description = "Get current state root index")]
     private void OnGetStateHeight()
     {
-        CheckNetwork();
-
         ConsoleHelper.Info("LocalRootIndex: ",
             $"{StateStore.Singleton.LocalRootIndex}",
             " ValidatedRootIndex: ",
@@ -177,9 +164,6 @@ public class StatePlugin : Plugin
     [ConsoleCommand("get proof", Category = "StateService", Description = "Get proof of key and contract hash")]
     private void OnGetProof(UInt256 rootHash, UInt160 scriptHash, string key)
     {
-        if (_system is null || _system.Settings.Network != StateServiceSettings.Default.Network)
-            throw new InvalidOperationException("Network doesn't match");
-
         try
         {
             ConsoleHelper.Info("Proof: ", GetProof(rootHash, scriptHash, Convert.FromBase64String(key)));

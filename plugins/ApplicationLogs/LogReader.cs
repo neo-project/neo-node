@@ -77,10 +77,8 @@ public class LogReader : Plugin
 
     protected override void OnSystemLoaded(NeoSystem system)
     {
-        if (system.Settings.Network != ApplicationLogsSettings.Default.Network)
-            return;
         // Get path from plugin's own configuration, optionally combined with base path from config.json
-        var networkId = ApplicationLogsSettings.Default.Network.ToString("X8");
+        var networkId = system.Settings.Network.ToString("X8");
         var pluginPath = string.Format(ApplicationLogsSettings.Default.Path, networkId);
         var path = PluginHelper.ApplyUnifiedStoragePath(pluginPath);
         var fullPath = GetFullPath(path);
@@ -89,7 +87,7 @@ public class LogReader : Plugin
         var store = system.LoadStore(fullPath);
         _neostore = new NeoStore(store);
         _neosystem = system;
-        RpcServerPlugin.RegisterMethods(this, ApplicationLogsSettings.Default.Network);
+        RpcServerPlugin.RegisterMethods(this, system.Settings.Network);
 
         if (ApplicationLogsSettings.Default.Debug)
             ApplicationEngine.InstanceHandler += ConfigureAppEngine;
@@ -233,9 +231,6 @@ public class LogReader : Plugin
     void Blockchain_Committing_Handler(NeoSystem system, Block block, DataCache snapshot,
         IReadOnlyList<Blockchain.ApplicationExecuted> applicationExecutedList)
     {
-        if (system.Settings.Network != ApplicationLogsSettings.Default.Network)
-            return;
-
         if (_neostore is null)
             return;
         _neostore.StartBlockLogBatch();
@@ -254,8 +249,6 @@ public class LogReader : Plugin
 
     void Blockchain_Committed_Handler(NeoSystem system, Block block)
     {
-        if (system.Settings.Network != ApplicationLogsSettings.Default.Network)
-            return;
         if (_neostore is null)
             return;
         _neostore.CommitBlockLog();
@@ -264,9 +257,6 @@ public class LogReader : Plugin
     void ApplicationEngine_Log_Handler(ApplicationEngine sender, LogEventArgs e)
     {
         if (ApplicationLogsSettings.Default.Debug == false)
-            return;
-
-        if (_neosystem.Settings.Network != ApplicationLogsSettings.Default.Network)
             return;
 
         if (e.ScriptContainer == null)

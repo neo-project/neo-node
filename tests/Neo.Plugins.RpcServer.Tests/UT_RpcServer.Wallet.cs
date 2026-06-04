@@ -937,7 +937,6 @@ partial class UT_RpcServer
     }
 
     [TestMethod]
-    [Obsolete]
     public void TestCancelTransaction()
     {
         TestUtilOpenWallet();

@@ -29,7 +29,9 @@ class Session : IDisposable
     {
         Random random = new();
         Snapshot = system.GetSnapshotCache();
-        var tx = signers == null ? null : new Transaction
+        if (signers == null)
+            signers = new[] { new Signer { Account = UInt160.Zero, Scopes = WitnessScope.None } };
+        var tx = new Transaction
         {
             Version = 0,
             Nonce = (uint)random.Next(),
