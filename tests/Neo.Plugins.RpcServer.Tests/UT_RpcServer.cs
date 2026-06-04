@@ -429,7 +429,7 @@ public partial class UT_RpcServer
         Assert.HasCount(1, settings.DisabledMethods);
         Assert.AreEqual("openwallet", settings.DisabledMethods[0]);
         Assert.AreEqual(40, settings.MaxConcurrentConnections);
-        Assert.AreEqual(5 * 1024 * 1024, settings.MaxRequestBodySize);
+        Assert.AreEqual(1 * 1024 * 1024, settings.MaxRequestBodySize);
         Assert.AreEqual(50, settings.FindStoragePageSize);
     }
 

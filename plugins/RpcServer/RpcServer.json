@@ -17,6 +17,7 @@
         "RequestHeadersTimeout": 15,
         "MaxGasInvoke": 20,
         "MaxFee": 0.1,
+        "MaxRequestBodySize": 1048576,
         "MaxConcurrentConnections": 40,
         "MaxIteratorResultItems": 100,
         "MaxStackSize": 65535,
