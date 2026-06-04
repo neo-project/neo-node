@@ -10,7 +10,6 @@
 // modifications are permitted.
 
 using Neo.Cryptography.ECC;
-using System.Security.Cryptography;
 using Neo.Extensions;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
@@ -19,6 +18,7 @@ using Neo.SmartContract.Native;
 using Neo.Wallets;
 using System.Numerics;
 using System.Reflection;
+using System.Security.Cryptography;
 using ECPoint = Neo.Cryptography.ECC.ECPoint;
 
 namespace Neo.CLI.Tests;

@@ -17,6 +17,7 @@ using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
+using Neo.VM;
 using Neo.VM.Types;
 using Neo.Wallets;
 using System.Numerics;
@@ -67,7 +68,39 @@ partial class MainService
 
         var testGas = NativeContract.NEO.GetRegisterPrice(snapshot) + (BigInteger)Math.Pow(10, NativeContract.GAS.Decimals) * 10;
         var script = BuildNeoScript(VoteMethods.Register, publicKey);
-        SendTransaction(script, account, (long)testGas);
+        RegisterCandidateViaInvoke(script, account, snapshot, (long)testGas);
+    }
+
+    private void RegisterCandidateViaInvoke(byte[] script, UInt160 account, DataCache snapshot, long testGas)
+    {
+        var signers = CurrentWallet!.GetAccounts()
+            .Where(p => !p.Lock && !p.WatchOnly && p.ScriptHash == account && NativeContract.GAS.BalanceOf(snapshot, p.ScriptHash).Sign > 0)
+            .Select(p => new Signer { Account = p.ScriptHash, Scopes = WitnessScope.CalledByEntry })
+            .ToArray();
+
+        try
+        {
+            var tx = CurrentWallet!.MakeTransaction(snapshot, script, account, signers, maxGas: testGas);
+            ConsoleHelper.Info("Invoking script with: ", $"'{Convert.ToBase64String(tx.Script.Span)}'");
+            using (var engine = ApplicationEngine.Run(tx.Script, snapshot, container: tx, settings: NeoSystem.Settings, gas: testGas))
+            {
+                PrintExecutionOutput(engine, true);
+                if (engine.State == VMState.FAULT) return;
+            }
+
+            ConsoleHelper.Info(
+                "Network fee: ", $"{new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)}\t",
+                "Total fee: ", $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
+
+            if (!ConsoleHelper.ReadUserInput("Relay tx(no|yes)").IsYes())
+                return;
+
+            SignAndSendTx(snapshot, tx);
+        }
+        catch (InvalidOperationException e)
+        {
+            ConsoleHelper.Error(GetExceptionMessage(e));
+        }
     }
 
     /// <summary>
@@ -112,7 +145,17 @@ partial class MainService
             return;
         }
 
+        using (var engine = ApplicationEngine.Run(tx.Script, snapshot, container: tx, settings: NeoSystem.Settings, gas: TestModeGas))
+        {
+            PrintExecutionOutput(engine, true);
+            if (engine.State == VMState.FAULT) return;
+        }
+
         ConsoleHelper.Info("Registering candidate via GAS transfer to NEO contract, amount: ", amount.ToString());
+        ConsoleHelper.Info(
+            "Network fee: ", $"{new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)}\t",
+            "System fee: ", $"{new BigDecimal((BigInteger)tx.SystemFee, NativeContract.GAS.Decimals)}\t",
+            "Total fee: ", $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
 
         if (!ConsoleHelper.ReadUserInput("Relay tx(no|yes)").IsYes())
             return;
