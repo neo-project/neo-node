@@ -38,6 +38,9 @@ static class Helper
         if (IPAddress.Any.Equals(ipAddress)) return true;
         if (IPAddress.IPv6Any.Equals(ipAddress)) return true;
         if (IPAddress.IPv6Loopback.Equals(ipAddress)) return true;
+        if (ipAddress.IsIPv6LinkLocal) return true;
+        if (ipAddress.IsIPv6UniqueLocal) return true;
+        if (ipAddress.IsIPv6SiteLocal) return true;
 
         // Handle IPv4 mapped into IPv6 (e.g., ::ffff:127.0.0.1)
         if (ipAddress.IsIPv4MappedToIPv6)
