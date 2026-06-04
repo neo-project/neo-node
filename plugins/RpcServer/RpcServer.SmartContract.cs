@@ -374,7 +374,7 @@ partial class RpcServer
         var iterator = Result.Ok_Or(() => session.Iterators[iteratorId], RpcError.UnknownIterator);
         var json = new JArray();
         while (count-- > 0 && iterator.Next())
-            json.Add(iterator.Value(null).ToJson());
+            json.Add(iterator.Value().ToJson());
         return json;
     }
 
