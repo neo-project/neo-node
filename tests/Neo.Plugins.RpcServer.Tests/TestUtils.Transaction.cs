@@ -89,8 +89,8 @@ public partial class TestUtils
                 tx.Script = new byte[Transaction.MaxTransactionSize];
                 break;
             case InvalidTransactionType.Expired:
-                // Set an expired ValidUntilBlock
-                tx.ValidUntilBlock = NativeContract.Ledger.CurrentIndex(snapshot) - 1;
+                // Set an expired ValidUntilBlock (use 0 to avoid uint underflow when CurrentIndex == 0)
+                tx.ValidUntilBlock = 0;
                 break;
             case InvalidTransactionType.Conflicting:
                 // To create a conflicting transaction, we'd need another valid transaction.
