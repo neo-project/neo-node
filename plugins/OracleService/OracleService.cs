@@ -32,6 +32,7 @@ using Neo.VM;
 using Neo.Wallets;
 using Serilog;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace Neo.Plugins.OracleService;
@@ -152,6 +153,7 @@ public sealed class OracleService : Plugin
 
         this.wallet = wallet;
         protocols["https"] = new OracleHttpsProtocol();
+        protocols["dns"] = new OracleDnsProtocol();
         protocols["neofs"] = new OracleNeoFSProtocol(wallet, oracles);
         status = OracleStatus.Running;
         timer = new Timer(OnTimer, null, RefreshIntervalMilliSeconds, Timeout.Infinite);
@@ -301,8 +303,20 @@ public sealed class OracleService : Plugin
 
         (OracleResponseCode code, string? data) = await ProcessUrlAsync(req.Url);
 
+        bool dnsStackOutput = Uri.TryCreate(req.Url, UriKind.Absolute, out Uri? requestUri)
+            && requestUri.Scheme.Equals("dns", StringComparison.OrdinalIgnoreCase);
+        byte[]? dnsStackBytes = null;
+        if (code == OracleResponseCode.Success && dnsStackOutput)
+        {
+            if (!TryDecodeDnsStackItemPayload(data, out dnsStackBytes))
+            {
+                code = OracleResponseCode.Error;
+                PluginLogger?.Warning("Invalid DNS stack item payload: {OriginalTxid}", req.OriginalTxid);
+            }
+        }
+
         PluginLogger?.Information("Process oracle request end: {OriginalTxid} <{Url}>, responseCode:{ResponseCode}, response:{Response}",
-            req.OriginalTxid, req.Url, code, data);
+            req.OriginalTxid, req.Url, code, FormatResponseForLog(code, data, dnsStackOutput));
 
         var oracleNodes = NativeContract.RoleManagement.GetDesignatedByRole(snapshot, Role.Oracle, height);
         foreach (var (requestId, request) in NativeContract.Oracle.GetRequestsByUrl(snapshot, req.Url))
@@ -312,7 +326,20 @@ public sealed class OracleService : Plugin
             {
                 try
                 {
-                    result = Filter(data!, request.Filter);
+                    if (dnsStackOutput)
+                    {
+                        if (!string.IsNullOrEmpty(request.Filter))
+                            throw new InvalidOperationException("Filter is not supported for dns: requests.");
+                        if (dnsStackBytes is null)
+                            throw new InvalidOperationException("Missing DNS stack item payload.");
+                        if (dnsStackBytes.Length > OracleResponse.MaxResultSize)
+                            throw new InvalidOperationException("DNS stack item payload exceeds oracle maximum result size.");
+                        result = dnsStackBytes;
+                    }
+                    else
+                    {
+                        result = Filter(data ?? string.Empty, request.Filter);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -540,6 +567,41 @@ public sealed class OracleService : Plugin
         JToken? beforeObject = JToken.Parse(input);
         JArray afterObjects = beforeObject?.JsonPath(filterArgs) ?? new();
         return afterObjects.ToByteArray(false);
+    }
+
+    internal static string? FormatResponseForLog(OracleResponseCode code, string? data, bool dnsStackOutput)
+    {
+        if (code != OracleResponseCode.Success)
+            return data;
+
+        if (dnsStackOutput)
+            return string.IsNullOrEmpty(data) ? "<stackitem:empty>" : $"<stackitem:base64:{data.Length} chars>";
+
+        if (string.IsNullOrEmpty(data))
+            return data;
+
+        const int maxLen = 2048;
+        return data.Length <= maxLen ? data : data[..maxLen] + "...";
+    }
+
+    internal static bool TryDecodeDnsStackItemPayload(string? payload, [NotNullWhen(true)] out byte[]? result)
+    {
+        if (payload is null)
+        {
+            result = null;
+            return false;
+        }
+
+        try
+        {
+            result = Convert.FromBase64String(payload);
+            return true;
+        }
+        catch (Exception)
+        {
+            result = null;
+            return false;
+        }
     }
 
     private bool CheckTxSign(DataCache snapshot, Transaction tx, ConcurrentDictionary<ECPoint, byte[]> OracleSigns)
