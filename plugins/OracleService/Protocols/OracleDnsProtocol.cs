@@ -97,6 +97,7 @@ class OracleDnsProtocol : IOracleProtocol
     private readonly object syncRoot = new();
     private bool configured;
     private Uri? endpoint;
+    private TimeSpan timeout;
 
     public OracleDnsProtocol(HttpMessageHandler? handler = null)
     {
@@ -128,7 +129,7 @@ class OracleDnsProtocol : IOracleProtocol
         try
         {
             query = ParseQueryString(uri.Query);
-            queryName = BuildQueryName(uri, query);
+            queryName = BuildQueryName(uri);
             ValidateClass(query);
             resolverEndpoint = GetResolverEndpoint(uri);
         }
@@ -179,15 +180,26 @@ class OracleDnsProtocol : IOracleProtocol
         if (dnsResponse.Answers.Count == 0)
             return (OracleResponseCode.NotFound, null);
 
-        ResultAnswer[] answers = dnsResponse.Answers
-            .Select(a => new ResultAnswer
-            {
-                Name = a.Name.TrimEnd('.'),
-                Type = GetRecordTypeLabel(a.Type),
-                Ttl = a.Ttl,
-                Data = FormatRData(a.Type, a.RData)
-            })
-            .ToArray();
+        ResultAnswer[] answers;
+        try
+        {
+            answers = dnsResponse.Answers
+                .Select(a => new ResultAnswer
+                {
+                    Name = a.Name.TrimEnd('.'),
+                    Type = GetRecordTypeLabel(a.Type),
+                    Ttl = 0,
+                    Data = FormatRData(a.Type, a.RData)
+                })
+                .OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(a => a.Type, StringComparer.Ordinal)
+                .ThenBy(a => a.Data, StringComparer.Ordinal)
+                .ToArray();
+        }
+        catch (Exception ex)
+        {
+            return (OracleResponseCode.Error, ex.Message);
+        }
 
         byte[] stackBytes = SerializeStackItemEnvelope(queryName, recordTypeLabel, answers);
         if (stackBytes.Length > OracleResponse.MaxResultSize)
@@ -231,11 +243,16 @@ class OracleDnsProtocol : IOracleProtocol
     private async Task<DnsMessage> ResolveAsync(string name, ushort type, Uri resolverEndpoint, CancellationToken cancellation)
     {
         byte[] queryMessage = BuildDnsQuery(name, type);
+        ushort queryId = BinaryPrimitives.ReadUInt16BigEndian(queryMessage.AsSpan(0, 2));
 
         using ByteArrayContent content = new(queryMessage);
         content.Headers.ContentType = DnsMessageMediaType;
 
-        await EnsureEndpointAllowed(resolverEndpoint, cancellation);
+        using CancellationTokenSource timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
+        timeoutSource.CancelAfter(timeout);
+        CancellationToken requestCancellation = timeoutSource.Token;
+
+        await EnsureEndpointAllowed(resolverEndpoint, requestCancellation);
 
         using HttpRequestMessage request = new(HttpMethod.Post, resolverEndpoint)
         {
@@ -244,16 +261,16 @@ class OracleDnsProtocol : IOracleProtocol
             VersionPolicy = HttpVersionPolicy.RequestVersionOrHigher
         };
 
-        using HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellation);
+        using HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, requestCancellation);
         if (!response.IsSuccessStatusCode)
             throw new InvalidOperationException($"DoH endpoint returned {(int)response.StatusCode} ({response.StatusCode})");
 
         if (response.Content.Headers.ContentLength.HasValue && response.Content.Headers.ContentLength > OracleResponse.MaxResultSize)
             throw new ResponseTooLargeException();
 
-        using Stream stream = await response.Content.ReadAsStreamAsync(cancellation);
-        byte[] responseData = await ReadResponseContentAsync(stream, cancellation);
-        return ParseDnsResponse(responseData);
+        using Stream stream = await response.Content.ReadAsStreamAsync(requestCancellation);
+        byte[] responseData = await ReadResponseContentAsync(stream, requestCancellation);
+        return ParseDnsResponse(responseData, queryId, name, type);
     }
 
     private static async Task<byte[]> ReadResponseContentAsync(Stream stream, CancellationToken cancellation)
@@ -472,7 +489,7 @@ class OracleDnsProtocol : IOracleProtocol
     /// <summary>
     /// Parses a DNS response message from wire format (RFC 1035).
     /// </summary>
-    private static DnsMessage ParseDnsResponse(byte[] data)
+    private static DnsMessage ParseDnsResponse(byte[] data, ushort expectedId, string expectedName, ushort expectedType)
     {
         if (data is null || data.Length < DnsHeaderSize)
             throw new FormatException("DNS response too short.");
@@ -483,17 +500,30 @@ class OracleDnsProtocol : IOracleProtocol
             Flags = BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(2, 2))
         };
 
+        if (message.Id != expectedId)
+            throw new FormatException("DNS response ID does not match the query.");
+
         ushort qdCount = BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(4, 2));
         ushort anCount = BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(6, 2));
 
         int offset = DnsHeaderSize;
 
-        // Skip question section
-        for (int i = 0; i < qdCount; i++)
-        {
-            offset = SkipDnsName(data, offset);
-            offset += 4; // QTYPE (2) + QCLASS (2)
-        }
+        if (qdCount != 1)
+            throw new FormatException("DNS response must contain exactly one question.");
+
+        (string questionName, int questionOffset) = DecodeDnsName(data, offset);
+        offset = questionOffset;
+        if (offset + 4 > data.Length)
+            throw new FormatException("DNS response truncated in question section.");
+
+        ushort questionType = BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(offset, 2));
+        ushort questionClass = BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(offset + 2, 2));
+        offset += 4;
+
+        if (!questionName.TrimEnd('.').Equals(expectedName.TrimEnd('.'), StringComparison.OrdinalIgnoreCase)
+            || questionType != expectedType
+            || questionClass != 1)
+            throw new FormatException("DNS response question does not match the query.");
 
         // Parse answer section
         for (int i = 0; i < anCount; i++)
@@ -539,6 +569,7 @@ class OracleDnsProtocol : IOracleProtocol
         int originalOffset = offset;
         bool jumped = false;
         int jumpCount = 0;
+        int wireLength = 1;
         const int maxJumps = 128; // Prevent infinite loops
 
         while (offset < data.Length)
@@ -561,6 +592,8 @@ class OracleDnsProtocol : IOracleProtocol
                     throw new FormatException("DNS name compression loop detected.");
 
                 int pointer = ((length & 0x3F) << 8) | data[offset + 1];
+                if (pointer >= offset)
+                    throw new FormatException("DNS name compression pointer must point backwards.");
                 if (!jumped)
                 {
                     originalOffset = offset + 2;
@@ -570,9 +603,17 @@ class OracleDnsProtocol : IOracleProtocol
                 continue;
             }
 
+            if ((length & 0xC0) != 0)
+                throw new FormatException("DNS label has invalid length bits.");
+
             offset++;
             if (offset + length > data.Length)
                 throw new FormatException("DNS label extends beyond message.");
+            if (length > 63)
+                throw new FormatException("DNS label exceeds 63 octets.");
+            wireLength += length + 1;
+            if (wireLength > 255)
+                throw new FormatException("DNS name exceeds 255 octets.");
 
             if (name.Length > 0)
                 name.Append('.');
@@ -636,7 +677,7 @@ class OracleDnsProtocol : IOracleProtocol
         {
             int length = rdata[offset++];
             if (offset + length > rdata.Length)
-                break;
+                throw new FormatException("TXT record string is truncated.");
 
             if (result.Length > 0)
                 result.Append(' ');
@@ -676,14 +717,13 @@ class OracleDnsProtocol : IOracleProtocol
                 return;
             var dnsSettings = OracleSettings.Default?.Dns ?? throw new InvalidOperationException("DNS settings are not loaded.");
             endpoint = dnsSettings.EndPoint;
-            client.Timeout = dnsSettings.Timeout;
+            timeout = dnsSettings.Timeout;
             configured = true;
         }
     }
 
-    internal static string BuildQueryName(Uri uri, NameValueCollection? queryParameters = null)
+    internal static string BuildQueryName(Uri uri)
     {
-        queryParameters ??= ParseQueryString(uri.Query);
         string dnsName = NormalizeDnsName(uri.GetComponents(UriComponents.Path, UriFormat.Unescaped));
         if (string.IsNullOrEmpty(dnsName))
             throw new FormatException("dns: URI must include a dnsname.");

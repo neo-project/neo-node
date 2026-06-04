@@ -156,7 +156,7 @@ public class UT_OracleDnsProtocol
         VmStruct answer0 = ParseAnswer(answers[0]);
         Assert.AreEqual("example.com", answer0[0].GetString());
         Assert.AreEqual("TXT", answer0[1].GetString());
-        Assert.AreEqual(120, (int)answer0[2].GetInteger());
+        Assert.AreEqual(0, (int)answer0[2].GetInteger());
         Assert.AreEqual("\"hello\"", answer0[3].GetString());
     }
 
@@ -542,6 +542,98 @@ public class UT_OracleDnsProtocol
 
     #endregion
 
+    #region DNS Response Validation Tests
+
+    [TestMethod]
+    public async Task ProcessAsync_RejectsMismatchedResponseId()
+    {
+        byte[] dnsResponse = BuildDnsResponse("example.com", 1, 300, [1, 2, 3, 4]);
+
+        var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(dnsResponse)
+            {
+                Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/dns-message") }
+            }
+        }, echoDnsQueryId: false);
+        using var protocol = new OracleDnsProtocol(handler);
+        (OracleResponseCode code, string? message) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=A"), CancellationToken.None);
+
+        Assert.AreEqual(OracleResponseCode.Error, code);
+        StringAssert.Contains(message, "ID");
+    }
+
+    [TestMethod]
+    public async Task ProcessAsync_RejectsMismatchedQuestion()
+    {
+        byte[] dnsResponse = BuildDnsResponse("other.example.com", 1, 300, [1, 2, 3, 4]);
+
+        var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(dnsResponse)
+            {
+                Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/dns-message") }
+            }
+        });
+        using var protocol = new OracleDnsProtocol(handler);
+        (OracleResponseCode code, string? message) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=A"), CancellationToken.None);
+
+        Assert.AreEqual(OracleResponseCode.Error, code);
+        StringAssert.Contains(message, "question");
+    }
+
+    [TestMethod]
+    public async Task ProcessAsync_RejectsForwardCompressionPointer()
+    {
+        List<byte> response = new();
+        response.AddRange(new byte[] { 0x00, 0x01 }); // ID
+        response.AddRange(new byte[] { 0x81, 0x80 }); // Flags
+        response.AddRange(new byte[] { 0x00, 0x01 }); // QDCOUNT
+        response.AddRange(new byte[] { 0x00, 0x01 }); // ANCOUNT
+        response.AddRange(new byte[] { 0x00, 0x00 }); // NSCOUNT
+        response.AddRange(new byte[] { 0x00, 0x00 }); // ARCOUNT
+        EncodeDnsName(response, "example.com");
+        response.AddRange(new byte[] { 0x00, 0x01, 0x00, 0x01 });
+        response.AddRange(new byte[] { 0xC0, 0x20 }); // Forward pointer.
+        response.AddRange(new byte[] { 0x00, 0x01, 0x00, 0x01 });
+        response.AddRange(new byte[] { 0x00, 0x00, 0x01, 0x2C });
+        response.AddRange(new byte[] { 0x00, 0x04, 0x08, 0x08, 0x08, 0x08 });
+
+        var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent([.. response])
+            {
+                Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/dns-message") }
+            }
+        });
+        using var protocol = new OracleDnsProtocol(handler);
+        (OracleResponseCode code, string? message) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=A"), CancellationToken.None);
+
+        Assert.AreEqual(OracleResponseCode.Error, code);
+        StringAssert.Contains(message, "backwards");
+    }
+
+    [TestMethod]
+    public async Task ProcessAsync_RejectsTruncatedTxtRecord()
+    {
+        byte[] dnsResponse = BuildDnsResponse("example.com", 16, 300, [0x05, (byte)'h', (byte)'i']);
+
+        var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(dnsResponse)
+            {
+                Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/dns-message") }
+            }
+        });
+        using var protocol = new OracleDnsProtocol(handler);
+        (OracleResponseCode code, string? message) = await protocol.ProcessAsync(new Uri("dns:example.com?TYPE=TXT"), CancellationToken.None);
+
+        Assert.AreEqual(OracleResponseCode.Error, code);
+        StringAssert.Contains(message, "truncated");
+    }
+
+    #endregion
+
     #region Error Handling Tests
 
     [TestMethod]
@@ -824,11 +916,10 @@ public class UT_OracleDnsProtocol
     #region TTL Tests
 
     [TestMethod]
-    public async Task ProcessAsync_PreservesTtlValue()
+    public async Task ProcessAsync_NormalizesTtlValue()
     {
         byte[] rdata = [1, 2, 3, 4];
-        uint expectedTtl = 86400; // 1 day
-        byte[] dnsResponse = BuildDnsResponse("example.com", 1, expectedTtl, rdata);
+        byte[] dnsResponse = BuildDnsResponse("example.com", 1, 86400, rdata);
 
         var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
         {
@@ -843,7 +934,7 @@ public class UT_OracleDnsProtocol
         Assert.AreEqual(OracleResponseCode.Success, code);
         var (_, _, answers) = ParseEnvelope(payload);
         VmStruct answer0 = ParseAnswer(answers[0]);
-        Assert.AreEqual(expectedTtl, (uint)answer0[2].GetInteger());
+        Assert.AreEqual(0u, (uint)answer0[2].GetInteger());
     }
 
     #endregion
@@ -1219,15 +1310,37 @@ public class UT_OracleDnsProtocol
     private sealed class StubHandler : HttpMessageHandler
     {
         private readonly Func<HttpRequestMessage, HttpResponseMessage> responder;
+        private readonly bool echoDnsQueryId;
 
-        public StubHandler(Func<HttpRequestMessage, HttpResponseMessage> responder)
+        public StubHandler(Func<HttpRequestMessage, HttpResponseMessage> responder, bool echoDnsQueryId = true)
         {
             this.responder = responder;
+            this.echoDnsQueryId = echoDnsQueryId;
         }
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            return Task.FromResult(responder(request));
+            HttpResponseMessage response = responder(request);
+            if (!echoDnsQueryId || request.Content is null || response.Content is null)
+                return response;
+
+            if (request.Content.Headers.ContentType?.MediaType != "application/dns-message"
+                || response.Content.Headers.ContentType?.MediaType != "application/dns-message")
+                return response;
+
+            byte[] query = await request.Content.ReadAsByteArrayAsync(cancellationToken);
+            byte[] responseBytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+            if (query.Length < 2 || responseBytes.Length < 2)
+                return response;
+
+            responseBytes[0] = query[0];
+            responseBytes[1] = query[1];
+
+            ByteArrayContent content = new(responseBytes);
+            foreach (var header in response.Content.Headers)
+                content.Headers.TryAddWithoutValidation(header.Key, header.Value);
+            response.Content = content;
+            return response;
         }
     }
 }

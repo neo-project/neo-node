@@ -71,7 +71,7 @@ Struct schema:
 
 Notes:
 
-- `Answers` mirrors the DoH answer section but normalizes record types and names.
+- `Answers` normalizes record types and names, sorts records by name/type/data, and sets `Ttl` to `0` so all oracle nodes serialize the same payload.
 - CERT records are returned verbatim in `Answer[3]` (type, key tag, algorithm, base64 payload). Contracts can parse the certificate themselves if needed.
 - If the DoH server responds with NXDOMAIN, the oracle returns `OracleResponseCode.NotFound`.
 - Results exceeding `OracleResponse.MaxResultSize` yield `OracleResponseCode.ResponseTooLarge`.
@@ -104,7 +104,7 @@ Tips:
 
 1. Always set `TYPE` when you need anything other than an A record.
 2. Budget enough `gasForResponse` to cover payload size (TXT records are often kilobytes).
-3. Validate TTL or fingerprint data before trusting it.
+3. Validate or fingerprint returned DNS data before trusting it.
 4. DNS oracle responses do not support the oracle `filter`; request the record type you need and parse `Answers` in-contract.
 
 ## Manual testing
