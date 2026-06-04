@@ -66,7 +66,7 @@ partial class MainService
             return;
         }
 
-        var testGas = NativeContract.NEO.GetRegisterPrice(snapshot) + (BigInteger)Math.Pow(10, NativeContract.GAS.Decimals) * 10;
+        var testGas = NativeContract.NEO.GetRegisterPrice(snapshot) + BigInteger.Pow(10, NativeContract.GAS.Decimals) * 10;
         var script = BuildNeoScript(VoteMethods.Register, publicKey);
         RegisterCandidateViaInvoke(script, account, snapshot, (long)testGas);
     }
