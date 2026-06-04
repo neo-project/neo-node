@@ -346,8 +346,8 @@ public class UT_MainService_Wallet
     {
         var service = new MainService();
 
-        TrySet(service, "NeoSystem", _neoSystem);
-        TrySetField(service, "_neoSystem", _neoSystem);
+        TestUtils.TrySet(service, "NeoSystem", _neoSystem);
+        TestUtils.TrySetField(service, "_neoSystem", _neoSystem);
 
         var originalOut = Console.Out;
         var originalErr = Console.Error;
@@ -358,7 +358,7 @@ public class UT_MainService_Wallet
 
         try
         {
-            InvokeNonPublic(service, "OnVerifyMessageCommand", message, signature, publicKey, salt, avoidSignatureReplay);
+            TestUtils.InvokeNonPublic(service, "OnVerifyMessageCommand", message, signature, publicKey, salt, avoidSignatureReplay);
         }
         finally
         {
@@ -383,10 +383,10 @@ public class UT_MainService_Wallet
 
         var service = new MainService();
 
-        TrySet(service, "NeoSystem", _neoSystem);
-        TrySetField(service, "_neoSystem", _neoSystem);
-        TrySet(service, "CurrentWallet", wallet);
-        TrySetField(service, "_currentWallet", wallet);
+        TestUtils.TrySet(service, "NeoSystem", _neoSystem);
+        TestUtils.TrySetField(service, "_neoSystem", _neoSystem);
+        TestUtils.TrySet(service, "CurrentWallet", wallet);
+        TestUtils.TrySetField(service, "_currentWallet", wallet);
 
         var readInputProp = service.GetType().GetProperty(
             "ReadUserInput",
@@ -409,7 +409,7 @@ public class UT_MainService_Wallet
 
         try
         {
-            InvokeNonPublic(service, "OnSignMessageCommand", message, addSignData);
+            TestUtils.InvokeNonPublic(service, "OnSignMessageCommand", message, addSignData);
         }
         finally
         {
@@ -431,10 +431,10 @@ public class UT_MainService_Wallet
 
         var service = new MainService();
 
-        TrySet(service, "NeoSystem", _neoSystem);
-        TrySetField(service, "_neoSystem", _neoSystem);
-        TrySet(service, "CurrentWallet", wallet);
-        TrySetField(service, "_currentWallet", wallet);
+        TestUtils.TrySet(service, "NeoSystem", _neoSystem);
+        TestUtils.TrySetField(service, "_neoSystem", _neoSystem);
+        TestUtils.TrySet(service, "CurrentWallet", wallet);
+        TestUtils.TrySetField(service, "_currentWallet", wallet);
 
         var readInputProp = service.GetType().GetProperty(
             "ReadUserInput",
@@ -456,7 +456,7 @@ public class UT_MainService_Wallet
 
         try
         {
-            var result = (bool)InvokeNonPublic(service, "OnCommand", command);
+            var result = (bool)TestUtils.InvokeNonPublic(service, "OnCommand", command)!;
             Assert.IsTrue(result, "Command should be handled");
         }
         finally
@@ -491,10 +491,10 @@ public class UT_MainService_Wallet
 
         var service = new MainService();
 
-        TrySet(service, "NeoSystem", _neoSystem);
-        TrySetField(service, "_neoSystem", _neoSystem);
-        TrySet(service, "CurrentWallet", wallet);
-        TrySetField(service, "_currentWallet", wallet);
+        TestUtils.TrySet(service, "NeoSystem", _neoSystem);
+        TestUtils.TrySetField(service, "_neoSystem", _neoSystem);
+        TestUtils.TrySet(service, "CurrentWallet", wallet);
+        TestUtils.TrySetField(service, "_currentWallet", wallet);
 
         var originalOut = Console.Out;
         var originalErr = Console.Error;
@@ -504,7 +504,7 @@ public class UT_MainService_Wallet
 
         try
         {
-            InvokeNonPublic(service, "OnSignCommand", jsonObjectToSign);
+            TestUtils.InvokeNonPublic(service, "OnSignCommand", jsonObjectToSign);
         }
         finally
         {
@@ -543,37 +543,6 @@ public class UT_MainService_Wallet
         }
 
         return true;
-    }
-
-    private static void TrySet(object target, string propertyName, object value)
-    {
-        var prop = target.GetType().GetProperty(
-            propertyName,
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic
-        );
-
-        prop?.SetValue(target, value);
-    }
-
-    private static void TrySetField(object target, string fieldName, object value)
-    {
-        var field = target.GetType().GetField(
-            fieldName,
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic
-        );
-
-        field?.SetValue(target, value);
-    }
-
-    private static object InvokeNonPublic(object target, string methodName, params object[] args)
-    {
-        var method = target.GetType().GetMethod(
-            methodName,
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic
-        );
-
-        Assert.IsNotNull(method, $"Method '{methodName}' not found on type '{target.GetType().FullName}'.");
-        return method.Invoke(target, args);
     }
 
     private static string ExtractMessageFromSignedPayload(string payloadHex)

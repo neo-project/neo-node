@@ -17,7 +17,6 @@ using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.Wallets;
 using System.Numerics;
-using System.Reflection;
 using System.Security.Cryptography;
 using ECPoint = Neo.Cryptography.ECC.ECPoint;
 
@@ -287,7 +286,7 @@ public class UT_MainService_Vote
         account ??= context.Wallet?.CreateAccount().ScriptHash ?? UInt160.Zero;
 
         return InvokeWithConsoleCapture(context, service =>
-            InvokeNonPublic(service, "OnRegisterCandidateCommand", account), relayAnswer);
+            TestUtils.InvokeNonPublic(service, "OnRegisterCandidateCommand", account), relayAnswer);
     }
 
     private static string RunRegisterCandidateViaNep17Payment(
@@ -298,7 +297,7 @@ public class UT_MainService_Vote
         string? relayAnswer)
     {
         return InvokeWithConsoleCapture(context, service =>
-            InvokeNonPublic(service, "RegisterCandidateViaNep17Payment", account, publicKey, snapshot), relayAnswer);
+            TestUtils.InvokeNonPublic(service, "RegisterCandidateViaNep17Payment", account, publicKey, snapshot), relayAnswer);
     }
 
     private static string InvokeWithConsoleCapture(VoteTestContext context, Action<MainService> invoke, string? relayAnswer)
@@ -332,13 +331,13 @@ public class UT_MainService_Vote
     private static MainService CreateService(VoteTestContext context)
     {
         var service = new MainService();
-        TrySet(service, "NeoSystem", context.NeoSystem);
-        TrySetField(service, "_neoSystem", context.NeoSystem);
+        TestUtils.TrySet(service, "NeoSystem", context.NeoSystem);
+        TestUtils.TrySetField(service, "_neoSystem", context.NeoSystem);
 
         if (context.Wallet != null)
         {
-            TrySet(service, "CurrentWallet", context.Wallet);
-            TrySetField(service, "_currentWallet", context.Wallet);
+            TestUtils.TrySet(service, "CurrentWallet", context.Wallet);
+            TestUtils.TrySetField(service, "_currentWallet", context.Wallet);
         }
 
         return service;
@@ -351,31 +350,6 @@ public class UT_MainService_Vote
         var entry = snapshot.GetAndChange(key, () => new StorageItem(new AccountState()));
         entry.GetInteroperable<AccountState>().Balance = balance;
         snapshot.Commit();
-    }
-
-    private static void TrySet(object target, string propertyName, object value)
-    {
-        var prop = target.GetType().GetProperty(
-            propertyName,
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        prop?.SetValue(target, value);
-    }
-
-    private static void TrySetField(object target, string fieldName, object value)
-    {
-        var field = target.GetType().GetField(
-            fieldName,
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        field?.SetValue(target, value);
-    }
-
-    private static object InvokeNonPublic(object target, string methodName, params object[] args)
-    {
-        var method = target.GetType().GetMethod(
-            methodName,
-            BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.IsNotNull(method, $"Method '{methodName}' not found on type '{target.GetType().FullName}'.");
-        return method!.Invoke(target, args)!;
     }
 
     private sealed record VoteTestContext(NeoSystem NeoSystem, Wallet? Wallet = null);
