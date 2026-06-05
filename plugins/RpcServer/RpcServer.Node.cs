@@ -210,7 +210,7 @@ partial class RpcServer
     {
         var txData = Result.Ok_Or(
             () => Convert.FromBase64String(base64Tx),
-            RpcError.InvalidParams.WithData($"Invalid Transaction Format: Expected Base64-encoded string"));
+            throw new RpcException(RpcError.InvalidParams.WithData("Invalid Transaction Format: Expected Base64-encoded string"));
 
         if (txData.Length > Transaction.MaxTransactionSize)
             RpcError.InvalidParams.WithData("Transaction size exceeds the maximum allowed.");
