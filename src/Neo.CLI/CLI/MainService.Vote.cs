@@ -13,12 +13,16 @@ using Neo.ConsoleService;
 using Neo.Cryptography.ECC;
 using Neo.Extensions;
 using Neo.Json;
+using Neo.Network.P2P.Payloads;
+using Neo.Persistence;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
+using Neo.VM;
 using Neo.VM.Types;
 using Neo.Wallets;
 using System.Numerics;
 using Array = Neo.VM.Types.Array;
+using ECPoint = Neo.Cryptography.ECC.ECPoint;
 
 namespace Neo.CLI;
 
@@ -42,15 +46,121 @@ partial class MainService
     [ConsoleCommand("register candidate", Category = "Vote Commands")]
     private void OnRegisterCandidateCommand(UInt160 account)
     {
-        var testGas = NativeContract.NEO.GetRegisterPrice(NeoSystem.StoreView) + (BigInteger)Math.Pow(10, NativeContract.GAS.Decimals) * 10;
         if (NoWallet()) return;
 
         var currentAccount = GetValidAccountOrWarn(account);
         if (currentAccount == null) return;
 
         var publicKey = currentAccount.GetKey()?.PublicKey;
+        if (publicKey is null)
+        {
+            ConsoleHelper.Error("Unable to get the public key of the account.");
+            return;
+        }
+
+        var snapshot = NeoSystem.StoreView;
+        var index = NativeContract.Ledger.CurrentIndex(snapshot);
+        if (NeoSystem.Settings.IsHardforkEnabled(Hardfork.HF_Echidna, index))
+        {
+            RegisterCandidateViaNep17Payment(account, publicKey, snapshot);
+            return;
+        }
+
+        var testGas = NativeContract.NEO.GetRegisterPrice(snapshot) + BigInteger.Pow(10, NativeContract.GAS.Decimals) * 10;
         var script = BuildNeoScript(VoteMethods.Register, publicKey);
-        SendTransaction(script, account, (long)testGas);
+        RegisterCandidateViaInvoke(script, account, snapshot, (long)testGas);
+    }
+
+    private void RegisterCandidateViaInvoke(byte[] script, UInt160 account, DataCache snapshot, long testGas)
+    {
+        var signers = CurrentWallet!.GetAccounts()
+            .Where(p => !p.Lock && !p.WatchOnly && p.ScriptHash == account && NativeContract.GAS.BalanceOf(snapshot, p.ScriptHash).Sign > 0)
+            .Select(p => new Signer { Account = p.ScriptHash, Scopes = WitnessScope.CalledByEntry })
+            .ToArray();
+
+        try
+        {
+            var tx = CurrentWallet!.MakeTransaction(snapshot, script, account, signers, maxGas: testGas);
+            ConsoleHelper.Info("Invoking script with: ", $"'{Convert.ToBase64String(tx.Script.Span)}'");
+            using (var engine = ApplicationEngine.Run(tx.Script, snapshot, container: tx, settings: NeoSystem.Settings, gas: testGas))
+            {
+                PrintExecutionOutput(engine, true);
+                if (engine.State == VMState.FAULT) return;
+            }
+
+            ConsoleHelper.Info(
+                "Network fee: ", $"{new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)}\t",
+                "Total fee: ", $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
+
+            if (!ConsoleHelper.ReadUserInput("Relay tx(no|yes)").IsYes())
+                return;
+
+            SignAndSendTx(snapshot, tx);
+        }
+        catch (InvalidOperationException e)
+        {
+            ConsoleHelper.Error(GetExceptionMessage(e));
+        }
+    }
+
+    /// <summary>
+    /// Registers a candidate by transferring the register price in GAS to the NEO native contract.
+    /// This triggers <c>OnNEP17Payment</c> and avoids charging the register price as transaction system fee,
+    /// which is required when <c>MaxBlockSystemFee</c> is lower than the register price.
+    /// </summary>
+    private void RegisterCandidateViaNep17Payment(UInt160 account, ECPoint publicKey, DataCache snapshot)
+    {
+        var registerPrice = NativeContract.NEO.GetRegisterPrice(snapshot);
+        var amount = new BigDecimal((BigInteger)registerPrice, NativeContract.GAS.Decimals);
+        var gasBalance = NativeContract.GAS.BalanceOf(snapshot, account);
+        if (gasBalance < registerPrice)
+        {
+            ConsoleHelper.Error($"Insufficient GAS. Required: {amount}, available: {new BigDecimal(gasBalance, NativeContract.GAS.Decimals)}.");
+            return;
+        }
+
+        Transaction tx;
+        try
+        {
+            // OnNEP17Payment runs inside GAS.transfer callback (depth > 1), so CalledByEntry
+            // witness scope is not sufficient for RegisterInternal's CheckWitness.
+            var signers = new[]
+            {
+                new Signer { Account = account, Scopes = WitnessScope.Global }
+            };
+            tx = CurrentWallet!.MakeTransaction(snapshot, new[]
+            {
+                new TransferOutput
+                {
+                    AssetId = NativeContract.GAS.Hash,
+                    Value = amount,
+                    ScriptHash = NativeContract.NEO.Hash,
+                    Data = publicKey.EncodePoint(true)
+                }
+            }, from: account, cosigners: signers);
+        }
+        catch (InvalidOperationException e)
+        {
+            ConsoleHelper.Error(GetExceptionMessage(e));
+            return;
+        }
+
+        using (var engine = ApplicationEngine.Run(tx.Script, snapshot, container: tx, settings: NeoSystem.Settings, gas: TestModeGas))
+        {
+            PrintExecutionOutput(engine, true);
+            if (engine.State == VMState.FAULT) return;
+        }
+
+        ConsoleHelper.Info("Registering candidate via GAS transfer to NEO contract, amount: ", amount.ToString());
+        ConsoleHelper.Info(
+            "Network fee: ", $"{new BigDecimal((BigInteger)tx.NetworkFee, NativeContract.GAS.Decimals)}\t",
+            "System fee: ", $"{new BigDecimal((BigInteger)tx.SystemFee, NativeContract.GAS.Decimals)}\t",
+            "Total fee: ", $"{new BigDecimal((BigInteger)(tx.SystemFee + tx.NetworkFee), NativeContract.GAS.Decimals)} GAS");
+
+        if (!ConsoleHelper.ReadUserInput("Relay tx(no|yes)").IsYes())
+            return;
+
+        SignAndSendTx(snapshot, tx);
     }
 
     /// <summary>
