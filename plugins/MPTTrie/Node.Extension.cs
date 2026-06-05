@@ -64,11 +64,11 @@ partial class Node
         Next.SerializeAsChild(writer);
     }
 
-    private void DeserializeExtension(ref MemoryReader reader)
+    private void DeserializeExtension(ref MemoryReader reader, int depth)
     {
         Key = reader.ReadVarMemory();
         var n = new Node();
-        n.Deserialize(ref reader);
+        n.Deserialize(ref reader, depth + 1);
         Next = n;
     }
 }
