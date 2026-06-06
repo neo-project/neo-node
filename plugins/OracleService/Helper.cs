@@ -64,15 +64,6 @@ static class Helper
             };
         }
 
-        // IPv6 Specific Checks
-        if (ipAddress.AddressFamily == AddressFamily.InterNetworkV6)
-        {
-            // Unique Local Address (fc00::/7) -> First byte is 0xFC or 0xFD
-            if ((ip[0] & 0xFE) == 0xFC) return true;
-
-            // Link-Local Address (fe80::/10) -> First byte is 0xFE, second byte has top 2 bits set (0x80)
-            if (ip[0] == 0xFE && (ip[1] & 0xC0) == 0x80) return true;
-        }
 
         return false;
     }
