@@ -155,7 +155,7 @@ public partial class RpcServer : IDisposable
         {
             builder.UseKestrel(options => options.Listen(settings.BindAddress, settings.Port, listenOptions =>
             {
-                // Default value is 5Mb
+                // Default value is 1Mb
                 options.Limits.MaxRequestBodySize = settings.MaxRequestBodySize;
                 options.Limits.MaxRequestLineSize = Math.Min(settings.MaxRequestBodySize, options.Limits.MaxRequestLineSize);
                 // Default value is 40

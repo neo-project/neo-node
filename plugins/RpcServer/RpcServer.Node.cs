@@ -208,9 +208,17 @@ partial class RpcServer
     [RpcMethod]
     protected internal virtual JToken SendRawTransaction(string base64Tx)
     {
+        var txData = Result.Ok_Or(
+            () => Convert.FromBase64String(base64Tx),
+            RpcError.InvalidParams.WithData("Invalid Transaction Format: Expected Base64-encoded string"));
+
+        if (txData.Length > Transaction.MaxTransactionSize)
+            throw new RpcException(RpcError.InvalidParams.WithData("Transaction size exceeds the maximum allowed."));
+
         var tx = Result.Ok_Or(
-            () => Convert.FromBase64String(base64Tx).AsSerializable<Transaction>(),
-            RpcError.InvalidParams.WithData($"Invalid Transaction Format: {base64Tx}"));
+            () => txData.AsSerializable<Transaction>(),
+            RpcError.InvalidParams.WithData("Invalid Transaction Format"));
+
         var relayResult = system.Blockchain.Ask<RelayResult>(tx, TimeSpan.FromSeconds(30)).Result;
         return GetRelayResult(relayResult.Result, tx.Hash);
     }
