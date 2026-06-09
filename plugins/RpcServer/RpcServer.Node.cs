@@ -213,7 +213,7 @@ partial class RpcServer
             RpcError.InvalidParams.WithData("Invalid Transaction Format: Expected Base64-encoded string"));
 
         if (txData.Length > Transaction.MaxTransactionSize)
-            throw new RpcException(RpcError.InvalidParams.WithData("Transaction size exceeds the maximum allowed."));
+            throw new RpcException(RpcError.InvalidSize.WithData("Transaction size exceeds the maximum allowed."));
 
         var tx = Result.Ok_Or(
             () => txData.AsSerializable<Transaction>(),
