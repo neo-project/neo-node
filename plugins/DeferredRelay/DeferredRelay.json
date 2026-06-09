@@ -2,6 +2,8 @@
   "PluginConfiguration": {
     "Path": "DeferredRelay_{0}",
     "MaxTransactions": 0,
+    "MaxTransactionsPerSender": 0,
+    "MinNetworkFee": 0,
     "CheckFrequency": 0,
     "UnhandledExceptionPolicy": "StopPlugin"
   },

@@ -84,7 +84,11 @@ internal static class DeferredRelayEngine
     /// instead of scanning the store, and the counter is incremented on a successful <c>Put</c>.
     /// Callers that do not maintain a counter (e.g. tests) pass <c>null</c>, falling back to <see cref="CountEntries"/>.
     /// </param>
-    public static bool TryOffer(NeoSystem system, IStore store, DeferredRelaySettings settings, Transaction tx, VerifyResult relayResult, EntryCounter? counter = null)
+    /// <param name="queueContext">
+    /// Optional in-memory deferred-queue state (per-sender limits and fee aggregation).
+    /// When <c>null</c>, a fresh context is bootstrapped from <paramref name="store"/> on each call.
+    /// </param>
+    public static bool TryOffer(NeoSystem system, IStore store, DeferredRelaySettings settings, Transaction tx, VerifyResult relayResult, EntryCounter? counter = null, DeferredQueueContext? queueContext = null)
     {
         if (!settings.Enabled)
             return false;
@@ -103,8 +107,21 @@ internal static class DeferredRelayEngine
         if (currentCount >= settings.MaxTransactions)
             return false;
 
+        if (settings.MinNetworkFee > 0 && tx.NetworkFee < settings.MinNetworkFee)
+            return false;
+
+        queueContext ??= DeferredQueueContext.Bootstrap(store);
+        if (!queueContext.CanAcceptSender(tx.Sender, settings.MaxTransactionsPerSender))
+            return false;
+
+        var snapshot = system.StoreView;
+        var verifyContext = queueContext.CreateVerificationContext();
+        if (DeferredRelayVerification.VerifyForOffer(system.Settings, snapshot, tx, verifyContext) != VerifyResult.Succeed)
+            return false;
+
         store.Put(key, tx.ToArray());
         counter?.Increment();
+        queueContext.OnQueued(tx);
         return true;
     }
 
@@ -146,7 +163,7 @@ internal static class DeferredRelayEngine
     /// Optional in-memory entry counter; decremented on every successful <c>Delete</c> so that
     /// <see cref="TryOffer"/> can perform its capacity check without re-scanning the store.
     /// </param>
-    public static async Task ProcessQueuedAsync(NeoSystem system, IStore store, DeferredRelaySettings settings, EntryCounter? counter = null, CancellationToken cancellationToken = default)
+    public static async Task ProcessQueuedAsync(NeoSystem system, IStore store, DeferredRelaySettings settings, EntryCounter? counter = null, DeferredQueueContext? queueContext = null, CancellationToken cancellationToken = default)
     {
         var snapshot = system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
@@ -182,8 +199,22 @@ internal static class DeferredRelayEngine
                 toRelay.Add(tx);
         }
 
+        queueContext ??= DeferredQueueContext.Bootstrap(store);
+
         foreach (byte[] key in toRemove)
         {
+            if (store.TryGet(key, out byte[]? value))
+            {
+                try
+                {
+                    queueContext.OnRemoved(value.AsSerializable<Transaction>());
+                }
+                catch
+                {
+                    // Corrupt entries have no queue-context state to reconcile.
+                }
+            }
+
             store.Delete(key);
             counter?.Decrement();
         }
@@ -198,26 +229,38 @@ internal static class DeferredRelayEngine
             // and every Ask -- whether it eventually returns Succeed, AlreadyInPool, or a failure --
             // already occupies one slot in that mailbox.
             attempts++;
-            if (!await TryRelayAsync(system, tx).ConfigureAwait(false))
+            var relayOutcome = await TryRelayAsync(system, tx).ConfigureAwait(false);
+            if (relayOutcome is VerifyResult.Succeed or VerifyResult.AlreadyInPool or VerifyResult.AlreadyExists)
+            {
+                RemoveQueued(store, tx, counter, queueContext);
                 continue;
-            store.Delete(tx.Hash.GetSpan().ToArray());
-            counter?.Decrement();
+            }
+
+            if (DeferredRelayVerification.IsDefinitiveRelayFailure(relayOutcome))
+                RemoveQueued(store, tx, counter, queueContext);
         }
     }
 
-    private static async Task<bool> TryRelayAsync(NeoSystem system, Transaction tx)
+    private static void RemoveQueued(IStore store, Transaction tx, EntryCounter? counter, DeferredQueueContext queueContext)
+    {
+        store.Delete(tx.Hash.GetSpan().ToArray());
+        counter?.Decrement();
+        queueContext.OnRemoved(tx);
+    }
+
+    private static async Task<VerifyResult> TryRelayAsync(NeoSystem system, Transaction tx)
     {
         try
         {
             var relayResult = await system.Blockchain
                 .Ask<Blockchain.RelayResult>(tx, TimeSpan.FromSeconds(30))
                 .ConfigureAwait(false);
-            return relayResult.Result is VerifyResult.Succeed or VerifyResult.AlreadyInPool or VerifyResult.AlreadyExists;
+            return relayResult.Result;
         }
         catch (Exception ex)
         {
             Logs.RuntimeLogger.Debug(ex, "Deferred relay attempt failed for {Hash}", tx.Hash);
-            return false;
+            return VerifyResult.Unknown;
         }
     }
 

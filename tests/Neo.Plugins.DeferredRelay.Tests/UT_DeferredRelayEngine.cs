@@ -24,6 +24,7 @@ using Neo.SmartContract.Native;
 using Neo.VM;
 using Neo.Wallets;
 using Neo.Wallets.NEP6;
+using System.Numerics;
 using System.Reflection;
 
 namespace Neo.Plugins.DeferredRelay.Tests;
@@ -41,10 +42,21 @@ public class UT_DeferredRelayEngine
         _system = TestBlockchain.GetSystem();
         _wallet = TestUtils.GenerateTestWallet("pwd");
         _account = _wallet.CreateAccount();
+        FundAccount(_account.ScriptHash, 100_000_000 * NativeContract.GAS.Factor);
     }
 
-    private static DeferredRelaySettings EnabledSettings(uint max = 10000u, uint freq = 1u) => DeferredRelaySettings.Create(max, freq);
+    private static DeferredRelaySettings EnabledSettings(uint max = 10000u, uint freq = 1u, uint maxPerSender = 0u, long minNetworkFee = 0L) =>
+        DeferredRelaySettings.Create(max, freq, maxPerSender, minNetworkFee);
     private static DeferredRelaySettings DisabledSettings() => DeferredRelaySettings.Create(0u, 1u);
+
+    private void FundAccount(UInt160 scriptHash, BigInteger balance)
+    {
+        var snapshot = _system.GetSnapshotCache();
+        var key = new KeyBuilder(NativeContract.GAS.Id, 20).Add(scriptHash);
+        var entry = snapshot.GetAndChange(key, () => new StorageItem(new AccountState()));
+        entry.GetInteroperable<AccountState>().Balance = balance;
+        snapshot.Commit();
+    }
 
     private static void RunPersistProcessing(NeoSystem system, IStore store, DeferredRelaySettings settings, Block block)
     {
@@ -56,16 +68,11 @@ public class UT_DeferredRelayEngine
     private Transaction CreateSignedTx(uint validUntilBlock, uint nonce = 42)
     {
         var snapshot = _system.StoreView;
-        var tx = new Transaction
-        {
-            Version = 0,
-            Nonce = nonce,
-            ValidUntilBlock = validUntilBlock,
-            Signers = [new Signer { Account = _account.ScriptHash, Scopes = WitnessScope.CalledByEntry }],
-            Attributes = [],
-            Script = new byte[] { (byte)OpCode.RET },
-            Witnesses = [],
-        };
+        var tx = _wallet.MakeTransaction(snapshot, new byte[] { (byte)OpCode.RET },
+            sender: _account.ScriptHash,
+            cosigners: [new Signer { Account = _account.ScriptHash, Scopes = WitnessScope.CalledByEntry }]);
+        tx.Nonce = nonce;
+        tx.ValidUntilBlock = validUntilBlock;
         var ctx = new ContractParametersContext(snapshot, tx, _system.Settings.Network);
         Assert.IsTrue(_wallet.Sign(ctx));
         tx.Witnesses = ctx.GetWitnesses();
@@ -727,6 +734,225 @@ public class UT_DeferredRelayEngine
         using (var writer = new BinaryWriter(ms))
             ((ISerializable)tx).Serialize(writer);
         return ms.ToArray();
+    }
+
+    [TestMethod]
+    public void TryOffer_Rejects_WhenNetworkFeeBelowMin()
+    {
+        var store = new MemoryStore();
+        var minFee = (long)new BigDecimal(1M, NativeContract.GAS.Decimals).Value;
+        var settings = EnabledSettings(minNetworkFee: minFee);
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
+        var tx = CreateManualSignedTx(_wallet, _account, height + maxInc + 5, nonce: 2);
+
+        Assert.IsLessThan(minFee, tx.NetworkFee);
+        Assert.IsFalse(DeferredRelayEngine.TryOffer(_system, store, settings, tx, VerifyResult.NotYetValid));
+        Assert.AreEqual(0, store.Find(null).Count());
+    }
+
+    [TestMethod]
+    public void TryOffer_Rejects_WhenSenderHasNoGas()
+    {
+        var store = new MemoryStore();
+        var settings = EnabledSettings();
+        var unfundedWallet = TestUtils.GenerateTestWallet("unfunded");
+        var unfundedAccount = unfundedWallet.CreateAccount();
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
+        var tx = CreateManualSignedTx(unfundedWallet, unfundedAccount, height + maxInc + 5, nonce: 1);
+
+        Assert.IsFalse(DeferredRelayEngine.TryOffer(_system, store, settings, tx, VerifyResult.NotYetValid));
+        Assert.AreEqual(0, store.Find(null).Count());
+    }
+
+    [TestMethod]
+    public void TryOffer_MaxTransactionsPerSender_RejectsExcess()
+    {
+        var store = new MemoryStore();
+        var settings = EnabledSettings(maxPerSender: 2u);
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
+        uint vub = height + maxInc + 10;
+        var queueContext = new DeferredQueueContext();
+
+        Assert.IsTrue(DeferredRelayEngine.TryOffer(_system, store, settings, CreateSignedTx(vub, nonce: 1), VerifyResult.NotYetValid, queueContext: queueContext));
+        Assert.IsTrue(DeferredRelayEngine.TryOffer(_system, store, settings, CreateSignedTx(vub, nonce: 2), VerifyResult.NotYetValid, queueContext: queueContext));
+        Assert.IsFalse(DeferredRelayEngine.TryOffer(_system, store, settings, CreateSignedTx(vub, nonce: 3), VerifyResult.NotYetValid, queueContext: queueContext));
+        Assert.AreEqual(2, store.Find(null).Count());
+    }
+
+    [TestMethod]
+    public void TryOffer_SameSenderFeeAggregation_RejectsWhenBalanceInsufficient()
+    {
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
+        uint vub = height + maxInc + 10;
+
+        var probe = CreateSignedTx(vub, nonce: 99);
+        var oneTxCost = (BigInteger)(probe.SystemFee + probe.NetworkFee);
+        FundAccount(_account.ScriptHash, oneTxCost);
+
+        var store = new MemoryStore();
+        var settings = EnabledSettings();
+        var queueContext = new DeferredQueueContext();
+
+        var tx1 = CreateSignedTx(vub, nonce: 11);
+        Assert.IsTrue(DeferredRelayEngine.TryOffer(_system, store, settings, tx1, VerifyResult.NotYetValid, queueContext: queueContext));
+
+        var tx2 = CreateSignedTx(vub, nonce: 12);
+        Assert.IsFalse(DeferredRelayEngine.TryOffer(_system, store, settings, tx2, VerifyResult.NotYetValid, queueContext: queueContext));
+        Assert.AreEqual(1, store.Find(null).Count());
+    }
+
+    [TestMethod]
+    public void ProcessQueued_DefinitiveRelayFailure_InsufficientFunds_RemovesEntry()
+    {
+        var tx = CreateSignedTx(InWindowVub(), nonce: 501);
+        AssertRelayEvictsQueuedEntry(tx, beforeRelay: () => FundAccount(_account.ScriptHash, BigInteger.Zero));
+    }
+
+    [TestMethod]
+    public void ProcessQueued_DefinitiveRelayFailure_InvalidScript_RemovesEntry()
+    {
+        var tx = CreateRawTx(InWindowVub(), nonce: 502);
+        tx.Script = new byte[] { 0xFF };
+        AssertRelayEvictsQueuedEntry(tx);
+    }
+
+    [TestMethod]
+    public void ProcessQueued_DefinitiveRelayFailure_OverSize_RemovesEntry()
+    {
+        var tx = CreateRawTx(InWindowVub(), nonce: 503);
+        tx.Script = new byte[Transaction.MaxTransactionSize];
+        AssertRelayEvictsQueuedEntry(tx);
+    }
+
+    [TestMethod]
+    public void ProcessQueued_DefinitiveRelayFailure_InvalidSignature_RemovesEntry()
+    {
+        var tx = CreateSignedTx(InWindowVub(), nonce: 504);
+        tx.Witnesses =
+        [
+            new Witness
+            {
+                InvocationScript = new byte[] { (byte)OpCode.PUSHDATA1, 64 }.Concat(new byte[64]).ToArray(),
+                VerificationScript = tx.Witnesses[0].VerificationScript,
+            },
+        ];
+        AssertRelayEvictsQueuedEntry(tx);
+    }
+
+    [TestMethod]
+    public void ProcessQueued_DefinitiveRelayFailure_Invalid_RemovesEntry()
+    {
+        var tx = CreateRawTx(InWindowVub(), nonce: 505);
+        AssertRelayEvictsQueuedEntry(tx);
+    }
+
+    [TestMethod]
+    public void ProcessQueued_DefinitiveRelayFailure_InvalidAttribute_RemovesEntry()
+    {
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        var tx = CreateSignedTx(InWindowVub(), nonce: 506);
+        tx.Attributes = [new NotValidBefore { Height = height + 100 }];
+        var ctx = new ContractParametersContext(snapshot, tx, _system.Settings.Network);
+        Assert.IsTrue(_wallet.Sign(ctx));
+        tx.Witnesses = ctx.GetWitnesses();
+        AssertRelayEvictsQueuedEntry(tx);
+    }
+
+    [TestMethod]
+    public void ProcessQueued_DefinitiveRelayFailure_PolicyFail_RemovesEntry()
+    {
+        var tx = CreateSignedTx(InWindowVub(), nonce: 507);
+        AssertRelayEvictsQueuedEntry(tx, beforeRelay: () => BlockAccount(_account.ScriptHash));
+    }
+
+    [TestMethod]
+    public void IsDefinitiveRelayFailure_MatchesExpectedResults()
+    {
+        foreach (var result in new[]
+                 {
+                     VerifyResult.PolicyFail,
+                     VerifyResult.InvalidScript,
+                     VerifyResult.InvalidAttribute,
+                     VerifyResult.InvalidSignature,
+                     VerifyResult.Invalid,
+                     VerifyResult.OverSize,
+                     VerifyResult.InsufficientFunds,
+                 })
+            Assert.IsTrue(DeferredRelayVerification.IsDefinitiveRelayFailure(result), $"{result} should evict");
+
+        foreach (var result in new[]
+                 {
+                     VerifyResult.Succeed,
+                     VerifyResult.AlreadyInPool,
+                     VerifyResult.AlreadyExists,
+                     VerifyResult.OutOfMemory,
+                     VerifyResult.HasConflicts,
+                     VerifyResult.NotYetValid,
+                     VerifyResult.Unknown,
+                 })
+            Assert.IsFalse(DeferredRelayVerification.IsDefinitiveRelayFailure(result), $"{result} should retain");
+    }
+
+    private uint InWindowVub()
+    {
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
+        Assert.AreNotEqual(0u, maxInc);
+        return height + 1;
+    }
+
+    private void BlockAccount(UInt160 scriptHash)
+    {
+        var snapshot = _system.GetSnapshotCache();
+        var key = new KeyBuilder(NativeContract.Policy.Id, 15).Add(scriptHash);
+        snapshot.Add(key, new StorageItem(Array.Empty<byte>()));
+        snapshot.Commit();
+        Assert.IsTrue(NativeContract.Policy.IsBlocked(snapshot, scriptHash));
+    }
+
+    private void AssertRelayEvictsQueuedEntry(Transaction tx, Action beforeRelay = null)
+    {
+        var store = new MemoryStore();
+        var settings = EnabledSettings();
+        byte[] key = tx.Hash.GetSpan().ToArray();
+        store.Put(key, SerializeTx(tx));
+
+        beforeRelay?.Invoke();
+
+        var queueContext = DeferredQueueContext.Bootstrap(store);
+        DeferredRelayEngine.ProcessQueuedAsync(_system, store, settings, queueContext: queueContext).GetAwaiter().GetResult();
+
+        Assert.IsFalse(store.Contains(key), $"Queued entry should be evicted after definitive relay failure ({tx.Hash})");
+    }
+
+    private Transaction CreateManualSignedTx(NEP6Wallet wallet, WalletAccount account, uint validUntilBlock, uint nonce)
+    {
+        var snapshot = _system.StoreView;
+        var tx = new Transaction
+        {
+            Version = 0,
+            Nonce = nonce,
+            ValidUntilBlock = validUntilBlock,
+            Signers = [new Signer { Account = account.ScriptHash, Scopes = WitnessScope.CalledByEntry }],
+            Attributes = [],
+            Script = new byte[] { (byte)OpCode.RET },
+            Witnesses = [],
+        };
+        tx.NetworkFee = Math.Max(tx.NetworkFee, tx.Size * NativeContract.Policy.GetFeePerByte(snapshot));
+        var ctx = new ContractParametersContext(snapshot, tx, _system.Settings.Network);
+        Assert.IsTrue(wallet.Sign(ctx));
+        tx.Witnesses = ctx.GetWitnesses();
+        return tx;
     }
 
     private Transaction CreateRawTx(uint validUntilBlock, uint nonce = 0) => new()
