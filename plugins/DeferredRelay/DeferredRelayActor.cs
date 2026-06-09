@@ -27,15 +27,21 @@ internal sealed class DeferredRelayActor : UntypedActor
     private readonly DeferredQueueContext _queueContext;
     private bool _processingQueued;
 
-    public DeferredRelayActor(NeoSystem neo, IStore store, DeferredRelaySettings settings)
+    public DeferredRelayActor(NeoSystem neo, IStore store, DeferredRelaySettings settings,
+        EntryCounter? counter = null, DeferredQueueContext? queueContext = null)
     {
         _neo = neo;
         _store = store;
         _settings = settings;
-        // Bootstrap once at startup; afterwards the counter is maintained incrementally
-        // by TryOffer (++) and ProcessQueuedAsync (--), so the per-offer capacity check is O(1).
-        _counter = new EntryCounter(DeferredRelayEngine.CountEntries(store));
-        _queueContext = DeferredQueueContext.Bootstrap(store);
+        if (counter is null || queueContext is null)
+        {
+            var state = DeferredRelayEngine.CreateQueueState(neo, store, settings);
+            counter ??= state.Counter;
+            queueContext ??= state.Context;
+        }
+
+        _counter = counter;
+        _queueContext = queueContext;
     }
 
     protected override void PreStart()

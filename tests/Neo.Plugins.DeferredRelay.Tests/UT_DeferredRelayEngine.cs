@@ -314,6 +314,60 @@ public class UT_DeferredRelayEngine
     }
 
     [TestMethod]
+    public void CompactStore_RemovesExpiredCorruptAndVerifyFailures()
+    {
+        var store = new MemoryStore();
+        var settings = EnabledSettings(max: 10u, freq: 1u);
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
+        uint vub = height + maxInc + 100;
+
+        var expired = CreateRawTx(height, nonce: 70);
+        store.Put(expired.Hash.GetSpan().ToArray(), SerializeTx(expired));
+
+        var corruptKey = UInt256.Parse("0x0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20").GetSpan().ToArray();
+        store.Put(corruptKey, [0xFF]);
+
+        var invalidWitness = CreateRawTx(vub, nonce: 71);
+        store.Put(invalidWitness.Hash.GetSpan().ToArray(), SerializeTx(invalidWitness));
+
+        var valid = CreateSignedTx(vub, nonce: 72);
+        store.Put(valid.Hash.GetSpan().ToArray(), SerializeTx(valid));
+
+        DeferredRelayEngine.CompactStore(_system, store, settings);
+
+        Assert.IsFalse(store.Contains(expired.Hash.GetSpan().ToArray()));
+        Assert.IsFalse(store.Contains(corruptKey));
+        Assert.IsFalse(store.Contains(invalidWitness.Hash.GetSpan().ToArray()));
+        Assert.IsTrue(store.Contains(valid.Hash.GetSpan().ToArray()));
+        Assert.AreEqual(1, DeferredRelayEngine.CountEntries(store));
+    }
+
+    [TestMethod]
+    public void CreateQueueState_CompactsStoreAndBootstrapsCounter()
+    {
+        var store = new MemoryStore();
+        var settings = EnabledSettings(max: 10u, freq: 1u);
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
+        uint vub = height + maxInc + 100;
+
+        var expired = CreateRawTx(height, nonce: 80);
+        store.Put(expired.Hash.GetSpan().ToArray(), SerializeTx(expired));
+        var valid = CreateSignedTx(vub, nonce: 81);
+        store.Put(valid.Hash.GetSpan().ToArray(), SerializeTx(valid));
+
+        var (counter, _) = DeferredRelayEngine.CreateQueueState(_system, store, settings);
+
+        Assert.IsFalse(store.Contains(expired.Hash.GetSpan().ToArray()));
+        Assert.IsTrue(store.Contains(valid.Hash.GetSpan().ToArray()));
+        Assert.AreEqual(1, counter.Value);
+        Assert.AreEqual(1, DeferredRelayEngine.CountEntries(store));
+    }
+
+    [TestMethod]
     public void DeferredRelayActor_BootstrapsCounter_FromExistingStoreEntries()
     {
         // Pre-seed store with `max` entries before starting the actor: the actor must bootstrap its
@@ -332,7 +386,9 @@ public class UT_DeferredRelayEngine
         store.Put(seed2.Hash.GetSpan().ToArray(), SerializeTx(seed2));
 
         var newTx = CreateSignedTx(vub, nonce: 93);
-        var actor = _system.ActorSystem.ActorOf(Props.Create(() => new DeferredRelayActor(_system, store, settings)));
+        var queueState = DeferredRelayEngine.CreateQueueState(_system, store, settings);
+        var actor = _system.ActorSystem.ActorOf(Props.Create(() =>
+            new DeferredRelayActor(_system, store, settings, queueState.Counter, queueState.Context)));
         try
         {
             // Publish a NotYetValid RelayResult; if the bootstrap is wrong (counter==0), the actor would accept it.
@@ -631,7 +687,7 @@ public class UT_DeferredRelayEngine
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
 
-        var tx = CreateRawTx(height + maxInc + 100);
+        var tx = CreateSignedTx(height + maxInc + 100, nonce: 601);
         byte[] key = tx.Hash.GetSpan().ToArray();
         store.Put(key, SerializeTx(tx));
 
@@ -642,7 +698,7 @@ public class UT_DeferredRelayEngine
             // Give the actor system a brief window to publish any stray RelayResult events.
             Thread.Sleep(100);
 
-            Assert.IsTrue(store.Contains(key), "Tx beyond the relay window must remain in store");
+            Assert.IsTrue(store.Contains(key), "Valid tx beyond the relay window must remain in store");
             lock (locker)
             {
                 Assert.IsFalse(
@@ -671,7 +727,7 @@ public class UT_DeferredRelayEngine
 
         uint vub = height + 1; // height < vub <= height + maxInc
         Assert.IsTrue(vub > height && vub <= height + maxInc);
-        var tx = CreateRawTx(vub);
+        var tx = CreateSignedTx(vub, nonce: 602);
         byte[] key = tx.Hash.GetSpan().ToArray();
         store.Put(key, SerializeTx(tx));
 
@@ -807,6 +863,28 @@ public class UT_DeferredRelayEngine
         var tx2 = CreateSignedTx(vub, nonce: 12);
         Assert.IsFalse(DeferredRelayEngine.TryOffer(_system, store, settings, tx2, VerifyResult.NotYetValid, queueContext: queueContext));
         Assert.AreEqual(1, store.Find(null).Count());
+    }
+
+    [TestMethod]
+    public void ProcessQueued_EvictsStateInvalidFarFutureEntry()
+    {
+        var store = new MemoryStore();
+        var settings = EnabledSettings();
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
+        uint vub = height + maxInc + 50;
+
+        var tx = CreateSignedTx(vub, nonce: 600);
+        byte[] key = tx.Hash.GetSpan().ToArray();
+        store.Put(key, SerializeTx(tx));
+
+        var queueContext = DeferredQueueContext.Bootstrap(store);
+        BlockAccount(_account.ScriptHash);
+
+        DeferredRelayEngine.ProcessQueuedAsync(_system, store, settings, queueContext: queueContext).GetAwaiter().GetResult();
+
+        Assert.IsFalse(store.Contains(key));
     }
 
     [TestMethod]
