@@ -245,7 +245,7 @@ partial class UT_RpcServer
         var exception = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.SendRawTransaction(txString),
             "Should throw RpcException for invalid format transaction");
         // Oversized transaction will not pass the deserialization.
-        Assert.AreEqual(RpcError.InvalidParams.Code, exception.HResult);
+        Assert.AreEqual(RpcError.InvalidSize.Code, exception.HResult);
     }
 
     [TestMethod]
