@@ -103,6 +103,10 @@ internal static class DeferredRelayEngine
         if (store.Contains(key))
             return true;
 
+        // Fallback callers (no in-memory counter): compact before counting store entries.
+        if (counter is null)
+            queueContext ??= BootstrapQueueContext(system, store, settings);
+
         int currentCount = counter?.Value ?? CountEntries(store);
         if (currentCount >= settings.MaxTransactions)
             return false;
@@ -171,7 +175,7 @@ internal static class DeferredRelayEngine
         var snapshot = system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(system.Settings);
-        ClassifyQueueEntries(system, store, settings, out List<byte[]> toRemove, out List<Transaction> survivors);
+        ClassifyQueueEntries(system, store, settings, out List<byte[]> toRemove, out List<Transaction> survivors, cancellationToken);
 
         List<Transaction> toRelay = [];
         foreach (Transaction tx in survivors)
@@ -269,7 +273,8 @@ internal static class DeferredRelayEngine
         IStore store,
         DeferredRelaySettings settings,
         out List<byte[]> toRemove,
-        out List<Transaction> survivors)
+        out List<Transaction> survivors,
+        CancellationToken cancellationToken = default)
     {
         toRemove = [];
         survivors = [];
@@ -282,6 +287,7 @@ internal static class DeferredRelayEngine
 
         foreach ((byte[] key, byte[] value) in store.Find())
         {
+            cancellationToken.ThrowIfCancellationRequested();
             // Schema guard: only 32-byte (UInt256) keys are transaction entries; see CountEntries.
             if (key.Length != UInt256.Length) continue;
 
@@ -314,6 +320,7 @@ internal static class DeferredRelayEngine
         var verifyContext = new TransactionVerificationContext();
         foreach ((byte[] key, Transaction tx) in candidates)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (DeferredRelayVerification.VerifyForOffer(system.Settings, snapshot, tx, verifyContext) != VerifyResult.Succeed)
                 toRemove.Add(key);
             else

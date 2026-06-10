@@ -220,6 +220,25 @@ public class UT_DeferredRelayEngine
     }
 
     [TestMethod]
+    public void TryOffer_Fallback_CompactsBeforeCapacityCheck()
+    {
+        var store = new MemoryStore();
+        var settings = EnabledSettings(max: 1u);
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
+
+        var expired = CreateRawTx(height, nonce: 99);
+        store.Put(expired.Hash.GetSpan().ToArray(), SerializeTx(expired));
+        Assert.AreEqual(1, DeferredRelayEngine.CountEntries(store));
+
+        var valid = CreateSignedTx(height + maxInc + 10, nonce: 100);
+        Assert.IsTrue(DeferredRelayEngine.TryOffer(_system, store, settings, valid, VerifyResult.NotYetValid));
+        Assert.IsFalse(store.Contains(expired.Hash.GetSpan().ToArray()));
+        Assert.AreEqual(1, DeferredRelayEngine.CountEntries(store));
+    }
+
+    [TestMethod]
     public void TryOffer_WhenAtMaxTransactions_RejectsNewHash()
     {
         var store = new MemoryStore();
@@ -802,8 +821,9 @@ public class UT_DeferredRelayEngine
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
         var tx = CreateManualSignedTx(_wallet, _account, height + maxInc + 5, nonce: 2);
+        tx.NetworkFee = minFee - 1;
 
-        Assert.IsLessThan(minFee, tx.NetworkFee);
+        Assert.IsTrue(tx.NetworkFee < minFee);
         Assert.IsFalse(DeferredRelayEngine.TryOffer(_system, store, settings, tx, VerifyResult.NotYetValid));
         Assert.AreEqual(0, store.Find(null).Count());
     }
