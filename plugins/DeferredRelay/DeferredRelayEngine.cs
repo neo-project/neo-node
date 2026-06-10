@@ -84,7 +84,11 @@ internal static class DeferredRelayEngine
     /// instead of scanning the store, and the counter is incremented on a successful <c>Put</c>.
     /// Callers that do not maintain a counter (e.g. tests) pass <c>null</c>, falling back to <see cref="CountEntries"/>.
     /// </param>
-    public static bool TryOffer(NeoSystem system, IStore store, DeferredRelaySettings settings, Transaction tx, VerifyResult relayResult, EntryCounter? counter = null)
+    /// <param name="queueContext">
+    /// Optional in-memory deferred-queue state (per-sender limits and fee aggregation).
+    /// When <c>null</c>, a fresh context is bootstrapped from <paramref name="store"/> on each call.
+    /// </param>
+    public static bool TryOffer(NeoSystem system, IStore store, DeferredRelaySettings settings, Transaction tx, VerifyResult relayResult, EntryCounter? counter = null, DeferredQueueContext? queueContext = null)
     {
         if (!settings.Enabled)
             return false;
@@ -99,12 +103,29 @@ internal static class DeferredRelayEngine
         if (store.Contains(key))
             return true;
 
+        // Fallback callers (no in-memory counter): compact before counting store entries.
+        if (counter is null)
+            queueContext ??= BootstrapQueueContext(system, store, settings);
+
         int currentCount = counter?.Value ?? CountEntries(store);
         if (currentCount >= settings.MaxTransactions)
             return false;
 
+        if (settings.MinNetworkFee > 0 && tx.NetworkFee < settings.MinNetworkFee)
+            return false;
+
+        queueContext ??= BootstrapQueueContext(system, store, settings);
+        if (!queueContext.CanAcceptSender(tx.Sender, settings.MaxTransactionsPerSender))
+            return false;
+
+        var snapshot = system.StoreView;
+        var verifyContext = queueContext.CreateVerificationContext();
+        if (DeferredRelayVerification.VerifyForOffer(system.Settings, snapshot, tx, verifyContext) != VerifyResult.Succeed)
+            return false;
+
         store.Put(key, tx.ToArray());
         counter?.Increment();
+        queueContext.OnQueued(tx);
         return true;
     }
 
@@ -137,7 +158,8 @@ internal static class DeferredRelayEngine
     }
 
     /// <summary>
-    /// Scans the local queue, removes expired or corrupt entries, and relays txs that entered the allowed window.
+    /// Scans the local queue, removes expired, corrupt, or state-dependent-invalid entries, and relays txs
+    /// that entered the allowed window.
     /// The number of relay attempts is capped at <see cref="DeferredRelaySettings.MaxRelayPerCycle"/> so a single
     /// drain pass cannot monopolize the Blockchain actor mailbox when the queue is near capacity; the unrelayed
     /// remainder stays in the store and is picked up by the next <see cref="ShouldProcessPersist"/>-eligible block.
@@ -146,19 +168,127 @@ internal static class DeferredRelayEngine
     /// Optional in-memory entry counter; decremented on every successful <c>Delete</c> so that
     /// <see cref="TryOffer"/> can perform its capacity check without re-scanning the store.
     /// </param>
-    public static async Task ProcessQueuedAsync(NeoSystem system, IStore store, DeferredRelaySettings settings, EntryCounter? counter = null, CancellationToken cancellationToken = default)
+    public static async Task ProcessQueuedAsync(NeoSystem system, IStore store, DeferredRelaySettings settings, EntryCounter? counter = null, DeferredQueueContext? queueContext = null, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var snapshot = system.StoreView;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(system.Settings);
-        List<byte[]> toRemove = [];
+        ClassifyQueueEntries(system, store, settings, out List<byte[]> toRemove, out List<Transaction> survivors, cancellationToken);
+
         List<Transaction> toRelay = [];
+        foreach (Transaction tx in survivors)
+        {
+            if (tx.ValidUntilBlock <= height + maxInc)
+                toRelay.Add(tx);
+        }
+
+        queueContext ??= DeferredQueueContext.Bootstrap(store);
+
+        foreach (byte[] key in toRemove)
+        {
+            if (store.TryGet(key, out byte[]? value))
+            {
+                try
+                {
+                    queueContext.OnRemoved(value.AsSerializable<Transaction>());
+                }
+                catch
+                {
+                    // Corrupt entries have no queue-context state to reconcile.
+                }
+            }
+
+            store.Delete(key);
+            counter?.Decrement();
+        }
+
+        int relayCap = (int)settings.MaxRelayPerCycle;
+        int attempts = 0;
+        foreach (Transaction tx in toRelay)
+        {
+            if (attempts >= relayCap) break;
+            cancellationToken.ThrowIfCancellationRequested();
+            // Count attempts (not just successes): the cap protects the Blockchain actor mailbox,
+            // and every Ask -- whether it eventually returns Succeed, AlreadyInPool, or a failure --
+            // already occupies one slot in that mailbox.
+            attempts++;
+            var relayOutcome = await TryRelayAsync(system, tx).ConfigureAwait(false);
+            if (relayOutcome is VerifyResult.Succeed or VerifyResult.AlreadyInPool or VerifyResult.AlreadyExists)
+            {
+                RemoveQueued(store, tx, counter, queueContext);
+                continue;
+            }
+
+            if (DeferredRelayVerification.IsDefinitiveRelayFailure(relayOutcome))
+                RemoveQueued(store, tx, counter, queueContext);
+        }
+    }
+
+    private static void RemoveQueued(IStore store, Transaction tx, EntryCounter? counter, DeferredQueueContext queueContext)
+    {
+        store.Delete(tx.Hash.GetSpan().ToArray());
+        counter?.Decrement();
+        queueContext.OnRemoved(tx);
+    }
+
+    private static async Task<VerifyResult> TryRelayAsync(NeoSystem system, Transaction tx)
+    {
+        try
+        {
+            var relayResult = await system.Blockchain
+                .Ask<Blockchain.RelayResult>(tx, TimeSpan.FromSeconds(30))
+                .ConfigureAwait(false);
+            return relayResult.Result;
+        }
+        catch (Exception ex)
+        {
+            Logs.RuntimeLogger.Debug(ex, "Deferred relay attempt failed for {Hash}", tx.Hash);
+            return VerifyResult.Unknown;
+        }
+    }
+
+    /// <summary>
+    /// Drops expired, corrupt, and state-dependent-invalid entries from the local store before
+    /// rebuilding in-memory queue state. Called on actor/plugin startup so <see cref="DeferredQueueContext.Bootstrap"/>
+    /// does not retain stale txs that would occupy per-sender slots or skew fee aggregation.
+    /// The same classification runs on every <see cref="ProcessQueuedAsync"/> cycle while the node is online.
+    /// </summary>
+    internal static void CompactStore(NeoSystem system, IStore store, DeferredRelaySettings settings)
+    {
+        if (!settings.Enabled)
+            return;
+
+        ClassifyQueueEntries(system, store, settings, out List<byte[]> toRemove, out _);
+        foreach (byte[] key in toRemove)
+            store.Delete(key);
+    }
+
+    /// <summary>
+    /// Returns store keys to evict and surviving transactions (stable store order, fee-aggregation aware).
+    /// </summary>
+    private static void ClassifyQueueEntries(
+        NeoSystem system,
+        IStore store,
+        DeferredRelaySettings settings,
+        out List<byte[]> toRemove,
+        out List<Transaction> survivors,
+        CancellationToken cancellationToken = default)
+    {
+        toRemove = [];
+        survivors = [];
+        if (!settings.Enabled)
+            return;
+
+        var snapshot = system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        List<(byte[] Key, Transaction Tx)> candidates = [];
 
         foreach ((byte[] key, byte[] value) in store.Find())
         {
             cancellationToken.ThrowIfCancellationRequested();
             // Schema guard: only 32-byte (UInt256) keys are transaction entries; see CountEntries.
-            // Non-tx entries are left untouched (not added to toRemove) to keep future metadata safe.
             if (key.Length != UInt256.Length) continue;
 
             Transaction tx;
@@ -178,47 +308,43 @@ internal static class DeferredRelayEngine
                 continue;
             }
 
-            if (height < tx.ValidUntilBlock && tx.ValidUntilBlock <= height + maxInc)
-                toRelay.Add(tx);
-        }
-
-        foreach (byte[] key in toRemove)
-        {
-            store.Delete(key);
-            counter?.Decrement();
-        }
-
-        int relayCap = (int)settings.MaxRelayPerCycle;
-        int attempts = 0;
-        foreach (Transaction tx in toRelay)
-        {
-            if (attempts >= relayCap) break;
-            cancellationToken.ThrowIfCancellationRequested();
-            // Count attempts (not just successes): the cap protects the Blockchain actor mailbox,
-            // and every Ask -- whether it eventually returns Succeed, AlreadyInPool, or a failure --
-            // already occupies one slot in that mailbox.
-            attempts++;
-            if (!await TryRelayAsync(system, tx).ConfigureAwait(false))
+            if (settings.MinNetworkFee > 0 && tx.NetworkFee < settings.MinNetworkFee)
+            {
+                toRemove.Add(key);
                 continue;
-            store.Delete(tx.Hash.GetSpan().ToArray());
-            counter?.Decrement();
+            }
+
+            candidates.Add((key, tx));
+        }
+
+        var verifyContext = new TransactionVerificationContext();
+        foreach ((byte[] key, Transaction tx) in candidates)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (DeferredRelayVerification.VerifyForOffer(system.Settings, snapshot, tx, verifyContext) != VerifyResult.Succeed)
+                toRemove.Add(key);
+            else
+            {
+                verifyContext.AddTransaction(tx);
+                survivors.Add(tx);
+            }
         }
     }
 
-    private static async Task<bool> TryRelayAsync(NeoSystem system, Transaction tx)
+    internal static DeferredQueueContext BootstrapQueueContext(NeoSystem system, IStore store, DeferredRelaySettings settings)
     {
-        try
-        {
-            var relayResult = await system.Blockchain
-                .Ask<Blockchain.RelayResult>(tx, TimeSpan.FromSeconds(30))
-                .ConfigureAwait(false);
-            return relayResult.Result is VerifyResult.Succeed or VerifyResult.AlreadyInPool or VerifyResult.AlreadyExists;
-        }
-        catch (Exception ex)
-        {
-            Logs.RuntimeLogger.Debug(ex, "Deferred relay attempt failed for {Hash}", tx.Hash);
-            return false;
-        }
+        CompactStore(system, store, settings);
+        return DeferredQueueContext.Bootstrap(store);
+    }
+
+    /// <summary>
+    /// Compacts the store and builds the in-memory counter/context pair used by <see cref="DeferredRelayActor"/>.
+    /// </summary>
+    internal static (EntryCounter Counter, DeferredQueueContext Context) CreateQueueState(
+        NeoSystem system, IStore store, DeferredRelaySettings settings)
+    {
+        var context = BootstrapQueueContext(system, store, settings);
+        return (new EntryCounter(CountEntries(store)), context);
     }
 
     /// <summary>

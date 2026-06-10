@@ -53,8 +53,9 @@ public class DeferredRelayPlugin : Plugin
         var fullPath = GetFullPath(path);
         Directory.CreateDirectory(fullPath);
         _store = system.LoadStore(fullPath);
-        _actor = system.ActorSystem.ActorOf(
-            Props.Create(() => new DeferredRelayActor(system, _store, DeferredRelaySettings.Default)));
+        var queueState = DeferredRelayEngine.CreateQueueState(system, _store, DeferredRelaySettings.Default);
+        _actor = system.ActorSystem.ActorOf(Props.Create(() =>
+            new DeferredRelayActor(system, _store, DeferredRelaySettings.Default, queueState.Counter, queueState.Context)));
     }
 
     public override void Dispose()
