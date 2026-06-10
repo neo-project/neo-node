@@ -48,6 +48,8 @@ internal static class DeferredRelayVerification
         TransactionVerificationContext context)
     {
         UInt160[] hashes = tx.GetScriptHashesForVerifying(snapshot);
+        if (tx.Witnesses.Length != hashes.Length)
+            return VerifyResult.InvalidSignature;
         foreach (UInt160 hash in hashes)
             if (NativeContract.Policy.IsBlocked(snapshot, hash))
                 return VerifyResult.PolicyFail;
