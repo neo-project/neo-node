@@ -22,7 +22,7 @@ namespace Neo.Plugins.DeferredRelay;
 /// </summary>
 internal sealed class DeferredQueueContext
 {
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private readonly Dictionary<UInt160, int> _senderCounts = new();
     private readonly List<Transaction> _queued = new();
 
