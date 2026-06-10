@@ -24,7 +24,7 @@ internal sealed class DeferredQueueContext
 {
     private readonly Lock _lock = new();
     private readonly Dictionary<UInt160, int> _senderCounts = new();
-    private readonly List<Transaction> _queued = new();
+    private readonly Dictionary<UInt256, Transaction> _queued = new();
 
     public static DeferredQueueContext Bootstrap(IStore store)
     {
@@ -60,7 +60,7 @@ internal sealed class DeferredQueueContext
         var context = new TransactionVerificationContext();
         lock (_lock)
         {
-            foreach (Transaction tx in _queued)
+            foreach (Transaction tx in _queued.Values)
                 context.AddTransaction(tx);
         }
 
@@ -71,7 +71,7 @@ internal sealed class DeferredQueueContext
     {
         lock (_lock)
         {
-            _queued.Add(tx);
+            _queued[tx.Hash] = tx;
             _senderCounts.TryGetValue(tx.Sender, out int count);
             _senderCounts[tx.Sender] = count + 1;
         }
@@ -81,14 +81,7 @@ internal sealed class DeferredQueueContext
     {
         lock (_lock)
         {
-            for (int i = _queued.Count - 1; i >= 0; i--)
-            {
-                if (_queued[i].Hash == tx.Hash)
-                {
-                    _queued.RemoveAt(i);
-                    break;
-                }
-            }
+            _queued.Remove(tx.Hash);
 
             if (_senderCounts.TryGetValue(tx.Sender, out int count))
             {
