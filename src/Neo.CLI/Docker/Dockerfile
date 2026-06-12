@@ -27,7 +27,6 @@ RUN if [ -z "$PLUGIN_VERSION" ]; then \
         ./prepare-node.sh $CLI_VERSION $PLUGIN_VERSION; \
     fi
 
-RUN sed -i 's/"BindAddress":[^,]*/"BindAddress": "0.0.0.0"/' neo-cli/Plugins/RpcServer/RpcServer.json
 COPY start.sh .
-RUN dos2unix start.sh && chmod -R +x ./neo-cli && chmod +x start.sh
+RUN dos2unix start.sh && if [ -d ./neo-cli ]; then chmod -R +x ./neo-cli; else chmod +x ./neo-cli; fi && chmod +x start.sh
 ENTRYPOINT ["sh", "./start.sh"]

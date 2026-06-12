@@ -2,6 +2,14 @@ echo "Downloading neo node $1"
 wget  https://github.com/neo-project/neo-node/releases/download/$1/neo-cli-linux-x64.zip
 unzip neo-cli-linux-x64.zip
 
+if [ -d neo-cli ]; then
+    PLUGIN_DIR=./neo-cli
+elif [ -f neo-cli ]; then
+    PLUGIN_DIR=.
+else
+    echo "Error: unexpected neo-cli layout after unzip" >&2
+    exit 1
+fi
 
 if [ -z "$2" ]; then
     echo "Downloading plugins $1"
@@ -15,8 +23,10 @@ else
     wget https://github.com/neo-project/neo-node/releases/download/$2/TokensTracker.zip
 fi
 
-unzip -n ApplicationLogs.zip -d ./neo-cli/
-unzip -n RpcServer.zip -d ./neo-cli/
-unzip -n TokensTracker.zip -d ./neo-cli/
+unzip -n ApplicationLogs.zip -d "$PLUGIN_DIR/"
+unzip -n RpcServer.zip -d "$PLUGIN_DIR/"
+unzip -n TokensTracker.zip -d "$PLUGIN_DIR/"
+
+sed -i 's/"BindAddress":[^,]*/"BindAddress": "0.0.0.0"/' "$PLUGIN_DIR/Plugins/RpcServer/RpcServer.json"
 
 echo "Node Ready!"
