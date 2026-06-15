@@ -88,7 +88,22 @@ jobs:
         dotnet out/neo-cli.dll &
         NEO_PID=$!
         echo "NEO_PID=$NEO_PID" >> $GITHUB_ENV
-        sleep 10
+
+        echo "Waiting for neo-cli RPC endpoint to become ready..."
+        ATTEMPTS=0
+        MAX_ATTEMPTS=30
+        SLEEP_SECONDS=2
+        until curl -s -H "Content-Type: application/json" \
+          -d '{"jsonrpc":"2.0","method":"getversion","params":[],"id":1}' \
+          http://localhost:10332 | jq -e '.jsonrpc' >/dev/null 2>&1; do
+          ATTEMPTS=$((ATTEMPTS+1))
+          if [ "$ATTEMPTS" -ge "$MAX_ATTEMPTS" ]; then
+            echo "neo-cli RPC endpoint did not become ready in time"
+            exit 1
+          fi
+          sleep "$SLEEP_SECONDS"
+        done
+        echo "neo-cli RPC endpoint is ready."
     - name: Test RPC calls
       run: |
         chmod +x ./.github/workflows/test-rpc-calls.sh
