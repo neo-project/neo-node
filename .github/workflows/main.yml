@@ -94,9 +94,11 @@ jobs:
         chmod +x ./.github/workflows/test-rpc-calls.sh
         ./.github/workflows/test-rpc-calls.sh
     - name: Stop neo-cli
+      if: always()
       run: |
         if [ -n "$NEO_PID" ]; then
-          kill $NEO_PID || true
+          kill "$NEO_PID" || true
+          wait "$NEO_PID" || true
         fi
       
   Release:
