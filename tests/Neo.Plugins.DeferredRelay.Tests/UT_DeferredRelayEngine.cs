@@ -823,7 +823,7 @@ public class UT_DeferredRelayEngine
         var tx = CreateManualSignedTx(_wallet, _account, height + maxInc + 5, nonce: 2);
         tx.NetworkFee = minFee - 1;
 
-        Assert.IsTrue(tx.NetworkFee < minFee);
+        Assert.IsLessThan(minFee, tx.NetworkFee);
         Assert.IsFalse(DeferredRelayEngine.TryOffer(_system, store, settings, tx, VerifyResult.NotYetValid));
         Assert.AreEqual(0, store.Find(null).Count());
     }
