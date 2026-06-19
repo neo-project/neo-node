@@ -53,6 +53,7 @@ public class UT_NodeDiagnosticsSettings
             },
             "SendStartupDiagnosticEvent": true,
             "HeartbeatIntervalSeconds": 120,
+            "ConsensusStallThresholdSeconds": 30,
             "RequestTimeoutMilliseconds": 2500,
             "Sinks": [
               {
@@ -98,6 +99,7 @@ public class UT_NodeDiagnosticsSettings
         Assert.AreEqual("eu", settings.Tags["region"]);
         Assert.IsTrue(settings.SendStartupDiagnosticEvent);
         Assert.AreEqual(120, settings.HeartbeatIntervalSeconds);
+        Assert.AreEqual(30, settings.ConsensusStallThresholdSeconds);
         Assert.AreEqual(2500, settings.RequestTimeoutMilliseconds);
         Assert.HasCount(3, settings.Sinks);
         Assert.AreEqual("Primary error sink", settings.Sinks[0].Description);
@@ -161,6 +163,18 @@ public class UT_NodeDiagnosticsSettings
         {
           "PluginConfiguration": {
             "RequestTimeoutMilliseconds": 0
+          }
+        }
+        """)));
+    }
+
+    [TestMethod]
+    public void Load_RejectsInvalidConsensusStallThreshold()
+    {
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => NodeDiagnosticsSettings.Load(BuildSection("""
+        {
+          "PluginConfiguration": {
+            "ConsensusStallThresholdSeconds": 0
           }
         }
         """)));

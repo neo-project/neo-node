@@ -12,6 +12,7 @@
     "SendStartupDiagnosticEvent": false,
     "IncludeStackTrace": true,
     "HeartbeatIntervalSeconds": 60,
+    "ConsensusStallThresholdSeconds": 30,
     "MaxQueueSize": 1024,
     "BatchSize": 10,
     "MaxRetries": 3,

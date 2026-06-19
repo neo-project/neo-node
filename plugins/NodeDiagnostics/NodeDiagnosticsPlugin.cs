@@ -77,7 +77,7 @@ public sealed class NodeDiagnosticsPlugin : Plugin
             TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
             _subscribedUnobservedTaskExceptions = true;
         }
-        if (_settings.HasHeartbeatSinks)
+        if (_settings.HasHeartbeatSinks || _settings.HasEventSinks)
         {
             Blockchain.Committed += Blockchain_Committed_Handler;
             _subscribedBlockLiveness = true;

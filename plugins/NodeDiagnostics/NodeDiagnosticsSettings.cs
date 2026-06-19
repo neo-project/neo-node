@@ -25,6 +25,7 @@ internal sealed class NodeDiagnosticsSettings : IPluginSettings
     public bool SendStartupDiagnosticEvent { get; }
     public bool IncludeStackTrace { get; }
     public int HeartbeatIntervalSeconds { get; }
+    public int ConsensusStallThresholdSeconds { get; }
     public int MaxQueueSize { get; }
     public int BatchSize { get; }
     public int MaxRetries { get; }
@@ -54,6 +55,7 @@ internal sealed class NodeDiagnosticsSettings : IPluginSettings
         SendStartupDiagnosticEvent = section.GetValue("SendStartupDiagnosticEvent", false);
         IncludeStackTrace = section.GetValue("IncludeStackTrace", true);
         HeartbeatIntervalSeconds = section.GetValue("HeartbeatIntervalSeconds", 60);
+        ConsensusStallThresholdSeconds = section.GetValue("ConsensusStallThresholdSeconds", 30);
         MaxQueueSize = section.GetValue("MaxQueueSize", 1024);
         BatchSize = section.GetValue("BatchSize", 10);
         MaxRetries = section.GetValue("MaxRetries", 3);
@@ -79,6 +81,7 @@ internal sealed class NodeDiagnosticsSettings : IPluginSettings
         bool sendStartupDiagnosticEvent,
         bool includeStackTrace,
         int heartbeatIntervalSeconds,
+        int consensusStallThresholdSeconds,
         int maxQueueSize,
         int batchSize,
         int maxRetries,
@@ -99,6 +102,7 @@ internal sealed class NodeDiagnosticsSettings : IPluginSettings
         SendStartupDiagnosticEvent = sendStartupDiagnosticEvent;
         IncludeStackTrace = includeStackTrace;
         HeartbeatIntervalSeconds = heartbeatIntervalSeconds;
+        ConsensusStallThresholdSeconds = consensusStallThresholdSeconds;
         MaxQueueSize = maxQueueSize;
         BatchSize = batchSize;
         MaxRetries = maxRetries;
@@ -126,6 +130,7 @@ internal sealed class NodeDiagnosticsSettings : IPluginSettings
         bool sendStartupDiagnosticEvent = false,
         bool includeStackTrace = true,
         int heartbeatIntervalSeconds = 60,
+        int consensusStallThresholdSeconds = 30,
         int maxQueueSize = 1024,
         int batchSize = 10,
         int maxRetries = 0,
@@ -146,6 +151,7 @@ internal sealed class NodeDiagnosticsSettings : IPluginSettings
             sendStartupDiagnosticEvent,
             includeStackTrace,
             heartbeatIntervalSeconds,
+            consensusStallThresholdSeconds,
             maxQueueSize,
             batchSize,
             maxRetries,
@@ -164,6 +170,8 @@ internal sealed class NodeDiagnosticsSettings : IPluginSettings
             throw new ArgumentException("ServiceName cannot be empty.", nameof(ServiceName));
         if (HeartbeatIntervalSeconds < 30)
             throw new ArgumentOutOfRangeException(nameof(HeartbeatIntervalSeconds), HeartbeatIntervalSeconds, "HeartbeatIntervalSeconds must be at least 30.");
+        if (ConsensusStallThresholdSeconds <= 0)
+            throw new ArgumentOutOfRangeException(nameof(ConsensusStallThresholdSeconds), ConsensusStallThresholdSeconds, "ConsensusStallThresholdSeconds must be greater than zero.");
         if (MaxQueueSize <= 0)
             throw new ArgumentOutOfRangeException(nameof(MaxQueueSize), MaxQueueSize, "MaxQueueSize must be greater than zero.");
         if (BatchSize <= 0)

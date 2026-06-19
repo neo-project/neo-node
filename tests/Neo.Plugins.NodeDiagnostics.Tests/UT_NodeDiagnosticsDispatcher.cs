@@ -184,6 +184,40 @@ public class UT_NodeDiagnosticsDispatcher
     }
 
     [TestMethod]
+    public async Task SendConsensusStallIfNeededAsync_SendsOncePerStalledHeight()
+    {
+        var handler = new TestHttpMessageHandler();
+        using var client = new HttpClient(handler);
+        var settings = NodeDiagnosticsSettings.Create(
+            sinks:
+            [
+                new NodeDiagnosticsSinkSettings(
+                    "custom-errors",
+                    NodeDiagnosticsSinkKind.ErrorCollector,
+                    NodeDiagnosticsProvider.CustomWebhook,
+                    new Uri("https://collector.example/v1/events"))
+            ],
+            consensusStallThresholdSeconds: 30);
+        using var dispatcher = new NodeDiagnosticsDispatcher(settings, client);
+        var now = DateTimeOffset.UtcNow;
+        dispatcher.RecordBlockPersisted(100, now - TimeSpan.FromSeconds(31));
+
+        var sent = await dispatcher.SendConsensusStallIfNeededAsync(now, CancellationToken.None);
+        var duplicate = await dispatcher.SendConsensusStallIfNeededAsync(now.AddSeconds(1), CancellationToken.None);
+
+        Assert.IsTrue(sent);
+        Assert.IsFalse(duplicate);
+        Assert.HasCount(1, handler.Requests);
+        using var document = JsonDocument.Parse(handler.Bodies[0]);
+        var item = document.RootElement.GetProperty("events")[0];
+        Assert.AreEqual("ConsensusStall", item.GetProperty("eventType").GetString());
+        Assert.AreEqual("error", item.GetProperty("severity").GetString());
+        Assert.AreEqual(100u, item.GetProperty("blockHeight").GetUInt32());
+        Assert.AreEqual(31, item.GetProperty("secondsSinceLastBlockAdvance").GetInt32());
+        Assert.AreEqual("consensus", item.GetProperty("source").GetString());
+    }
+
+    [TestMethod]
     public void TryEnqueue_ReturnsFalseWhenQueueIsFull()
     {
         var settings = NodeDiagnosticsSettings.Create(

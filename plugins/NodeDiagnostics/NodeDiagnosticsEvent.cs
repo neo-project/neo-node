@@ -167,6 +167,38 @@ internal sealed record NodeDiagnosticsEvent(
             Tags: settings.Tags);
     }
 
+    public static NodeDiagnosticsEvent ConsensusStall(NodeDiagnosticsSettings settings, NeoSystem? system, NodeDiagnosticsNodeState nodeState)
+    {
+        var seconds = nodeState.SecondsSinceLastBlockAdvance ?? settings.ConsensusStallThresholdSeconds;
+        var blockHeight = nodeState.BlockHeight?.ToString() ?? "unknown";
+        var headerHeight = nodeState.HeaderHeight?.ToString() ?? "unknown";
+        return new NodeDiagnosticsEvent(
+            EventId: Guid.NewGuid().ToString("N"),
+            EventType: "ConsensusStall",
+            Severity: "error",
+            Message: $"No new block for {seconds} seconds. Block height: {blockHeight}. Header height: {headerHeight}.",
+            ExceptionType: null,
+            StackTrace: null,
+            Source: "consensus",
+            Fingerprint: CreateFingerprint($"ConsensusStall:{settings.ServiceName}:{settings.Environment}:{settings.NodeName}"),
+            IsTerminating: false,
+            Timestamp: DateTimeOffset.UtcNow,
+            RuntimeVersion: RuntimeInformation.FrameworkDescription,
+            OSDescription: RuntimeInformation.OSDescription,
+            ProcessArchitecture: RuntimeInformation.ProcessArchitecture.ToString(),
+            ProcessId: System.Environment.ProcessId,
+            ServiceName: settings.ServiceName,
+            Environment: settings.Environment,
+            NodeName: string.IsNullOrWhiteSpace(settings.NodeName) ? null : settings.NodeName,
+            Network: system?.Settings.Network,
+            NodeVersion: Assembly.GetEntryAssembly()?.GetName().Version?.ToString(),
+            PluginVersion: typeof(NodeDiagnosticsPlugin).Assembly.GetName().Version?.ToString(),
+            BlockHeight: nodeState.BlockHeight,
+            HeaderHeight: nodeState.HeaderHeight,
+            SecondsSinceLastBlockAdvance: nodeState.SecondsSinceLastBlockAdvance,
+            Tags: CreateHeartbeatTags(settings.Tags, nodeState));
+    }
+
     private static string CreateFingerprint(Exception exception)
     {
         var baseException = exception.GetBaseException();

@@ -25,13 +25,16 @@ internal sealed class NodeDiagnosticsDispatcher : IDisposable
     private readonly Channel<NodeDiagnosticsEvent> _channel;
     private readonly CancellationTokenSource _shutdown = new();
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
+    private static readonly TimeSpan ConsensusStallCheckInterval = TimeSpan.FromSeconds(1);
     private Task? _eventWorker;
     private Task? _heartbeatWorker;
+    private Task? _consensusStallWorker;
     private long _droppedEvents;
     private DateTimeOffset _lastDropWarning = DateTimeOffset.MinValue;
     private readonly object _livenessLock = new();
     private uint? _lastObservedBlockHeight;
     private DateTimeOffset? _lastBlockAdvanceAt;
+    private uint? _lastReportedConsensusStallHeight;
 
     public NodeDiagnosticsDispatcher(NodeDiagnosticsSettings settings, Func<NeoSystem?> systemProvider)
         : this(settings, systemProvider, new HttpClient(), disposeClient: true)
@@ -64,6 +67,8 @@ internal sealed class NodeDiagnosticsDispatcher : IDisposable
             _eventWorker = Task.Run(ProcessQueueAsync);
         if (_settings.HasHeartbeatSinks && _heartbeatWorker is null)
             _heartbeatWorker = Task.Run(ProcessHeartbeatAsync);
+        if (_settings.HasEventSinks && _consensusStallWorker is null)
+            _consensusStallWorker = Task.Run(ProcessConsensusStallAsync);
     }
 
     public bool TryEnqueue(NodeDiagnosticsEvent nodeEvent)
@@ -101,11 +106,22 @@ internal sealed class NodeDiagnosticsDispatcher : IDisposable
     internal Task<bool> SendHeartbeatAsync(CancellationToken cancellationToken)
     {
         var system = _systemProvider();
-        return SendEventsAsync([NodeDiagnosticsEvent.Heartbeat(_settings, system, GetNodeState(system))], cancellationToken);
+        return SendEventsAsync([NodeDiagnosticsEvent.Heartbeat(_settings, system, GetNodeState(system, DateTimeOffset.UtcNow))], cancellationToken);
     }
 
     internal void RecordBlockPersisted(uint blockIndex) =>
-        ObserveBlockHeight(blockIndex, DateTimeOffset.UtcNow);
+        RecordBlockPersisted(blockIndex, DateTimeOffset.UtcNow);
+
+    internal void RecordBlockPersisted(uint blockIndex, DateTimeOffset timestamp) =>
+        ObserveBlockHeight(blockIndex, timestamp);
+
+    internal Task<bool> SendConsensusStallIfNeededAsync(DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var system = _systemProvider();
+        var nodeState = GetNodeState(system, now);
+        if (!ShouldReportConsensusStall(nodeState)) return Task.FromResult(false);
+        return SendEventsAsync([NodeDiagnosticsEvent.ConsensusStall(_settings, system, nodeState)], cancellationToken);
+    }
 
     internal async Task<bool> SendEventsAsync(IReadOnlyList<NodeDiagnosticsEvent> events, CancellationToken cancellationToken)
     {
@@ -279,9 +295,8 @@ internal sealed class NodeDiagnosticsDispatcher : IDisposable
         return tags;
     }
 
-    private NodeDiagnosticsNodeState GetNodeState(NeoSystem? system)
+    private NodeDiagnosticsNodeState GetNodeState(NeoSystem? system, DateTimeOffset now)
     {
-        var now = DateTimeOffset.UtcNow;
         uint? blockHeight = null;
         uint? headerHeight = null;
 
@@ -323,6 +338,23 @@ internal sealed class NodeDiagnosticsDispatcher : IDisposable
             if (_lastObservedBlockHeight == blockHeight) return;
             _lastObservedBlockHeight = blockHeight;
             _lastBlockAdvanceAt = timestamp;
+            _lastReportedConsensusStallHeight = null;
+        }
+    }
+
+    private bool ShouldReportConsensusStall(NodeDiagnosticsNodeState nodeState)
+    {
+        if (nodeState.BlockHeight is null || nodeState.SecondsSinceLastBlockAdvance is null)
+            return false;
+        if (nodeState.SecondsSinceLastBlockAdvance.Value < _settings.ConsensusStallThresholdSeconds)
+            return false;
+
+        lock (_livenessLock)
+        {
+            if (_lastReportedConsensusStallHeight == nodeState.BlockHeight)
+                return false;
+            _lastReportedConsensusStallHeight = nodeState.BlockHeight;
+            return true;
         }
     }
 
@@ -371,6 +403,25 @@ internal sealed class NodeDiagnosticsDispatcher : IDisposable
         }
     }
 
+    private async Task ProcessConsensusStallAsync()
+    {
+        try
+        {
+            while (!_shutdown.IsCancellationRequested)
+            {
+                await SendConsensusStallIfNeededAsync(DateTimeOffset.UtcNow, _shutdown.Token).ConfigureAwait(false);
+                await Task.Delay(ConsensusStallCheckInterval, _shutdown.Token).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            Logs.RuntimeLogger.Warning(ex, "NodeDiagnostics consensus stall processing stopped");
+        }
+    }
+
     public void Dispose()
     {
         _channel.Writer.TryComplete();
@@ -379,6 +430,7 @@ internal sealed class NodeDiagnosticsDispatcher : IDisposable
         {
             _eventWorker?.Wait(TimeSpan.FromSeconds(2));
             _heartbeatWorker?.Wait(TimeSpan.FromSeconds(2));
+            _consensusStallWorker?.Wait(TimeSpan.FromSeconds(2));
         }
         catch
         {

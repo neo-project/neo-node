@@ -36,6 +36,7 @@ Configure the plugin in `NodeDiagnostics.json`.
     },
     "SendStartupDiagnosticEvent": false,
     "HeartbeatIntervalSeconds": 60,
+    "ConsensusStallThresholdSeconds": 30,
     "RequestTimeoutMilliseconds": 5000,
     "MaxRetries": 3,
     "Sinks": [
@@ -66,10 +67,13 @@ Set `SendStartupDiagnosticEvent` to `true` during rollout if you want the plugin
 
 For process-level uptime, configure a Better Stack or Healthchecks heartbeat URL. For node-level liveness, configure a `CustomWebhook` sink with `Kind` set to `StatusMonitor`; heartbeat payloads include block height, header height, and the number of seconds since the local block height last advanced.
 
+If the local block height does not advance for `ConsensusStallThresholdSeconds` seconds, the plugin sends a `ConsensusStall` error event to error collector and notification sinks. The default threshold is 30 seconds. The same stalled height is reported once and reporting resets after the next persisted block.
+
 ## Reliability behavior
 
 - Exception events are queued in memory and sent in batches where the provider supports batching.
 - Heartbeats can include block height, header height, and block-advance age so external monitors can detect stalled synchronization or consensus progress.
+- Consensus stalls are reported as error events when no local block is persisted within `ConsensusStallThresholdSeconds`.
 - Fatal unhandled exceptions are flushed immediately with `FlushTimeoutMilliseconds`.
 - Each HTTP request is bounded by `RequestTimeoutMilliseconds`.
 - Failed requests are retried up to `MaxRetries` with `RetryDelayMilliseconds` between attempts.
