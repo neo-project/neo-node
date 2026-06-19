@@ -48,9 +48,11 @@ public class UT_NodeOpsSettings
             "ServiceName": "neo-node",
             "NodeName": "seed-1",
             "HeartbeatIntervalSeconds": 120,
+            "RequestTimeoutMilliseconds": 2500,
             "Sinks": [
               {
                 "Name": "errors",
+                "Description": "Primary error sink",
                 "Kind": "ErrorCollector",
                 "Provider": "Sentry",
                 "Endpoint": "https://sentry.example/api/123/store/",
@@ -88,7 +90,9 @@ public class UT_NodeOpsSettings
         Assert.AreEqual("mainnet", settings.Environment);
         Assert.AreEqual("seed-1", settings.NodeName);
         Assert.AreEqual(120, settings.HeartbeatIntervalSeconds);
+        Assert.AreEqual(2500, settings.RequestTimeoutMilliseconds);
         Assert.HasCount(3, settings.Sinks);
+        Assert.AreEqual("Primary error sink", settings.Sinks[0].Description);
         Assert.AreEqual(NodeOpsProvider.Sentry, settings.Sinks[0].Provider);
         Assert.AreEqual("X-Sentry-Auth", settings.Sinks[0].TokenHeader);
         Assert.AreEqual("", settings.Sinks[0].TokenScheme);
@@ -137,6 +141,18 @@ public class UT_NodeOpsSettings
           "PluginConfiguration": {
             "MaxQueueSize": 2,
             "BatchSize": 3
+          }
+        }
+        """)));
+    }
+
+    [TestMethod]
+    public void Load_RejectsInvalidRequestTimeout()
+    {
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => NodeOpsSettings.Load(BuildSection("""
+        {
+          "PluginConfiguration": {
+            "RequestTimeoutMilliseconds": 0
           }
         }
         """)));

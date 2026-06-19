@@ -27,6 +27,7 @@ internal sealed class NodeOpsSettings : IPluginSettings
     public int BatchSize { get; }
     public int MaxRetries { get; }
     public int RetryDelayMilliseconds { get; }
+    public int RequestTimeoutMilliseconds { get; }
     public int FlushTimeoutMilliseconds { get; }
     public int MaxMessageLength { get; }
     public int MaxStackTraceLength { get; }
@@ -53,6 +54,7 @@ internal sealed class NodeOpsSettings : IPluginSettings
         BatchSize = section.GetValue("BatchSize", 10);
         MaxRetries = section.GetValue("MaxRetries", 3);
         RetryDelayMilliseconds = section.GetValue("RetryDelayMilliseconds", 1000);
+        RequestTimeoutMilliseconds = section.GetValue("RequestTimeoutMilliseconds", 5000);
         FlushTimeoutMilliseconds = section.GetValue("FlushTimeoutMilliseconds", 5000);
         MaxMessageLength = section.GetValue("MaxMessageLength", 4096);
         MaxStackTraceLength = section.GetValue("MaxStackTraceLength", 32768);
@@ -75,6 +77,7 @@ internal sealed class NodeOpsSettings : IPluginSettings
         int batchSize,
         int maxRetries,
         int retryDelayMilliseconds,
+        int requestTimeoutMilliseconds,
         int flushTimeoutMilliseconds,
         int maxMessageLength,
         int maxStackTraceLength,
@@ -92,6 +95,7 @@ internal sealed class NodeOpsSettings : IPluginSettings
         BatchSize = batchSize;
         MaxRetries = maxRetries;
         RetryDelayMilliseconds = retryDelayMilliseconds;
+        RequestTimeoutMilliseconds = requestTimeoutMilliseconds;
         FlushTimeoutMilliseconds = flushTimeoutMilliseconds;
         MaxMessageLength = maxMessageLength;
         MaxStackTraceLength = maxStackTraceLength;
@@ -116,6 +120,7 @@ internal sealed class NodeOpsSettings : IPluginSettings
         int batchSize = 10,
         int maxRetries = 0,
         int retryDelayMilliseconds = 1,
+        int requestTimeoutMilliseconds = 1000,
         int flushTimeoutMilliseconds = 1000,
         int maxMessageLength = 4096,
         int maxStackTraceLength = 32768,
@@ -133,6 +138,7 @@ internal sealed class NodeOpsSettings : IPluginSettings
             batchSize,
             maxRetries,
             retryDelayMilliseconds,
+            requestTimeoutMilliseconds,
             flushTimeoutMilliseconds,
             maxMessageLength,
             maxStackTraceLength,
@@ -156,6 +162,8 @@ internal sealed class NodeOpsSettings : IPluginSettings
             throw new ArgumentOutOfRangeException(nameof(MaxRetries), MaxRetries, "MaxRetries cannot be negative.");
         if (RetryDelayMilliseconds < 0)
             throw new ArgumentOutOfRangeException(nameof(RetryDelayMilliseconds), RetryDelayMilliseconds, "RetryDelayMilliseconds cannot be negative.");
+        if (RequestTimeoutMilliseconds <= 0)
+            throw new ArgumentOutOfRangeException(nameof(RequestTimeoutMilliseconds), RequestTimeoutMilliseconds, "RequestTimeoutMilliseconds must be greater than zero.");
         if (FlushTimeoutMilliseconds <= 0)
             throw new ArgumentOutOfRangeException(nameof(FlushTimeoutMilliseconds), FlushTimeoutMilliseconds, "FlushTimeoutMilliseconds must be greater than zero.");
         if (MaxMessageLength <= 0)

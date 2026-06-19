@@ -26,6 +26,8 @@ internal sealed class NodeOpsDispatcher : IDisposable
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
     private Task? _eventWorker;
     private Task? _heartbeatWorker;
+    private long _droppedEvents;
+    private DateTimeOffset _lastDropWarning = DateTimeOffset.MinValue;
 
     public NodeOpsDispatcher(NodeOpsSettings settings, Func<NeoSystem?> systemProvider)
         : this(settings, systemProvider, new HttpClient(), disposeClient: true)
@@ -63,7 +65,18 @@ internal sealed class NodeOpsDispatcher : IDisposable
     public bool TryEnqueue(NodeOpsEvent nodeEvent)
     {
         if (!_settings.Enabled || !_settings.HasEventSinks) return false;
-        return _channel.Writer.TryWrite(nodeEvent);
+        if (_channel.Writer.TryWrite(nodeEvent)) return true;
+
+        var dropped = Interlocked.Increment(ref _droppedEvents);
+        var now = DateTimeOffset.UtcNow;
+        if (now - _lastDropWarning > TimeSpan.FromMinutes(1))
+        {
+            _lastDropWarning = now;
+            Logs.RuntimeLogger.Warning(
+                "NodeOps event queue is full. Dropped {DroppedEvents} events. Increase MaxQueueSize or reduce sink latency.",
+                dropped);
+        }
+        return false;
     }
 
     public bool SendNow(NodeOpsEvent nodeEvent)
@@ -136,6 +149,8 @@ internal sealed class NodeOpsDispatcher : IDisposable
         {
             try
             {
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                timeout.CancelAfter(TimeSpan.FromMilliseconds(_settings.RequestTimeoutMilliseconds));
                 using var request = new HttpRequestMessage(new HttpMethod(sink.Method), sink.Endpoint);
                 if (payload is not null && sink.Method != "GET")
                     request.Content = JsonContent.Create(payload, options: SerializerOptions);
@@ -144,7 +159,7 @@ internal sealed class NodeOpsDispatcher : IDisposable
                     request.Headers.TryAddWithoutValidation(header.Key, header.Value);
                 AddToken(request, sink);
 
-                using var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                using var response = await _httpClient.SendAsync(request, timeout.Token).ConfigureAwait(false);
                 if (response.IsSuccessStatusCode) return true;
 
                 Logs.RuntimeLogger.Warning(
@@ -155,6 +170,13 @@ internal sealed class NodeOpsDispatcher : IDisposable
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 return false;
+            }
+            catch (OperationCanceledException)
+            {
+                Logs.RuntimeLogger.Warning(
+                    "NodeOps sink {SinkName} timed out after {TimeoutMilliseconds} ms",
+                    sink.Name,
+                    _settings.RequestTimeoutMilliseconds);
             }
             catch (Exception ex)
             {

@@ -40,6 +40,7 @@ internal enum NodeOpsSeverity
 internal sealed class NodeOpsSinkSettings
 {
     public string Name { get; }
+    public string Description { get; }
     public NodeOpsSinkKind Kind { get; }
     public NodeOpsProvider Provider { get; }
     public Uri? Endpoint { get; }
@@ -64,7 +65,8 @@ internal sealed class NodeOpsSinkSettings
             section.GetSection("Headers").GetChildren()
                 .Where(p => !string.IsNullOrWhiteSpace(p.Key) && !string.IsNullOrEmpty(p.Value))
                 .ToDictionary(p => p.Key, p => p.Value!, StringComparer.OrdinalIgnoreCase),
-            section.GetValue("MinimumSeverity", NodeOpsSeverity.Error))
+            section.GetValue("MinimumSeverity", NodeOpsSeverity.Error),
+            section.GetValue("Description", string.Empty)!)
     {
     }
 
@@ -78,9 +80,11 @@ internal sealed class NodeOpsSinkSettings
         string tokenHeader = "Authorization",
         string tokenScheme = "Bearer",
         IReadOnlyDictionary<string, string>? headers = null,
-        NodeOpsSeverity minimumSeverity = NodeOpsSeverity.Error)
+        NodeOpsSeverity minimumSeverity = NodeOpsSeverity.Error,
+        string description = "")
     {
         Name = string.IsNullOrWhiteSpace(name) ? provider.ToString() : name;
+        Description = description;
         Kind = kind;
         Provider = provider;
         Endpoint = endpoint;

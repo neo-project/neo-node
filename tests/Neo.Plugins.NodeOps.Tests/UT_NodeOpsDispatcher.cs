@@ -136,14 +136,69 @@ public class UT_NodeOpsDispatcher
         Assert.IsFalse(dispatcher.TryEnqueue(nodeEvent));
     }
 
+    [TestMethod]
+    public async Task SendEventsAsync_ReturnsFalseWhenSinkTimesOut()
+    {
+        var handler = new TestHttpMessageHandler
+        {
+            Delay = TimeSpan.FromMilliseconds(200)
+        };
+        using var client = new HttpClient(handler);
+        var settings = NodeOpsSettings.Create(
+            sinks:
+            [
+                new NodeOpsSinkSettings(
+                    "custom-errors",
+                    NodeOpsSinkKind.ErrorCollector,
+                    NodeOpsProvider.CustomWebhook,
+                    new Uri("https://collector.example/v1/events"))
+            ],
+            requestTimeoutMilliseconds: 50);
+        using var dispatcher = new NodeOpsDispatcher(settings, client);
+        var nodeEvent = NodeOpsEvent.FromException("UnhandledException", new Exception("timeout"), false, settings, null);
+
+        var sent = await dispatcher.SendEventsAsync([nodeEvent], CancellationToken.None);
+
+        Assert.IsFalse(sent);
+        Assert.HasCount(1, handler.Requests);
+    }
+
+    [TestMethod]
+    public void SendNow_UsesFlushTimeout()
+    {
+        var handler = new TestHttpMessageHandler
+        {
+            Delay = TimeSpan.FromMilliseconds(200)
+        };
+        using var client = new HttpClient(handler);
+        var settings = NodeOpsSettings.Create(
+            sinks:
+            [
+                new NodeOpsSinkSettings(
+                    "custom-errors",
+                    NodeOpsSinkKind.ErrorCollector,
+                    NodeOpsProvider.CustomWebhook,
+                    new Uri("https://collector.example/v1/events"))
+            ],
+            requestTimeoutMilliseconds: 1000,
+            flushTimeoutMilliseconds: 50);
+        using var dispatcher = new NodeOpsDispatcher(settings, client);
+        var nodeEvent = NodeOpsEvent.FromException("UnhandledException", new Exception("fatal"), true, settings, null);
+
+        Assert.IsFalse(dispatcher.SendNow(nodeEvent));
+    }
+
     private sealed class TestHttpMessageHandler : HttpMessageHandler
     {
         public List<HttpRequestMessage> Requests { get; } = new();
         public List<string> Bodies { get; } = new();
+        public TimeSpan Delay { get; init; }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Requests.Add(request);
+            if (Delay > TimeSpan.Zero)
+                await Task.Delay(Delay, cancellationToken);
             Bodies.Add(request.Content is null
                 ? ""
                 : await request.Content.ReadAsStringAsync(cancellationToken));
