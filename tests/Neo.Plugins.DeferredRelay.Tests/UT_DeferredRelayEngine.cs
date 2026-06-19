@@ -367,8 +367,9 @@ public class UT_DeferredRelayEngine
     public void TryGetCurrentHeight_UninitializedLedger_ReturnsFalse()
     {
         var store = new MemoryStore();
+        using var snapshot = new StoreCache(store);
 
-        Assert.IsFalse(DeferredRelayEngine.TryGetCurrentHeight(store, out uint height));
+        Assert.IsFalse(DeferredRelayEngine.TryGetCurrentHeight(snapshot, out uint height));
         Assert.AreEqual(0u, height);
     }
 

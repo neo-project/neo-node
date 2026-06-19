@@ -265,13 +265,7 @@ internal static class DeferredRelayEngine
             store.Delete(key);
     }
 
-    internal static bool TryGetCurrentHeight(IStore store, out uint height)
-    {
-        using var snapshot = new StoreCache(store);
-        return TryGetCurrentHeight(snapshot, out height);
-    }
-
-    private static bool TryGetCurrentHeight(IReadOnlyStore snapshot, out uint height)
+    internal static bool TryGetCurrentHeight(IReadOnlyStore snapshot, out uint height)
     {
         try
         {
