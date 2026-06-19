@@ -1,0 +1,21 @@
+{
+  "PluginConfiguration": {
+    "Endpoint": "",
+    "Headers": {},
+    "Environment": "production",
+    "ServiceName": "neo-node",
+    "NodeName": "",
+    "CaptureUnhandledExceptions": true,
+    "CaptureUnobservedTaskExceptions": true,
+    "IncludeStackTrace": true,
+    "MaxQueueSize": 1024,
+    "BatchSize": 10,
+    "MaxRetries": 3,
+    "RetryDelayMilliseconds": 1000,
+    "FlushTimeoutMilliseconds": 5000,
+    "MaxMessageLength": 4096,
+    "MaxStackTraceLength": 32768,
+    "UnhandledExceptionPolicy": "Ignore"
+  },
+  "Dependency": []
+}

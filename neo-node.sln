@@ -49,6 +49,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TokensTracker", "plugins\To
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeferredRelay", "plugins\DeferredRelay\DeferredRelay.csproj", "{7E3A9C12-4B5D-6E8F-A901-23456789ABCD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ErrorReporting", "plugins\ErrorReporting\ErrorReporting.csproj", "{12CB1904-A8A3-43D6-8280-3806490E3857}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Neo.Plugins.ErrorReporting.Tests", "tests\Neo.Plugins.ErrorReporting.Tests\Neo.Plugins.ErrorReporting.Tests.csproj", "{2644BA1A-A942-4257-8AC8-48607540572F}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Neo.Cryptography.MPTTrie.Tests", "tests\Neo.Cryptography.MPTTrie.Tests\Neo.Cryptography.MPTTrie.Tests.csproj", "{1A6EB5BA-2FCD-3056-1C01-FC6FA24EF09C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Neo.Network.RPC.Tests", "tests\Neo.Network.RPC.Tests\Neo.Network.RPC.Tests.csproj", "{60E16A49-06EB-6F80-7228-21A7793B8250}"
@@ -207,6 +211,14 @@ Global
 		{8F4BAC23-5C6E-7F90-B012-34567890BCDE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8F4BAC23-5C6E-7F90-B012-34567890BCDE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8F4BAC23-5C6E-7F90-B012-34567890BCDE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{12CB1904-A8A3-43D6-8280-3806490E3857}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{12CB1904-A8A3-43D6-8280-3806490E3857}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{12CB1904-A8A3-43D6-8280-3806490E3857}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{12CB1904-A8A3-43D6-8280-3806490E3857}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2644BA1A-A942-4257-8AC8-48607540572F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2644BA1A-A942-4257-8AC8-48607540572F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2644BA1A-A942-4257-8AC8-48607540572F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2644BA1A-A942-4257-8AC8-48607540572F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -244,6 +256,8 @@ Global
 		{834D4327-7DDF-4D6A-1624-B074700964F0} = {62F4DC79-BE3D-4E60-B402-8D5F9C4BB2D9}
 		{52D6F4D3-8AC9-DEA4-1D6F-FAF6943EE3D9} = {62F4DC79-BE3D-4E60-B402-8D5F9C4BB2D9}
 		{8F4BAC23-5C6E-7F90-B012-34567890BCDE} = {62F4DC79-BE3D-4E60-B402-8D5F9C4BB2D9}
+		{12CB1904-A8A3-43D6-8280-3806490E3857} = {876880F3-B389-4388-B3A4-00E6F2581D52}
+		{2644BA1A-A942-4257-8AC8-48607540572F} = {62F4DC79-BE3D-4E60-B402-8D5F9C4BB2D9}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {6C1293A1-8EC4-44E8-9EE9-67892696FE26}
