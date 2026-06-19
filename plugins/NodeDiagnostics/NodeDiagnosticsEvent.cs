@@ -38,11 +38,9 @@ internal sealed record NodeDiagnosticsEvent(
     uint? Network,
     string? NodeVersion,
     string? PluginVersion,
-    uint? BlockIndex,
-    string? BlockHash,
-    string? TransactionHash,
-    string? Trigger,
-    long? GasConsumed,
+    uint? BlockHeight,
+    uint? HeaderHeight,
+    int? SecondsSinceLastBlockAdvance,
     IReadOnlyDictionary<string, string> Tags)
 {
     public bool IsHeartbeat => EventType == "Heartbeat";
@@ -75,11 +73,9 @@ internal sealed record NodeDiagnosticsEvent(
             Network: system?.Settings.Network,
             NodeVersion: Assembly.GetEntryAssembly()?.GetName().Version?.ToString(),
             PluginVersion: typeof(NodeDiagnosticsPlugin).Assembly.GetName().Version?.ToString(),
-            BlockIndex: null,
-            BlockHash: null,
-            TransactionHash: null,
-            Trigger: null,
-            GasConsumed: null,
+            BlockHeight: null,
+            HeaderHeight: null,
+            SecondsSinceLastBlockAdvance: null,
             Tags: settings.Tags);
     }
 
@@ -107,15 +103,13 @@ internal sealed record NodeDiagnosticsEvent(
             Network: system?.Settings.Network,
             NodeVersion: Assembly.GetEntryAssembly()?.GetName().Version?.ToString(),
             PluginVersion: typeof(NodeDiagnosticsPlugin).Assembly.GetName().Version?.ToString(),
-            BlockIndex: null,
-            BlockHash: null,
-            TransactionHash: null,
-            Trigger: null,
-            GasConsumed: null,
+            BlockHeight: null,
+            HeaderHeight: null,
+            SecondsSinceLastBlockAdvance: null,
             Tags: settings.Tags);
     }
 
-    public static NodeDiagnosticsEvent Heartbeat(NodeDiagnosticsSettings settings, NeoSystem? system)
+    public static NodeDiagnosticsEvent Heartbeat(NodeDiagnosticsSettings settings, NeoSystem? system, NodeDiagnosticsNodeState? nodeState = null)
     {
         return new NodeDiagnosticsEvent(
             EventId: Guid.NewGuid().ToString("N"),
@@ -138,12 +132,10 @@ internal sealed record NodeDiagnosticsEvent(
             Network: system?.Settings.Network,
             NodeVersion: Assembly.GetEntryAssembly()?.GetName().Version?.ToString(),
             PluginVersion: typeof(NodeDiagnosticsPlugin).Assembly.GetName().Version?.ToString(),
-            BlockIndex: null,
-            BlockHash: null,
-            TransactionHash: null,
-            Trigger: null,
-            GasConsumed: null,
-            Tags: settings.Tags);
+            BlockHeight: nodeState?.BlockHeight,
+            HeaderHeight: nodeState?.HeaderHeight,
+            SecondsSinceLastBlockAdvance: nodeState?.SecondsSinceLastBlockAdvance,
+            Tags: CreateHeartbeatTags(settings.Tags, nodeState));
     }
 
     public static NodeDiagnosticsEvent StartupDiagnostic(NodeDiagnosticsSettings settings, NeoSystem? system)
@@ -169,60 +161,9 @@ internal sealed record NodeDiagnosticsEvent(
             Network: system?.Settings.Network,
             NodeVersion: Assembly.GetEntryAssembly()?.GetName().Version?.ToString(),
             PluginVersion: typeof(NodeDiagnosticsPlugin).Assembly.GetName().Version?.ToString(),
-            BlockIndex: null,
-            BlockHash: null,
-            TransactionHash: null,
-            Trigger: null,
-            GasConsumed: null,
-            Tags: settings.Tags);
-    }
-
-    internal static NodeDiagnosticsEvent ApplicationFault(
-        NodeDiagnosticsSettings settings,
-        NeoSystem? system,
-        uint blockIndex,
-        string blockHash,
-        string? transactionHash,
-        string trigger,
-        long gasConsumed,
-        Exception? exception)
-    {
-        var baseException = exception?.GetBaseException();
-        var message = Truncate(
-            baseException?.Message ?? $"Application execution fault in block {blockIndex}",
-            settings.MaxMessageLength);
-        var stackTrace = settings.IncludeStackTrace && exception is not null
-            ? Truncate(exception.ToString(), settings.MaxStackTraceLength)
-            : null;
-
-        return new NodeDiagnosticsEvent(
-            EventId: Guid.NewGuid().ToString("N"),
-            EventType: "ApplicationFault",
-            Severity: "error",
-            Message: message,
-            ExceptionType: baseException?.GetType().FullName,
-            StackTrace: stackTrace,
-            Source: baseException?.Source,
-            Fingerprint: exception is null
-                ? CreateFingerprint($"ApplicationFault:{trigger}:{transactionHash ?? blockHash}")
-                : CreateFingerprint(exception),
-            IsTerminating: false,
-            Timestamp: DateTimeOffset.UtcNow,
-            RuntimeVersion: RuntimeInformation.FrameworkDescription,
-            OSDescription: RuntimeInformation.OSDescription,
-            ProcessArchitecture: RuntimeInformation.ProcessArchitecture.ToString(),
-            ProcessId: System.Environment.ProcessId,
-            ServiceName: settings.ServiceName,
-            Environment: settings.Environment,
-            NodeName: string.IsNullOrWhiteSpace(settings.NodeName) ? null : settings.NodeName,
-            Network: system?.Settings.Network,
-            NodeVersion: Assembly.GetEntryAssembly()?.GetName().Version?.ToString(),
-            PluginVersion: typeof(NodeDiagnosticsPlugin).Assembly.GetName().Version?.ToString(),
-            BlockIndex: blockIndex,
-            BlockHash: blockHash,
-            TransactionHash: transactionHash,
-            Trigger: trigger,
-            GasConsumed: gasConsumed,
+            BlockHeight: null,
+            HeaderHeight: null,
+            SecondsSinceLastBlockAdvance: null,
             Tags: settings.Tags);
     }
 
@@ -248,4 +189,25 @@ internal sealed record NodeDiagnosticsEvent(
         if (value.Length <= maxLength) return value;
         return value[..maxLength];
     }
+
+    private static IReadOnlyDictionary<string, string> CreateHeartbeatTags(
+        IReadOnlyDictionary<string, string> tags,
+        NodeDiagnosticsNodeState? nodeState)
+    {
+        if (nodeState is null) return tags;
+
+        var heartbeatTags = new Dictionary<string, string>(tags, StringComparer.OrdinalIgnoreCase);
+        if (nodeState.BlockHeight is not null)
+            heartbeatTags["block_height"] = nodeState.BlockHeight.Value.ToString();
+        if (nodeState.HeaderHeight is not null)
+            heartbeatTags["header_height"] = nodeState.HeaderHeight.Value.ToString();
+        if (nodeState.SecondsSinceLastBlockAdvance is not null)
+            heartbeatTags["seconds_since_last_block_advance"] = nodeState.SecondsSinceLastBlockAdvance.Value.ToString();
+        return heartbeatTags;
+    }
 }
+
+internal sealed record NodeDiagnosticsNodeState(
+    uint? BlockHeight,
+    uint? HeaderHeight,
+    int? SecondsSinceLastBlockAdvance);

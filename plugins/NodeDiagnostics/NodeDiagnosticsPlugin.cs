@@ -11,8 +11,6 @@
 
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
-using Neo.Persistence;
-using Neo.VM;
 using static System.IO.Path;
 
 namespace Neo.Plugins.NodeDiagnostics;
@@ -24,7 +22,7 @@ public sealed class NodeDiagnosticsPlugin : Plugin
     private NeoSystem? _system;
     private bool _subscribedUnhandledExceptions;
     private bool _subscribedUnobservedTaskExceptions;
-    private bool _subscribedApplicationFaults;
+    private bool _subscribedBlockLiveness;
 
     public override string Name => "NodeDiagnostics";
     public override string Description => "Collects node diagnostics events, reports failures, and publishes status heartbeats to configured monitoring services.";
@@ -49,9 +47,9 @@ public sealed class NodeDiagnosticsPlugin : Plugin
 
         _dispatcher = new NodeDiagnosticsDispatcher(_settings, () => _system);
         _dispatcher.Start();
+        Subscribe();
         if (_settings.HasEventSinks)
         {
-            Subscribe();
             if (_settings.SendStartupDiagnosticEvent)
                 _dispatcher.TryEnqueue(NodeDiagnosticsEvent.StartupDiagnostic(_settings, _system));
         }
@@ -69,20 +67,20 @@ public sealed class NodeDiagnosticsPlugin : Plugin
 
     private void Subscribe()
     {
-        if (_settings.CaptureUnhandledExceptions)
+        if (_settings.HasEventSinks && _settings.CaptureUnhandledExceptions)
         {
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
             _subscribedUnhandledExceptions = true;
         }
-        if (_settings.CaptureUnobservedTaskExceptions)
+        if (_settings.HasEventSinks && _settings.CaptureUnobservedTaskExceptions)
         {
             TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
             _subscribedUnobservedTaskExceptions = true;
         }
-        if (_settings.CaptureApplicationFaults)
+        if (_settings.HasHeartbeatSinks)
         {
-            Blockchain.Committing += Blockchain_Committing_Handler;
-            _subscribedApplicationFaults = true;
+            Blockchain.Committed += Blockchain_Committed_Handler;
+            _subscribedBlockLiveness = true;
         }
     }
 
@@ -98,10 +96,10 @@ public sealed class NodeDiagnosticsPlugin : Plugin
             TaskScheduler.UnobservedTaskException -= TaskScheduler_UnobservedTaskException;
             _subscribedUnobservedTaskExceptions = false;
         }
-        if (_subscribedApplicationFaults)
+        if (_subscribedBlockLiveness)
         {
-            Blockchain.Committing -= Blockchain_Committing_Handler;
-            _subscribedApplicationFaults = false;
+            Blockchain.Committed -= Blockchain_Committed_Handler;
+            _subscribedBlockLiveness = false;
         }
     }
 
@@ -127,44 +125,6 @@ public sealed class NodeDiagnosticsPlugin : Plugin
         _dispatcher.TryEnqueue(report);
     }
 
-    private void Blockchain_Committing_Handler(
-        NeoSystem system,
-        Block block,
-        DataCache snapshot,
-        IReadOnlyList<Blockchain.ApplicationExecuted> applicationExecutedList)
-    {
-        if (_dispatcher is null) return;
-
-        try
-        {
-            var captured = 0;
-            foreach (var applicationExecuted in applicationExecutedList)
-            {
-                if (!applicationExecuted.VMState.HasFlag(VMState.FAULT)) continue;
-                if (captured >= _settings.MaxApplicationFaultsPerBlock)
-                {
-                    Logs.RuntimeLogger.Warning(
-                        "NodeDiagnostics skipped application fault events after reaching MaxApplicationFaultsPerBlock={MaxApplicationFaultsPerBlock} for block {BlockIndex}",
-                        _settings.MaxApplicationFaultsPerBlock,
-                        block.Index);
-                    break;
-                }
-
-                _dispatcher.TryEnqueue(NodeDiagnosticsEvent.ApplicationFault(
-                    _settings,
-                    system,
-                    block.Index,
-                    block.Hash.ToString(),
-                    applicationExecuted.Transaction?.Hash.ToString(),
-                    applicationExecuted.Trigger.ToString(),
-                    applicationExecuted.GasConsumed,
-                    applicationExecuted.Exception));
-                captured++;
-            }
-        }
-        catch (Exception ex)
-        {
-            Logs.RuntimeLogger.Warning(ex, "NodeDiagnostics failed to capture application fault events");
-        }
-    }
+    private void Blockchain_Committed_Handler(NeoSystem system, Block block) =>
+        _dispatcher?.RecordBlockPersisted(block.Index);
 }

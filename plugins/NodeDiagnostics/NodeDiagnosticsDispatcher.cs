@@ -12,6 +12,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Channels;
+using Neo.SmartContract.Native;
 
 namespace Neo.Plugins.NodeDiagnostics;
 
@@ -28,6 +29,9 @@ internal sealed class NodeDiagnosticsDispatcher : IDisposable
     private Task? _heartbeatWorker;
     private long _droppedEvents;
     private DateTimeOffset _lastDropWarning = DateTimeOffset.MinValue;
+    private readonly object _livenessLock = new();
+    private uint? _lastObservedBlockHeight;
+    private DateTimeOffset? _lastBlockAdvanceAt;
 
     public NodeDiagnosticsDispatcher(NodeDiagnosticsSettings settings, Func<NeoSystem?> systemProvider)
         : this(settings, systemProvider, new HttpClient(), disposeClient: true)
@@ -94,8 +98,14 @@ internal sealed class NodeDiagnosticsDispatcher : IDisposable
         }
     }
 
-    internal Task<bool> SendHeartbeatAsync(CancellationToken cancellationToken) =>
-        SendEventsAsync([NodeDiagnosticsEvent.Heartbeat(_settings, _systemProvider())], cancellationToken);
+    internal Task<bool> SendHeartbeatAsync(CancellationToken cancellationToken)
+    {
+        var system = _systemProvider();
+        return SendEventsAsync([NodeDiagnosticsEvent.Heartbeat(_settings, system, GetNodeState(system))], cancellationToken);
+    }
+
+    internal void RecordBlockPersisted(uint blockIndex) =>
+        ObserveBlockHeight(blockIndex, DateTimeOffset.UtcNow);
 
     internal async Task<bool> SendEventsAsync(IReadOnlyList<NodeDiagnosticsEvent> events, CancellationToken cancellationToken)
     {
@@ -260,13 +270,60 @@ internal sealed class NodeDiagnosticsDispatcher : IDisposable
         tags["fingerprint"] = nodeEvent.Fingerprint;
         if (nodeEvent.Network is not null)
             tags["network"] = nodeEvent.Network.Value.ToString("X8");
-        if (nodeEvent.BlockIndex is not null)
-            tags["block_index"] = nodeEvent.BlockIndex.Value.ToString();
-        if (nodeEvent.TransactionHash is not null)
-            tags["transaction_hash"] = nodeEvent.TransactionHash;
-        if (nodeEvent.Trigger is not null)
-            tags["trigger"] = nodeEvent.Trigger;
+        if (nodeEvent.BlockHeight is not null)
+            tags["block_height"] = nodeEvent.BlockHeight.Value.ToString();
+        if (nodeEvent.HeaderHeight is not null)
+            tags["header_height"] = nodeEvent.HeaderHeight.Value.ToString();
+        if (nodeEvent.SecondsSinceLastBlockAdvance is not null)
+            tags["seconds_since_last_block_advance"] = nodeEvent.SecondsSinceLastBlockAdvance.Value.ToString();
         return tags;
+    }
+
+    private NodeDiagnosticsNodeState GetNodeState(NeoSystem? system)
+    {
+        var now = DateTimeOffset.UtcNow;
+        uint? blockHeight = null;
+        uint? headerHeight = null;
+
+        if (system is not null)
+        {
+            try
+            {
+                blockHeight = NativeContract.Ledger.CurrentIndex(system.StoreView);
+                headerHeight = system.HeaderCache.Last?.Index ?? blockHeight;
+                ObserveBlockHeight(blockHeight.Value, now);
+            }
+            catch
+            {
+            }
+        }
+
+        uint? lastObservedBlockHeight;
+        DateTimeOffset? lastBlockAdvanceAt;
+        lock (_livenessLock)
+        {
+            lastObservedBlockHeight = _lastObservedBlockHeight;
+            lastBlockAdvanceAt = _lastBlockAdvanceAt;
+        }
+
+        int? secondsSinceLastBlockAdvance = lastBlockAdvanceAt is null
+            ? null
+            : Math.Max(0, (int)(now - lastBlockAdvanceAt.Value).TotalSeconds);
+
+        return new NodeDiagnosticsNodeState(
+            blockHeight ?? lastObservedBlockHeight,
+            headerHeight,
+            secondsSinceLastBlockAdvance);
+    }
+
+    private void ObserveBlockHeight(uint blockHeight, DateTimeOffset timestamp)
+    {
+        lock (_livenessLock)
+        {
+            if (_lastObservedBlockHeight == blockHeight) return;
+            _lastObservedBlockHeight = blockHeight;
+            _lastBlockAdvanceAt = timestamp;
+        }
     }
 
     private async Task ProcessQueueAsync()

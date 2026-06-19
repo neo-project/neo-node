@@ -22,11 +22,9 @@ internal sealed class NodeDiagnosticsSettings : IPluginSettings
     public IReadOnlyDictionary<string, string> Tags { get; }
     public bool CaptureUnhandledExceptions { get; }
     public bool CaptureUnobservedTaskExceptions { get; }
-    public bool CaptureApplicationFaults { get; }
     public bool SendStartupDiagnosticEvent { get; }
     public bool IncludeStackTrace { get; }
     public int HeartbeatIntervalSeconds { get; }
-    public int MaxApplicationFaultsPerBlock { get; }
     public int MaxQueueSize { get; }
     public int BatchSize { get; }
     public int MaxRetries { get; }
@@ -53,11 +51,9 @@ internal sealed class NodeDiagnosticsSettings : IPluginSettings
         Tags = LoadTags(section.GetSection("Tags"));
         CaptureUnhandledExceptions = section.GetValue("CaptureUnhandledExceptions", true);
         CaptureUnobservedTaskExceptions = section.GetValue("CaptureUnobservedTaskExceptions", true);
-        CaptureApplicationFaults = section.GetValue("CaptureApplicationFaults", false);
         SendStartupDiagnosticEvent = section.GetValue("SendStartupDiagnosticEvent", false);
         IncludeStackTrace = section.GetValue("IncludeStackTrace", true);
         HeartbeatIntervalSeconds = section.GetValue("HeartbeatIntervalSeconds", 60);
-        MaxApplicationFaultsPerBlock = section.GetValue("MaxApplicationFaultsPerBlock", 32);
         MaxQueueSize = section.GetValue("MaxQueueSize", 1024);
         BatchSize = section.GetValue("BatchSize", 10);
         MaxRetries = section.GetValue("MaxRetries", 3);
@@ -80,11 +76,9 @@ internal sealed class NodeDiagnosticsSettings : IPluginSettings
         IReadOnlyDictionary<string, string> tags,
         bool captureUnhandledExceptions,
         bool captureUnobservedTaskExceptions,
-        bool captureApplicationFaults,
         bool sendStartupDiagnosticEvent,
         bool includeStackTrace,
         int heartbeatIntervalSeconds,
-        int maxApplicationFaultsPerBlock,
         int maxQueueSize,
         int batchSize,
         int maxRetries,
@@ -102,11 +96,9 @@ internal sealed class NodeDiagnosticsSettings : IPluginSettings
         Tags = tags;
         CaptureUnhandledExceptions = captureUnhandledExceptions;
         CaptureUnobservedTaskExceptions = captureUnobservedTaskExceptions;
-        CaptureApplicationFaults = captureApplicationFaults;
         SendStartupDiagnosticEvent = sendStartupDiagnosticEvent;
         IncludeStackTrace = includeStackTrace;
         HeartbeatIntervalSeconds = heartbeatIntervalSeconds;
-        MaxApplicationFaultsPerBlock = maxApplicationFaultsPerBlock;
         MaxQueueSize = maxQueueSize;
         BatchSize = batchSize;
         MaxRetries = maxRetries;
@@ -131,11 +123,9 @@ internal sealed class NodeDiagnosticsSettings : IPluginSettings
         IReadOnlyDictionary<string, string>? tags = null,
         bool captureUnhandledExceptions = true,
         bool captureUnobservedTaskExceptions = true,
-        bool captureApplicationFaults = false,
         bool sendStartupDiagnosticEvent = false,
         bool includeStackTrace = true,
         int heartbeatIntervalSeconds = 60,
-        int maxApplicationFaultsPerBlock = 32,
         int maxQueueSize = 1024,
         int batchSize = 10,
         int maxRetries = 0,
@@ -153,11 +143,9 @@ internal sealed class NodeDiagnosticsSettings : IPluginSettings
             tags ?? new Dictionary<string, string>(),
             captureUnhandledExceptions,
             captureUnobservedTaskExceptions,
-            captureApplicationFaults,
             sendStartupDiagnosticEvent,
             includeStackTrace,
             heartbeatIntervalSeconds,
-            maxApplicationFaultsPerBlock,
             maxQueueSize,
             batchSize,
             maxRetries,
@@ -176,8 +164,6 @@ internal sealed class NodeDiagnosticsSettings : IPluginSettings
             throw new ArgumentException("ServiceName cannot be empty.", nameof(ServiceName));
         if (HeartbeatIntervalSeconds < 30)
             throw new ArgumentOutOfRangeException(nameof(HeartbeatIntervalSeconds), HeartbeatIntervalSeconds, "HeartbeatIntervalSeconds must be at least 30.");
-        if (MaxApplicationFaultsPerBlock <= 0)
-            throw new ArgumentOutOfRangeException(nameof(MaxApplicationFaultsPerBlock), MaxApplicationFaultsPerBlock, "MaxApplicationFaultsPerBlock must be greater than zero.");
         if (MaxQueueSize <= 0)
             throw new ArgumentOutOfRangeException(nameof(MaxQueueSize), MaxQueueSize, "MaxQueueSize must be greater than zero.");
         if (BatchSize <= 0)

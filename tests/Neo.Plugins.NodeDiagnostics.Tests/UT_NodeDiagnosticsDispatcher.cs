@@ -148,7 +148,7 @@ public class UT_NodeDiagnosticsDispatcher
     }
 
     [TestMethod]
-    public async Task SendEventsAsync_IncludesApplicationFaultContext()
+    public async Task SendEventsAsync_IncludesNodeLivenessContext()
     {
         var handler = new TestHttpMessageHandler();
         using var client = new HttpClient(handler);
@@ -156,34 +156,31 @@ public class UT_NodeDiagnosticsDispatcher
             sinks:
             [
                 new NodeDiagnosticsSinkSettings(
-                    "custom-errors",
-                    NodeDiagnosticsSinkKind.ErrorCollector,
+                    "status",
+                    NodeDiagnosticsSinkKind.StatusMonitor,
                     NodeDiagnosticsProvider.CustomWebhook,
-                    new Uri("https://collector.example/v1/events"))
+                    new Uri("https://collector.example/v1/status"))
             ]);
         using var dispatcher = new NodeDiagnosticsDispatcher(settings, client);
-        var nodeEvent = NodeDiagnosticsEvent.ApplicationFault(
+        var nodeEvent = NodeDiagnosticsEvent.Heartbeat(
             settings,
             null,
-            100,
-            "0xabc",
-            "0xtx",
-            "Application",
-            1234,
-            new InvalidOperationException("contract fault"));
+            new NodeDiagnosticsNodeState(100, 120, 7));
 
         var sent = await dispatcher.SendEventsAsync([nodeEvent], CancellationToken.None);
 
         Assert.IsTrue(sent);
         using var document = JsonDocument.Parse(handler.Bodies[0]);
         var item = document.RootElement.GetProperty("events")[0];
-        Assert.AreEqual("ApplicationFault", item.GetProperty("eventType").GetString());
-        Assert.AreEqual("contract fault", item.GetProperty("message").GetString());
-        Assert.AreEqual(100u, item.GetProperty("blockIndex").GetUInt32());
-        Assert.AreEqual("0xabc", item.GetProperty("blockHash").GetString());
-        Assert.AreEqual("0xtx", item.GetProperty("transactionHash").GetString());
-        Assert.AreEqual("Application", item.GetProperty("trigger").GetString());
-        Assert.AreEqual(1234L, item.GetProperty("gasConsumed").GetInt64());
+        Assert.AreEqual("Heartbeat", item.GetProperty("eventType").GetString());
+        Assert.AreEqual(100u, item.GetProperty("blockHeight").GetUInt32());
+        Assert.AreEqual(120u, item.GetProperty("headerHeight").GetUInt32());
+        Assert.AreEqual(7, item.GetProperty("secondsSinceLastBlockAdvance").GetInt32());
+
+        var tags = item.GetProperty("tags");
+        Assert.AreEqual("100", tags.GetProperty("block_height").GetString());
+        Assert.AreEqual("120", tags.GetProperty("header_height").GetString());
+        Assert.AreEqual("7", tags.GetProperty("seconds_since_last_block_advance").GetString());
     }
 
     [TestMethod]
