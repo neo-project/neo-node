@@ -9,10 +9,10 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using Neo.SmartContract.Native;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Channels;
-using Neo.SmartContract.Native;
 
 namespace Neo.Plugins.NodeDiagnostics;
 
@@ -26,10 +26,12 @@ internal sealed class NodeDiagnosticsDispatcher : IDisposable
     private readonly CancellationTokenSource _shutdown = new();
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
     private static readonly TimeSpan ConsensusStallCheckInterval = TimeSpan.FromSeconds(1);
+    private static readonly string UserAgent = $"Neo.NodeDiagnostics/{typeof(NodeDiagnosticsPlugin).Assembly.GetName().Version?.ToString() ?? "unknown"}";
     private Task? _eventWorker;
     private Task? _heartbeatWorker;
     private Task? _consensusStallWorker;
     private long _droppedEvents;
+    private readonly object _dropWarningLock = new();
     private DateTimeOffset _lastDropWarning = DateTimeOffset.MinValue;
     private readonly object _livenessLock = new();
     private uint? _lastObservedBlockHeight;
@@ -77,13 +79,16 @@ internal sealed class NodeDiagnosticsDispatcher : IDisposable
         if (_channel.Writer.TryWrite(nodeEvent)) return true;
 
         var dropped = Interlocked.Increment(ref _droppedEvents);
-        var now = DateTimeOffset.UtcNow;
-        if (now - _lastDropWarning > TimeSpan.FromMinutes(1))
+        lock (_dropWarningLock)
         {
-            _lastDropWarning = now;
-            Logs.RuntimeLogger.Warning(
-                "NodeDiagnostics event queue is full. Dropped {DroppedEvents} events. Increase MaxQueueSize or reduce sink latency.",
-                dropped);
+            var now = DateTimeOffset.UtcNow;
+            if (now - _lastDropWarning > TimeSpan.FromMinutes(1))
+            {
+                _lastDropWarning = now;
+                Logs.RuntimeLogger.Warning(
+                    "NodeDiagnostics event queue is full. Dropped {DroppedEvents} events. Increase MaxQueueSize or reduce sink latency.",
+                    dropped);
+            }
         }
         return false;
     }
@@ -94,6 +99,7 @@ internal sealed class NodeDiagnosticsDispatcher : IDisposable
         using var timeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(_settings.FlushTimeoutMilliseconds));
         try
         {
+            // Fatal exception handling needs a bounded synchronous flush before the process exits.
             return SendEventsAsync([nodeEvent], timeout.Token).GetAwaiter().GetResult();
         }
         catch (Exception ex)
@@ -178,6 +184,7 @@ internal sealed class NodeDiagnosticsDispatcher : IDisposable
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 timeout.CancelAfter(TimeSpan.FromMilliseconds(_settings.RequestTimeoutMilliseconds));
                 using var request = new HttpRequestMessage(new HttpMethod(sink.Method), sink.Endpoint);
+                request.Headers.TryAddWithoutValidation("User-Agent", UserAgent);
                 if (payload is not null && sink.Method != "GET")
                     request.Content = JsonContent.Create(payload, options: SerializerOptions);
 
@@ -308,8 +315,9 @@ internal sealed class NodeDiagnosticsDispatcher : IDisposable
                 headerHeight = system.HeaderCache.Last?.Index ?? blockHeight;
                 ObserveBlockHeight(blockHeight.Value, now);
             }
-            catch
+            catch (Exception ex)
             {
+                Logs.RuntimeLogger.Debug(ex, "NodeDiagnostics failed to read node liveness state");
             }
         }
 
@@ -426,18 +434,35 @@ internal sealed class NodeDiagnosticsDispatcher : IDisposable
     {
         _channel.Writer.TryComplete();
         _shutdown.Cancel();
-        try
-        {
-            _eventWorker?.Wait(TimeSpan.FromSeconds(2));
-            _heartbeatWorker?.Wait(TimeSpan.FromSeconds(2));
-            _consensusStallWorker?.Wait(TimeSpan.FromSeconds(2));
-        }
-        catch
-        {
-        }
+        WaitForWorkers();
         _shutdown.Dispose();
         if (_disposeClient)
             _httpClient.Dispose();
+    }
+
+    private void WaitForWorkers()
+    {
+        var workers = new[] { _eventWorker, _heartbeatWorker, _consensusStallWorker }
+            .Where(static worker => worker is not null)
+            .Cast<Task>()
+            .ToArray();
+        if (workers.Length == 0) return;
+
+        var timeout = TimeSpan.FromMilliseconds(Math.Max(2000, _settings.RequestTimeoutMilliseconds + 500));
+        try
+        {
+            if (!Task.WaitAll(workers, timeout))
+                Logs.RuntimeLogger.Warning(
+                    "NodeDiagnostics worker shutdown timed out after {TimeoutMilliseconds} ms",
+                    (int)timeout.TotalMilliseconds);
+        }
+        catch (AggregateException ex) when (ex.InnerExceptions.All(static p => p is OperationCanceledException))
+        {
+        }
+        catch (Exception ex)
+        {
+            Logs.RuntimeLogger.Warning(ex, "NodeDiagnostics worker shutdown failed");
+        }
     }
 
     private sealed record NodeDiagnosticsBatchPayload(

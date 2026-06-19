@@ -49,6 +49,7 @@ public class UT_NodeDiagnosticsDispatcher
         Assert.HasCount(2, handler.Requests);
         Assert.AreEqual("https://collector.example/v1/events", handler.Requests[0].RequestUri!.ToString());
         Assert.AreEqual("Bearer collector-token", handler.Requests[0].Headers.GetValues("Authorization").Single());
+        Assert.IsTrue(handler.Requests[0].Headers.UserAgent.ToString().StartsWith("Neo.NodeDiagnostics/", StringComparison.Ordinal));
         Assert.AreEqual("https://notify.example/hooks/node", handler.Requests[1].RequestUri!.ToString());
         Assert.AreEqual("Bearer notify-token", handler.Requests[1].Headers.GetValues("Authorization").Single());
 
@@ -60,6 +61,46 @@ public class UT_NodeDiagnosticsDispatcher
         Assert.AreEqual("UnhandledException", item.GetProperty("eventType").GetString());
         Assert.AreEqual("fatal", item.GetProperty("severity").GetString());
         Assert.AreEqual("boom", item.GetProperty("message").GetString());
+    }
+
+    [TestMethod]
+    public async Task SendEventsAsync_UsesProviderPayloadForSentry()
+    {
+        var handler = new TestHttpMessageHandler();
+        using var client = new HttpClient(handler);
+        var settings = NodeDiagnosticsSettings.Create(
+            sinks:
+            [
+                new NodeDiagnosticsSinkSettings(
+                    "sentry",
+                    NodeDiagnosticsSinkKind.ErrorCollector,
+                    NodeDiagnosticsProvider.Sentry,
+                    new Uri("https://sentry.example/api/123/store/"),
+                    token: "Sentry sentry_key=public, sentry_version=7",
+                    tokenHeader: "X-Sentry-Auth",
+                    tokenScheme: "")
+            ],
+            tags: new Dictionary<string, string>
+            {
+                ["role"] = "seed"
+            });
+        using var dispatcher = new NodeDiagnosticsDispatcher(settings, client);
+        var nodeEvent = NodeDiagnosticsEvent.FromException("UnhandledException", new InvalidOperationException("boom"), true, settings, null);
+
+        var sent = await dispatcher.SendEventsAsync([nodeEvent], CancellationToken.None);
+
+        Assert.IsTrue(sent);
+        Assert.AreEqual("Sentry sentry_key=public, sentry_version=7", handler.Requests[0].Headers.GetValues("X-Sentry-Auth").Single());
+        using var document = JsonDocument.Parse(handler.Bodies[0]);
+        Assert.AreEqual(nodeEvent.EventId, document.RootElement.GetProperty("event_id").GetString());
+        Assert.AreEqual("csharp", document.RootElement.GetProperty("platform").GetString());
+        Assert.AreEqual("fatal", document.RootElement.GetProperty("level").GetString());
+        Assert.AreEqual("neo-node", document.RootElement.GetProperty("logger").GetString());
+        Assert.AreEqual("boom", document.RootElement.GetProperty("message").GetString());
+        Assert.AreEqual(typeof(InvalidOperationException).FullName, document.RootElement.GetProperty("exception").GetProperty("values")[0].GetProperty("type").GetString());
+        var tags = document.RootElement.GetProperty("tags");
+        Assert.AreEqual("UnhandledException", tags.GetProperty("event_type").GetString());
+        Assert.AreEqual("seed", tags.GetProperty("role").GetString());
     }
 
     [TestMethod]
@@ -173,6 +214,7 @@ public class UT_NodeDiagnosticsDispatcher
         using var document = JsonDocument.Parse(handler.Bodies[0]);
         var item = document.RootElement.GetProperty("events")[0];
         Assert.AreEqual("Heartbeat", item.GetProperty("eventType").GetString());
+        Assert.IsFalse(item.TryGetProperty("isHeartbeat", out _));
         Assert.AreEqual(100u, item.GetProperty("blockHeight").GetUInt32());
         Assert.AreEqual(120u, item.GetProperty("headerHeight").GetUInt32());
         Assert.AreEqual(7, item.GetProperty("secondsSinceLastBlockAdvance").GetInt32());
@@ -218,6 +260,33 @@ public class UT_NodeDiagnosticsDispatcher
     }
 
     [TestMethod]
+    public async Task SendEventsAsync_SkipsEventsBelowSinkSeverity()
+    {
+        var handler = new TestHttpMessageHandler();
+        using var client = new HttpClient(handler);
+        var settings = NodeDiagnosticsSettings.Create(
+            sinks:
+            [
+                new NodeDiagnosticsSinkSettings(
+                    "custom-errors",
+                    NodeDiagnosticsSinkKind.ErrorCollector,
+                    NodeDiagnosticsProvider.CustomWebhook,
+                    new Uri("https://collector.example/v1/events"),
+                    minimumSeverity: NodeDiagnosticsSeverity.Error)
+            ]);
+        using var dispatcher = new NodeDiagnosticsDispatcher(settings, client);
+        var nodeEvent = NodeDiagnosticsEvent.StartupDiagnostic(settings, null) with
+        {
+            Severity = "warning"
+        };
+
+        var sent = await dispatcher.SendEventsAsync([nodeEvent], CancellationToken.None);
+
+        Assert.IsFalse(sent);
+        Assert.HasCount(0, handler.Requests);
+    }
+
+    [TestMethod]
     public void TryEnqueue_ReturnsFalseWhenQueueIsFull()
     {
         var settings = NodeDiagnosticsSettings.Create(
@@ -236,6 +305,33 @@ public class UT_NodeDiagnosticsDispatcher
 
         Assert.IsTrue(dispatcher.TryEnqueue(nodeEvent));
         Assert.IsFalse(dispatcher.TryEnqueue(nodeEvent));
+    }
+
+    [TestMethod]
+    public async Task SendEventsAsync_RetriesAndReturnsTrueAfterTransientFailure()
+    {
+        var handler = new TestHttpMessageHandler();
+        handler.StatusCodes.Enqueue(HttpStatusCode.InternalServerError);
+        handler.StatusCodes.Enqueue(HttpStatusCode.Accepted);
+        using var client = new HttpClient(handler);
+        var settings = NodeDiagnosticsSettings.Create(
+            sinks:
+            [
+                new NodeDiagnosticsSinkSettings(
+                    "custom-errors",
+                    NodeDiagnosticsSinkKind.ErrorCollector,
+                    NodeDiagnosticsProvider.CustomWebhook,
+                    new Uri("https://collector.example/v1/events"))
+            ],
+            maxRetries: 1,
+            retryDelayMilliseconds: 1);
+        using var dispatcher = new NodeDiagnosticsDispatcher(settings, client);
+        var nodeEvent = NodeDiagnosticsEvent.FromException("UnhandledException", new Exception("retry"), false, settings, null);
+
+        var sent = await dispatcher.SendEventsAsync([nodeEvent], CancellationToken.None);
+
+        Assert.IsTrue(sent);
+        Assert.HasCount(2, handler.Requests);
     }
 
     [TestMethod]
@@ -294,6 +390,7 @@ public class UT_NodeDiagnosticsDispatcher
     {
         public List<HttpRequestMessage> Requests { get; } = new();
         public List<string> Bodies { get; } = new();
+        public Queue<HttpStatusCode> StatusCodes { get; } = new();
         public TimeSpan Delay { get; init; }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -304,7 +401,10 @@ public class UT_NodeDiagnosticsDispatcher
             Bodies.Add(request.Content is null
                 ? ""
                 : await request.Content.ReadAsStringAsync(cancellationToken));
-            return new HttpResponseMessage(HttpStatusCode.Accepted);
+            var statusCode = StatusCodes.Count == 0
+                ? HttpStatusCode.Accepted
+                : StatusCodes.Dequeue();
+            return new HttpResponseMessage(statusCode);
         }
     }
 }

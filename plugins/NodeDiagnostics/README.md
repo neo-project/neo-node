@@ -15,8 +15,8 @@ Each item in `Sinks` has a `Kind` and a `Provider`.
 Available providers:
 
 - `CustomWebhook`: generic JSON webhook for internal gateways, alert routers, or vendor-specific wrappers.
-- `Sentry`: sends Sentry-shaped event payloads to a configured Sentry ingestion URL.
-- `GoogleCloudErrorReporting`: sends Google Cloud Error Reporting `events.report` shaped payloads.
+- `Sentry`: experimental provider-specific payload for a configured Sentry ingestion URL.
+- `GoogleCloudErrorReporting`: experimental provider-specific payload for the Google Cloud Error Reporting `events.report` API.
 - `BetterStackHeartbeat`: sends periodic requests to a Better Stack heartbeat URL.
 - `HealthchecksHeartbeat`: sends periodic requests to a Healthchecks-compatible ping URL.
 
@@ -63,6 +63,8 @@ Configure the plugin in `NodeDiagnostics.json`.
 
 Do not commit production tokens to source control. Prefer injecting the final plugin configuration from deployment tooling or a secret manager.
 
+Endpoints that send `Token` headers must use HTTPS. Plain HTTP is only accepted for unauthenticated local development or trusted internal test endpoints.
+
 Set `SendStartupDiagnosticEvent` to `true` during rollout if you want the plugin to send a single error-level diagnostic event on startup. This is useful for confirming that endpoint, token, header, and payload settings are accepted by the target platform. Turn it off after validation if the target platform should only receive real failures.
 
 For process-level uptime, configure a Better Stack or Healthchecks heartbeat URL. For node-level liveness, configure a `CustomWebhook` sink with `Kind` set to `StatusMonitor`; heartbeat payloads include block height, header height, and the number of seconds since the local block height last advanced.
@@ -82,5 +84,6 @@ If the local block height does not advance for `ConsensusStallThresholdSeconds` 
 ## Provider notes
 
 - Better Stack and Healthchecks heartbeats usually provide a dedicated URL. Put that URL in `Endpoint`.
-- Google Cloud Error Reporting can use an API key in the endpoint URL or an authorization header configured with `Token`, `TokenHeader`, and `TokenScheme`.
-- Sentry deployments differ between DSN store endpoints and envelope endpoints. Configure `Endpoint` and token headers to match the ingestion endpoint used by the target deployment.
+- `CustomWebhook` is the most stable production integration point when routing through an operator-owned gateway or when a vendor contract differs from the built-in payloads.
+- Google Cloud Error Reporting support is experimental. Verify the project endpoint, API enablement, authentication mode, and payload acceptance with `SendStartupDiagnosticEvent` before relying on it in production. It can use an API key in the endpoint URL or an authorization header configured with `Token`, `TokenHeader`, and `TokenScheme`.
+- Sentry support is experimental. Deployments differ between DSN store endpoints and envelope endpoints, so configure `Endpoint` and token headers to match the ingestion endpoint used by the target deployment and validate delivery during rollout.

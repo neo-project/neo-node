@@ -36,7 +36,7 @@
       },
       {
         "Name": "sentry",
-        "Description": "Sentry event ingestion endpoint. Configure Endpoint from the project DSN store endpoint and provide the DSN auth header or key as required by your deployment.",
+        "Description": "Experimental Sentry event ingestion endpoint. Configure Endpoint from the project DSN store endpoint and provide the DSN auth header or key as required by your deployment.",
         "Kind": "ErrorCollector",
         "Provider": "Sentry",
         "Endpoint": "",
@@ -48,7 +48,7 @@
       },
       {
         "Name": "google-cloud-error-reporting",
-        "Description": "Google Cloud Error Reporting events.report endpoint. Configure Endpoint with the project path and use either an API key in the URL or an authorization token header.",
+        "Description": "Experimental Google Cloud Error Reporting events.report endpoint. Configure Endpoint with the project path and use either an API key in the URL or an authorization token header.",
         "Kind": "ErrorCollector",
         "Provider": "GoogleCloudErrorReporting",
         "Endpoint": "",

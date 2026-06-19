@@ -14,6 +14,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace Neo.Plugins.NodeDiagnostics;
 
@@ -43,6 +44,7 @@ internal sealed record NodeDiagnosticsEvent(
     int? SecondsSinceLastBlockAdvance,
     IReadOnlyDictionary<string, string> Tags)
 {
+    [JsonIgnore]
     public bool IsHeartbeat => EventType == "Heartbeat";
 
     public static NodeDiagnosticsEvent FromException(string eventType, Exception exception, bool isTerminating, NodeDiagnosticsSettings settings, NeoSystem? system)
@@ -219,7 +221,10 @@ internal sealed record NodeDiagnosticsEvent(
     private static string Truncate(string value, int maxLength)
     {
         if (value.Length <= maxLength) return value;
-        return value[..maxLength];
+        var truncated = value[..maxLength];
+        return truncated.Length > 0 && char.IsHighSurrogate(truncated[^1])
+            ? truncated[..^1]
+            : truncated;
     }
 
     private static IReadOnlyDictionary<string, string> CreateHeartbeatTags(

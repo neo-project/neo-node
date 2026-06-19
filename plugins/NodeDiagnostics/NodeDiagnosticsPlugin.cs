@@ -15,6 +15,9 @@ using static System.IO.Path;
 
 namespace Neo.Plugins.NodeDiagnostics;
 
+/// <summary>
+/// Captures node process failures and liveness diagnostics and forwards them to configured monitoring sinks.
+/// </summary>
 public sealed class NodeDiagnosticsPlugin : Plugin
 {
     private NodeDiagnosticsSettings _settings = NodeDiagnosticsSettings.Default;
@@ -123,6 +126,7 @@ public sealed class NodeDiagnosticsPlugin : Plugin
 
         var report = NodeDiagnosticsEvent.FromException("UnobservedTaskException", e.Exception, false, _settings, _system);
         _dispatcher.TryEnqueue(report);
+        e.SetObserved();
     }
 
     private void Blockchain_Committed_Handler(NeoSystem system, Block block) =>

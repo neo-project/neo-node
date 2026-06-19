@@ -132,6 +132,26 @@ public class UT_NodeDiagnosticsSettings
     }
 
     [TestMethod]
+    public void Load_RejectsHttpEndpointWithToken()
+    {
+        Assert.ThrowsExactly<ArgumentException>(() => NodeDiagnosticsSettings.Load(BuildSection("""
+        {
+          "PluginConfiguration": {
+            "Sinks": [
+              {
+                "Name": "plain-http",
+                "Kind": "ErrorCollector",
+                "Provider": "CustomWebhook",
+                "Endpoint": "http://collector.example/v1/events",
+                "Token": "secret"
+              }
+            ]
+          }
+        }
+        """)));
+    }
+
+    [TestMethod]
     public void Load_RejectsInvalidHeartbeatInterval()
     {
         Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => NodeDiagnosticsSettings.Load(BuildSection("""

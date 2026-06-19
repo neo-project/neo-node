@@ -138,5 +138,7 @@ internal sealed class NodeDiagnosticsSinkSettings
             throw new ArgumentException("Method must be GET, POST, or PUT.", nameof(Method));
         if (!string.IsNullOrEmpty(Token) && string.IsNullOrWhiteSpace(TokenHeader))
             throw new ArgumentException("TokenHeader cannot be empty when Token is configured.", nameof(TokenHeader));
+        if (Enabled && !string.IsNullOrEmpty(Token) && Endpoint!.Scheme != Uri.UriSchemeHttps)
+            throw new ArgumentException("Token requires an HTTPS endpoint.", nameof(Endpoint));
     }
 }
