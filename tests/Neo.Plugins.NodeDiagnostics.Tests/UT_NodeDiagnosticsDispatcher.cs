@@ -116,6 +116,77 @@ public class UT_NodeDiagnosticsDispatcher
     }
 
     [TestMethod]
+    public async Task SendEventsAsync_IncludesOperatorTags()
+    {
+        var handler = new TestHttpMessageHandler();
+        using var client = new HttpClient(handler);
+        var settings = NodeDiagnosticsSettings.Create(
+            sinks:
+            [
+                new NodeDiagnosticsSinkSettings(
+                    "custom-errors",
+                    NodeDiagnosticsSinkKind.ErrorCollector,
+                    NodeDiagnosticsProvider.CustomWebhook,
+                    new Uri("https://collector.example/v1/events"))
+            ],
+            tags: new Dictionary<string, string>
+            {
+                ["role"] = "seed",
+                ["region"] = "eu"
+            });
+        using var dispatcher = new NodeDiagnosticsDispatcher(settings, client);
+        var nodeEvent = NodeDiagnosticsEvent.StartupDiagnostic(settings, null);
+
+        var sent = await dispatcher.SendEventsAsync([nodeEvent], CancellationToken.None);
+
+        Assert.IsTrue(sent);
+        using var document = JsonDocument.Parse(handler.Bodies[0]);
+        var tags = document.RootElement.GetProperty("events")[0].GetProperty("tags");
+        Assert.AreEqual("seed", tags.GetProperty("role").GetString());
+        Assert.AreEqual("eu", tags.GetProperty("region").GetString());
+        Assert.AreEqual("StartupDiagnostic", document.RootElement.GetProperty("events")[0].GetProperty("eventType").GetString());
+    }
+
+    [TestMethod]
+    public async Task SendEventsAsync_IncludesApplicationFaultContext()
+    {
+        var handler = new TestHttpMessageHandler();
+        using var client = new HttpClient(handler);
+        var settings = NodeDiagnosticsSettings.Create(
+            sinks:
+            [
+                new NodeDiagnosticsSinkSettings(
+                    "custom-errors",
+                    NodeDiagnosticsSinkKind.ErrorCollector,
+                    NodeDiagnosticsProvider.CustomWebhook,
+                    new Uri("https://collector.example/v1/events"))
+            ]);
+        using var dispatcher = new NodeDiagnosticsDispatcher(settings, client);
+        var nodeEvent = NodeDiagnosticsEvent.ApplicationFault(
+            settings,
+            null,
+            100,
+            "0xabc",
+            "0xtx",
+            "Application",
+            1234,
+            new InvalidOperationException("contract fault"));
+
+        var sent = await dispatcher.SendEventsAsync([nodeEvent], CancellationToken.None);
+
+        Assert.IsTrue(sent);
+        using var document = JsonDocument.Parse(handler.Bodies[0]);
+        var item = document.RootElement.GetProperty("events")[0];
+        Assert.AreEqual("ApplicationFault", item.GetProperty("eventType").GetString());
+        Assert.AreEqual("contract fault", item.GetProperty("message").GetString());
+        Assert.AreEqual(100u, item.GetProperty("blockIndex").GetUInt32());
+        Assert.AreEqual("0xabc", item.GetProperty("blockHash").GetString());
+        Assert.AreEqual("0xtx", item.GetProperty("transactionHash").GetString());
+        Assert.AreEqual("Application", item.GetProperty("trigger").GetString());
+        Assert.AreEqual(1234L, item.GetProperty("gasConsumed").GetInt64());
+    }
+
+    [TestMethod]
     public void TryEnqueue_ReturnsFalseWhenQueueIsFull()
     {
         var settings = NodeDiagnosticsSettings.Create(

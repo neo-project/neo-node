@@ -37,7 +37,13 @@ internal sealed record NodeDiagnosticsEvent(
     string? NodeName,
     uint? Network,
     string? NodeVersion,
-    string? PluginVersion)
+    string? PluginVersion,
+    uint? BlockIndex,
+    string? BlockHash,
+    string? TransactionHash,
+    string? Trigger,
+    long? GasConsumed,
+    IReadOnlyDictionary<string, string> Tags)
 {
     public bool IsHeartbeat => EventType == "Heartbeat";
 
@@ -68,7 +74,13 @@ internal sealed record NodeDiagnosticsEvent(
             NodeName: string.IsNullOrWhiteSpace(settings.NodeName) ? null : settings.NodeName,
             Network: system?.Settings.Network,
             NodeVersion: Assembly.GetEntryAssembly()?.GetName().Version?.ToString(),
-            PluginVersion: typeof(NodeDiagnosticsPlugin).Assembly.GetName().Version?.ToString());
+            PluginVersion: typeof(NodeDiagnosticsPlugin).Assembly.GetName().Version?.ToString(),
+            BlockIndex: null,
+            BlockHash: null,
+            TransactionHash: null,
+            Trigger: null,
+            GasConsumed: null,
+            Tags: settings.Tags);
     }
 
     public static NodeDiagnosticsEvent FromObject(string eventType, object value, bool isTerminating, NodeDiagnosticsSettings settings, NeoSystem? system)
@@ -94,7 +106,13 @@ internal sealed record NodeDiagnosticsEvent(
             NodeName: string.IsNullOrWhiteSpace(settings.NodeName) ? null : settings.NodeName,
             Network: system?.Settings.Network,
             NodeVersion: Assembly.GetEntryAssembly()?.GetName().Version?.ToString(),
-            PluginVersion: typeof(NodeDiagnosticsPlugin).Assembly.GetName().Version?.ToString());
+            PluginVersion: typeof(NodeDiagnosticsPlugin).Assembly.GetName().Version?.ToString(),
+            BlockIndex: null,
+            BlockHash: null,
+            TransactionHash: null,
+            Trigger: null,
+            GasConsumed: null,
+            Tags: settings.Tags);
     }
 
     public static NodeDiagnosticsEvent Heartbeat(NodeDiagnosticsSettings settings, NeoSystem? system)
@@ -119,7 +137,93 @@ internal sealed record NodeDiagnosticsEvent(
             NodeName: string.IsNullOrWhiteSpace(settings.NodeName) ? null : settings.NodeName,
             Network: system?.Settings.Network,
             NodeVersion: Assembly.GetEntryAssembly()?.GetName().Version?.ToString(),
-            PluginVersion: typeof(NodeDiagnosticsPlugin).Assembly.GetName().Version?.ToString());
+            PluginVersion: typeof(NodeDiagnosticsPlugin).Assembly.GetName().Version?.ToString(),
+            BlockIndex: null,
+            BlockHash: null,
+            TransactionHash: null,
+            Trigger: null,
+            GasConsumed: null,
+            Tags: settings.Tags);
+    }
+
+    public static NodeDiagnosticsEvent StartupDiagnostic(NodeDiagnosticsSettings settings, NeoSystem? system)
+    {
+        return new NodeDiagnosticsEvent(
+            EventId: Guid.NewGuid().ToString("N"),
+            EventType: "StartupDiagnostic",
+            Severity: "error",
+            Message: "NodeDiagnostics startup diagnostic event",
+            ExceptionType: null,
+            StackTrace: null,
+            Source: null,
+            Fingerprint: CreateFingerprint($"StartupDiagnostic:{settings.ServiceName}:{settings.Environment}:{settings.NodeName}"),
+            IsTerminating: false,
+            Timestamp: DateTimeOffset.UtcNow,
+            RuntimeVersion: RuntimeInformation.FrameworkDescription,
+            OSDescription: RuntimeInformation.OSDescription,
+            ProcessArchitecture: RuntimeInformation.ProcessArchitecture.ToString(),
+            ProcessId: System.Environment.ProcessId,
+            ServiceName: settings.ServiceName,
+            Environment: settings.Environment,
+            NodeName: string.IsNullOrWhiteSpace(settings.NodeName) ? null : settings.NodeName,
+            Network: system?.Settings.Network,
+            NodeVersion: Assembly.GetEntryAssembly()?.GetName().Version?.ToString(),
+            PluginVersion: typeof(NodeDiagnosticsPlugin).Assembly.GetName().Version?.ToString(),
+            BlockIndex: null,
+            BlockHash: null,
+            TransactionHash: null,
+            Trigger: null,
+            GasConsumed: null,
+            Tags: settings.Tags);
+    }
+
+    internal static NodeDiagnosticsEvent ApplicationFault(
+        NodeDiagnosticsSettings settings,
+        NeoSystem? system,
+        uint blockIndex,
+        string blockHash,
+        string? transactionHash,
+        string trigger,
+        long gasConsumed,
+        Exception? exception)
+    {
+        var baseException = exception?.GetBaseException();
+        var message = Truncate(
+            baseException?.Message ?? $"Application execution fault in block {blockIndex}",
+            settings.MaxMessageLength);
+        var stackTrace = settings.IncludeStackTrace && exception is not null
+            ? Truncate(exception.ToString(), settings.MaxStackTraceLength)
+            : null;
+
+        return new NodeDiagnosticsEvent(
+            EventId: Guid.NewGuid().ToString("N"),
+            EventType: "ApplicationFault",
+            Severity: "error",
+            Message: message,
+            ExceptionType: baseException?.GetType().FullName,
+            StackTrace: stackTrace,
+            Source: baseException?.Source,
+            Fingerprint: exception is null
+                ? CreateFingerprint($"ApplicationFault:{trigger}:{transactionHash ?? blockHash}")
+                : CreateFingerprint(exception),
+            IsTerminating: false,
+            Timestamp: DateTimeOffset.UtcNow,
+            RuntimeVersion: RuntimeInformation.FrameworkDescription,
+            OSDescription: RuntimeInformation.OSDescription,
+            ProcessArchitecture: RuntimeInformation.ProcessArchitecture.ToString(),
+            ProcessId: System.Environment.ProcessId,
+            ServiceName: settings.ServiceName,
+            Environment: settings.Environment,
+            NodeName: string.IsNullOrWhiteSpace(settings.NodeName) ? null : settings.NodeName,
+            Network: system?.Settings.Network,
+            NodeVersion: Assembly.GetEntryAssembly()?.GetName().Version?.ToString(),
+            PluginVersion: typeof(NodeDiagnosticsPlugin).Assembly.GetName().Version?.ToString(),
+            BlockIndex: blockIndex,
+            BlockHash: blockHash,
+            TransactionHash: transactionHash,
+            Trigger: trigger,
+            GasConsumed: gasConsumed,
+            Tags: settings.Tags);
     }
 
     private static string CreateFingerprint(Exception exception)

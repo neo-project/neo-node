@@ -1,6 +1,6 @@
 # NodeDiagnostics
 
-NodeDiagnostics provides lightweight diagnostics telemetry for Neo nodes. It can send crash and runtime exception events to error analysis services, publish status heartbeats to uptime monitors, and notify operator-owned webhooks when the node reports an exception.
+NodeDiagnostics provides lightweight diagnostics telemetry for Neo nodes. It can send crash and runtime exception events to error analysis services, publish smart-contract execution faults, send status heartbeats to uptime monitors, and notify operator-owned webhooks when the node reports an exception.
 
 The plugin is disabled until at least one sink has a non-empty `Endpoint`.
 
@@ -10,7 +10,7 @@ Each item in `Sinks` has a `Kind` and a `Provider`.
 
 - `ErrorCollector`: receives exception and crash events.
 - `StatusMonitor`: receives periodic heartbeats while the node process is running.
-- `Notification`: receives exception events intended for alerting workflows.
+- `Notification`: receives exception and application fault events intended for alerting workflows.
 
 Available providers:
 
@@ -30,6 +30,12 @@ Configure the plugin in `NodeDiagnostics.json`.
     "Environment": "production",
     "ServiceName": "neo-node",
     "NodeName": "seed-1",
+    "Tags": {
+      "role": "seed",
+      "region": "eu"
+    },
+    "CaptureApplicationFaults": false,
+    "SendStartupDiagnosticEvent": false,
     "HeartbeatIntervalSeconds": 60,
     "RequestTimeoutMilliseconds": 5000,
     "MaxRetries": 3,
@@ -57,13 +63,19 @@ Configure the plugin in `NodeDiagnostics.json`.
 
 Do not commit production tokens to source control. Prefer injecting the final plugin configuration from deployment tooling or a secret manager.
 
+Set `SendStartupDiagnosticEvent` to `true` during rollout if you want the plugin to send a single error-level diagnostic event on startup. This is useful for confirming that endpoint, token, header, and payload settings are accepted by the target platform. Turn it off after validation if the target platform should only receive real failures.
+
+Set `CaptureApplicationFaults` to `true` only when persisted smart-contract execution faults should be exported to the configured error sinks. This is optional because contract faults can be user- or contract-level failures rather than node software failures.
+
 ## Reliability behavior
 
 - Exception events are queued in memory and sent in batches where the provider supports batching.
+- Smart-contract application execution faults are captured from persisted block execution results when `CaptureApplicationFaults` is enabled.
 - Fatal unhandled exceptions are flushed immediately with `FlushTimeoutMilliseconds`.
 - Each HTTP request is bounded by `RequestTimeoutMilliseconds`.
 - Failed requests are retried up to `MaxRetries` with `RetryDelayMilliseconds` between attempts.
 - If the queue fills, new events are dropped and the runtime logger emits a throttled warning.
+- `MaxApplicationFaultsPerBlock` limits per-block fault event volume so a faulty block cannot flood outbound sinks.
 
 ## Provider notes
 

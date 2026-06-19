@@ -3,10 +3,17 @@
     "Environment": "production",
     "ServiceName": "neo-node",
     "NodeName": "",
+    "Tags": {
+      "role": "",
+      "region": ""
+    },
     "CaptureUnhandledExceptions": true,
     "CaptureUnobservedTaskExceptions": true,
+    "CaptureApplicationFaults": false,
+    "SendStartupDiagnosticEvent": false,
     "IncludeStackTrace": true,
     "HeartbeatIntervalSeconds": 60,
+    "MaxApplicationFaultsPerBlock": 32,
     "MaxQueueSize": 1024,
     "BatchSize": 10,
     "MaxRetries": 3,

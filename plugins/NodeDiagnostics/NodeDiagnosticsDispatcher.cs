@@ -252,13 +252,20 @@ internal sealed class NodeDiagnosticsDispatcher : IDisposable
 
     private static Dictionary<string, string> CreateTags(NodeDiagnosticsEvent nodeEvent)
     {
-        var tags = new Dictionary<string, string>
-        {
-            ["event_type"] = nodeEvent.EventType,
-            ["fingerprint"] = nodeEvent.Fingerprint
-        };
+        var tags = new Dictionary<string, string>();
+        foreach (var tag in nodeEvent.Tags)
+            if (!string.IsNullOrWhiteSpace(tag.Key) && !string.IsNullOrWhiteSpace(tag.Value))
+                tags[tag.Key] = tag.Value;
+        tags["event_type"] = nodeEvent.EventType;
+        tags["fingerprint"] = nodeEvent.Fingerprint;
         if (nodeEvent.Network is not null)
             tags["network"] = nodeEvent.Network.Value.ToString("X8");
+        if (nodeEvent.BlockIndex is not null)
+            tags["block_index"] = nodeEvent.BlockIndex.Value.ToString();
+        if (nodeEvent.TransactionHash is not null)
+            tags["transaction_hash"] = nodeEvent.TransactionHash;
+        if (nodeEvent.Trigger is not null)
+            tags["trigger"] = nodeEvent.Trigger;
         return tags;
     }
 

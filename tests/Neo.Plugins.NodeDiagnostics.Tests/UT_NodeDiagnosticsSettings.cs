@@ -36,6 +36,7 @@ public class UT_NodeDiagnosticsSettings
         Assert.AreEqual("neo-node", NodeDiagnosticsSettings.Default.ServiceName);
         Assert.AreEqual("production", NodeDiagnosticsSettings.Default.Environment);
         Assert.AreEqual(60, NodeDiagnosticsSettings.Default.HeartbeatIntervalSeconds);
+        Assert.IsFalse(NodeDiagnosticsSettings.Default.CaptureApplicationFaults);
     }
 
     [TestMethod]
@@ -47,7 +48,14 @@ public class UT_NodeDiagnosticsSettings
             "Environment": "mainnet",
             "ServiceName": "neo-node",
             "NodeName": "seed-1",
+            "Tags": {
+              "role": "seed",
+              "region": "eu"
+            },
+            "CaptureApplicationFaults": true,
+            "SendStartupDiagnosticEvent": true,
             "HeartbeatIntervalSeconds": 120,
+            "MaxApplicationFaultsPerBlock": 16,
             "RequestTimeoutMilliseconds": 2500,
             "Sinks": [
               {
@@ -89,7 +97,12 @@ public class UT_NodeDiagnosticsSettings
         Assert.IsTrue(settings.HasHeartbeatSinks);
         Assert.AreEqual("mainnet", settings.Environment);
         Assert.AreEqual("seed-1", settings.NodeName);
+        Assert.AreEqual("seed", settings.Tags["role"]);
+        Assert.AreEqual("eu", settings.Tags["region"]);
+        Assert.IsTrue(settings.CaptureApplicationFaults);
+        Assert.IsTrue(settings.SendStartupDiagnosticEvent);
         Assert.AreEqual(120, settings.HeartbeatIntervalSeconds);
+        Assert.AreEqual(16, settings.MaxApplicationFaultsPerBlock);
         Assert.AreEqual(2500, settings.RequestTimeoutMilliseconds);
         Assert.HasCount(3, settings.Sinks);
         Assert.AreEqual("Primary error sink", settings.Sinks[0].Description);
@@ -153,6 +166,18 @@ public class UT_NodeDiagnosticsSettings
         {
           "PluginConfiguration": {
             "RequestTimeoutMilliseconds": 0
+          }
+        }
+        """)));
+    }
+
+    [TestMethod]
+    public void Load_RejectsInvalidApplicationFaultLimit()
+    {
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => NodeDiagnosticsSettings.Load(BuildSection("""
+        {
+          "PluginConfiguration": {
+            "MaxApplicationFaultsPerBlock": 0
           }
         }
         """)));
