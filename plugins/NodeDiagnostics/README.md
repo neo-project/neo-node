@@ -1,6 +1,6 @@
-# NodeOps
+# NodeDiagnostics
 
-NodeOps provides lightweight node operations telemetry for Neo nodes. It can send crash and runtime exception events to error analysis services, publish status heartbeats to uptime monitors, and notify operator-owned webhooks when the node reports an exception.
+NodeDiagnostics provides lightweight diagnostics telemetry for Neo nodes. It can send crash and runtime exception events to error analysis services, publish status heartbeats to uptime monitors, and notify operator-owned webhooks when the node reports an exception.
 
 The plugin is disabled until at least one sink has a non-empty `Endpoint`.
 
@@ -22,7 +22,7 @@ Available providers:
 
 ## Configuration
 
-Configure the plugin in `NodeOps.json`.
+Configure the plugin in `NodeDiagnostics.json`.
 
 ```json
 {

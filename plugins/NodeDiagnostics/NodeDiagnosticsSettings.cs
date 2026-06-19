@@ -1,6 +1,6 @@
 // Copyright (C) 2015-2026 The Neo Project.
 //
-// NodeOpsSettings.cs file belongs to the neo project and is free
+// NodeDiagnosticsSettings.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
 // accompanying file LICENSE in the main directory of the
 // repository or http://www.opensource.org/licenses/mit-license.php
@@ -11,11 +11,11 @@
 
 using Microsoft.Extensions.Configuration;
 
-namespace Neo.Plugins.NodeOps;
+namespace Neo.Plugins.NodeDiagnostics;
 
-internal sealed class NodeOpsSettings : IPluginSettings
+internal sealed class NodeDiagnosticsSettings : IPluginSettings
 {
-    public IReadOnlyList<NodeOpsSinkSettings> Sinks { get; }
+    public IReadOnlyList<NodeDiagnosticsSinkSettings> Sinks { get; }
     public string Environment { get; }
     public string ServiceName { get; }
     public string NodeName { get; }
@@ -33,15 +33,15 @@ internal sealed class NodeOpsSettings : IPluginSettings
     public int MaxStackTraceLength { get; }
     public UnhandledExceptionPolicy ExceptionPolicy { get; }
 
-    public static NodeOpsSettings Default { get; private set; } = new(new ConfigurationBuilder().Build().GetSection("PluginConfiguration"));
+    public static NodeDiagnosticsSettings Default { get; private set; } = new(new ConfigurationBuilder().Build().GetSection("PluginConfiguration"));
 
     public bool Enabled => Sinks.Any(p => p.Enabled);
-    public bool HasEventSinks => Sinks.Any(p => p.Enabled && p.Kind is NodeOpsSinkKind.ErrorCollector or NodeOpsSinkKind.Notification);
-    public bool HasHeartbeatSinks => Sinks.Any(p => p.Enabled && p.Kind == NodeOpsSinkKind.StatusMonitor);
+    public bool HasEventSinks => Sinks.Any(p => p.Enabled && p.Kind is NodeDiagnosticsSinkKind.ErrorCollector or NodeDiagnosticsSinkKind.Notification);
+    public bool HasHeartbeatSinks => Sinks.Any(p => p.Enabled && p.Kind == NodeDiagnosticsSinkKind.StatusMonitor);
     public TimeSpan HeartbeatInterval => TimeSpan.FromSeconds(HeartbeatIntervalSeconds);
     public TimeSpan RetryDelay => TimeSpan.FromMilliseconds(RetryDelayMilliseconds);
 
-    private NodeOpsSettings(IConfigurationSection section)
+    private NodeDiagnosticsSettings(IConfigurationSection section)
     {
         Environment = section.GetValue("Environment", "production")!;
         ServiceName = section.GetValue("ServiceName", "neo-node")!;
@@ -59,13 +59,13 @@ internal sealed class NodeOpsSettings : IPluginSettings
         MaxMessageLength = section.GetValue("MaxMessageLength", 4096);
         MaxStackTraceLength = section.GetValue("MaxStackTraceLength", 32768);
         ExceptionPolicy = section.GetValue("UnhandledExceptionPolicy", UnhandledExceptionPolicy.Ignore);
-        Sinks = section.GetSection("Sinks").GetChildren().Select(p => new NodeOpsSinkSettings(p)).ToArray();
+        Sinks = section.GetSection("Sinks").GetChildren().Select(p => new NodeDiagnosticsSinkSettings(p)).ToArray();
 
         Validate();
     }
 
-    private NodeOpsSettings(
-        IReadOnlyList<NodeOpsSinkSettings> sinks,
+    private NodeDiagnosticsSettings(
+        IReadOnlyList<NodeDiagnosticsSinkSettings> sinks,
         string environment,
         string serviceName,
         string nodeName,
@@ -105,10 +105,10 @@ internal sealed class NodeOpsSettings : IPluginSettings
     }
 
     public static void Load(IConfigurationSection section) =>
-        Default = new NodeOpsSettings(section);
+        Default = new NodeDiagnosticsSettings(section);
 
-    internal static NodeOpsSettings Create(
-        IReadOnlyList<NodeOpsSinkSettings>? sinks = null,
+    internal static NodeDiagnosticsSettings Create(
+        IReadOnlyList<NodeDiagnosticsSinkSettings>? sinks = null,
         string environment = "test",
         string serviceName = "neo-node",
         string nodeName = "",
@@ -126,7 +126,7 @@ internal sealed class NodeOpsSettings : IPluginSettings
         int maxStackTraceLength = 32768,
         UnhandledExceptionPolicy exceptionPolicy = UnhandledExceptionPolicy.Ignore) =>
         new(
-            sinks ?? Array.Empty<NodeOpsSinkSettings>(),
+            sinks ?? Array.Empty<NodeDiagnosticsSinkSettings>(),
             environment,
             serviceName,
             nodeName,

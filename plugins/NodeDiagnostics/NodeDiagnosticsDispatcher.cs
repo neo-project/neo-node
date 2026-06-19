@@ -1,6 +1,6 @@
 // Copyright (C) 2015-2026 The Neo Project.
 //
-// NodeOpsDispatcher.cs file belongs to the neo project and is free
+// NodeDiagnosticsDispatcher.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
 // accompanying file LICENSE in the main directory of the
 // repository or http://www.opensource.org/licenses/mit-license.php
@@ -13,15 +13,15 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Channels;
 
-namespace Neo.Plugins.NodeOps;
+namespace Neo.Plugins.NodeDiagnostics;
 
-internal sealed class NodeOpsDispatcher : IDisposable
+internal sealed class NodeDiagnosticsDispatcher : IDisposable
 {
-    private readonly NodeOpsSettings _settings;
+    private readonly NodeDiagnosticsSettings _settings;
     private readonly Func<NeoSystem?> _systemProvider;
     private readonly HttpClient _httpClient;
     private readonly bool _disposeClient;
-    private readonly Channel<NodeOpsEvent> _channel;
+    private readonly Channel<NodeDiagnosticsEvent> _channel;
     private readonly CancellationTokenSource _shutdown = new();
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
     private Task? _eventWorker;
@@ -29,23 +29,23 @@ internal sealed class NodeOpsDispatcher : IDisposable
     private long _droppedEvents;
     private DateTimeOffset _lastDropWarning = DateTimeOffset.MinValue;
 
-    public NodeOpsDispatcher(NodeOpsSettings settings, Func<NeoSystem?> systemProvider)
+    public NodeDiagnosticsDispatcher(NodeDiagnosticsSettings settings, Func<NeoSystem?> systemProvider)
         : this(settings, systemProvider, new HttpClient(), disposeClient: true)
     {
     }
 
-    internal NodeOpsDispatcher(NodeOpsSettings settings, HttpClient httpClient, bool disposeClient = false)
+    internal NodeDiagnosticsDispatcher(NodeDiagnosticsSettings settings, HttpClient httpClient, bool disposeClient = false)
         : this(settings, () => null, httpClient, disposeClient)
     {
     }
 
-    private NodeOpsDispatcher(NodeOpsSettings settings, Func<NeoSystem?> systemProvider, HttpClient httpClient, bool disposeClient)
+    private NodeDiagnosticsDispatcher(NodeDiagnosticsSettings settings, Func<NeoSystem?> systemProvider, HttpClient httpClient, bool disposeClient)
     {
         _settings = settings;
         _systemProvider = systemProvider;
         _httpClient = httpClient;
         _disposeClient = disposeClient;
-        _channel = Channel.CreateBounded<NodeOpsEvent>(new BoundedChannelOptions(settings.MaxQueueSize)
+        _channel = Channel.CreateBounded<NodeDiagnosticsEvent>(new BoundedChannelOptions(settings.MaxQueueSize)
         {
             SingleReader = true,
             SingleWriter = false,
@@ -62,7 +62,7 @@ internal sealed class NodeOpsDispatcher : IDisposable
             _heartbeatWorker = Task.Run(ProcessHeartbeatAsync);
     }
 
-    public bool TryEnqueue(NodeOpsEvent nodeEvent)
+    public bool TryEnqueue(NodeDiagnosticsEvent nodeEvent)
     {
         if (!_settings.Enabled || !_settings.HasEventSinks) return false;
         if (_channel.Writer.TryWrite(nodeEvent)) return true;
@@ -73,13 +73,13 @@ internal sealed class NodeOpsDispatcher : IDisposable
         {
             _lastDropWarning = now;
             Logs.RuntimeLogger.Warning(
-                "NodeOps event queue is full. Dropped {DroppedEvents} events. Increase MaxQueueSize or reduce sink latency.",
+                "NodeDiagnostics event queue is full. Dropped {DroppedEvents} events. Increase MaxQueueSize or reduce sink latency.",
                 dropped);
         }
         return false;
     }
 
-    public bool SendNow(NodeOpsEvent nodeEvent)
+    public bool SendNow(NodeDiagnosticsEvent nodeEvent)
     {
         if (!_settings.Enabled) return false;
         using var timeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(_settings.FlushTimeoutMilliseconds));
@@ -89,15 +89,15 @@ internal sealed class NodeOpsDispatcher : IDisposable
         }
         catch (Exception ex)
         {
-            Logs.RuntimeLogger.Warning(ex, "NodeOps failed to flush event");
+            Logs.RuntimeLogger.Warning(ex, "NodeDiagnostics failed to flush event");
             return false;
         }
     }
 
     internal Task<bool> SendHeartbeatAsync(CancellationToken cancellationToken) =>
-        SendEventsAsync([NodeOpsEvent.Heartbeat(_settings, _systemProvider())], cancellationToken);
+        SendEventsAsync([NodeDiagnosticsEvent.Heartbeat(_settings, _systemProvider())], cancellationToken);
 
-    internal async Task<bool> SendEventsAsync(IReadOnlyList<NodeOpsEvent> events, CancellationToken cancellationToken)
+    internal async Task<bool> SendEventsAsync(IReadOnlyList<NodeDiagnosticsEvent> events, CancellationToken cancellationToken)
     {
         if (events.Count == 0 || !_settings.Enabled) return false;
 
@@ -117,11 +117,11 @@ internal sealed class NodeOpsDispatcher : IDisposable
         return allSucceeded;
     }
 
-    private async Task<bool> SendToSinkAsync(NodeOpsSinkSettings sink, IReadOnlyList<NodeOpsEvent> events, CancellationToken cancellationToken)
+    private async Task<bool> SendToSinkAsync(NodeDiagnosticsSinkSettings sink, IReadOnlyList<NodeDiagnosticsEvent> events, CancellationToken cancellationToken)
     {
         if (events.Count == 0) return false;
 
-        if (sink.Provider is NodeOpsProvider.Sentry or NodeOpsProvider.GoogleCloudErrorReporting)
+        if (sink.Provider is NodeDiagnosticsProvider.Sentry or NodeDiagnosticsProvider.GoogleCloudErrorReporting)
         {
             var allSucceeded = true;
             foreach (var nodeEvent in events)
@@ -129,12 +129,12 @@ internal sealed class NodeOpsDispatcher : IDisposable
             return allSucceeded;
         }
 
-        if (sink.Provider is NodeOpsProvider.BetterStackHeartbeat or NodeOpsProvider.HealthchecksHeartbeat)
+        if (sink.Provider is NodeDiagnosticsProvider.BetterStackHeartbeat or NodeDiagnosticsProvider.HealthchecksHeartbeat)
             return await SendPayloadWithRetryAsync(sink, null, cancellationToken).ConfigureAwait(false);
 
         return await SendPayloadWithRetryAsync(
             sink,
-            new NodeOpsBatchPayload(
+            new NodeDiagnosticsBatchPayload(
                 ServiceName: _settings.ServiceName,
                 Environment: _settings.Environment,
                 NodeName: string.IsNullOrWhiteSpace(_settings.NodeName) ? null : _settings.NodeName,
@@ -143,7 +143,7 @@ internal sealed class NodeOpsDispatcher : IDisposable
             cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task<bool> SendPayloadWithRetryAsync(NodeOpsSinkSettings sink, object? payload, CancellationToken cancellationToken)
+    private async Task<bool> SendPayloadWithRetryAsync(NodeDiagnosticsSinkSettings sink, object? payload, CancellationToken cancellationToken)
     {
         for (var attempt = 0; attempt <= _settings.MaxRetries; attempt++)
         {
@@ -163,7 +163,7 @@ internal sealed class NodeOpsDispatcher : IDisposable
                 if (response.IsSuccessStatusCode) return true;
 
                 Logs.RuntimeLogger.Warning(
-                    "NodeOps sink {SinkName} failed with status {StatusCode}",
+                    "NodeDiagnostics sink {SinkName} failed with status {StatusCode}",
                     sink.Name,
                     (int)response.StatusCode);
             }
@@ -174,13 +174,13 @@ internal sealed class NodeOpsDispatcher : IDisposable
             catch (OperationCanceledException)
             {
                 Logs.RuntimeLogger.Warning(
-                    "NodeOps sink {SinkName} timed out after {TimeoutMilliseconds} ms",
+                    "NodeDiagnostics sink {SinkName} timed out after {TimeoutMilliseconds} ms",
                     sink.Name,
                     _settings.RequestTimeoutMilliseconds);
             }
             catch (Exception ex)
             {
-                Logs.RuntimeLogger.Warning(ex, "NodeOps sink {SinkName} upload attempt failed", sink.Name);
+                Logs.RuntimeLogger.Warning(ex, "NodeDiagnostics sink {SinkName} upload attempt failed", sink.Name);
             }
 
             if (attempt < _settings.MaxRetries)
@@ -190,7 +190,7 @@ internal sealed class NodeOpsDispatcher : IDisposable
         return false;
     }
 
-    private static void AddToken(HttpRequestMessage request, NodeOpsSinkSettings sink)
+    private static void AddToken(HttpRequestMessage request, NodeDiagnosticsSinkSettings sink)
     {
         if (string.IsNullOrEmpty(sink.Token)) return;
         var value = string.IsNullOrWhiteSpace(sink.TokenScheme)
@@ -199,10 +199,10 @@ internal sealed class NodeOpsDispatcher : IDisposable
         request.Headers.TryAddWithoutValidation(sink.TokenHeader, value);
     }
 
-    private static object CreateProviderPayload(NodeOpsProvider provider, NodeOpsEvent nodeEvent) =>
+    private static object CreateProviderPayload(NodeDiagnosticsProvider provider, NodeDiagnosticsEvent nodeEvent) =>
         provider switch
         {
-            NodeOpsProvider.Sentry => new
+            NodeDiagnosticsProvider.Sentry => new
             {
                 event_id = nodeEvent.EventId,
                 timestamp = nodeEvent.Timestamp,
@@ -229,7 +229,7 @@ internal sealed class NodeOpsDispatcher : IDisposable
                     },
                 tags = CreateTags(nodeEvent)
             },
-            NodeOpsProvider.GoogleCloudErrorReporting => new
+            NodeDiagnosticsProvider.GoogleCloudErrorReporting => new
             {
                 serviceContext = new
                 {
@@ -250,7 +250,7 @@ internal sealed class NodeOpsDispatcher : IDisposable
             _ => nodeEvent
         };
 
-    private static Dictionary<string, string> CreateTags(NodeOpsEvent nodeEvent)
+    private static Dictionary<string, string> CreateTags(NodeDiagnosticsEvent nodeEvent)
     {
         var tags = new Dictionary<string, string>
         {
@@ -264,7 +264,7 @@ internal sealed class NodeOpsDispatcher : IDisposable
 
     private async Task ProcessQueueAsync()
     {
-        var batch = new List<NodeOpsEvent>(_settings.BatchSize);
+        var batch = new List<NodeDiagnosticsEvent>(_settings.BatchSize);
 
         try
         {
@@ -284,7 +284,7 @@ internal sealed class NodeOpsDispatcher : IDisposable
         }
         catch (Exception ex)
         {
-            Logs.RuntimeLogger.Warning(ex, "NodeOps queue processing stopped");
+            Logs.RuntimeLogger.Warning(ex, "NodeDiagnostics queue processing stopped");
         }
     }
 
@@ -303,7 +303,7 @@ internal sealed class NodeOpsDispatcher : IDisposable
         }
         catch (Exception ex)
         {
-            Logs.RuntimeLogger.Warning(ex, "NodeOps heartbeat processing stopped");
+            Logs.RuntimeLogger.Warning(ex, "NodeDiagnostics heartbeat processing stopped");
         }
     }
 
@@ -324,10 +324,10 @@ internal sealed class NodeOpsDispatcher : IDisposable
             _httpClient.Dispose();
     }
 
-    private sealed record NodeOpsBatchPayload(
+    private sealed record NodeDiagnosticsBatchPayload(
         string ServiceName,
         string Environment,
         string? NodeName,
         DateTimeOffset SentAt,
-        IReadOnlyList<NodeOpsEvent> Events);
+        IReadOnlyList<NodeDiagnosticsEvent> Events);
 }

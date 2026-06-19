@@ -1,6 +1,6 @@
 // Copyright (C) 2015-2026 The Neo Project.
 //
-// NodeOpsEvent.cs file belongs to the neo project and is free
+// NodeDiagnosticsEvent.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
 // accompanying file LICENSE in the main directory of the
 // repository or http://www.opensource.org/licenses/mit-license.php
@@ -15,9 +15,9 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Neo.Plugins.NodeOps;
+namespace Neo.Plugins.NodeDiagnostics;
 
-internal sealed record NodeOpsEvent(
+internal sealed record NodeDiagnosticsEvent(
     string EventId,
     string EventType,
     string Severity,
@@ -41,14 +41,14 @@ internal sealed record NodeOpsEvent(
 {
     public bool IsHeartbeat => EventType == "Heartbeat";
 
-    public static NodeOpsEvent FromException(string eventType, Exception exception, bool isTerminating, NodeOpsSettings settings, NeoSystem? system)
+    public static NodeDiagnosticsEvent FromException(string eventType, Exception exception, bool isTerminating, NodeDiagnosticsSettings settings, NeoSystem? system)
     {
         var message = Truncate(exception.GetBaseException().Message, settings.MaxMessageLength);
         var stackTrace = settings.IncludeStackTrace
             ? Truncate(exception.ToString(), settings.MaxStackTraceLength)
             : null;
 
-        return new NodeOpsEvent(
+        return new NodeDiagnosticsEvent(
             EventId: Guid.NewGuid().ToString("N"),
             EventType: eventType,
             Severity: isTerminating ? "fatal" : "error",
@@ -68,13 +68,13 @@ internal sealed record NodeOpsEvent(
             NodeName: string.IsNullOrWhiteSpace(settings.NodeName) ? null : settings.NodeName,
             Network: system?.Settings.Network,
             NodeVersion: Assembly.GetEntryAssembly()?.GetName().Version?.ToString(),
-            PluginVersion: typeof(NodeOpsPlugin).Assembly.GetName().Version?.ToString());
+            PluginVersion: typeof(NodeDiagnosticsPlugin).Assembly.GetName().Version?.ToString());
     }
 
-    public static NodeOpsEvent FromObject(string eventType, object value, bool isTerminating, NodeOpsSettings settings, NeoSystem? system)
+    public static NodeDiagnosticsEvent FromObject(string eventType, object value, bool isTerminating, NodeDiagnosticsSettings settings, NeoSystem? system)
     {
         var message = Truncate(value.ToString() ?? value.GetType().FullName ?? "Unknown non-exception error", settings.MaxMessageLength);
-        return new NodeOpsEvent(
+        return new NodeDiagnosticsEvent(
             EventId: Guid.NewGuid().ToString("N"),
             EventType: eventType,
             Severity: isTerminating ? "fatal" : "error",
@@ -94,12 +94,12 @@ internal sealed record NodeOpsEvent(
             NodeName: string.IsNullOrWhiteSpace(settings.NodeName) ? null : settings.NodeName,
             Network: system?.Settings.Network,
             NodeVersion: Assembly.GetEntryAssembly()?.GetName().Version?.ToString(),
-            PluginVersion: typeof(NodeOpsPlugin).Assembly.GetName().Version?.ToString());
+            PluginVersion: typeof(NodeDiagnosticsPlugin).Assembly.GetName().Version?.ToString());
     }
 
-    public static NodeOpsEvent Heartbeat(NodeOpsSettings settings, NeoSystem? system)
+    public static NodeDiagnosticsEvent Heartbeat(NodeDiagnosticsSettings settings, NeoSystem? system)
     {
-        return new NodeOpsEvent(
+        return new NodeDiagnosticsEvent(
             EventId: Guid.NewGuid().ToString("N"),
             EventType: "Heartbeat",
             Severity: "info",
@@ -119,7 +119,7 @@ internal sealed record NodeOpsEvent(
             NodeName: string.IsNullOrWhiteSpace(settings.NodeName) ? null : settings.NodeName,
             Network: system?.Settings.Network,
             NodeVersion: Assembly.GetEntryAssembly()?.GetName().Version?.ToString(),
-            PluginVersion: typeof(NodeOpsPlugin).Assembly.GetName().Version?.ToString());
+            PluginVersion: typeof(NodeDiagnosticsPlugin).Assembly.GetName().Version?.ToString());
     }
 
     private static string CreateFingerprint(Exception exception)

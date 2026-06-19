@@ -1,6 +1,6 @@
 // Copyright (C) 2015-2026 The Neo Project.
 //
-// NodeOpsSinkSettings.cs file belongs to the neo project and is free
+// NodeDiagnosticsSinkSettings.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
 // accompanying file LICENSE in the main directory of the
 // repository or http://www.opensource.org/licenses/mit-license.php
@@ -11,16 +11,16 @@
 
 using Microsoft.Extensions.Configuration;
 
-namespace Neo.Plugins.NodeOps;
+namespace Neo.Plugins.NodeDiagnostics;
 
-internal enum NodeOpsSinkKind
+internal enum NodeDiagnosticsSinkKind
 {
     ErrorCollector,
     StatusMonitor,
     Notification
 }
 
-internal enum NodeOpsProvider
+internal enum NodeDiagnosticsProvider
 {
     CustomWebhook,
     Sentry,
@@ -29,7 +29,7 @@ internal enum NodeOpsProvider
     HealthchecksHeartbeat
 }
 
-internal enum NodeOpsSeverity
+internal enum NodeDiagnosticsSeverity
 {
     Info,
     Warning,
@@ -37,26 +37,26 @@ internal enum NodeOpsSeverity
     Fatal
 }
 
-internal sealed class NodeOpsSinkSettings
+internal sealed class NodeDiagnosticsSinkSettings
 {
     public string Name { get; }
     public string Description { get; }
-    public NodeOpsSinkKind Kind { get; }
-    public NodeOpsProvider Provider { get; }
+    public NodeDiagnosticsSinkKind Kind { get; }
+    public NodeDiagnosticsProvider Provider { get; }
     public Uri? Endpoint { get; }
     public string Method { get; }
     public string Token { get; }
     public string TokenHeader { get; }
     public string TokenScheme { get; }
     public IReadOnlyDictionary<string, string> Headers { get; }
-    public NodeOpsSeverity MinimumSeverity { get; }
+    public NodeDiagnosticsSeverity MinimumSeverity { get; }
     public bool Enabled => Endpoint is not null;
 
-    public NodeOpsSinkSettings(IConfigurationSection section)
+    public NodeDiagnosticsSinkSettings(IConfigurationSection section)
         : this(
             section.GetValue("Name", string.Empty)!,
-            section.GetValue("Kind", NodeOpsSinkKind.ErrorCollector),
-            section.GetValue("Provider", NodeOpsProvider.CustomWebhook),
+            section.GetValue("Kind", NodeDiagnosticsSinkKind.ErrorCollector),
+            section.GetValue("Provider", NodeDiagnosticsProvider.CustomWebhook),
             ParseEndpoint(section.GetValue("Endpoint", string.Empty)),
             section.GetValue("Method", string.Empty)!,
             section.GetValue("Token", string.Empty)!,
@@ -65,22 +65,22 @@ internal sealed class NodeOpsSinkSettings
             section.GetSection("Headers").GetChildren()
                 .Where(p => !string.IsNullOrWhiteSpace(p.Key) && !string.IsNullOrEmpty(p.Value))
                 .ToDictionary(p => p.Key, p => p.Value!, StringComparer.OrdinalIgnoreCase),
-            section.GetValue("MinimumSeverity", NodeOpsSeverity.Error),
+            section.GetValue("MinimumSeverity", NodeDiagnosticsSeverity.Error),
             section.GetValue("Description", string.Empty)!)
     {
     }
 
-    internal NodeOpsSinkSettings(
+    internal NodeDiagnosticsSinkSettings(
         string name,
-        NodeOpsSinkKind kind,
-        NodeOpsProvider provider,
+        NodeDiagnosticsSinkKind kind,
+        NodeDiagnosticsProvider provider,
         Uri? endpoint,
         string method = "",
         string token = "",
         string tokenHeader = "Authorization",
         string tokenScheme = "Bearer",
         IReadOnlyDictionary<string, string>? headers = null,
-        NodeOpsSeverity minimumSeverity = NodeOpsSeverity.Error,
+        NodeDiagnosticsSeverity minimumSeverity = NodeDiagnosticsSeverity.Error,
         string description = "")
     {
         Name = string.IsNullOrWhiteSpace(name) ? provider.ToString() : name;
@@ -98,11 +98,11 @@ internal sealed class NodeOpsSinkSettings
         Validate();
     }
 
-    public bool Accepts(NodeOpsEvent nodeEvent)
+    public bool Accepts(NodeDiagnosticsEvent nodeEvent)
     {
         if (!Enabled) return false;
-        if (nodeEvent.IsHeartbeat) return Kind == NodeOpsSinkKind.StatusMonitor;
-        if (Kind == NodeOpsSinkKind.StatusMonitor) return false;
+        if (nodeEvent.IsHeartbeat) return Kind == NodeDiagnosticsSinkKind.StatusMonitor;
+        if (Kind == NodeDiagnosticsSinkKind.StatusMonitor) return false;
         return ParseSeverity(nodeEvent.Severity) >= MinimumSeverity;
     }
 
@@ -116,16 +116,16 @@ internal sealed class NodeOpsSinkSettings
         return uri;
     }
 
-    private static string GetDefaultMethod(NodeOpsProvider provider) =>
-        provider is NodeOpsProvider.BetterStackHeartbeat or NodeOpsProvider.HealthchecksHeartbeat ? "GET" : "POST";
+    private static string GetDefaultMethod(NodeDiagnosticsProvider provider) =>
+        provider is NodeDiagnosticsProvider.BetterStackHeartbeat or NodeDiagnosticsProvider.HealthchecksHeartbeat ? "GET" : "POST";
 
-    private static NodeOpsSeverity ParseSeverity(string severity) =>
+    private static NodeDiagnosticsSeverity ParseSeverity(string severity) =>
         severity.ToLowerInvariant() switch
         {
-            "fatal" => NodeOpsSeverity.Fatal,
-            "error" => NodeOpsSeverity.Error,
-            "warning" => NodeOpsSeverity.Warning,
-            _ => NodeOpsSeverity.Info
+            "fatal" => NodeDiagnosticsSeverity.Fatal,
+            "error" => NodeDiagnosticsSeverity.Error,
+            "warning" => NodeDiagnosticsSeverity.Warning,
+            _ => NodeDiagnosticsSeverity.Info
         };
 
     private void Validate()

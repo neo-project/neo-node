@@ -1,6 +1,6 @@
 // Copyright (C) 2015-2026 The Neo Project.
 //
-// NodeOpsPlugin.cs file belongs to the neo project and is free
+// NodeDiagnosticsPlugin.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
 // accompanying file LICENSE in the main directory of the
 // repository or http://www.opensource.org/licenses/mit-license.php
@@ -11,25 +11,25 @@
 
 using static System.IO.Path;
 
-namespace Neo.Plugins.NodeOps;
+namespace Neo.Plugins.NodeDiagnostics;
 
-public sealed class NodeOpsPlugin : Plugin
+public sealed class NodeDiagnosticsPlugin : Plugin
 {
-    private NodeOpsSettings _settings = NodeOpsSettings.Default;
-    private NodeOpsDispatcher? _dispatcher;
+    private NodeDiagnosticsSettings _settings = NodeDiagnosticsSettings.Default;
+    private NodeDiagnosticsDispatcher? _dispatcher;
     private NeoSystem? _system;
     private bool _subscribedUnhandledExceptions;
     private bool _subscribedUnobservedTaskExceptions;
 
-    public override string Name => "NodeOps";
-    public override string Description => "Collects node operations events, reports failures, and publishes status heartbeats to configured monitoring services.";
-    public override string ConfigFile => Combine(RootPath, "NodeOps.json");
+    public override string Name => "NodeDiagnostics";
+    public override string Description => "Collects node diagnostics events, reports failures, and publishes status heartbeats to configured monitoring services.";
+    public override string ConfigFile => Combine(RootPath, "NodeDiagnostics.json");
     protected override UnhandledExceptionPolicy ExceptionPolicy => _settings.ExceptionPolicy;
 
     protected override void Configure()
     {
-        NodeOpsSettings.Load(GetConfiguration());
-        _settings = NodeOpsSettings.Default;
+        NodeDiagnosticsSettings.Load(GetConfiguration());
+        _settings = NodeDiagnosticsSettings.Default;
     }
 
     protected override void OnSystemLoaded(NeoSystem system)
@@ -38,15 +38,15 @@ public sealed class NodeOpsPlugin : Plugin
 
         if (!_settings.Enabled)
         {
-            Logs.RuntimeLogger.Information("NodeOps plugin is disabled");
+            Logs.RuntimeLogger.Information("NodeDiagnostics plugin is disabled");
             return;
         }
 
-        _dispatcher = new NodeOpsDispatcher(_settings, () => _system);
+        _dispatcher = new NodeDiagnosticsDispatcher(_settings, () => _system);
         _dispatcher.Start();
         if (_settings.HasEventSinks)
             Subscribe();
-        Logs.RuntimeLogger.Information("NodeOps plugin started");
+        Logs.RuntimeLogger.Information("NodeDiagnostics plugin started");
     }
 
     public override void Dispose()
@@ -91,8 +91,8 @@ public sealed class NodeOpsPlugin : Plugin
         if (_dispatcher is null) return;
 
         var report = e.ExceptionObject is Exception exception
-            ? NodeOpsEvent.FromException("UnhandledException", exception, e.IsTerminating, _settings, _system)
-            : NodeOpsEvent.FromObject("UnhandledException", e.ExceptionObject, e.IsTerminating, _settings, _system);
+            ? NodeDiagnosticsEvent.FromException("UnhandledException", exception, e.IsTerminating, _settings, _system)
+            : NodeDiagnosticsEvent.FromObject("UnhandledException", e.ExceptionObject, e.IsTerminating, _settings, _system);
 
         if (e.IsTerminating)
             _dispatcher.SendNow(report);
@@ -104,7 +104,7 @@ public sealed class NodeOpsPlugin : Plugin
     {
         if (_dispatcher is null) return;
 
-        var report = NodeOpsEvent.FromException("UnobservedTaskException", e.Exception, false, _settings, _system);
+        var report = NodeDiagnosticsEvent.FromException("UnobservedTaskException", e.Exception, false, _settings, _system);
         _dispatcher.TryEnqueue(report);
     }
 }

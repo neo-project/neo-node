@@ -1,6 +1,6 @@
 // Copyright (C) 2015-2026 The Neo Project.
 //
-// UT_NodeOpsDispatcher.cs file belongs to the neo project and is free
+// UT_NodeDiagnosticsDispatcher.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
 // accompanying file LICENSE in the main directory of the
 // repository or http://www.opensource.org/licenses/mit-license.php
@@ -12,36 +12,36 @@
 using System.Net;
 using System.Text.Json;
 
-namespace Neo.Plugins.NodeOps.Tests;
+namespace Neo.Plugins.NodeDiagnostics.Tests;
 
 [TestClass]
-public class UT_NodeOpsDispatcher
+public class UT_NodeDiagnosticsDispatcher
 {
     [TestMethod]
     public async Task SendEventsAsync_RoutesErrorsToCollectorsAndNotifications()
     {
         var handler = new TestHttpMessageHandler();
         using var client = new HttpClient(handler);
-        var settings = NodeOpsSettings.Create(
+        var settings = NodeDiagnosticsSettings.Create(
             sinks:
             [
-                new NodeOpsSinkSettings(
+                new NodeDiagnosticsSinkSettings(
                     "custom-errors",
-                    NodeOpsSinkKind.ErrorCollector,
-                    NodeOpsProvider.CustomWebhook,
+                    NodeDiagnosticsSinkKind.ErrorCollector,
+                    NodeDiagnosticsProvider.CustomWebhook,
                     new Uri("https://collector.example/v1/events"),
                     token: "collector-token"),
-                new NodeOpsSinkSettings(
+                new NodeDiagnosticsSinkSettings(
                     "notifications",
-                    NodeOpsSinkKind.Notification,
-                    NodeOpsProvider.CustomWebhook,
+                    NodeDiagnosticsSinkKind.Notification,
+                    NodeDiagnosticsProvider.CustomWebhook,
                     new Uri("https://notify.example/hooks/node"),
                     token: "notify-token")
             ],
             environment: "unit-test",
             nodeName: "node-1");
-        using var dispatcher = new NodeOpsDispatcher(settings, client);
-        var nodeEvent = NodeOpsEvent.FromException("UnhandledException", new InvalidOperationException("boom"), true, settings, null);
+        using var dispatcher = new NodeDiagnosticsDispatcher(settings, client);
+        var nodeEvent = NodeDiagnosticsEvent.FromException("UnhandledException", new InvalidOperationException("boom"), true, settings, null);
 
         var sent = await dispatcher.SendEventsAsync([nodeEvent], CancellationToken.None);
 
@@ -67,18 +67,18 @@ public class UT_NodeOpsDispatcher
     {
         var handler = new TestHttpMessageHandler();
         using var client = new HttpClient(handler);
-        var settings = NodeOpsSettings.Create(
+        var settings = NodeDiagnosticsSettings.Create(
             sinks:
             [
-                new NodeOpsSinkSettings(
+                new NodeDiagnosticsSinkSettings(
                     "google",
-                    NodeOpsSinkKind.ErrorCollector,
-                    NodeOpsProvider.GoogleCloudErrorReporting,
+                    NodeDiagnosticsSinkKind.ErrorCollector,
+                    NodeDiagnosticsProvider.GoogleCloudErrorReporting,
                     new Uri("https://clouderrorreporting.googleapis.com/v1beta1/projects/test/events:report"),
                     token: "gcp-token")
             ]);
-        using var dispatcher = new NodeOpsDispatcher(settings, client);
-        var nodeEvent = NodeOpsEvent.FromException("UnhandledException", new InvalidOperationException("boom"), true, settings, null);
+        using var dispatcher = new NodeDiagnosticsDispatcher(settings, client);
+        var nodeEvent = NodeDiagnosticsEvent.FromException("UnhandledException", new InvalidOperationException("boom"), true, settings, null);
 
         var sent = await dispatcher.SendEventsAsync([nodeEvent], CancellationToken.None);
 
@@ -95,16 +95,16 @@ public class UT_NodeOpsDispatcher
     {
         var handler = new TestHttpMessageHandler();
         using var client = new HttpClient(handler);
-        var settings = NodeOpsSettings.Create(
+        var settings = NodeDiagnosticsSettings.Create(
             sinks:
             [
-                new NodeOpsSinkSettings(
+                new NodeDiagnosticsSinkSettings(
                     "betterstack",
-                    NodeOpsSinkKind.StatusMonitor,
-                    NodeOpsProvider.BetterStackHeartbeat,
+                    NodeDiagnosticsSinkKind.StatusMonitor,
+                    NodeDiagnosticsProvider.BetterStackHeartbeat,
                     new Uri("https://uptime.betterstack.com/api/v1/heartbeat/abcd"))
             ]);
-        using var dispatcher = new NodeOpsDispatcher(settings, client);
+        using var dispatcher = new NodeDiagnosticsDispatcher(settings, client);
 
         var sent = await dispatcher.SendHeartbeatAsync(CancellationToken.None);
 
@@ -118,19 +118,19 @@ public class UT_NodeOpsDispatcher
     [TestMethod]
     public void TryEnqueue_ReturnsFalseWhenQueueIsFull()
     {
-        var settings = NodeOpsSettings.Create(
+        var settings = NodeDiagnosticsSettings.Create(
             sinks:
             [
-                new NodeOpsSinkSettings(
+                new NodeDiagnosticsSinkSettings(
                     "custom-errors",
-                    NodeOpsSinkKind.ErrorCollector,
-                    NodeOpsProvider.CustomWebhook,
+                    NodeDiagnosticsSinkKind.ErrorCollector,
+                    NodeDiagnosticsProvider.CustomWebhook,
                     new Uri("https://collector.example/v1/events"))
             ],
             maxQueueSize: 1,
             batchSize: 1);
-        using var dispatcher = new NodeOpsDispatcher(settings, new HttpClient(new TestHttpMessageHandler()));
-        var nodeEvent = NodeOpsEvent.FromException("UnhandledException", new Exception("first"), false, settings, null);
+        using var dispatcher = new NodeDiagnosticsDispatcher(settings, new HttpClient(new TestHttpMessageHandler()));
+        var nodeEvent = NodeDiagnosticsEvent.FromException("UnhandledException", new Exception("first"), false, settings, null);
 
         Assert.IsTrue(dispatcher.TryEnqueue(nodeEvent));
         Assert.IsFalse(dispatcher.TryEnqueue(nodeEvent));
@@ -144,18 +144,18 @@ public class UT_NodeOpsDispatcher
             Delay = TimeSpan.FromMilliseconds(200)
         };
         using var client = new HttpClient(handler);
-        var settings = NodeOpsSettings.Create(
+        var settings = NodeDiagnosticsSettings.Create(
             sinks:
             [
-                new NodeOpsSinkSettings(
+                new NodeDiagnosticsSinkSettings(
                     "custom-errors",
-                    NodeOpsSinkKind.ErrorCollector,
-                    NodeOpsProvider.CustomWebhook,
+                    NodeDiagnosticsSinkKind.ErrorCollector,
+                    NodeDiagnosticsProvider.CustomWebhook,
                     new Uri("https://collector.example/v1/events"))
             ],
             requestTimeoutMilliseconds: 50);
-        using var dispatcher = new NodeOpsDispatcher(settings, client);
-        var nodeEvent = NodeOpsEvent.FromException("UnhandledException", new Exception("timeout"), false, settings, null);
+        using var dispatcher = new NodeDiagnosticsDispatcher(settings, client);
+        var nodeEvent = NodeDiagnosticsEvent.FromException("UnhandledException", new Exception("timeout"), false, settings, null);
 
         var sent = await dispatcher.SendEventsAsync([nodeEvent], CancellationToken.None);
 
@@ -171,19 +171,19 @@ public class UT_NodeOpsDispatcher
             Delay = TimeSpan.FromMilliseconds(200)
         };
         using var client = new HttpClient(handler);
-        var settings = NodeOpsSettings.Create(
+        var settings = NodeDiagnosticsSettings.Create(
             sinks:
             [
-                new NodeOpsSinkSettings(
+                new NodeDiagnosticsSinkSettings(
                     "custom-errors",
-                    NodeOpsSinkKind.ErrorCollector,
-                    NodeOpsProvider.CustomWebhook,
+                    NodeDiagnosticsSinkKind.ErrorCollector,
+                    NodeDiagnosticsProvider.CustomWebhook,
                     new Uri("https://collector.example/v1/events"))
             ],
             requestTimeoutMilliseconds: 1000,
             flushTimeoutMilliseconds: 50);
-        using var dispatcher = new NodeOpsDispatcher(settings, client);
-        var nodeEvent = NodeOpsEvent.FromException("UnhandledException", new Exception("fatal"), true, settings, null);
+        using var dispatcher = new NodeDiagnosticsDispatcher(settings, client);
+        var nodeEvent = NodeDiagnosticsEvent.FromException("UnhandledException", new Exception("fatal"), true, settings, null);
 
         Assert.IsFalse(dispatcher.SendNow(nodeEvent));
     }
