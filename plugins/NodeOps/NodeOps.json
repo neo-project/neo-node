@@ -1,0 +1,70 @@
+{
+  "PluginConfiguration": {
+    "Environment": "production",
+    "ServiceName": "neo-node",
+    "NodeName": "",
+    "CaptureUnhandledExceptions": true,
+    "CaptureUnobservedTaskExceptions": true,
+    "IncludeStackTrace": true,
+    "HeartbeatIntervalSeconds": 60,
+    "MaxQueueSize": 1024,
+    "BatchSize": 10,
+    "MaxRetries": 3,
+    "RetryDelayMilliseconds": 1000,
+    "FlushTimeoutMilliseconds": 5000,
+    "MaxMessageLength": 4096,
+    "MaxStackTraceLength": 32768,
+    "Sinks": [
+      {
+        "Name": "custom-errors",
+        "Kind": "ErrorCollector",
+        "Provider": "CustomWebhook",
+        "Endpoint": "",
+        "Token": "",
+        "TokenHeader": "Authorization",
+        "TokenScheme": "Bearer",
+        "Headers": {},
+        "MinimumSeverity": "Error"
+      },
+      {
+        "Name": "sentry",
+        "Kind": "ErrorCollector",
+        "Provider": "Sentry",
+        "Endpoint": "",
+        "Token": "",
+        "Headers": {},
+        "MinimumSeverity": "Error"
+      },
+      {
+        "Name": "google-cloud-error-reporting",
+        "Kind": "ErrorCollector",
+        "Provider": "GoogleCloudErrorReporting",
+        "Endpoint": "",
+        "Token": "",
+        "Headers": {},
+        "MinimumSeverity": "Error"
+      },
+      {
+        "Name": "betterstack-heartbeat",
+        "Kind": "StatusMonitor",
+        "Provider": "BetterStackHeartbeat",
+        "Endpoint": "",
+        "Method": "GET",
+        "Headers": {}
+      },
+      {
+        "Name": "ops-notifications",
+        "Kind": "Notification",
+        "Provider": "CustomWebhook",
+        "Endpoint": "",
+        "Token": "",
+        "TokenHeader": "Authorization",
+        "TokenScheme": "Bearer",
+        "Headers": {},
+        "MinimumSeverity": "Error"
+      }
+    ],
+    "UnhandledExceptionPolicy": "Ignore"
+  },
+  "Dependency": []
+}

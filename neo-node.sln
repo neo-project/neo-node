@@ -49,9 +49,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TokensTracker", "plugins\To
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeferredRelay", "plugins\DeferredRelay\DeferredRelay.csproj", "{7E3A9C12-4B5D-6E8F-A901-23456789ABCD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ErrorReporting", "plugins\ErrorReporting\ErrorReporting.csproj", "{12CB1904-A8A3-43D6-8280-3806490E3857}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodeOps", "plugins\NodeOps\NodeOps.csproj", "{12CB1904-A8A3-43D6-8280-3806490E3857}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Neo.Plugins.ErrorReporting.Tests", "tests\Neo.Plugins.ErrorReporting.Tests\Neo.Plugins.ErrorReporting.Tests.csproj", "{2644BA1A-A942-4257-8AC8-48607540572F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Neo.Plugins.NodeOps.Tests", "tests\Neo.Plugins.NodeOps.Tests\Neo.Plugins.NodeOps.Tests.csproj", "{2644BA1A-A942-4257-8AC8-48607540572F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Neo.Cryptography.MPTTrie.Tests", "tests\Neo.Cryptography.MPTTrie.Tests\Neo.Cryptography.MPTTrie.Tests.csproj", "{1A6EB5BA-2FCD-3056-1C01-FC6FA24EF09C}"
 EndProject

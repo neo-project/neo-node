@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\plugins\NodeOps\NodeOps.csproj" />
+  </ItemGroup>
+
+</Project>

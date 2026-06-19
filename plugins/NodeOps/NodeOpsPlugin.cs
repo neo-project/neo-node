@@ -1,6 +1,6 @@
 // Copyright (C) 2015-2026 The Neo Project.
 //
-// ErrorReportingPlugin.cs file belongs to the neo project and is free
+// NodeOpsPlugin.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
 // accompanying file LICENSE in the main directory of the
 // repository or http://www.opensource.org/licenses/mit-license.php
@@ -11,25 +11,25 @@
 
 using static System.IO.Path;
 
-namespace Neo.Plugins.ErrorReporting;
+namespace Neo.Plugins.NodeOps;
 
-public sealed class ErrorReportingPlugin : Plugin
+public sealed class NodeOpsPlugin : Plugin
 {
-    private ErrorReportingSettings _settings = ErrorReportingSettings.Default;
-    private ErrorReportDispatcher? _dispatcher;
+    private NodeOpsSettings _settings = NodeOpsSettings.Default;
+    private NodeOpsDispatcher? _dispatcher;
     private NeoSystem? _system;
     private bool _subscribedUnhandledExceptions;
     private bool _subscribedUnobservedTaskExceptions;
 
-    public override string Name => "ErrorReporting";
-    public override string Description => "Collects node crash and runtime error details and uploads them to a configured error reporting endpoint.";
-    public override string ConfigFile => Combine(RootPath, "ErrorReporting.json");
+    public override string Name => "NodeOps";
+    public override string Description => "Collects node operations events, reports failures, and publishes status heartbeats to configured monitoring services.";
+    public override string ConfigFile => Combine(RootPath, "NodeOps.json");
     protected override UnhandledExceptionPolicy ExceptionPolicy => _settings.ExceptionPolicy;
 
     protected override void Configure()
     {
-        ErrorReportingSettings.Load(GetConfiguration());
-        _settings = ErrorReportingSettings.Default;
+        NodeOpsSettings.Load(GetConfiguration());
+        _settings = NodeOpsSettings.Default;
     }
 
     protected override void OnSystemLoaded(NeoSystem system)
@@ -38,14 +38,15 @@ public sealed class ErrorReportingPlugin : Plugin
 
         if (!_settings.Enabled)
         {
-            Logs.RuntimeLogger.Information("ErrorReporting plugin is disabled");
+            Logs.RuntimeLogger.Information("NodeOps plugin is disabled");
             return;
         }
 
-        _dispatcher = new ErrorReportDispatcher(_settings);
+        _dispatcher = new NodeOpsDispatcher(_settings, () => _system);
         _dispatcher.Start();
-        Subscribe();
-        Logs.RuntimeLogger.Information("ErrorReporting plugin started");
+        if (_settings.HasEventSinks)
+            Subscribe();
+        Logs.RuntimeLogger.Information("NodeOps plugin started");
     }
 
     public override void Dispose()
@@ -90,8 +91,8 @@ public sealed class ErrorReportingPlugin : Plugin
         if (_dispatcher is null) return;
 
         var report = e.ExceptionObject is Exception exception
-            ? ErrorReport.FromException("UnhandledException", exception, e.IsTerminating, _settings, _system)
-            : ErrorReport.FromObject("UnhandledException", e.ExceptionObject, e.IsTerminating, _settings, _system);
+            ? NodeOpsEvent.FromException("UnhandledException", exception, e.IsTerminating, _settings, _system)
+            : NodeOpsEvent.FromObject("UnhandledException", e.ExceptionObject, e.IsTerminating, _settings, _system);
 
         if (e.IsTerminating)
             _dispatcher.SendNow(report);
@@ -103,7 +104,7 @@ public sealed class ErrorReportingPlugin : Plugin
     {
         if (_dispatcher is null) return;
 
-        var report = ErrorReport.FromException("UnobservedTaskException", e.Exception, false, _settings, _system);
+        var report = NodeOpsEvent.FromException("UnobservedTaskException", e.Exception, false, _settings, _system);
         _dispatcher.TryEnqueue(report);
     }
 }

@@ -1,6 +1,6 @@
 // Copyright (C) 2015-2026 The Neo Project.
 //
-// ErrorReport.cs file belongs to the neo project and is free
+// NodeOpsEvent.cs file belongs to the neo project and is free
 // software distributed under the MIT software license, see the
 // accompanying file LICENSE in the main directory of the
 // repository or http://www.opensource.org/licenses/mit-license.php
@@ -15,9 +15,9 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Neo.Plugins.ErrorReporting;
+namespace Neo.Plugins.NodeOps;
 
-internal sealed record ErrorReport(
+internal sealed record NodeOpsEvent(
     string EventId,
     string EventType,
     string Severity,
@@ -39,14 +39,16 @@ internal sealed record ErrorReport(
     string? NodeVersion,
     string? PluginVersion)
 {
-    public static ErrorReport FromException(string eventType, Exception exception, bool isTerminating, ErrorReportingSettings settings, NeoSystem? system)
+    public bool IsHeartbeat => EventType == "Heartbeat";
+
+    public static NodeOpsEvent FromException(string eventType, Exception exception, bool isTerminating, NodeOpsSettings settings, NeoSystem? system)
     {
         var message = Truncate(exception.GetBaseException().Message, settings.MaxMessageLength);
         var stackTrace = settings.IncludeStackTrace
             ? Truncate(exception.ToString(), settings.MaxStackTraceLength)
             : null;
 
-        return new ErrorReport(
+        return new NodeOpsEvent(
             EventId: Guid.NewGuid().ToString("N"),
             EventType: eventType,
             Severity: isTerminating ? "fatal" : "error",
@@ -66,13 +68,13 @@ internal sealed record ErrorReport(
             NodeName: string.IsNullOrWhiteSpace(settings.NodeName) ? null : settings.NodeName,
             Network: system?.Settings.Network,
             NodeVersion: Assembly.GetEntryAssembly()?.GetName().Version?.ToString(),
-            PluginVersion: typeof(ErrorReportingPlugin).Assembly.GetName().Version?.ToString());
+            PluginVersion: typeof(NodeOpsPlugin).Assembly.GetName().Version?.ToString());
     }
 
-    public static ErrorReport FromObject(string eventType, object value, bool isTerminating, ErrorReportingSettings settings, NeoSystem? system)
+    public static NodeOpsEvent FromObject(string eventType, object value, bool isTerminating, NodeOpsSettings settings, NeoSystem? system)
     {
         var message = Truncate(value.ToString() ?? value.GetType().FullName ?? "Unknown non-exception error", settings.MaxMessageLength);
-        return new ErrorReport(
+        return new NodeOpsEvent(
             EventId: Guid.NewGuid().ToString("N"),
             EventType: eventType,
             Severity: isTerminating ? "fatal" : "error",
@@ -92,7 +94,32 @@ internal sealed record ErrorReport(
             NodeName: string.IsNullOrWhiteSpace(settings.NodeName) ? null : settings.NodeName,
             Network: system?.Settings.Network,
             NodeVersion: Assembly.GetEntryAssembly()?.GetName().Version?.ToString(),
-            PluginVersion: typeof(ErrorReportingPlugin).Assembly.GetName().Version?.ToString());
+            PluginVersion: typeof(NodeOpsPlugin).Assembly.GetName().Version?.ToString());
+    }
+
+    public static NodeOpsEvent Heartbeat(NodeOpsSettings settings, NeoSystem? system)
+    {
+        return new NodeOpsEvent(
+            EventId: Guid.NewGuid().ToString("N"),
+            EventType: "Heartbeat",
+            Severity: "info",
+            Message: "Node heartbeat",
+            ExceptionType: null,
+            StackTrace: null,
+            Source: null,
+            Fingerprint: CreateFingerprint($"Heartbeat:{settings.ServiceName}:{settings.Environment}:{settings.NodeName}"),
+            IsTerminating: false,
+            Timestamp: DateTimeOffset.UtcNow,
+            RuntimeVersion: RuntimeInformation.FrameworkDescription,
+            OSDescription: RuntimeInformation.OSDescription,
+            ProcessArchitecture: RuntimeInformation.ProcessArchitecture.ToString(),
+            ProcessId: System.Environment.ProcessId,
+            ServiceName: settings.ServiceName,
+            Environment: settings.Environment,
+            NodeName: string.IsNullOrWhiteSpace(settings.NodeName) ? null : settings.NodeName,
+            Network: system?.Settings.Network,
+            NodeVersion: Assembly.GetEntryAssembly()?.GetName().Version?.ToString(),
+            PluginVersion: typeof(NodeOpsPlugin).Assembly.GetName().Version?.ToString());
     }
 
     private static string CreateFingerprint(Exception exception)

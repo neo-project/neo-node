@@ -1,7 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\Plugins\ErrorReporting\ErrorReporting.csproj" />
-  </ItemGroup>
-
-</Project>
