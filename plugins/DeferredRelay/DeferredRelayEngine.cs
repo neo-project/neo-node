@@ -265,6 +265,20 @@ internal static class DeferredRelayEngine
             store.Delete(key);
     }
 
+    internal static bool TryGetCurrentHeight(IReadOnlyStore snapshot, out uint height)
+    {
+        try
+        {
+            height = NativeContract.Ledger.CurrentIndex(snapshot);
+            return true;
+        }
+        catch (KeyNotFoundException)
+        {
+            height = 0;
+            return false;
+        }
+    }
+
     /// <summary>
     /// Returns store keys to evict and surviving transactions (stable store order, fee-aggregation aware).
     /// </summary>
@@ -282,7 +296,8 @@ internal static class DeferredRelayEngine
             return;
 
         var snapshot = system.StoreView;
-        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        if (!TryGetCurrentHeight(snapshot, out uint height))
+            return;
         List<(byte[] Key, Transaction Tx)> candidates = [];
 
         foreach ((byte[] key, byte[] value) in store.Find())

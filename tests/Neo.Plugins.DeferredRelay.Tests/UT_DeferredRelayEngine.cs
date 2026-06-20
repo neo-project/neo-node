@@ -364,6 +364,16 @@ public class UT_DeferredRelayEngine
     }
 
     [TestMethod]
+    public void TryGetCurrentHeight_UninitializedLedger_ReturnsFalse()
+    {
+        var store = new MemoryStore();
+        using var snapshot = new StoreCache(store);
+
+        Assert.IsFalse(DeferredRelayEngine.TryGetCurrentHeight(snapshot, out uint height));
+        Assert.AreEqual(0u, height);
+    }
+
+    [TestMethod]
     public void CreateQueueState_CompactsStoreAndBootstrapsCounter()
     {
         var store = new MemoryStore();
