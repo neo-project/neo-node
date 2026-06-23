@@ -644,8 +644,7 @@ partial class UT_RpcServer
             Assert.AreEqual(VerifyResult.Succeed, _neoSystem.MemPool.TryAdd(tx, snapshot),
                 "Pre-seeding the mempool with the test tx should succeed.");
 
-            var signAndRelay = typeof(RpcServer).GetMethod(
-                "SignAndRelay", BindingFlags.NonPublic | BindingFlags.Instance);
+            var signAndRelay = GetSignAndRelayMethod();
             Assert.IsNotNull(signAndRelay, "SignAndRelay private method should exist.");
 
             var invokeException = Assert.ThrowsExactly<TargetInvocationException>(
@@ -723,6 +722,97 @@ partial class UT_RpcServer
             () => new StorageItem(20L)).Set(20L);
         snapshot.GetAndChange(new KeyBuilder(NativeContract.Policy.Id, Prefix_ExecFeeFactor),
             () => new StorageItem((uint)ApplicationEngine.FeeFactor)).Set((uint)ApplicationEngine.FeeFactor);
+    }
+
+    [TestMethod]
+    public void TestSignAndRelay_RaisesNetworkFeeWhenBelowCalculated()
+    {
+        _rpcServer.wallet = _wallet;
+        try
+        {
+            var snapshot = _neoSystem.GetSnapshotCache();
+            var tx = _wallet.MakeTransaction(snapshot, [
+                new TransferOutput
+                {
+                    AssetId = NativeContract.GAS.Hash,
+                    ScriptHash = _walletAccount.ScriptHash,
+                    Value = new BigDecimal(BigInteger.One, 8)
+                }
+            ]);
+            Assert.IsNotNull(tx);
+            tx.NetworkFee = 0;
+            tx.Witnesses = [];
+
+            var result = (JObject)InvokeSignAndRelay(snapshot, tx)!;
+            var netfee = long.Parse(result["netfee"]!.AsString());
+            Assert.IsGreaterThan(0, netfee);
+            Assert.AreEqual(netfee, tx.NetworkFee);
+
+            var expected = tx.CalculateNetworkFee(snapshot, _neoSystem.Settings, _wallet);
+            Assert.AreEqual(expected, netfee);
+        }
+        finally
+        {
+            _rpcServer.wallet = null;
+        }
+    }
+
+    [TestMethod]
+    public void TestSignAndRelay_InsufficientFunds_WhenBalanceTooLow()
+    {
+        _rpcServer.wallet = _wallet;
+        try
+        {
+            var snapshot = _neoSystem.GetSnapshotCache();
+            var tx = TestUtils.CreateValidTx(snapshot, _wallet, _walletAccount);
+            SetGasBalance(snapshot, _walletAccount.ScriptHash, 1);
+
+            var invokeException = Assert.ThrowsExactly<TargetInvocationException>(
+                () => InvokeSignAndRelay(snapshot, tx));
+            Assert.IsInstanceOfType<RpcException>(invokeException.InnerException);
+            Assert.AreEqual(RpcError.InsufficientFunds.Code, ((RpcException)invokeException.InnerException!).HResult);
+        }
+        finally
+        {
+            _rpcServer.wallet = null;
+        }
+    }
+
+    [TestMethod]
+    public void TestSignAndRelay_WalletFeeLimit_WhenNetworkFeeExceedsMaxFee()
+    {
+        var strictFeeServer = new RpcServer(_neoSystem, _rpcServerSettings with { MaxFee = 1 });
+        strictFeeServer.wallet = _wallet;
+        try
+        {
+            var snapshot = _neoSystem.GetSnapshotCache();
+            var tx = TestUtils.CreateValidTx(snapshot, _wallet, _walletAccount);
+
+            var invokeException = Assert.ThrowsExactly<TargetInvocationException>(
+                () => InvokeSignAndRelay(strictFeeServer, snapshot, tx));
+            Assert.IsInstanceOfType<RpcException>(invokeException.InnerException);
+            Assert.AreEqual(RpcError.WalletFeeLimit.Code, ((RpcException)invokeException.InnerException!).HResult);
+        }
+        finally
+        {
+            strictFeeServer.wallet = null;
+        }
+    }
+
+    private object InvokeSignAndRelay(DataCache snapshot, Transaction tx) =>
+        InvokeSignAndRelay(_rpcServer, snapshot, tx);
+
+    private static object InvokeSignAndRelay(RpcServer server, DataCache snapshot, Transaction tx) =>
+        GetSignAndRelayMethod().Invoke(server, [snapshot, tx])!;
+
+    private static MethodInfo GetSignAndRelayMethod() =>
+        typeof(RpcServer).GetMethod("SignAndRelay", BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+    private static void SetGasBalance(DataCache snapshot, UInt160 scriptHash, BigInteger balance)
+    {
+        var key = new KeyBuilder(NativeContract.GAS.Id, 20).Add(scriptHash);
+        var entry = snapshot.GetAndChange(key, () => new StorageItem(new AccountState()));
+        entry.GetInteroperable<AccountState>().Balance = balance;
     }
 
     [TestMethod]
