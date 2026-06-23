@@ -941,24 +941,33 @@ partial class RpcServer
         var wallet = CheckWallet();
         var context = new ContractParametersContext(snapshot, tx, system.Settings.Network);
         wallet.Sign(context);
-        if (context.Completed)
-        {
-            tx.Witnesses = context.GetWitnesses();
-            // Check MaxFee
-            long calFee = tx.Size * NativeContract.Policy.GetFeePerByte(snapshot) + 100000;
-            if (tx.NetworkFee < calFee)
-                tx.NetworkFee = calFee;
-            (tx.NetworkFee <= settings.MaxFee).True_Or(RpcError.WalletFeeLimit);
-            // Relay it
-            var relayResult = system.Blockchain.Ask<Blockchain.RelayResult>(tx, TimeSpan.FromSeconds(30)).Result;
-            // GetRelayResult throws RpcException for any non-Succeed reason; its JObject return value
-            // (only { "hash": ... }) is discarded because wallet RPCs return the full tx JSON.
-            GetRelayResult(relayResult.Result, tx.Hash);
-            return tx.ToJson(system.Settings);
-        }
-        else
-        {
+        if (!context.Completed)
             return context.ToJson();
+
+        tx.Witnesses = context.GetWitnesses();
+
+        // Align with MakeTransaction, calculatenetworkfee RPC, and on-chain verification.
+        var calculatedFee = tx.CalculateNetworkFee(snapshot, system.Settings, wallet);
+        if (calculatedFee > tx.NetworkFee)
+        {
+            tx.NetworkFee = calculatedFee;
+            context = new ContractParametersContext(snapshot, tx, system.Settings.Network);
+            wallet.Sign(context);
+            if (!context.Completed)
+                return context.ToJson();
+            tx.Witnesses = context.GetWitnesses();
         }
+
+        if (NativeContract.GAS.BalanceOf(snapshot, tx.Sender) < tx.SystemFee + tx.NetworkFee)
+            throw new RpcException(RpcError.InsufficientFunds);
+
+        if (tx.NetworkFee > settings.MaxFee)
+            throw new RpcException(RpcError.WalletFeeLimit);
+
+        var relayResult = system.Blockchain.Ask<Blockchain.RelayResult>(tx, TimeSpan.FromSeconds(30)).Result;
+        // GetRelayResult throws RpcException for any non-Succeed reason; its JObject return value
+        // (only { "hash": ... }) is discarded because wallet RPCs return the full tx JSON.
+        GetRelayResult(relayResult.Result, tx.Hash);
+        return tx.ToJson(system.Settings);
     }
 }
