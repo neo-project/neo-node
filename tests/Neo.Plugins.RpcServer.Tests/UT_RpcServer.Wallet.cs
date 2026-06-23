@@ -781,8 +781,10 @@ partial class UT_RpcServer
     [TestMethod]
     public void TestSignAndRelay_WalletFeeLimit_WhenNetworkFeeExceedsMaxFee()
     {
-        var strictFeeServer = new RpcServer(_neoSystem, _rpcServerSettings with { MaxFee = 1 });
-        strictFeeServer.wallet = _wallet;
+        var strictFeeServer = new RpcServer(_neoSystem, _rpcServerSettings with { MaxFee = 1 })
+        {
+            wallet = _wallet
+        };
         try
         {
             var snapshot = _neoSystem.GetSnapshotCache();
