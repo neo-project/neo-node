@@ -4,10 +4,10 @@ cd /neo
 
 rm -f neo.log
 
-if [ -x ./neo-cli/neo-cli ]; then
-    NEO_CLI=./neo-cli/neo-cli
-else
-    NEO_CLI=./neo-cli
+NEO_CLI="./${NEO_CLI_DIR}/neo-cli"
+if [ ! -x "$NEO_CLI" ]; then
+    echo "Error: neo-cli executable not found at $NEO_CLI" >&2
+    exit 1
 fi
 
 screen -L -Logfile neo.log -dmS neo "$NEO_CLI"
