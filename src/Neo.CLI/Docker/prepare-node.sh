@@ -1,16 +1,15 @@
 echo "Downloading neo node $1"
+NEO_DIR="neo-cli-$1"
 ARCHIVE="neo-cli.$1-linux-x64.tar.gz"
 wget "https://github.com/neo-project/neo-node/releases/download/$1/$ARCHIVE"
 tar -xzf "$ARCHIVE"
 
-if [ -d neo-cli ]; then
-    PLUGIN_DIR=./neo-cli
-elif [ -f neo-cli ]; then
-    PLUGIN_DIR=.
-else
-    echo "Error: unexpected neo-cli layout after unzip" >&2
+if [ ! -d "$NEO_DIR" ]; then
+    echo "Error: expected directory $NEO_DIR after extracting $ARCHIVE" >&2
     exit 1
 fi
+
+PLUGIN_DIR="./$NEO_DIR"
 
 if [ -z "$2" ]; then
     echo "Downloading plugins $1"

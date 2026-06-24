@@ -183,19 +183,27 @@ jobs:
           local platform=$1
           local publish_dir="./publish/$platform"
           local archive_base="neo-cli.${RELEASE_VERSION}-${platform}"
+          local package_root="neo-cli-${RELEASE_VERSION}"
+          local stage_dir="./publish/stage-$platform"
+
+          rm -rf "$stage_dir"
+          mkdir -p "$stage_dir/$package_root"
+          cp -a "$publish_dir/." "$stage_dir/$package_root/"
 
           case "$platform" in
             portable|win-*)
-              (cd "$publish_dir" && zip -r "../../${archive_base}.zip" .)
+              (cd "$stage_dir" && zip -r "../../${archive_base}.zip" "$package_root")
               ;;
             linux-*|osx-*)
-              tar -czf "${archive_base}.tar.gz" -C "$publish_dir" .
+              tar -czf "${archive_base}.tar.gz" -C "$stage_dir" "$package_root"
               ;;
             *)
               echo "Error: Unknown platform: $platform" >&2
               exit 1
               ;;
           esac
+
+          rm -rf "$stage_dir"
         }
         
         # Traditional framework-dependent publish used only for plugin dependency diffing
