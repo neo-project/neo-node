@@ -63,7 +63,7 @@ Configure the plugin in `NodeDiagnostics.json`.
 
 Do not commit production tokens to source control. Prefer injecting the final plugin configuration from deployment tooling or a secret manager.
 
-Endpoints that send `Token` headers must use HTTPS. Plain HTTP is only accepted for unauthenticated local development or trusted internal test endpoints.
+Endpoints that send `Token` values or credential headers such as `Authorization`, `X-Api-Key`, or `X-Sentry-Auth` must use HTTPS. Plain HTTP is only accepted for unauthenticated local development or trusted internal test endpoints.
 
 Set `SendStartupDiagnosticEvent` to `true` during rollout if you want the plugin to send a single error-level diagnostic event on startup. This is useful for confirming that endpoint, token, header, and payload settings are accepted by the target platform. Turn it off after validation if the target platform should only receive real failures.
 

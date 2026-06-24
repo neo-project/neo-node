@@ -39,6 +39,15 @@ internal enum NodeDiagnosticsSeverity
 
 internal sealed class NodeDiagnosticsSinkSettings
 {
+    private static readonly string[] CredentialHeaderNames =
+    [
+        "Authorization",
+        "Proxy-Authorization",
+        "X-Api-Key",
+        "X-Auth-Token",
+        "X-Sentry-Auth"
+    ];
+
     public string Name { get; }
     public string Description { get; }
     public NodeDiagnosticsSinkKind Kind { get; }
@@ -138,7 +147,19 @@ internal sealed class NodeDiagnosticsSinkSettings
             throw new ArgumentException("Method must be GET, POST, or PUT.", nameof(Method));
         if (!string.IsNullOrEmpty(Token) && string.IsNullOrWhiteSpace(TokenHeader))
             throw new ArgumentException("TokenHeader cannot be empty when Token is configured.", nameof(TokenHeader));
-        if (Enabled && !string.IsNullOrEmpty(Token) && Endpoint!.Scheme != Uri.UriSchemeHttps)
-            throw new ArgumentException("Token requires an HTTPS endpoint.", nameof(Endpoint));
+        if (Enabled && Endpoint!.Scheme != Uri.UriSchemeHttps && SendsCredentials())
+            throw new ArgumentException("Credentials require an HTTPS endpoint.", nameof(Endpoint));
+        if (Provider is NodeDiagnosticsProvider.BetterStackHeartbeat or NodeDiagnosticsProvider.HealthchecksHeartbeat
+            && Kind != NodeDiagnosticsSinkKind.StatusMonitor)
+            throw new ArgumentException("Heartbeat providers must use StatusMonitor sinks.", nameof(Kind));
+        if (Provider is NodeDiagnosticsProvider.Sentry or NodeDiagnosticsProvider.GoogleCloudErrorReporting
+            && Kind != NodeDiagnosticsSinkKind.ErrorCollector)
+            throw new ArgumentException("Error reporting providers must use ErrorCollector sinks.", nameof(Kind));
+    }
+
+    private bool SendsCredentials()
+    {
+        if (!string.IsNullOrEmpty(Token)) return true;
+        return Headers.Keys.Any(header => CredentialHeaderNames.Contains(header, StringComparer.OrdinalIgnoreCase));
     }
 }

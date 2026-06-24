@@ -152,6 +152,90 @@ public class UT_NodeDiagnosticsSettings
     }
 
     [TestMethod]
+    public void Load_RejectsHttpEndpointWithCredentialHeader()
+    {
+        Assert.ThrowsExactly<ArgumentException>(() => NodeDiagnosticsSettings.Load(BuildSection("""
+        {
+          "PluginConfiguration": {
+            "Sinks": [
+              {
+                "Name": "plain-http",
+                "Kind": "ErrorCollector",
+                "Provider": "CustomWebhook",
+                "Endpoint": "http://collector.example/v1/events",
+                "Headers": {
+                  "Authorization": "Bearer secret"
+                }
+              }
+            ]
+          }
+        }
+        """)));
+    }
+
+    [TestMethod]
+    public void Load_AllowsHttpEndpointWithoutCredentials()
+    {
+        NodeDiagnosticsSettings.Load(BuildSection("""
+        {
+          "PluginConfiguration": {
+            "Sinks": [
+              {
+                "Name": "local-dev",
+                "Kind": "ErrorCollector",
+                "Provider": "CustomWebhook",
+                "Endpoint": "http://localhost:8080/events",
+                "Headers": {
+                  "X-Team": "ops"
+                }
+              }
+            ]
+          }
+        }
+        """));
+
+        Assert.IsTrue(NodeDiagnosticsSettings.Default.Enabled);
+    }
+
+    [TestMethod]
+    public void Load_RejectsHeartbeatProviderForErrorCollector()
+    {
+        Assert.ThrowsExactly<ArgumentException>(() => NodeDiagnosticsSettings.Load(BuildSection("""
+        {
+          "PluginConfiguration": {
+            "Sinks": [
+              {
+                "Name": "bad-heartbeat",
+                "Kind": "ErrorCollector",
+                "Provider": "BetterStackHeartbeat",
+                "Endpoint": "https://uptime.example/heartbeat"
+              }
+            ]
+          }
+        }
+        """)));
+    }
+
+    [TestMethod]
+    public void Load_RejectsErrorProviderForStatusMonitor()
+    {
+        Assert.ThrowsExactly<ArgumentException>(() => NodeDiagnosticsSettings.Load(BuildSection("""
+        {
+          "PluginConfiguration": {
+            "Sinks": [
+              {
+                "Name": "bad-status",
+                "Kind": "StatusMonitor",
+                "Provider": "Sentry",
+                "Endpoint": "https://sentry.example/api/123/store/"
+              }
+            ]
+          }
+        }
+        """)));
+    }
+
+    [TestMethod]
     public void Load_RejectsInvalidHeartbeatInterval()
     {
         Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => NodeDiagnosticsSettings.Load(BuildSection("""
