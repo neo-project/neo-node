@@ -14,11 +14,13 @@ using Neo.Extensions;
 using Neo.Json;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
+using Neo.Persistence;
 using Neo.Plugins.RpcServer.Model;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;
 using Neo.Wallets;
+using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
@@ -642,8 +644,7 @@ partial class UT_RpcServer
             Assert.AreEqual(VerifyResult.Succeed, _neoSystem.MemPool.TryAdd(tx, snapshot),
                 "Pre-seeding the mempool with the test tx should succeed.");
 
-            var signAndRelay = typeof(RpcServer).GetMethod(
-                "SignAndRelay", BindingFlags.NonPublic | BindingFlags.Instance);
+            var signAndRelay = GetSignAndRelayMethod();
             Assert.IsNotNull(signAndRelay, "SignAndRelay private method should exist.");
 
             var invokeException = Assert.ThrowsExactly<TargetInvocationException>(
@@ -662,6 +663,158 @@ partial class UT_RpcServer
         {
             _rpcServer.wallet = null;
         }
+    }
+
+    /// <summary>
+    /// Regression for issue #1069 on mainnet policy (feePerByte=20, execFeeFactor=1):
+    /// legacy SignAndRelay used size*feePerByte+100000 which always exceeded CalculateNetworkFee for single-sig txs.
+    /// </summary>
+    [TestMethod]
+    public void TestSendToAddress_MainnetPolicy_KeepsCalculatedNetworkFee()
+    {
+        var snapshot = _neoSystem.GetSnapshotCache();
+        SetMainnetPolicyFees(snapshot);
+        snapshot.Commit();
+
+        _rpcServer.wallet = _wallet;
+        try
+        {
+            var to = new Address(_walletAccount.ScriptHash, ProtocolSettings.Default.AddressVersion);
+            var resp = (JObject)_rpcServer.SendToAddress(NativeContract.GAS.Hash, to, "1");
+
+            var netfee = long.Parse(resp["netfee"]!.AsString());
+            var size = (int)resp["size"]!.AsNumber();
+            var feePerByte = NativeContract.Policy.GetFeePerByte(snapshot);
+            Assert.AreEqual(20L, feePerByte);
+            Assert.AreEqual(1L, NativeContract.Policy.GetExecFeeFactor(_neoSystem.Settings, snapshot,
+                NativeContract.Ledger.CurrentIndex(snapshot) + 1));
+
+            var legacyFloor = size * feePerByte + 100_000;
+            Assert.IsGreaterThan(netfee, legacyFloor,
+                "Correct NetworkFee must stay below the legacy RpcServer floor on mainnet policy.");
+
+            var probe = _wallet.MakeTransaction(snapshot, [
+                new TransferOutput
+                {
+                    AssetId = NativeContract.GAS.Hash,
+                    ScriptHash = to.ScriptHash,
+                    Value = new BigDecimal(BigInteger.One, 8)
+                }
+            ]);
+            Assert.IsNotNull(probe);
+            var ctx = new ContractParametersContext(snapshot, probe, _neoSystem.Settings.Network);
+            Assert.IsTrue(_wallet.Sign(ctx));
+            probe.Witnesses = ctx.GetWitnesses();
+            var expected = probe.CalculateNetworkFee(snapshot, _neoSystem.Settings, _wallet);
+            Assert.AreEqual(expected, netfee);
+        }
+        finally
+        {
+            _rpcServer.wallet = null;
+        }
+    }
+
+    private static void SetMainnetPolicyFees(DataCache snapshot)
+    {
+        const byte Prefix_FeePerByte = 10;
+        const byte Prefix_ExecFeeFactor = 18;
+        snapshot.GetAndChange(new KeyBuilder(NativeContract.Policy.Id, Prefix_FeePerByte),
+            () => new StorageItem(20L)).Set(20L);
+        snapshot.GetAndChange(new KeyBuilder(NativeContract.Policy.Id, Prefix_ExecFeeFactor),
+            () => new StorageItem((uint)ApplicationEngine.FeeFactor)).Set((uint)ApplicationEngine.FeeFactor);
+    }
+
+    [TestMethod]
+    public void TestSignAndRelay_RaisesNetworkFeeWhenBelowCalculated()
+    {
+        _rpcServer.wallet = _wallet;
+        try
+        {
+            var snapshot = _neoSystem.GetSnapshotCache();
+            var tx = _wallet.MakeTransaction(snapshot, [
+                new TransferOutput
+                {
+                    AssetId = NativeContract.GAS.Hash,
+                    ScriptHash = _walletAccount.ScriptHash,
+                    Value = new BigDecimal(BigInteger.One, 8)
+                }
+            ]);
+            Assert.IsNotNull(tx);
+            tx.NetworkFee = 0;
+            tx.Witnesses = [];
+
+            var result = (JObject)InvokeSignAndRelay(snapshot, tx)!;
+            var netfee = long.Parse(result["netfee"]!.AsString());
+            Assert.IsGreaterThan(0, netfee);
+            Assert.AreEqual(netfee, tx.NetworkFee);
+
+            var expected = tx.CalculateNetworkFee(snapshot, _neoSystem.Settings, _wallet);
+            Assert.AreEqual(expected, netfee);
+        }
+        finally
+        {
+            _rpcServer.wallet = null;
+        }
+    }
+
+    [TestMethod]
+    public void TestSignAndRelay_InsufficientFunds_WhenBalanceTooLow()
+    {
+        _rpcServer.wallet = _wallet;
+        try
+        {
+            var snapshot = _neoSystem.GetSnapshotCache();
+            var tx = TestUtils.CreateValidTx(snapshot, _wallet, _walletAccount);
+            SetGasBalance(snapshot, _walletAccount.ScriptHash, 1);
+
+            var invokeException = Assert.ThrowsExactly<TargetInvocationException>(
+                () => InvokeSignAndRelay(snapshot, tx));
+            Assert.IsInstanceOfType<RpcException>(invokeException.InnerException);
+            Assert.AreEqual(RpcError.InsufficientFunds.Code, ((RpcException)invokeException.InnerException!).HResult);
+        }
+        finally
+        {
+            _rpcServer.wallet = null;
+        }
+    }
+
+    [TestMethod]
+    public void TestSignAndRelay_WalletFeeLimit_WhenNetworkFeeExceedsMaxFee()
+    {
+        var strictFeeServer = new RpcServer(_neoSystem, _rpcServerSettings with { MaxFee = 1 })
+        {
+            wallet = _wallet
+        };
+        try
+        {
+            var snapshot = _neoSystem.GetSnapshotCache();
+            var tx = TestUtils.CreateValidTx(snapshot, _wallet, _walletAccount);
+
+            var invokeException = Assert.ThrowsExactly<TargetInvocationException>(
+                () => InvokeSignAndRelay(strictFeeServer, snapshot, tx));
+            Assert.IsInstanceOfType<RpcException>(invokeException.InnerException);
+            Assert.AreEqual(RpcError.WalletFeeLimit.Code, ((RpcException)invokeException.InnerException!).HResult);
+        }
+        finally
+        {
+            strictFeeServer.wallet = null;
+        }
+    }
+
+    private object InvokeSignAndRelay(DataCache snapshot, Transaction tx) =>
+        InvokeSignAndRelay(_rpcServer, snapshot, tx);
+
+    private static object InvokeSignAndRelay(RpcServer server, DataCache snapshot, Transaction tx) =>
+        GetSignAndRelayMethod().Invoke(server, [snapshot, tx])!;
+
+    private static MethodInfo GetSignAndRelayMethod() =>
+        typeof(RpcServer).GetMethod("SignAndRelay", BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+    private static void SetGasBalance(DataCache snapshot, UInt160 scriptHash, BigInteger balance)
+    {
+        var key = new KeyBuilder(NativeContract.GAS.Id, 20).Add(scriptHash);
+        var entry = snapshot.GetAndChange(key, () => new StorageItem(new AccountState()));
+        entry.GetInteroperable<AccountState>().Balance = balance;
     }
 
     [TestMethod]
