@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     sqlite3 \
     libsqlite3-dev \
     libunwind8-dev \
+    libleveldb-dev \
     screen \
     dos2unix \
     && rm -rf /var/lib/apt/lists/*
