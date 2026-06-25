@@ -15,9 +15,9 @@ if [ ! -f "${NEO_HOME}/libleveldb.so" ]; then
     exit 1
 fi
 
-# Run from the neo-cli directory so native libraries (libleveldb.so) are found
-cd "$NEO_HOME"
-screen -L -Logfile /neo/neo.log -dmS neo ./neo-cli
+# screen does not reliably keep the caller cwd; use explicit cd + absolute executable path
+screen -L -Logfile /neo/neo.log -dmS neo \
+    /bin/sh -c "cd '${NEO_HOME}' && exec '${NEO_CLI}'"
 
 while [ ! -f /neo/neo.log ]; do
   sleep 0.5
