@@ -146,6 +146,8 @@ jobs:
         dotnet build plugins/LevelDBStore/LevelDBStore.csproj -c Release
     - name: Build and package neo-cli for all platforms
       if: steps.check_tag.outputs.statusCode == '404'
+      env:
+        RELEASE_VERSION: ${{ steps.get_version.outputs.version }}
       run: |
         # Define platforms
         platforms=("portable" "linux-x64" "linux-arm64" "win-x64" "osx-x64" "osx-arm64")
@@ -176,12 +178,47 @@ jobs:
             find "$zip_dir" -name "*.dylib" -type f -exec cp {} "$target_dir/" \; 2>/dev/null || true
           fi
         }
+
+        package_publish_output() {
+          local platform=$1
+          local publish_dir="./publish/$platform"
+          local archive_base="neo-cli.${RELEASE_VERSION}-${platform}"
+          local package_root="neo-cli-${RELEASE_VERSION}"
+          local stage_dir="./publish/stage-$platform"
+
+          rm -rf "$stage_dir"
+          mkdir -p "$stage_dir/$package_root"
+          cp -a "$publish_dir/." "$stage_dir/$package_root/"
+
+          case "$platform" in
+            portable|win-*)
+              (cd "$stage_dir" && zip -r "../../${archive_base}.zip" "$package_root")
+              ;;
+            linux-*|osx-*)
+              tar -czf "${archive_base}.tar.gz" -C "$stage_dir" "$package_root"
+              ;;
+            *)
+              echo "Error: Unknown platform: $platform" >&2
+              exit 1
+              ;;
+          esac
+
+          rm -rf "$stage_dir"
+        }
         
+        # Traditional framework-dependent publish used only for plugin dependency diffing
+        dotnet publish src/Neo.CLI/Neo.CLI.csproj -c Release -o "./publish/baseline" --self-contained false
+
         for platform in "${platforms[@]}"; do
           if [ "$platform" == "portable" ]; then
-            dotnet publish src/Neo.CLI/Neo.CLI.csproj -c Release -o "./publish/$platform" --self-contained false
+            rm -rf "./publish/$platform"
+            cp -a "./publish/baseline" "./publish/$platform"
           else
-            dotnet publish src/Neo.CLI/Neo.CLI.csproj -c Release -o "./publish/$platform" -r "$platform" --self-contained true
+            dotnet publish src/Neo.CLI/Neo.CLI.csproj -c Release -o "./publish/$platform" -r "$platform" --self-contained true \
+              -p:PublishSingleFile=true \
+              -p:IncludeNativeLibrariesForSelfExtract=false \
+              -p:DebugType=none \
+              -p:DebugSymbols=false
           fi
           
           mkdir -p "./publish/$platform/Plugins/LevelDBStore"
@@ -199,7 +236,7 @@ jobs:
             esac
           fi
           
-          cd "./publish/$platform" && zip -r "../../neo-cli-$platform.zip" . && cd ../..
+          package_publish_output "$platform"
         done
 
     - name: Build and package plugins (zip per plugin)
@@ -207,16 +244,16 @@ jobs:
       run: |
         set -euo pipefail
 
-        # Use neo-cli portable publish output as the baseline set of assemblies
-        if [ ! -d "./publish/portable" ]; then
-          echo "Error: ./publish/portable not found. neo-cli portable must be published first."
+        # Use traditional neo-cli publish output as the baseline set of assemblies (not single-file releases)
+        if [ ! -d "./publish/baseline" ]; then
+          echo "Error: ./publish/baseline not found. neo-cli baseline must be published first."
           exit 1
         fi
 
         mkdir -p "./plugin-publish" "./plugin-zip"
 
-        # Collect baseline DLL filenames shipped with neo-cli portable
-        mapfile -t cli_dlls < <(find "./publish/portable" -maxdepth 1 -type f -name "*.dll" -printf "%f\n" | sort -u)
+        # Collect baseline DLL filenames shipped with neo-cli
+        mapfile -t cli_dlls < <(find "./publish/baseline" -maxdepth 1 -type f -name "*.dll" -printf "%f\n" | sort -u)
         declare -A cli_dll_set
         for f in "${cli_dlls[@]}"; do cli_dll_set["$f"]=1; done
 
@@ -259,7 +296,7 @@ jobs:
           # Only include extra dependency DLLs for plugins that explicitly reference NuGet packages.
           # This keeps "pure" project-reference plugins (e.g. DBFTPlugin) minimal: {Plugin}.dll (+ optional json).
           if grep -q "<PackageReference" "$csproj"; then
-            # Include only dlls that neo-cli portable does NOT already ship
+            # Include only dlls that neo-cli does NOT already ship
             shopt -s nullglob
             for dep in "$plugin_out"/*.dll; do
               dep_name="$(basename "$dep")"
@@ -295,6 +332,7 @@ jobs:
       if: steps.check_tag.outputs.statusCode == '404'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        RELEASE_VERSION: ${{ steps.get_version.outputs.version }}
       run: |
         RELEASE_TAG="${{ steps.get_version.outputs.version }}"
         
@@ -304,9 +342,17 @@ jobs:
           exit 1
         fi
         
-        # Verify all required zip files exist
+        # Verify all required archive files exist
         missing_files=()
-        for file in neo-cli-portable.zip neo-cli-linux-x64.zip neo-cli-linux-arm64.zip neo-cli-win-x64.zip neo-cli-osx-x64.zip neo-cli-osx-arm64.zip; do
+        cli_archives=(
+          "neo-cli.${RELEASE_VERSION}-portable.zip"
+          "neo-cli.${RELEASE_VERSION}-linux-x64.tar.gz"
+          "neo-cli.${RELEASE_VERSION}-linux-arm64.tar.gz"
+          "neo-cli.${RELEASE_VERSION}-win-x64.zip"
+          "neo-cli.${RELEASE_VERSION}-osx-x64.tar.gz"
+          "neo-cli.${RELEASE_VERSION}-osx-arm64.tar.gz"
+        )
+        for file in "${cli_archives[@]}"; do
           [ ! -f "$file" ] && missing_files+=("$file")
         done
 
@@ -319,13 +365,13 @@ jobs:
         done
         
         if [ ${#missing_files[@]} -gt 0 ]; then
-          echo "Error: Missing zip files: ${missing_files[*]}"
+          echo "Error: Missing archive files: ${missing_files[*]}"
           exit 1
         fi
         
-        # Upload all zip files to release
+        # Upload all CLI archives to release
         failed_files=()
-        for file in neo-cli-portable.zip neo-cli-linux-x64.zip neo-cli-linux-arm64.zip neo-cli-win-x64.zip neo-cli-osx-x64.zip neo-cli-osx-arm64.zip; do
+        for file in "${cli_archives[@]}"; do
           if ! gh release upload "$RELEASE_TAG" "$file" --clobber; then
             failed_files+=("$file")
           fi
