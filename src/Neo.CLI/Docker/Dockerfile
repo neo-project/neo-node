@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     sqlite3 \
     libsqlite3-dev \
     libunwind8-dev \
+    libleveldb-dev \
     screen \
     dos2unix \
     && rm -rf /var/lib/apt/lists/*
@@ -21,6 +22,9 @@ RUN dos2unix prepare-node.sh && chmod +x prepare-node.sh
 
 ARG CLI_VERSION=v3.10.0
 ARG PLUGIN_VERSION=
+ARG GITHUB_REPO=neo-project/neo-node
+ENV NEO_CLI_DIR=neo-cli-${CLI_VERSION}
+ENV GITHUB_REPO=${GITHUB_REPO}
 RUN if [ -z "$PLUGIN_VERSION" ]; then \
         ./prepare-node.sh $CLI_VERSION; \
     else \
@@ -28,5 +32,5 @@ RUN if [ -z "$PLUGIN_VERSION" ]; then \
     fi
 
 COPY start.sh .
-RUN dos2unix start.sh && if [ -d ./neo-cli ]; then chmod -R +x ./neo-cli; else chmod +x ./neo-cli; fi && chmod +x start.sh
+RUN dos2unix start.sh && chmod -R +x "${NEO_CLI_DIR}" && chmod +x start.sh
 ENTRYPOINT ["sh", "./start.sh"]
