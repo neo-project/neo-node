@@ -381,6 +381,7 @@ internal sealed class NodeDiagnosticsDispatcher : IDisposable
         }
         catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
         {
+            // Expected during plugin shutdown.
         }
         catch (Exception ex)
         {
@@ -400,6 +401,7 @@ internal sealed class NodeDiagnosticsDispatcher : IDisposable
         }
         catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
         {
+            // Expected during plugin shutdown.
         }
         catch (Exception ex)
         {
@@ -419,6 +421,7 @@ internal sealed class NodeDiagnosticsDispatcher : IDisposable
         }
         catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
         {
+            // Expected during plugin shutdown.
         }
         catch (Exception ex)
         {
