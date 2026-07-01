@@ -31,22 +31,18 @@ internal sealed class NodeDiagnosticsDispatcher : IDisposable
     private Task? _heartbeatWorker;
     private Task? _consensusStallWorker;
     private long _droppedEvents;
-    private readonly object _dropWarningLock = new();
+    private readonly Lock _dropWarningLock = new();
     private DateTimeOffset _lastDropWarning = DateTimeOffset.MinValue;
-    private readonly object _livenessLock = new();
+    private readonly Lock _livenessLock = new();
     private uint? _lastObservedBlockHeight;
     private DateTimeOffset? _lastBlockAdvanceAt;
     private uint? _lastReportedConsensusStallHeight;
 
     public NodeDiagnosticsDispatcher(NodeDiagnosticsSettings settings, Func<NeoSystem?> systemProvider)
-        : this(settings, systemProvider, new HttpClient(), disposeClient: true)
-    {
-    }
+        : this(settings, systemProvider, new HttpClient(), disposeClient: true) { }
 
     internal NodeDiagnosticsDispatcher(NodeDiagnosticsSettings settings, HttpClient httpClient, bool disposeClient = false)
-        : this(settings, () => null, httpClient, disposeClient)
-    {
-    }
+        : this(settings, () => null, httpClient, disposeClient) { }
 
     private NodeDiagnosticsDispatcher(NodeDiagnosticsSettings settings, Func<NeoSystem?> systemProvider, HttpClient httpClient, bool disposeClient)
     {
@@ -383,7 +379,7 @@ internal sealed class NodeDiagnosticsDispatcher : IDisposable
                 batch.Clear();
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
         {
         }
         catch (Exception ex)
@@ -402,7 +398,7 @@ internal sealed class NodeDiagnosticsDispatcher : IDisposable
                 await Task.Delay(_settings.HeartbeatInterval, _shutdown.Token).ConfigureAwait(false);
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
         {
         }
         catch (Exception ex)
@@ -421,7 +417,7 @@ internal sealed class NodeDiagnosticsDispatcher : IDisposable
                 await Task.Delay(ConsensusStallCheckInterval, _shutdown.Token).ConfigureAwait(false);
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
         {
         }
         catch (Exception ex)
