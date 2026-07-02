@@ -58,7 +58,7 @@ internal class Store : IStore
         ArgumentNullException.ThrowIfNull(start);
         ArgumentNullException.ThrowIfNull(end);
 
-        if (Helper.CompareLex(start, end) >= 0)
+        if (start.AsSpan().SequenceCompareTo(end) >= 0)
             yield break;
 
         using var it = _db.NewIterator();
@@ -68,7 +68,7 @@ internal class Store : IStore
             for (it.Seek(start); it.Valid(); it.Next())
             {
                 var key = it.Key();
-                if (Helper.CompareLex(key, end) >= 0)
+                if (key.AsSpan().SequenceCompareTo(end) >= 0)
                     break;
 
                 yield return (key, it.Value());
@@ -90,7 +90,7 @@ internal class Store : IStore
             for (; it.Valid(); it.Prev())
             {
                 var key = it.Key();
-                if (Helper.CompareLex(key, start) < 0)
+                if (key.AsSpan().SequenceCompareTo(start) < 0)
                     break;
 
                 yield return (key, it.Value());
