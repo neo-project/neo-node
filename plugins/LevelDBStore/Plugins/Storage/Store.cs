@@ -83,7 +83,7 @@ internal class Store : IStore, IEnumerable<KeyValuePair<byte[], byte[]>>
         ArgumentNullException.ThrowIfNull(start);
         ArgumentNullException.ThrowIfNull(end);
 
-        if (Helper.CompareLex(start, end) >= 0)
+        if (start.AsSpan().SequenceCompareTo(end) >= 0)
             yield break;
 
         using var iterator = _db.CreateIterator(ReadOptions.Default);
@@ -97,7 +97,7 @@ internal class Store : IStore, IEnumerable<KeyValuePair<byte[], byte[]>>
                 var key = iterator.Key();
                 if (key is null) break;
 
-                if (Helper.CompareLex(key, end) >= 0)
+                if (key.AsSpan().SequenceCompareTo(end) >= 0)
                     break;
 
                 yield return (key, iterator.Value()!);
@@ -122,7 +122,7 @@ internal class Store : IStore, IEnumerable<KeyValuePair<byte[], byte[]>>
                 var key = iterator.Key();
                 if (key is null) break;
 
-                if (Helper.CompareLex(key, start) < 0)
+                if (key.AsSpan().SequenceCompareTo(start) < 0)
                     break;
 
                 yield return (key, iterator.Value()!);
