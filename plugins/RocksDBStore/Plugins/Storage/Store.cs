@@ -43,14 +43,17 @@ internal class Store : IStore
     public IEnumerable<(byte[] Key, byte[] Value)> Find(byte[]? keyOrPrefix, SeekDirection direction = SeekDirection.Forward)
     {
         keyOrPrefix ??= [];
-
         using var it = _db.NewIterator();
         if (direction == SeekDirection.Forward)
+        {
             for (it.Seek(keyOrPrefix); it.Valid(); it.Next())
                 yield return (it.Key(), it.Value());
+        }
         else
+        {
             for (it.SeekForPrev(keyOrPrefix); it.Valid(); it.Prev())
                 yield return (it.Key(), it.Value());
+        }
     }
 
     public IEnumerable<(byte[] Key, byte[] Value)> FindRange(byte[] start, byte[] end, SeekDirection direction = SeekDirection.Forward)
@@ -58,43 +61,22 @@ internal class Store : IStore
         ArgumentNullException.ThrowIfNull(start);
         ArgumentNullException.ThrowIfNull(end);
 
-        if (start.AsSpan().SequenceCompareTo(end) >= 0)
+        var order = start.AsSpan().SequenceCompareTo(end);
+        if ((direction == SeekDirection.Forward && order >= 0) ||
+            (direction == SeekDirection.Backward && order <= 0))
+        {
             yield break;
-
-        using var it = _db.NewIterator();
-
-        if (direction == SeekDirection.Forward)
-        {
-            for (it.Seek(start); it.Valid(); it.Next())
-            {
-                var key = it.Key();
-                if (key.AsSpan().SequenceCompareTo(end) >= 0)
-                    break;
-
-                yield return (key, it.Value());
-            }
         }
-        else
+
+        foreach (var item in Find(start, direction))
         {
-            it.Seek(end);
-
-            if (!it.Valid())
+            order = item.Key.AsSpan().SequenceCompareTo(end);
+            if ((direction == SeekDirection.Forward && order >= 0) ||
+                (direction == SeekDirection.Backward && order <= 0))
             {
-                it.SeekToLast();
+                yield break; // end is the exclusive max key if forward, or the exclusive min key if backward
             }
-            else
-            {
-                it.Prev();
-            }
-
-            for (; it.Valid(); it.Prev())
-            {
-                var key = it.Key();
-                if (key.AsSpan().SequenceCompareTo(start) < 0)
-                    break;
-
-                yield return (key, it.Value());
-            }
+            yield return item;
         }
     }
 

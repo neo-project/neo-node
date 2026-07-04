@@ -16,7 +16,7 @@ namespace Neo.IO.Data.LevelDB;
 
 public static class Helper
 {
-    public static IEnumerable<(byte[], byte[])> Seek(this DB db, ReadOptions options, byte[]? keyOrPrefix, SeekDirection direction)
+    public static IEnumerable<(byte[] Key, byte[] Value)> Seek(this DB db, ReadOptions options, byte[]? keyOrPrefix, SeekDirection direction)
     {
         keyOrPrefix ??= [];
 
