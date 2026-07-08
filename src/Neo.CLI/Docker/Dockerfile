@@ -19,7 +19,7 @@ WORKDIR /neo
 COPY prepare-node.sh .
 RUN dos2unix prepare-node.sh && chmod +x prepare-node.sh
 
-ARG CLI_VERSION=v3.10.0
+ARG CLI_VERSION=v3.10.1
 ARG PLUGIN_VERSION=
 ENV NEO_CLI_DIR=neo-cli-${CLI_VERSION}
 RUN if [ -z "$PLUGIN_VERSION" ]; then \

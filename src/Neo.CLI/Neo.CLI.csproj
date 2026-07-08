@@ -12,8 +12,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Neo" Version="3.10.0" />
-    <PackageReference Include="System.CommandLine" Version="2.0.2" />
+    <PackageReference Include="Neo" Version="3.10.1" />
+    <PackageReference Include="System.CommandLine" Version="2.0.9" />
   </ItemGroup>
 
   <ItemGroup>
