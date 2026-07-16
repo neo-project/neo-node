@@ -17,8 +17,9 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /neo
-COPY prepare-node.sh .
-RUN dos2unix prepare-node.sh && chmod +x prepare-node.sh
+# CI may pre-stage release archives in this context; local builds download them in prepare-node.sh
+COPY . .
+RUN dos2unix prepare-node.sh start.sh && chmod +x prepare-node.sh start.sh
 
 ARG CLI_VERSION=v3.10.1
 ARG PLUGIN_VERSION=
@@ -29,8 +30,8 @@ RUN if [ -z "$PLUGIN_VERSION" ]; then \
         ./prepare-node.sh $CLI_VERSION; \
     else \
         ./prepare-node.sh $CLI_VERSION $PLUGIN_VERSION; \
-    fi
+    fi \
+    && rm -f neo-cli.*.tar.gz ApplicationLogs.zip RpcServer.zip TokensTracker.zip \
+    && chmod -R +x "${NEO_CLI_DIR}"
 
-COPY start.sh .
-RUN dos2unix start.sh && chmod -R +x "${NEO_CLI_DIR}" && chmod +x start.sh
 ENTRYPOINT ["sh", "./start.sh"]
