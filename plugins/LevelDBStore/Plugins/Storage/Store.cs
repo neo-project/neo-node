@@ -102,7 +102,9 @@ internal class Store : IStore, IEnumerable<KeyValuePair<byte[], byte[]>>
         }
     }
 
-    public IEnumerator<KeyValuePair<byte[], byte[]>> GetEnumerator() => _db.GetEnumerator();
+    public IEnumerator<KeyValuePair<byte[], byte[]>> GetEnumerator() =>
+        _db.GetEnumerator();
 
-    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() =>
+        GetEnumerator();
 }

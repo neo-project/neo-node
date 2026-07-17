@@ -9,6 +9,8 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+#pragma warning disable CS0618 // Type or member is obsolete
+
 using Neo.Persistence;
 using Neo.Persistence.Providers;
 
@@ -46,14 +48,16 @@ public class StoreTest
     public void TestMemory()
     {
         using var store = new MemoryStore();
-
         // Test all with the same store
+
         TestStorage(store);
 
         // Test with different storages
+
         TestPersistence(store);
 
         // Test snapshot
+
         TestSnapshot(store);
         TestMultiSnapshot(store);
     }
@@ -64,12 +68,15 @@ public class StoreTest
         using var store = s_levelDbStore.GetStore(Path_leveldb);
 
         // Test all with the same store
+
         TestStorage(store);
 
         // Test with different storages
+
         TestPersistence(store);
 
         // Test snapshot
+
         TestSnapshot(store);
         TestMultiSnapshot(store);
     }
@@ -80,12 +87,15 @@ public class StoreTest
         using var store = s_rocksDBStore.GetStore(Path_rocksdb);
 
         // Test all with the same store
+
         TestStorage(store);
 
         // Test with different storages
+
         TestPersistence(store);
 
         // Test snapshot
+
         TestSnapshot(store);
         TestMultiSnapshot(store);
     }
@@ -173,6 +183,7 @@ public class StoreTest
         Assert.IsFalse(store.Contains(key1));
 
         // Test seek in order
+
         store.Put([0x00, 0x00, 0x04], [0x04]);
         store.Put([0x00, 0x00, 0x00], [0x00]);
         store.Put([0x00, 0x00, 0x01], [0x01]);
@@ -180,6 +191,7 @@ public class StoreTest
         store.Put([0x00, 0x00, 0x03], [0x03]);
 
         // Seek Forward
+
         var entries = store.Find([0x00, 0x00, 0x02], SeekDirection.Forward).ToArray();
         Assert.HasCount(3, entries);
         CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x02 }, entries[0].Key);
@@ -223,6 +235,7 @@ public class StoreTest
         CollectionAssert.AreEqual(new byte[] { 0x04 }, entries[1].Value);
 
         // Seek Backward
+
         entries = store.Find([0x00, 0x00, 0x02], SeekDirection.Backward).ToArray();
         Assert.HasCount(3, entries);
         CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x02 }, entries[0].Key);
@@ -288,6 +301,7 @@ public class StoreTest
             Assert.IsEmpty(entries);
 
             // Seek Backward
+
             entries = snapshot.Find([0x00, 0x00, 0x02], SeekDirection.Backward).ToArray();
             Assert.HasCount(2, entries);
             CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x01 }, entries[0].Key);
@@ -316,6 +330,27 @@ public class StoreTest
             CollectionAssert.AreEqual(new byte[] { 0x01 }, entries[0].Value);
             CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x00 }, entries[1].Key);
             CollectionAssert.AreEqual(new byte[] { 0x00 }, entries[1].Value);
+
+            // FindRange Forward
+            entries = snapshot.FindRange([0x00, 0x00, 0x00], [0x00, 0x01, 0x02], SeekDirection.Forward).ToArray();
+            Assert.HasCount(2, entries);
+            CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x00 }, entries[0].Key);
+            CollectionAssert.AreEqual(new byte[] { 0x00 }, entries[0].Value);
+            CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x01 }, entries[1].Key);
+            CollectionAssert.AreEqual(new byte[] { 0x01 }, entries[1].Value);
+
+            // FindRange Backward
+            entries = snapshot.FindRange([0x00, 0x01, 0x02], [0x00, 0x00, 0x00], SeekDirection.Backward).ToArray();
+            Assert.HasCount(2, entries);
+            CollectionAssert.AreEqual(new byte[] { 0x00, 0x01, 0x02 }, entries[0].Key);
+            CollectionAssert.AreEqual(new byte[] { 0x02 }, entries[0].Value);
+            CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x01 }, entries[1].Key);
+            CollectionAssert.AreEqual(new byte[] { 0x01 }, entries[1].Value);
+
+            entries = snapshot.FindRange([0x00, 0x01, 0xFF], [0x00, 0x00, 0x01], SeekDirection.Backward).ToArray();
+            Assert.HasCount(1, entries);
+            CollectionAssert.AreEqual(new byte[] { 0x00, 0x01, 0x02 }, entries[0].Key);
+            CollectionAssert.AreEqual(new byte[] { 0x02 }, entries[0].Value);
 
             // Test keys with different lengths
             searchKey = [0x00, 0x01];
@@ -352,3 +387,5 @@ public class StoreTest
         Assert.IsNull(retvalue);
     }
 }
+
+#pragma warning restore CS0618 // Type or member is obsolete

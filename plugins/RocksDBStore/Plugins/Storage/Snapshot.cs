@@ -62,17 +62,15 @@ internal class Snapshot : IStoreSnapshot
     public IEnumerable<(byte[] Key, byte[] Value)> Find(byte[]? keyOrPrefix, SeekDirection direction)
     {
         keyOrPrefix ??= [];
+
         using var it = _db.NewIterator(readOptions: _options);
+
         if (direction == SeekDirection.Forward)
-        {
             for (it.Seek(keyOrPrefix); it.Valid(); it.Next())
                 yield return (it.Key(), it.Value());
-        }
         else
-        {
             for (it.SeekForPrev(keyOrPrefix); it.Valid(); it.Prev())
                 yield return (it.Key(), it.Value());
-        }
     }
 
     public IEnumerable<(byte[] Key, byte[] Value)> FindRange(byte[] start, byte[] end, SeekDirection direction = SeekDirection.Forward)

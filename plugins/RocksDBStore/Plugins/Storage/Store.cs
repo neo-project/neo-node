@@ -43,17 +43,14 @@ internal class Store : IStore
     public IEnumerable<(byte[] Key, byte[] Value)> Find(byte[]? keyOrPrefix, SeekDirection direction = SeekDirection.Forward)
     {
         keyOrPrefix ??= [];
+
         using var it = _db.NewIterator();
         if (direction == SeekDirection.Forward)
-        {
             for (it.Seek(keyOrPrefix); it.Valid(); it.Next())
                 yield return (it.Key(), it.Value());
-        }
         else
-        {
             for (it.SeekForPrev(keyOrPrefix); it.Valid(); it.Prev())
                 yield return (it.Key(), it.Value());
-        }
     }
 
     public IEnumerable<(byte[] Key, byte[] Value)> FindRange(byte[] start, byte[] end, SeekDirection direction = SeekDirection.Forward)
