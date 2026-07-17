@@ -79,51 +79,22 @@ internal class Snapshot : IStoreSnapshot, IEnumerable<KeyValuePair<byte[], byte[
         ArgumentNullException.ThrowIfNull(start);
         ArgumentNullException.ThrowIfNull(end);
 
-        if (start.AsSpan().SequenceCompareTo(end) >= 0)
+        var order = start.AsSpan().SequenceCompareTo(end);
+        if ((direction == SeekDirection.Forward && order >= 0) ||
+            (direction == SeekDirection.Backward && order <= 0))
+        {
             yield break;
-
-        using var iterator = _db.CreateIterator(_readOptions);
-
-        if (direction == SeekDirection.Forward)
-        {
-            iterator.Seek(start);
-
-            while (iterator.Valid())
-            {
-                var key = iterator.Key();
-                if (key is null) break;
-
-                if (key.AsSpan().SequenceCompareTo(end) >= 0)
-                    break;
-
-                yield return (key, iterator.Value()!);
-                iterator.Next();
-            }
         }
-        else
+
+        foreach (var item in _db.Seek(_readOptions, start, direction))
         {
-            iterator.Seek(end);
-
-            if (!iterator.Valid())
+            order = item.Key.AsSpan().SequenceCompareTo(end);
+            if ((direction == SeekDirection.Forward && order >= 0) ||
+                (direction == SeekDirection.Backward && order <= 0))
             {
-                iterator.SeekToLast();
+                yield break; // end is the exclusive max key if forward, or the exclusive min key if backward
             }
-            else
-            {
-                iterator.Prev();
-            }
-
-            while (iterator.Valid())
-            {
-                var key = iterator.Key();
-                if (key is null) break;
-
-                if (key.AsSpan().SequenceCompareTo(start) < 0)
-                    break;
-
-                yield return (key, iterator.Value()!);
-                iterator.Prev();
-            }
+            yield return item;
         }
     }
 

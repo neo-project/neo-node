@@ -201,6 +201,39 @@ public class StoreTest
         CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x04 }, entries[2].Key);
         CollectionAssert.AreEqual(new byte[] { 0x04 }, entries[2].Value);
 
+        // FindRange Forward
+        entries = store.FindRange([0x00, 0x00, 0x02], [0x00, 0x00, 0x04], SeekDirection.Forward).ToArray();
+        Assert.HasCount(2, entries);
+        CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x02 }, entries[0].Key);
+        CollectionAssert.AreEqual(new byte[] { 0x02 }, entries[0].Value);
+        CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x03 }, entries[1].Key);
+        CollectionAssert.AreEqual(new byte[] { 0x03 }, entries[1].Value);
+
+        // FindRange Backward
+        entries = store.FindRange([0x00, 0x00, 0x02], [0x00, 0x00, 0x04], SeekDirection.Backward).ToArray();
+        Assert.HasCount(0, entries); // start is the max key if backward, so no entries
+
+        entries = store.FindRange([0x00, 0x00, 0x04], [0x00, 0x00, 0x02], SeekDirection.Backward).ToArray();
+        Assert.HasCount(2, entries);
+        CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x04 }, entries[0].Key);
+        CollectionAssert.AreEqual(new byte[] { 0x04 }, entries[0].Value);
+        CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x03 }, entries[1].Key);
+        CollectionAssert.AreEqual(new byte[] { 0x03 }, entries[1].Value);
+
+        // FindRange Backward with start is greater than the last key
+        entries = store.FindRange([0x00, 0x00, 0xFF], [0x00, 0x00, 0x03], SeekDirection.Backward).ToArray();
+        Assert.HasCount(1, entries);
+        CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x04 }, entries[0].Key);
+        CollectionAssert.AreEqual(new byte[] { 0x04 }, entries[0].Value);
+
+        // FindRange Forward with end is greater than the last key
+        entries = store.FindRange([0x00, 0x00, 0x03], [0x00, 0x00, 0xFF], SeekDirection.Forward).ToArray();
+        Assert.HasCount(2, entries);
+        CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x03 }, entries[0].Key);
+        CollectionAssert.AreEqual(new byte[] { 0x03 }, entries[0].Value);
+        CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x04 }, entries[1].Key);
+        CollectionAssert.AreEqual(new byte[] { 0x04 }, entries[1].Value);
+
         // Seek Backward
 
         entries = store.Find([0x00, 0x00, 0x02], SeekDirection.Backward).ToArray();
@@ -297,6 +330,27 @@ public class StoreTest
             CollectionAssert.AreEqual(new byte[] { 0x01 }, entries[0].Value);
             CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x00 }, entries[1].Key);
             CollectionAssert.AreEqual(new byte[] { 0x00 }, entries[1].Value);
+
+            // FindRange Forward
+            entries = snapshot.FindRange([0x00, 0x00, 0x00], [0x00, 0x01, 0x02], SeekDirection.Forward).ToArray();
+            Assert.HasCount(2, entries);
+            CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x00 }, entries[0].Key);
+            CollectionAssert.AreEqual(new byte[] { 0x00 }, entries[0].Value);
+            CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x01 }, entries[1].Key);
+            CollectionAssert.AreEqual(new byte[] { 0x01 }, entries[1].Value);
+
+            // FindRange Backward
+            entries = snapshot.FindRange([0x00, 0x01, 0x02], [0x00, 0x00, 0x00], SeekDirection.Backward).ToArray();
+            Assert.HasCount(2, entries);
+            CollectionAssert.AreEqual(new byte[] { 0x00, 0x01, 0x02 }, entries[0].Key);
+            CollectionAssert.AreEqual(new byte[] { 0x02 }, entries[0].Value);
+            CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x01 }, entries[1].Key);
+            CollectionAssert.AreEqual(new byte[] { 0x01 }, entries[1].Value);
+
+            entries = snapshot.FindRange([0x00, 0x01, 0xFF], [0x00, 0x00, 0x01], SeekDirection.Backward).ToArray();
+            Assert.HasCount(1, entries);
+            CollectionAssert.AreEqual(new byte[] { 0x00, 0x01, 0x02 }, entries[0].Key);
+            CollectionAssert.AreEqual(new byte[] { 0x02 }, entries[0].Value);
 
             // Test keys with different lengths
             searchKey = [0x00, 0x01];

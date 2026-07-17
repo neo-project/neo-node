@@ -78,43 +78,22 @@ internal class Snapshot : IStoreSnapshot
         ArgumentNullException.ThrowIfNull(start);
         ArgumentNullException.ThrowIfNull(end);
 
-        if (start.AsSpan().SequenceCompareTo(end) >= 0)
+        var order = start.AsSpan().SequenceCompareTo(end);
+        if ((direction == SeekDirection.Forward && order >= 0) ||
+            (direction == SeekDirection.Backward && order <= 0))
+        {
             yield break;
-
-        using var it = _db.NewIterator(readOptions: _options);
-
-        if (direction == SeekDirection.Forward)
-        {
-            for (it.Seek(start); it.Valid(); it.Next())
-            {
-                var key = it.Key();
-                if (key.AsSpan().SequenceCompareTo(end) >= 0)
-                    break;
-
-                yield return (key, it.Value());
-            }
         }
-        else
+
+        foreach (var item in Find(start, direction))
         {
-            it.Seek(end);
-
-            if (!it.Valid())
+            order = item.Key.AsSpan().SequenceCompareTo(end);
+            if ((direction == SeekDirection.Forward && order >= 0) ||
+                (direction == SeekDirection.Backward && order <= 0))
             {
-                it.SeekToLast();
+                yield break; // end is the exclusive max key if forward, or the exclusive min key if backward
             }
-            else
-            {
-                it.Prev();
-            }
-
-            for (; it.Valid(); it.Prev())
-            {
-                var key = it.Key();
-                if (key.AsSpan().SequenceCompareTo(start) < 0)
-                    break;
-
-                yield return (key, it.Value());
-            }
+            yield return item;
         }
     }
 
