@@ -25,7 +25,8 @@ internal class Snapshot : IStoreSnapshot, IEnumerable<KeyValuePair<byte[], byte[
 {
     private readonly DB _db;
     private readonly LSnapshot _snapshot;
-    private readonly ReadOptions _readOptions;
+    private readonly ReadOptions _scanReadOptions;
+    private readonly ReadOptions _pointReadOptions;
     private readonly WriteBatch _batch;
     private readonly Lock _lock = new();
 
@@ -36,7 +37,8 @@ internal class Snapshot : IStoreSnapshot, IEnumerable<KeyValuePair<byte[], byte[
         Store = store;
         _db = db;
         _snapshot = db.CreateSnapshot();
-        _readOptions = new ReadOptions { FillCache = false, Snapshot = _snapshot };
+        _scanReadOptions = new ReadOptions { FillCache = false, Snapshot = _snapshot };
+        _pointReadOptions = new ReadOptions { Snapshot = _snapshot };
         _batch = new WriteBatch();
     }
 
@@ -64,35 +66,36 @@ internal class Snapshot : IStoreSnapshot, IEnumerable<KeyValuePair<byte[], byte[
     public void Dispose()
     {
         _snapshot.Dispose();
-        _readOptions.Dispose();
+        _scanReadOptions.Dispose();
+        _pointReadOptions.Dispose();
         _batch.Dispose();
     }
 
     /// <inheritdoc/>
     public IEnumerable<(byte[] Key, byte[] Value)> Find(byte[]? keyOrPrefix, SeekDirection direction = SeekDirection.Forward)
     {
-        return _db.Seek(_readOptions, keyOrPrefix, direction);
+        return _db.Seek(_scanReadOptions, keyOrPrefix, direction);
     }
 
     public bool Contains(byte[] key)
     {
-        return _db.Contains(_readOptions, key);
+        return _db.Contains(_pointReadOptions, key);
     }
 
     public byte[]? TryGet(byte[] key)
     {
-        return _db.Get(_readOptions, key);
+        return _db.Get(_pointReadOptions, key);
     }
 
     public bool TryGet(byte[] key, [NotNullWhen(true)] out byte[]? value)
     {
-        value = _db.Get(_readOptions, key);
+        value = _db.Get(_pointReadOptions, key);
         return value != null;
     }
 
     public IEnumerator<KeyValuePair<byte[], byte[]>> GetEnumerator()
     {
-        using var iterator = _db.CreateIterator(_readOptions);
+        using var iterator = _db.CreateIterator(_scanReadOptions);
         for (iterator.SeekToFirst(); iterator.Valid(); iterator.Next())
             yield return new KeyValuePair<byte[], byte[]>(iterator.Key()!, iterator.Value()!);
     }
