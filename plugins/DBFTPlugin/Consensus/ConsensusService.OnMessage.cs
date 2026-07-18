@@ -221,10 +221,10 @@ partial class ConsensusService
                 foreach (UInt256 hash in message.RejectedHashes)
                 {
                     ECPoint pubkey = context.Validators[message.ValidatorIndex];
-                    if (context.InvalidTransactions.TryGetValue(hash, out var hashset))
-                        hashset.Add(pubkey);
+                    if (context.InvalidTransactions.TryGet(hash, out var hashset))
+                        hashset.Value.Add(pubkey);
                     else
-                        context.InvalidTransactions.Add(hash, [pubkey]);
+                        context.InvalidTransactions.Add(new ConsensusContext.UnvalidTxCacheItem(hash, new HashSet<ECPoint> { pubkey }));
                 }
                 break;
         }
