@@ -286,6 +286,30 @@ public class UT_RpcClient
     }
 
     [TestMethod]
+    public async Task TestFindStorage()
+    {
+        var test = TestUtils.RpcTestCases.Find(p => p.Name.Equals(nameof(rpc.FindStorageAsync), StringComparison.CurrentCultureIgnoreCase));
+        var result = await rpc.FindStorageAsync(test.Request.Params[0].AsString(), test.Request.Params[1].AsString(), (int)test.Request.Params[2].AsNumber());
+        Assert.AreEqual(test.Response.Result.ToString(), result.ToJson().ToString());
+        Assert.IsFalse(result.Truncated);
+        Assert.AreEqual(2, result.Next);
+        Assert.AreEqual(2, result.Results.Count);
+        Assert.AreEqual("AAEC", result.Results[0].Key);
+        Assert.AreEqual("AQID", result.Results[0].Value);
+    }
+
+    [TestMethod]
+    public async Task TestFindStorage_WithId()
+    {
+        var test = TestUtils.RpcTestCases.Find(p => p.Name.Equals(nameof(rpc.FindStorageAsync) + "_with_id", StringComparison.CurrentCultureIgnoreCase));
+        var result = await rpc.FindStorageAsync(test.Request.Params[0].AsString(), test.Request.Params[1].AsString(), (int)test.Request.Params[2].AsNumber());
+        Assert.AreEqual(test.Response.Result.ToString(), result.ToJson().ToString());
+        Assert.IsTrue(result.Truncated);
+        Assert.AreEqual(51, result.Next);
+        Assert.AreEqual(1, result.Results.Count);
+    }
+
+    [TestMethod]
     public async Task TestGetTransactionHeight()
     {
         var test = TestUtils.RpcTestCases.Find(p => p.Name.Equals(nameof(rpc.GetTransactionHeightAsync), StringComparison.CurrentCultureIgnoreCase));
@@ -299,6 +323,19 @@ public class UT_RpcClient
         var test = TestUtils.RpcTestCases.Find(p => p.Name.Equals(nameof(rpc.GetNextBlockValidatorsAsync), StringComparison.CurrentCultureIgnoreCase));
         var result = await rpc.GetNextBlockValidatorsAsync();
         Assert.AreEqual(test.Response.Result.ToString(), ((JArray)result.Select(p => p.ToJson()).ToArray()).ToString());
+    }
+
+    [TestMethod]
+    public async Task TestGetCandidates()
+    {
+        var test = TestUtils.RpcTestCases.Find(p => p.Name.Equals(nameof(rpc.GetCandidatesAsync), StringComparison.CurrentCultureIgnoreCase));
+        var result = await rpc.GetCandidatesAsync();
+        Assert.AreEqual(test.Response.Result.ToString(), ((JArray)result.Select(p => p.ToJson()).ToArray()).ToString());
+        Assert.AreEqual(2, result.Length);
+        Assert.IsTrue(result[0].Active);
+        Assert.IsFalse(result[1].Active);
+        Assert.AreEqual("100000000", result[0].Votes.ToString());
+        Assert.AreEqual("0", result[1].Votes.ToString());
     }
 
     #endregion Blockchain
@@ -527,6 +564,55 @@ public class UT_RpcClient
         var test = TestUtils.RpcTestCases.Find(p => p.Name.Equals(nameof(rpc.GetNep17BalancesAsync), StringComparison.CurrentCultureIgnoreCase));
         var result = await rpc.GetNep17BalancesAsync(test.Request.Params[0].AsString());
         Assert.AreEqual(test.Response.Result.ToString(), result.ToJson(rpc.protocolSettings).ToString());
+    }
+
+    [TestMethod()]
+    public async Task GetNep11TransfersTest()
+    {
+        var test = TestUtils.RpcTestCases.Find(p => p.Name.Equals(nameof(rpc.GetNep11TransfersAsync), StringComparison.CurrentCultureIgnoreCase));
+        var result = await rpc.GetNep11TransfersAsync(test.Request.Params[0].AsString(), (ulong)test.Request.Params[1].AsNumber(), (ulong)test.Request.Params[2].AsNumber());
+        Assert.AreEqual(test.Response.Result.ToString(), result.ToJson(rpc.protocolSettings).ToString());
+        Assert.AreEqual(1, result.Sent.Count);
+        Assert.AreEqual("010203", result.Sent[0].TokenId);
+        Assert.AreEqual(1, result.Received.Count);
+        Assert.AreEqual("010203", result.Received[0].TokenId);
+
+        test = TestUtils.RpcTestCases.Find(p => p.Name == (nameof(rpc.GetNep11TransfersAsync).ToLower() + "_with_null_transferaddress"));
+        result = await rpc.GetNep11TransfersAsync(test.Request.Params[0].AsString(), (ulong)test.Request.Params[1].AsNumber(), (ulong)test.Request.Params[2].AsNumber());
+        Assert.AreEqual(test.Response.Result.ToString(), result.ToJson(rpc.protocolSettings).ToString());
+        Assert.IsNull(result.Sent[0].UserScriptHash);
+        Assert.IsNull(result.Received[0].UserScriptHash);
+        Assert.AreEqual("aabbcc", result.Sent[0].TokenId);
+    }
+
+    [TestMethod()]
+    public async Task GetNep11BalancesTest()
+    {
+        var test = TestUtils.RpcTestCases.Find(p => p.Name.Equals(nameof(rpc.GetNep11BalancesAsync), StringComparison.CurrentCultureIgnoreCase));
+        var result = await rpc.GetNep11BalancesAsync(test.Request.Params[0].AsString());
+        Assert.AreEqual(test.Response.Result.ToString(), result.ToJson(rpc.protocolSettings).ToString());
+        Assert.AreEqual(1, result.Balances.Count);
+        Assert.AreEqual("TestNFT", result.Balances[0].Name);
+        Assert.AreEqual("TNFT", result.Balances[0].Symbol);
+        Assert.AreEqual(0, result.Balances[0].Decimals);
+        Assert.AreEqual(2, result.Balances[0].Tokens.Count);
+        Assert.AreEqual("010203", result.Balances[0].Tokens[0].TokenId);
+        Assert.AreEqual("1", result.Balances[0].Tokens[0].Amount.ToString());
+        Assert.AreEqual(3101u, result.Balances[0].Tokens[0].LastUpdatedBlock);
+        Assert.AreEqual("040506", result.Balances[0].Tokens[1].TokenId);
+        Assert.AreEqual("2", result.Balances[0].Tokens[1].Amount.ToString());
+    }
+
+    [TestMethod()]
+    public async Task GetNep11PropertiesTest()
+    {
+        var test = TestUtils.RpcTestCases.Find(p => p.Name.Equals(nameof(rpc.GetNep11PropertiesAsync), StringComparison.CurrentCultureIgnoreCase));
+        var result = await rpc.GetNep11PropertiesAsync(test.Request.Params[0].AsString(), test.Request.Params[1].AsString());
+        Assert.AreEqual(test.Response.Result.ToString(), result.ToString());
+        Assert.AreEqual("Neo NFT #1", result["name"].AsString());
+        Assert.AreEqual("A sample NEP-11 token", result["description"].AsString());
+        Assert.AreEqual("https://example.com/nft/1.png", result["image"].AsString());
+        Assert.AreEqual("aHR0cHM6Ly9leGFtcGxlLmNvbS9tZXRhLzEuanNvbg==", result["tokenURI"].AsString());
     }
 
     #endregion Plugins
