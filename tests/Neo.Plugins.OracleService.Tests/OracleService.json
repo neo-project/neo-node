@@ -1,0 +1,21 @@
+{
+  "PluginConfiguration": {
+    "Nodes": [],
+    "MaxTaskTimeout": 432000000,
+    "MaxOracleTimeout": 10000,
+    "AllowPrivateHost": false,
+    "AllowedContentTypes": [ "application/json" ],
+    "UnhandledExceptionPolicy": "Ignore",
+    "Https": {
+      "Timeout": 5000
+    },
+    "NeoFS": {
+      "EndPoint": "https://st1.t5.fs.neo.org:8082",
+      "Timeout": 15000
+    },
+    "AutoStart": false
+  },
+  "Dependency": [
+    "RpcServer"
+  ]
+}

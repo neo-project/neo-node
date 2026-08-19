@@ -9,10 +9,12 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using Microsoft.Extensions.Configuration;
 using Neo.Cryptography.ECC;
 using Neo.Extensions;
 using Neo.Network.P2P.Payloads;
 using Neo.Plugins.OracleService.Protocols;
+using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using System.Collections.Concurrent;
 using static Neo.Plugins.OracleService.Tests.TestBlockchain;
@@ -100,6 +102,51 @@ public class UT_OracleService
         Assert.AreEqual(OracleResponseCode.InsufficientFunds, response.Code);
         Assert.AreEqual(2197650, tx.NetworkFee);
         Assert.AreEqual(7802350, tx.SystemFee);
+    }
+
+    [TestMethod]
+    public async Task TestNeoFSProtocol_Get()
+    {
+        ResetStore();
+        InitializeContract();
+        DesignateOracleRole();
+
+        var oracle = new OracleService
+        {
+            _system = s_theNeoSystem
+        };
+
+        var section = new ConfigurationBuilder().AddJsonFile("./OracleService.json", optional: false).Build().GetSection("PluginConfiguration");
+        OracleSettings.Load(section);
+        var oracles = TestUtils.settings.StandbyCommittee.ToArray();
+        var proto = new OracleNeoFSProtocol(s_wallet, oracles);
+
+        // This object is stored till 23-d of August, it contains hello.txt file with "hello" text.
+
+        // GET:
+        Assert.IsTrue(Uri.TryCreate("neofs:754iyTDY8xUtZJZfheSYLUn7jvCkxr79RcbjMt81QykC/2mv1fSGmTYTA8SixnVNpJFGdUbamwNF7jKdNb6JK5HTH", UriKind.Absolute, out var uri));
+        Assert.AreEqual(10, OracleSettings.Default.MaxOracleTimeout.Seconds);
+        using CancellationTokenSource ctsTimeout = new(OracleSettings.Default.MaxOracleTimeout);
+        using CancellationTokenSource ctsLinked = CancellationTokenSource.CreateLinkedTokenSource(new CancellationToken(), ctsTimeout.Token);
+
+        var task = proto.ProcessAsync(uri, ctsLinked.Token);
+        task.Wait();
+        var (code, res) = task.Result;
+        Assert.AreEqual(OracleResponseCode.Success, code);
+        Assert.AreEqual("hello", res);
+
+        // HEAD:
+        Assert.IsTrue(Uri.TryCreate("neofs:754iyTDY8xUtZJZfheSYLUn7jvCkxr79RcbjMt81QykC/2mv1fSGmTYTA8SixnVNpJFGdUbamwNF7jKdNb6JK5HTH/header", UriKind.Absolute, out uri));
+        Assert.AreEqual(10, OracleSettings.Default.MaxOracleTimeout.Seconds);
+        using CancellationTokenSource ctsTimeout1 = new(OracleSettings.Default.MaxOracleTimeout);
+        using CancellationTokenSource ctsLinked1 = CancellationTokenSource.CreateLinkedTokenSource(new CancellationToken(), ctsTimeout.Token);
+
+        task = proto.ProcessAsync(uri, ctsLinked1.Token);
+        task.Wait();
+        (code, res) = task.Result;
+        Assert.AreEqual(OracleResponseCode.Success, code);
+        Console.WriteLine(res);
+        Assert.AreEqual("""{ "objectID": { "value": "Gl0ux8Pd6ACcpARdJrDbxuiIT8orE+1DnXeyJdGQtNQ=" }, "signature": { "key": "Aj6Y+sJT6LXhxBtIypgCaUhuAsvM9N4EbY5hy3IJYRrn", "signature": "BIeKs4s8d1ahdmhVwudFA0UDyEzi5ZUdKA+RMCUmgZCUVzI9g1rrpimq7ulSUDEtH4svjBaZYP0aqEjWKfV0bOk=" }, "header": { "version": { "major": 2, "minor": 25 }, "containerID": { "value": "WjCnuT1qPenbAEvs869WjnzJuIi7A0ZEgmIKZ7bxlWE=" }, "ownerID": { "value": "NfBR4GtXHhvIjFNX8M/xXoxwXRICngD2dQ==" }, "creationEpoch": "32165", "payloadLength": "5", "payloadHash": { "type": "SHA256", "sum": "LPJNul+wow4m6DsqxbninhsWHlwfp0JecwQzYpOLmCQ=" }, "sessionToken": { "body": { "id": "V6Rg5xeuS5KI7IJ0aLklmw==", "ownerID": { "value": "NfBR4GtXHhvIjFNX8M/xXoxwXRICngD2dQ==" }, "lifetime": { "exp": "32236" }, "sessionKey": "Aj6Y+sJT6LXhxBtIypgCaUhuAsvM9N4EbY5hy3IJYRrn", "object": { "verb": "PUT", "target": { "container": { "value": "WjCnuT1qPenbAEvs869WjnzJuIi7A0ZEgmIKZ7bxlWE=" } } } }, "signature": { "key": "Ajif7B6Mq0aaWnni0brKQbgpgWz3YL7VQVzjOGxLan5Q", "signature": "VYqHAv1pj7HY+yJqQuM56mIom2qT3AqKWPuGkfGAcbercNZyYDF35m6lpgEZ6x1BwIVKF+/QpcsKe/9NYNPt9w==", "scheme": "ECDSA_RFC6979_SHA256" } }, "attributes": [ { "key": "FileName", "value": "file.txt" }, { "key": "Email", "value": "2f431472927faf80b8910a0b66d6557013eaa2532d4fa5c7f857d1a79128f161" }, { "key": "__NEOFS__EXPIRATION_EPOCH", "value": "32261" }, { "key": "Content-Type", "value": "text/plain" } ] } }""", res);
     }
 
     [TestMethod]

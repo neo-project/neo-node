@@ -31,7 +31,7 @@ class NeoFSSettings
 
     public NeoFSSettings(IConfigurationSection section)
     {
-        EndPoint = section.GetValue("EndPoint", "127.0.0.1:8080");
+        EndPoint = section.GetValue("EndPoint", "grpcs://st1.t5.fs.neo.org:8082");
         Timeout = TimeSpan.FromMilliseconds(section.GetValue("Timeout", 15000));
     }
 }

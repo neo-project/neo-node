@@ -1,10 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
 	<ItemGroup>
-		<PackageReference Include="Neo.FileStorage.API" Version="3.8.1" />
-	</ItemGroup>
-
-	<ItemGroup>
+		<ProjectReference Include="..\..\..\neofs-api-csharp\src\Neo.FileStorage.API\Neo.FileStorage.API.csproj" />
 		<ProjectReference Include="..\..\src\Neo.ConsoleService\Neo.ConsoleService.csproj" />
 		<ProjectReference Include="..\RpcServer\RpcServer.csproj">
 			<Private>false</Private>

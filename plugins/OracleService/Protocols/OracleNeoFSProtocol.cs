@@ -16,9 +16,7 @@ using Neo.FileStorage.API.Refs;
 using Neo.Network.P2P.Payloads;
 using Neo.Wallets;
 using System.Security.Cryptography;
-using System.Web;
 using ECPoint = Neo.Cryptography.ECC.ECPoint;
-using Object = Neo.FileStorage.API.Object.Object;
 
 namespace Neo.Plugins.OracleService.Protocols;
 
@@ -48,7 +46,7 @@ class OracleNeoFSProtocol : IOracleProtocol
         OracleService.PluginLogger?.Information("NeoFS request: {Uri}", uri.AbsoluteUri);
         try
         {
-            (OracleResponseCode code, string data) = await GetAsync(uri, OracleSettings.Default.NeoFS.EndPoint, cancellation);
+            (OracleResponseCode code, string data) = await GetAsync(uri, "https://st1.t5.fs.neo.org:8082", cancellation);
             OracleService.PluginLogger?.Information("NeoFS result, code: {Code}, data: {Data}", code, data);
             return (code, data);
         }
@@ -83,7 +81,9 @@ class OracleNeoFSProtocol : IOracleProtocol
         var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
         tokenSource.CancelAfter(OracleSettings.Default.NeoFS.Timeout);
         if (ps.Length == 2)
+        {
             return GetPayload(client, objectAddr, tokenSource.Token);
+        }
         return ps[2] switch
         {
             "header" => (OracleResponseCode.Success, await GetHeaderAsync(client, objectAddr, tokenSource.Token)),
