@@ -702,8 +702,12 @@ public class RpcClient : IDisposable
     /// This method is provided by the plugin TokensTracker.
     /// </summary>
     /// <param name="address">The address to query the transaction information.</param>
-    /// <param name="startTimestamp">The start block Timestamp, default to seven days before UtcNow</param>
-    /// <param name="endTimestamp">The end block Timestamp, default to UtcNow</param>
+    /// <param name="startTimestamp">
+    /// Start block timestamp in milliseconds. Defaults to 0; TokensTracker treats 0 as seven days before UtcNow.
+    /// </param>
+    /// <param name="endTimestamp">
+    /// End block timestamp in milliseconds. Defaults to the current UtcNow timestamp.
+    /// </param>
     public async Task<RpcNep17Transfers> GetNep17TransfersAsync(string address, ulong? startTimestamp = default, ulong? endTimestamp = default)
     {
         startTimestamp ??= 0;
@@ -729,8 +733,12 @@ public class RpcClient : IDisposable
     /// This method is provided by the plugin TokensTracker.
     /// </summary>
     /// <param name="address">The address to query the transaction information.</param>
-    /// <param name="startTimestamp">The start block Timestamp, default to seven days before UtcNow</param>
-    /// <param name="endTimestamp">The end block Timestamp, default to UtcNow</param>
+    /// <param name="startTimestamp">
+    /// Start block timestamp in milliseconds. Defaults to 0; TokensTracker treats 0 as seven days before UtcNow.
+    /// </param>
+    /// <param name="endTimestamp">
+    /// End block timestamp in milliseconds. Defaults to the current UtcNow timestamp.
+    /// </param>
     public async Task<RpcNep11Transfers> GetNep11TransfersAsync(string address, ulong? startTimestamp = default, ulong? endTimestamp = default)
     {
         startTimestamp ??= 0;
