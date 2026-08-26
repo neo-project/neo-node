@@ -19,7 +19,6 @@ using System.Security.Cryptography;
 using System.Web;
 using ECPoint = Neo.Cryptography.ECC.ECPoint;
 using Object = Neo.FileStorage.API.Object.Object;
-using Range = Neo.FileStorage.API.Object.Range;
 
 namespace Neo.Plugins.OracleService.Protocols;
 
@@ -87,9 +86,7 @@ class OracleNeoFSProtocol : IOracleProtocol
             return GetPayload(client, objectAddr, tokenSource.Token);
         return ps[2] switch
         {
-            "range" => await GetRangeAsync(client, objectAddr, ps.Skip(3).ToArray(), tokenSource.Token),
             "header" => (OracleResponseCode.Success, await GetHeaderAsync(client, objectAddr, tokenSource.Token)),
-            "hash" => (OracleResponseCode.Success, await GetHashAsync(client, objectAddr, ps.Skip(3).ToArray(), tokenSource.Token)),
             _ => throw new Exception("invalid command")
         };
     }
@@ -113,41 +110,9 @@ class OracleNeoFSProtocol : IOracleProtocol
         return (OracleResponseCode.Success, payload.ToStrictUtf8String());
     }
 
-    private static async Task<(OracleResponseCode, string)> GetRangeAsync(Client client, Address addr, string[] ps, CancellationToken cancellation)
-    {
-        if (ps.Length == 0) throw new FormatException("missing object range (expected 'Offset|Length')");
-        Range range = ParseRange(ps[0]);
-        if (range.Length > OracleResponse.MaxResultSize) return (OracleResponseCode.ResponseTooLarge, "");
-        var res = await client.GetObjectPayloadRangeData(addr, range, options: new CallOptions { Ttl = 2 }, context: cancellation);
-        return (OracleResponseCode.Success, res.ToStrictUtf8String());
-    }
-
     private static async Task<string> GetHeaderAsync(Client client, Address addr, CancellationToken cancellation)
     {
         var obj = await client.GetObjectHeader(addr, options: new CallOptions { Ttl = 2 }, context: cancellation);
         return obj.ToString();
-    }
-
-    private static async Task<string> GetHashAsync(Client client, Address addr, string[] ps, CancellationToken cancellation)
-    {
-        if (ps.Length == 0 || ps[0] == "")
-        {
-            Object obj = await client.GetObjectHeader(addr, options: new CallOptions { Ttl = 2 }, context: cancellation);
-            return $"\"{new UInt256(obj.PayloadChecksum.Sum.ToByteArray())}\"";
-        }
-        Range range = ParseRange(ps[0]);
-        List<byte[]> hashes = await client.GetObjectPayloadRangeHash(addr, new List<Range>() { range }, ChecksumType.Sha256, Array.Empty<byte>(), new CallOptions { Ttl = 2 }, cancellation);
-        if (hashes.Count == 0) throw new Exception("empty response, object range is invalid (expected 'Offset|Length')");
-        return $"\"{new UInt256(hashes[0])}\"";
-    }
-
-    private static Range ParseRange(string s)
-    {
-        string url = HttpUtility.UrlDecode(s);
-        int sepIndex = url.IndexOf('|');
-        if (sepIndex < 0) throw new Exception("object range is invalid (expected 'Offset|Length')");
-        ulong offset = ulong.Parse(url[..sepIndex]);
-        ulong length = ulong.Parse(url[(sepIndex + 1)..]);
-        return new Range() { Offset = offset, Length = length };
     }
 }
