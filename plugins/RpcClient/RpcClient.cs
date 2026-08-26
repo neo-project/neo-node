@@ -333,6 +333,19 @@ public class RpcClient : IDisposable
     }
 
     /// <summary>
+    /// Finds storage items by contract script hash (or Id) and a Base64-encoded key prefix.
+    /// </summary>
+    /// <param name="scriptHashOrId">Contract script hash, native name, or contract Id.</param>
+    /// <param name="base64KeyPrefix">Base64-encoded storage key prefix.</param>
+    /// <param name="start">Start index for pagination. Defaults to 0.</param>
+    public async Task<RpcFindStorage> FindStorageAsync(string scriptHashOrId, string base64KeyPrefix, int start = 0)
+    {
+        var result = await RpcSendByHashOrIndexAsync(GetRpcName(), scriptHashOrId, base64KeyPrefix, start)
+            .ConfigureAwait(false);
+        return RpcFindStorage.FromJson((JObject)result);
+    }
+
+    /// <summary>
     /// Returns the block index in which the transaction is found.
     /// </summary>
     public async Task<uint> GetTransactionHeightAsync(string txHash)
@@ -348,6 +361,15 @@ public class RpcClient : IDisposable
     {
         var result = await RpcSendAsync(GetRpcName()).ConfigureAwait(false);
         return ((JArray)result).Select(p => RpcValidator.FromJson((JObject)p)).ToArray();
+    }
+
+    /// <summary>
+    /// Returns the list of candidates for the next block validators, including vote counts and active status.
+    /// </summary>
+    public async Task<RpcCandidate[]> GetCandidatesAsync()
+    {
+        var result = await RpcSendAsync(GetRpcName()).ConfigureAwait(false);
+        return ((JArray)result).Select(p => RpcCandidate.FromJson((JObject)p)).ToArray();
     }
 
     /// <summary>
@@ -677,11 +699,15 @@ public class RpcClient : IDisposable
 
     /// <summary>
     /// Returns all the NEP-17 transaction information occurred in the specified address.
-    /// This method is provided by the plugin RpcNep17Tracker.
+    /// This method is provided by the plugin TokensTracker.
     /// </summary>
     /// <param name="address">The address to query the transaction information.</param>
-    /// <param name="startTimestamp">The start block Timestamp, default to seven days before UtcNow</param>
-    /// <param name="endTimestamp">The end block Timestamp, default to UtcNow</param>
+    /// <param name="startTimestamp">
+    /// Start block timestamp in milliseconds. Defaults to 0; TokensTracker treats 0 as seven days before UtcNow.
+    /// </param>
+    /// <param name="endTimestamp">
+    /// End block timestamp in milliseconds. Defaults to the current UtcNow timestamp.
+    /// </param>
     public async Task<RpcNep17Transfers> GetNep17TransfersAsync(string address, ulong? startTimestamp = default, ulong? endTimestamp = default)
     {
         startTimestamp ??= 0;
@@ -693,13 +719,57 @@ public class RpcClient : IDisposable
 
     /// <summary>
     /// Returns the balance of all NEP-17 assets in the specified address.
-    /// This method is provided by the plugin RpcNep17Tracker.
+    /// This method is provided by the plugin TokensTracker.
     /// </summary>
     public async Task<RpcNep17Balances> GetNep17BalancesAsync(string address)
     {
         var result = await RpcSendAsync(GetRpcName(), address.AsScriptHash())
             .ConfigureAwait(false);
         return RpcNep17Balances.FromJson((JObject)result, protocolSettings);
+    }
+
+    /// <summary>
+    /// Returns all the NEP-11 transaction information occurred in the specified address.
+    /// This method is provided by the plugin TokensTracker.
+    /// </summary>
+    /// <param name="address">The address to query the transaction information.</param>
+    /// <param name="startTimestamp">
+    /// Start block timestamp in milliseconds. Defaults to 0; TokensTracker treats 0 as seven days before UtcNow.
+    /// </param>
+    /// <param name="endTimestamp">
+    /// End block timestamp in milliseconds. Defaults to the current UtcNow timestamp.
+    /// </param>
+    public async Task<RpcNep11Transfers> GetNep11TransfersAsync(string address, ulong? startTimestamp = default, ulong? endTimestamp = default)
+    {
+        startTimestamp ??= 0;
+        endTimestamp ??= DateTime.UtcNow.ToTimestampMS();
+        var result = await RpcSendAsync(GetRpcName(), address.AsScriptHash(), startTimestamp, endTimestamp)
+            .ConfigureAwait(false);
+        return RpcNep11Transfers.FromJson((JObject)result, protocolSettings);
+    }
+
+    /// <summary>
+    /// Returns the balance of all NEP-11 assets in the specified address.
+    /// This method is provided by the plugin TokensTracker.
+    /// </summary>
+    public async Task<RpcNep11Balances> GetNep11BalancesAsync(string address)
+    {
+        var result = await RpcSendAsync(GetRpcName(), address.AsScriptHash())
+            .ConfigureAwait(false);
+        return RpcNep11Balances.FromJson((JObject)result, protocolSettings);
+    }
+
+    /// <summary>
+    /// Returns the properties of the specified NEP-11 token.
+    /// This method is provided by the plugin TokensTracker.
+    /// </summary>
+    /// <param name="contractHash">The NEP-11 contract script hash or address.</param>
+    /// <param name="tokenId">The token id in hex format.</param>
+    public async Task<JObject> GetNep11PropertiesAsync(string contractHash, string tokenId)
+    {
+        var result = await RpcSendAsync(GetRpcName(), contractHash.AsScriptHash(), tokenId)
+            .ConfigureAwait(false);
+        return (JObject)result;
     }
 
     #endregion Plugins
