@@ -10,6 +10,7 @@
 // modifications are permitted.
 
 using Neo.Persistence;
+using Neo.Plugins.Storage.Extensions;
 using RocksDbSharp;
 using System.Diagnostics.CodeAnalysis;
 

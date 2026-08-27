@@ -9,7 +9,7 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
-namespace Neo.Plugins.Storage;
+namespace Neo.Plugins.Storage.Extensions;
 
 /// <summary>
 /// Extension methods for <see cref="RocksDbSharp.Iterator"/> (RocksDbSharp does not allow
