@@ -15,7 +15,7 @@ namespace Neo.Plugins.Storage.Extensions;
 /// Extension methods for <see cref="RocksDbSharp.Iterator"/> (RocksDbSharp does not allow
 /// extending its sealed iterator type directly, so these are provided as extension methods).
 /// </summary>
-internal static class Iterator
+internal static class IteratorExtensions
 {
     /// <summary>
     /// Advances the iterator <paramref name="count"/> entries by calling the native
