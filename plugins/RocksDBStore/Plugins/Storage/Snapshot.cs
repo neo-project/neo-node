@@ -59,18 +59,28 @@ internal class Snapshot : IStoreSnapshot
     }
 
     /// <inheritdoc/>
-    public IEnumerable<(byte[] Key, byte[] Value)> Find(byte[]? keyOrPrefix, SeekDirection direction)
+    public IEnumerable<(byte[] Key, byte[] Value)> Find(byte[]? keyOrPrefix, SeekDirection direction = SeekDirection.Forward, int skip = 0)
     {
         keyOrPrefix ??= [];
 
         using var it = _db.NewIterator(readOptions: _options);
 
         if (direction == SeekDirection.Forward)
-            for (it.Seek(keyOrPrefix); it.Valid(); it.Next())
+        {
+            it.Seek(keyOrPrefix);
+            it.Skip(skip);
+
+            for (; it.Valid(); it.Next())
                 yield return (it.Key(), it.Value());
+        }
         else
-            for (it.SeekForPrev(keyOrPrefix); it.Valid(); it.Prev())
+        {
+            it.SeekForPrev(keyOrPrefix);
+            it.SkipPrev(skip);
+
+            for (; it.Valid(); it.Prev())
                 yield return (it.Key(), it.Value());
+        }
     }
 
     public bool Contains(byte[] key)
