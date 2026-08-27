@@ -24,6 +24,8 @@ internal static class Iterator
     /// </summary>
     public static void Skip(this RocksDbSharp.Iterator it, int count)
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+
         while (count-- > 0 && it.Valid())
             it.Next();
     }
@@ -35,6 +37,8 @@ internal static class Iterator
     /// </summary>
     public static void SkipPrev(this RocksDbSharp.Iterator it, int count)
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+
         while (count-- > 0 && it.Valid())
             it.Prev();
     }

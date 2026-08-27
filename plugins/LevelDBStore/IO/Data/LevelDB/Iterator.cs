@@ -67,6 +67,8 @@ public class Iterator : LevelDBHandle
     /// </summary>
     public void Skip(int count)
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+
         while (count-- > 0 && Valid())
             Next();
     }
@@ -78,6 +80,8 @@ public class Iterator : LevelDBHandle
     /// </summary>
     public void SkipPrev(int count)
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+
         while (count-- > 0 && Valid())
             Prev();
     }
