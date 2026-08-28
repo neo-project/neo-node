@@ -9,6 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Spectre.Console" Version="0.51.1" />
     <PackageReference Include="System.CommandLine" Version="2.0.9" />
   </ItemGroup>
@@ -17,6 +21,9 @@
     <ProjectReference Include="..\Neo.CLI\Neo.CLI.csproj" />
     <ProjectReference Include="..\Neo.ConsoleService\Neo.ConsoleService.csproj" />
   </ItemGroup>
+
+  <Import Project="..\NodePlugins.props" />
+  <Import Project="..\CopyNodePlugins.targets" />
 
   <ItemGroup>
     <None Include="..\Neo.CLI\config*.json">

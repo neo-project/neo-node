@@ -21,6 +21,7 @@ internal sealed class CommandLineApp
     public Option<string?> Password { get; }
     public Option<string?> DbEngine { get; }
     public Option<string?> DbPath { get; }
+    public Option<string[]> Plugins { get; }
     public Option<bool> NoVerify { get; }
 
     public CommandLineApp(IReadOnlyList<CommandInfo> commands, Func<string, bool> invoke)
@@ -31,9 +32,16 @@ internal sealed class CommandLineApp
         Password = NewOption<string?>("--password", "Password to decrypt the wallet.", "-p", "/password");
         DbEngine = NewOption<string?>("--db-engine", "Specify the db engine.", "/db-engine");
         DbPath = NewOption<string?>("--db-path", "Specify the db path.", "/db-path");
+        Plugins = new Option<string[]>("--plugins")
+        {
+            Description = "Plugins to install if not already present [plugin1 plugin2].",
+            Arity = ArgumentArity.ZeroOrMore,
+            AllowMultipleArgumentsPerToken = true
+        };
+        Plugins.Aliases.Add("/plugins");
         NoVerify = NewOption<bool>("--noverify", "Skip block verification when importing.", "/noverify");
 
-        foreach (var option in new Option[] { Config, Wallet, Password, DbEngine, DbPath, NoVerify })
+        foreach (var option in new Option[] { Config, Wallet, Password, DbEngine, DbPath, Plugins, NoVerify })
             Root.Options.Add(option);
 
         // Root must have an action so `neo-tui` with only options (or none) is valid.
@@ -51,6 +59,12 @@ internal sealed class CommandLineApp
         Add(result, Password, args);
         Add(result, DbEngine, args);
         Add(result, DbPath, args);
+        var plugins = result.GetValue(Plugins);
+        if (plugins is { Length: > 0 })
+        {
+            args.Add("--plugins");
+            args.AddRange(plugins);
+        }
         if (result.GetValue(NoVerify))
             args.Add("--noverify");
         return [.. args];

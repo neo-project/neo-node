@@ -32,44 +32,89 @@ internal sealed class InteractiveShell
 
     public void Run()
     {
-        AnsiConsole.Clear();
-        WriteBanner();
-        PrintHotkeys();
-
-        while (true)
+        using var broadcastCancel = new CancellationTokenSource();
+        Task broadcast = Task.CompletedTask;
+        try
         {
-            WriteStatus();
-            var menu = new[] { "Command line", "Command palette" }
-                .Concat(CommandCatalog.Categories(_commands))
-                .Concat(["Help", "Exit"]);
-            var action = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("[green]Select an action[/] (search with typing)")
-                    .PageSize(15)
-                    .EnableSearch()
-                    .AddChoices(menu));
-
-            if (action == "Exit")
-                break;
-            if (action == "Help")
-            {
-                PrintHotkeys();
-                _invoke("help");
-                continue;
-            }
-            if (action == "Command line")
-            {
-                RunCommandLine();
-                continue;
-            }
-            if (action == "Command palette")
-            {
-                RunPalette();
-                continue;
-            }
-
-            RunCategory(action);
+            if (_service.NeoSystem is not null)
+                broadcast = _service.CreateBroadcastTask(broadcastCancel.Token);
         }
+        catch
+        {
+            // Node failed to start; still show the status screen.
+        }
+
+        try
+        {
+            while (true)
+            {
+                var next = StateScreen.Run(_service);
+                if (next == StatusAction.Quit)
+                    break;
+                if (next == StatusAction.Help)
+                {
+                    AnsiConsole.Clear();
+                    PrintHotkeys();
+                    AnsiConsole.MarkupLine("[grey]Press any key to return to status[/]");
+                    Console.ReadKey(intercept: true);
+                    continue;
+                }
+                if (next == StatusAction.CommandLine)
+                {
+                    AnsiConsole.Clear();
+                    RunCommandLine();
+                    continue;
+                }
+
+                AnsiConsole.Clear();
+                if (!RunMenu())
+                    break;
+            }
+        }
+        finally
+        {
+            broadcastCancel.Cancel();
+            try { broadcast.Wait(TimeSpan.FromSeconds(2)); } catch { /* cancelled */ }
+        }
+    }
+
+    /// <returns><see langword="false"/> when the user chose Exit.</returns>
+    private bool RunMenu()
+    {
+        WriteStatus();
+        var menu = new[] { "Back to status", "Command line", "Command palette" }
+            .Concat(CommandCatalog.Categories(_commands))
+            .Concat(["Help", "Exit"]);
+        var action = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[green]Select an action[/] (search with typing)")
+                .PageSize(15)
+                .EnableSearch()
+                .AddChoices(menu));
+
+        if (action == "Exit")
+            return false;
+        if (action == "Back to status")
+            return true;
+        if (action == "Help")
+        {
+            PrintHotkeys();
+            RunLine("help");
+            return true;
+        }
+        if (action == "Command line")
+        {
+            RunCommandLine();
+            return true;
+        }
+        if (action == "Command palette")
+        {
+            RunPalette();
+            return true;
+        }
+
+        RunCategory(action);
+        return true;
     }
 
     private void RunCategory(string category)
@@ -90,7 +135,11 @@ internal sealed class InteractiveShell
 
         var index = Array.IndexOf(labels, picked);
         if (index >= 0 && index < items.Length)
+        {
+            if (items[index].Key.Equals("show state", StringComparison.OrdinalIgnoreCase))
+                return;
             RunCommand(items[index]);
+        }
     }
 
     private void RunPalette()
@@ -104,7 +153,11 @@ internal sealed class InteractiveShell
                 .AddChoices(labels));
         var index = Array.IndexOf(labels, picked);
         if (index >= 0)
+        {
+            if (_commands[index].Key.Equals("show state", StringComparison.OrdinalIgnoreCase))
+                return;
             RunCommand(_commands[index]);
+        }
     }
 
     private void RunCommandLine()
@@ -120,15 +173,9 @@ internal sealed class InteractiveShell
             if (line.Equals("exit", StringComparison.OrdinalIgnoreCase) ||
                 line.Equals("quit", StringComparison.OrdinalIgnoreCase))
                 return;
-            try
-            {
-                if (!_invoke(line.Trim()))
-                    AnsiConsole.MarkupLine("[red]Command not found[/]");
-            }
-            catch (Exception ex)
-            {
-                AnsiConsole.MarkupLine($"[red]{Markup.Escape(ex.InnerException?.Message ?? ex.Message)}[/]");
-            }
+            if (line.Trim().Equals("show state", StringComparison.OrdinalIgnoreCase))
+                return;
+            RunLine(line.Trim());
         }
     }
 
@@ -166,25 +213,11 @@ internal sealed class InteractiveShell
         }
 
         var line = string.Join(' ', parts);
-        AnsiConsole.MarkupLine($"[grey]→ {Markup.Escape(line)}[/]");
-        try
-        {
-            if (!_invoke(line))
-                AnsiConsole.MarkupLine("[red]Command not found[/]");
-        }
-        catch (Exception ex)
-        {
-            AnsiConsole.MarkupLine($"[red]{Markup.Escape(ex.InnerException?.Message ?? ex.Message)}[/]");
-        }
+        RunLine(line);
     }
 
-    private void WriteBanner()
-    {
-        AnsiConsole.Write(new FigletText("NEO").Color(Color.Green));
-        AnsiConsole.MarkupLine("[bold green]neo-tui[/] — cross-platform console UI for neo-cli");
-        AnsiConsole.MarkupLine("[grey]Windows · Linux · macOS[/]");
-        AnsiConsole.WriteLine();
-    }
+    private bool RunLine(string line)
+        => CommandOutputPopup.Run(line, _invoke);
 
     private void WriteStatus()
     {
@@ -209,6 +242,11 @@ internal sealed class InteractiveShell
         var table = new Table().Border(TableBorder.Rounded);
         table.AddColumn("Key");
         table.AddColumn("Action");
+        table.AddRow("M / Enter (status)", "Open command menu");
+        table.AddRow("C (status)", "Command line");
+        table.AddRow("H (status)", "Help");
+        table.AddRow("↑ ↓ (status)", "Scroll connected peers");
+        table.AddRow("Q / Esc (status)", "Quit");
         table.AddRow("Type to search", "Filter the current menu");
         table.AddRow("Enter", "Select");
         table.AddRow("Esc (command line)", "Back to menu");

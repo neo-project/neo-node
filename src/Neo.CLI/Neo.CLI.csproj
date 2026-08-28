@@ -20,6 +20,13 @@
     <ProjectReference Include="..\Neo.ConsoleService\Neo.ConsoleService.csproj" />
   </ItemGroup>
 
+  <Import Project="..\NodePlugins.props" />
+  <Import Project="..\CopyNodePlugins.targets" />
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="neo-tui" />
+  </ItemGroup>
+
   <ItemGroup>
     <Content Include="neo.ico" />
   </ItemGroup>
