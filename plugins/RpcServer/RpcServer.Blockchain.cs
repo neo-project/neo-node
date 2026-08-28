@@ -471,7 +471,7 @@ partial class RpcServer
         var items = new JArray();
         int pageSize = settings.FindStoragePageSize;
         int i = 0;
-        using (var iter = NativeContract.ContractManagement.FindContractStorage(snapshot, id, prefix).Skip(count: start).GetEnumerator())
+        using (var iter = NativeContract.ContractManagement.FindContractStorage(snapshot, id, prefix, skip: start).GetEnumerator())
         {
             var hasMore = false;
             while (iter.MoveNext())
