@@ -168,7 +168,9 @@ internal sealed class VMInstruction : IEnumerable<VMInstruction>
             OpCode.PUSHDATA1 or
             OpCode.PUSHDATA2 or
             OpCode.PUSHDATA4 => FormatPushData(operand),
-            _ => TryGetReadableText(operand, out var text) ? $"\"{text}\"" : $"{Convert.ToHexString(operand)}",
+            _ => TryGetReadableText(operand, out var text)
+                ? $"\"{text}\""
+                : $"{Convert.ToHexString(operand)} // blob {operand.Length} bytes",
         };
     }
 
@@ -193,14 +195,15 @@ internal sealed class VMInstruction : IEnumerable<VMInstruction>
         if (operand.Length == 8 && TryFormatUnixTimestamp(BinaryPrimitives.ReadInt64LittleEndian(operand), out var ts64))
             return $"{hex} // {ts64}";
 
-        return hex;
+        return $"{hex} // blob {operand.Length} bytes";
     }
 
     private static string FormatInteger(long value)
         => TryFormatUnixTimestamp(value, out var ts) ? $"{value} // {ts}" : value.ToString(CultureInfo.InvariantCulture);
 
     /// <summary>
-    /// Strict UTF-8 whose runes are all printable (not control characters).
+    /// Strict UTF-8 with at least one non-control rune. Control runes are escaped
+    /// (<c>\n</c>, <c>\r</c>, <c>\t</c>, <c>\xNN</c>) so they are not written as raw output.
     /// Invalid sequences are rejected; <see cref="Encoding.UTF8"/> replacement is not used.
     /// </summary>
     private static bool TryGetReadableText(ReadOnlySpan<byte> utf8, out string text)
@@ -209,18 +212,36 @@ internal sealed class VMInstruction : IEnumerable<VMInstruction>
         if (utf8.IsEmpty || !Utf8.IsValid(utf8))
             return false;
 
-        text = Encoding.UTF8.GetString(utf8);
-        foreach (var rune in text.EnumerateRunes())
+        var decoded = Encoding.UTF8.GetString(utf8);
+        var hasGraphic = false;
+        var sb = new StringBuilder(decoded.Length);
+        foreach (var rune in decoded.EnumerateRunes())
         {
-            if (Rune.IsControl(rune))
+            if (Rune.IsControl(rune) || rune.Value == 0x7F)
+                sb.Append(EscapeControlRune(rune));
+            else
             {
-                text = null!;
-                return false;
+                hasGraphic = true;
+                sb.Append(rune);
             }
         }
 
+        if (!hasGraphic)
+            return false;
+
+        text = sb.ToString();
         return true;
     }
+
+    private static string EscapeControlRune(Rune rune)
+        => rune.Value switch
+        {
+            '\n' => "\\n",
+            '\r' => "\\r",
+            '\t' => "\\t",
+            '\0' => "\\0",
+            _ => rune.Value <= 0xFF ? $"\\x{rune.Value:X2}" : $"\\u{rune.Value:X4}",
+        };
 
     private static bool TryDecodeEcPoint(byte[] operand, out ECPoint point)
     {

@@ -65,15 +65,16 @@ public class UT_VMInstruction
     {
         var invalid = new byte[] { 0xC0, 0x80, 0xFF };
         var instruction = new VMInstruction(PushData1(invalid));
-        Assert.AreEqual(Convert.ToHexString(invalid), instruction.DecodeOperand());
+        Assert.AreEqual($"{Convert.ToHexString(invalid)} // blob {invalid.Length} bytes", instruction.DecodeOperand());
     }
 
     [TestMethod]
-    public void DecodeOperand_RejectsControlRunesAsText()
+    public void DecodeOperand_EscapesControlRunesInText()
     {
         var withNl = "ab\ncd"u8.ToArray();
         var instruction = new VMInstruction(PushData1(withNl));
-        Assert.DoesNotContain(" // ", instruction.DecodeOperand());
+        Assert.Contains(" // ab\\ncd", instruction.DecodeOperand());
+        Assert.DoesNotContain("ab\ncd", instruction.DecodeOperand());
     }
 
     [TestMethod]
@@ -118,7 +119,7 @@ public class UT_VMInstruction
         var blob = Convert.FromHexString("71BDDFD76DBDEF67BCF1C71AE77E787B973C69F79C79FF1F");
         Assert.AreEqual(24, blob.Length);
         var instruction = new VMInstruction(PushData1(blob));
-        Assert.AreEqual(Convert.ToHexString(blob), instruction.DecodeOperand());
+        Assert.AreEqual($"{Convert.ToHexString(blob)} // blob 24 bytes", instruction.DecodeOperand());
     }
 
     private static byte[] PushData1(byte[] data)
