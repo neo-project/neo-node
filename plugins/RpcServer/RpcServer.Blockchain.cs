@@ -581,37 +581,51 @@ partial class RpcServer
             throw new RpcException(RpcError.InternalServerError.WithData("Can't get candidates."));
         }
 
-        JObject json = new();
         try
         {
-            if (resultstack.Length > 0)
-            {
-                JArray jArray = new();
-                var validators = NativeContract.NEO.GetNextBlockValidators(snapshot, system.Settings.ValidatorsCount)
-                    ?? throw new RpcException(RpcError.InternalServerError.WithData("Can't get next block validators."));
+            if (resultstack.Length == 0)
+                return FormatCandidates(resultstack, []);
 
-                foreach (var item in resultstack)
-                {
-                    var value = (Array)item;
-                    foreach (Struct ele in value)
-                    {
-                        var publickey = ECPoint.DecodePoint(ele[0].GetSpan(), ECCurve.Secp256r1);
-                        json["publickey"] = publickey.ToString();
-                        json["votes"] = ele[1].GetInteger().ToString();
-                        json["active"] = validators.Contains(publickey);
-                        jArray.Add(json);
-                        json = new();
-                    }
-                    return jArray;
-                }
-            }
+            var validators = NativeContract.NEO.GetNextBlockValidators(snapshot, system.Settings.ValidatorsCount)
+                ?? throw new RpcException(RpcError.InternalServerError.WithData("Can't get next block validators."));
+            return FormatCandidates(resultstack, validators);
+        }
+        catch (RpcException)
+        {
+            throw;
         }
         catch
         {
             throw new RpcException(RpcError.InternalServerError.WithData("Can't get next block validators"));
         }
+    }
 
-        return new JArray();
+    /// <summary>
+    /// Builds the getcandidates JSON array. An empty VM stack yields <c>[]</c>, not <c>{}</c>.
+    /// </summary>
+    internal static JToken FormatCandidates(StackItem[] resultstack, IReadOnlyCollection<ECPoint> validators)
+    {
+        var jArray = new JArray();
+        if (resultstack.Length == 0)
+            return jArray;
+
+        foreach (var item in resultstack)
+        {
+            var value = (Array)item;
+            foreach (Struct ele in value)
+            {
+                var publickey = ECPoint.DecodePoint(ele[0].GetSpan(), ECCurve.Secp256r1);
+                jArray.Add(new JObject
+                {
+                    ["publickey"] = publickey.ToString(),
+                    ["votes"] = ele[1].GetInteger().ToString(),
+                    ["active"] = validators.Contains(publickey),
+                });
+            }
+            return jArray;
+        }
+
+        return jArray;
     }
 
     /// <summary>
