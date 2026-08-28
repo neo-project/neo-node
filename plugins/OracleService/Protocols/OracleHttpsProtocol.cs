@@ -49,7 +49,7 @@ class OracleHttpsProtocol : IOracleProtocol
         HttpResponseMessage message;
         try
         {
-            int redirects = 2;
+            int redirects = OracleSettings.Default.Https.MaxRedirects;
             do
             {
                 if (!OracleSettings.Default.AllowPrivateHost)

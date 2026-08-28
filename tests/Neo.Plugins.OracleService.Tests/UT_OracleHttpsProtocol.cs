@@ -9,6 +9,7 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using Microsoft.Extensions.Configuration;
 using Neo.Plugins.OracleService.Protocols;
 using System.Net.Http.Headers;
 using System.Text;
@@ -97,5 +98,36 @@ public class UT_OracleHttpsProtocol
         Assert.AreEqual(Encoding.UTF8, OracleHttpsProtocol.GetEncoding(message.Content.Headers));
         message.Content.Headers.ContentType.CharSet = "utf-16";
         Assert.AreEqual(Encoding.Unicode, OracleHttpsProtocol.GetEncoding(message.Content.Headers));
+    }
+
+    [TestMethod]
+    public void HttpsSettings_MaxRedirects_DefaultsToTwo()
+    {
+        var https = new HttpsSettings(EmptySection());
+        Assert.AreEqual(HttpsSettings.DefaultMaxRedirects, https.MaxRedirects);
+        Assert.AreEqual(2, https.MaxRedirects);
+    }
+
+    [TestMethod]
+    public void HttpsSettings_MaxRedirects_ReadsFromConfig()
+    {
+        var https = new HttpsSettings(Section(("MaxRedirects", "5")));
+        Assert.AreEqual(5, https.MaxRedirects);
+    }
+
+    [TestMethod]
+    public void HttpsSettings_MaxRedirects_ClampsNegativeToZero()
+    {
+        var https = new HttpsSettings(Section(("MaxRedirects", "-3")));
+        Assert.AreEqual(0, https.MaxRedirects);
+    }
+
+    private static IConfigurationSection EmptySection()
+        => new ConfigurationBuilder().AddInMemoryCollection().Build().GetSection("Https");
+
+    private static IConfigurationSection Section(params (string Key, string Value)[] values)
+    {
+        var data = values.ToDictionary(p => "Https:" + p.Key, p => p.Value);
+        return new ConfigurationBuilder().AddInMemoryCollection(data!).Build().GetSection("Https");
     }
 }
