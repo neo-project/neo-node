@@ -66,6 +66,6 @@ Menu command parameters:
 
 ![Command parameters](command-params.png)
 
-`clear` from the command line (popup when there is no stdout):
+Command line (`C`) — same `neo>` prompt as neo-cli:
 
-![clear output](command-clear.png)
+![Command line](command-clear.png)
