@@ -9,11 +9,13 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using Neo.Cryptography.ECC;
 using Neo.SmartContract;
 using Neo.VM;
 using System.Buffers.Binary;
 using System.Collections;
 using System.Diagnostics;
+using System.Globalization;
 using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -157,17 +159,100 @@ internal sealed class VMInstruction : IEnumerable<VMInstruction>
             OpCode.LDARG or
             OpCode.STARG or
             OpCode.INITSSLOT => $"{AsToken<byte>()}",
-            OpCode.PUSHINT8 => $"{AsToken<sbyte>()}",
-            OpCode.PUSHINT16 => $"{AsToken<short>()}",
-            OpCode.PUSHINT32 => $"{AsToken<int>()}",
-            OpCode.PUSHINT64 => $"{AsToken<long>()}",
+            OpCode.PUSHINT8 => FormatInteger(AsToken<sbyte>()),
+            OpCode.PUSHINT16 => FormatInteger(AsToken<short>()),
+            OpCode.PUSHINT32 => FormatInteger(AsToken<int>()),
+            OpCode.PUSHINT64 => FormatInteger(AsToken<long>()),
             OpCode.PUSHINT128 or
             OpCode.PUSHINT256 => $"{new BigInteger(operand)}",
             OpCode.SYSCALL => $"[{ApplicationEngine.Services[Unsafe.As<byte, uint>(ref operand[0])].Name}]",
             OpCode.PUSHDATA1 or
             OpCode.PUSHDATA2 or
-            OpCode.PUSHDATA4 => readable ? $"{Convert.ToHexString(operand)} // {asStr}" : Convert.ToHexString(operand),
-            _ => readable ? $"\"{asStr}\"" : $"{Convert.ToHexString(operand)}",
+            OpCode.PUSHDATA4 => FormatPushData(operand),
+            _ => IsReadableText(asStr) ? $"\"{asStr}\"" : $"{Convert.ToHexString(operand)}",
         };
+    }
+
+    private static string FormatPushData(byte[] operand)
+    {
+        var hex = Convert.ToHexString(operand);
+        var asStr = Encoding.UTF8.GetString(operand);
+        if (IsReadableText(asStr))
+            return $"{hex} // {asStr}";
+
+        if (TryDecodeEcPoint(operand, out var point))
+            return $"{hex} // {point}";
+
+        if (operand.Length == UInt160.Length)
+            return $"{hex} // {new UInt160(operand)}";
+
+        if (operand.Length == UInt256.Length)
+            return $"{hex} // {new UInt256(operand)}";
+
+        if (operand.Length == 4 && TryFormatUnixTimestamp(BinaryPrimitives.ReadUInt32LittleEndian(operand), out var ts32))
+            return $"{hex} // {ts32}";
+
+        if (operand.Length == 8 && TryFormatUnixTimestamp(BinaryPrimitives.ReadInt64LittleEndian(operand), out var ts64))
+            return $"{hex} // {ts64}";
+
+        return hex;
+    }
+
+    private static string FormatInteger(long value)
+        => TryFormatUnixTimestamp(value, out var ts) ? $"{value} // {ts}" : value.ToString(CultureInfo.InvariantCulture);
+
+    private static bool IsReadableText(string value)
+        => value.Length > 0 && value.Any(char.IsAsciiLetter) && value.All(static c => char.IsAscii(c) && !char.IsControl(c));
+
+    private static bool TryDecodeEcPoint(byte[] operand, out ECPoint point)
+    {
+        point = null!;
+        if (operand.Length is not (33 or 65))
+            return false;
+        if (operand[0] is not (0x02 or 0x03 or 0x04))
+            return false;
+        try
+        {
+            point = ECPoint.DecodePoint(operand, ECCurve.Secp256r1);
+            return true;
+        }
+        catch (FormatException)
+        {
+            try
+            {
+                point = ECPoint.DecodePoint(operand, ECCurve.Secp256k1);
+                return true;
+            }
+            catch (FormatException)
+            {
+                return false;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Unix seconds in 2000–2100, or unix milliseconds in that same window.
+    /// </summary>
+    private static bool TryFormatUnixTimestamp(long value, out string text)
+    {
+        const long UnixSeconds2000 = 946_684_800;
+        const long UnixSeconds2100 = 4_102_444_800;
+        const long UnixMilliseconds2000 = 946_684_800_000;
+        const long UnixMilliseconds2100 = 4_102_444_800_000;
+
+        if (value >= UnixSeconds2000 && value <= UnixSeconds2100)
+        {
+            text = DateTimeOffset.FromUnixTimeSeconds(value).UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
+            return true;
+        }
+
+        if (value >= UnixMilliseconds2000 && value <= UnixMilliseconds2100)
+        {
+            text = DateTimeOffset.FromUnixTimeMilliseconds(value).UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
+            return true;
+        }
+
+        text = null!;
+        return false;
     }
 }

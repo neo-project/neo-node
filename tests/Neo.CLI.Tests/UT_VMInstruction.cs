@@ -11,6 +11,8 @@
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Neo.CLI;
+using Neo.Cryptography.ECC;
+using Neo.Extensions;
 using Neo.VM;
 
 namespace Neo.CLI.Tests;
@@ -40,5 +42,67 @@ public class UT_VMInstruction
         Assert.HasCount(2, lines);
         Assert.AreEqual("0000 NOP", lines[0]);
         Assert.AreEqual("0001 RET", lines[1]);
+    }
+
+    [TestMethod]
+    public void DecodeOperand_CommentsReadableTextIncludingColon()
+    {
+        var text = "TWELVEDATA:CNY-USD"u8.ToArray();
+        var instruction = new VMInstruction(PushData1(text));
+        Assert.Contains(" // TWELVEDATA:CNY-USD", instruction.DecodeOperand());
+    }
+
+    [TestMethod]
+    public void DecodeOperand_FormatsUInt160()
+    {
+        var hash = new UInt160(Convert.FromHexString("ABCC7F51C334D4F958BE8B6C54142AC4493F0103"));
+        var instruction = new VMInstruction(PushData1(hash.ToArray()));
+        Assert.AreEqual($"{Convert.ToHexString(hash.ToArray())} // {hash}", instruction.DecodeOperand());
+    }
+
+    [TestMethod]
+    public void DecodeOperand_FormatsUInt256()
+    {
+        var hash = new UInt256(new byte[32]);
+        var instruction = new VMInstruction(PushData1(hash.ToArray()));
+        Assert.AreEqual($"{Convert.ToHexString(hash.ToArray())} // {hash}", instruction.DecodeOperand());
+    }
+
+    [TestMethod]
+    public void DecodeOperand_FormatsEcPoint()
+    {
+        var point = ECPoint.Parse("03b209fd4f53a7170ea4444e0cb0a6bb6a53c2bd016926989cf85f9b0fba17a70c", ECCurve.Secp256r1);
+        var encoded = point.EncodePoint(true);
+        var instruction = new VMInstruction(PushData1(encoded));
+        Assert.AreEqual($"{Convert.ToHexString(encoded)} // {point}", instruction.DecodeOperand());
+    }
+
+    [TestMethod]
+    public void DecodeOperand_CommentsUnixTimestampOnPushInt32()
+    {
+        const int unix = 1_787_908_101;
+        var script = new byte[5];
+        script[0] = (byte)OpCode.PUSHINT32;
+        BitConverter.GetBytes(unix).CopyTo(script, 1);
+        var instruction = new VMInstruction(script);
+        Assert.AreEqual("1787908101 // 2026-08-28T09:08:21Z", instruction.DecodeOperand());
+    }
+
+    [TestMethod]
+    public void DecodeOperand_LeavesNonTypedPushDataAsHex()
+    {
+        var blob = Convert.FromHexString("71BDDFD76DBDEF67BCF1C71AE77E787B973C69F79C79FF1F");
+        Assert.AreEqual(24, blob.Length);
+        var instruction = new VMInstruction(PushData1(blob));
+        Assert.AreEqual(Convert.ToHexString(blob), instruction.DecodeOperand());
+    }
+
+    private static byte[] PushData1(byte[] data)
+    {
+        var script = new byte[2 + data.Length];
+        script[0] = (byte)OpCode.PUSHDATA1;
+        script[1] = (byte)data.Length;
+        Buffer.BlockCopy(data, 0, script, 2, data.Length);
+        return script;
     }
 }
