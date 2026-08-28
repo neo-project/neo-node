@@ -97,9 +97,9 @@ internal sealed class VMInstruction : IEnumerable<VMInstruction>
 
     public override string ToString()
     {
-        var sb = new StringBuilder();
-        sb.AppendFormat("{0:X04} {1,-10}{2}", Position, OpCode, DecodeOperand());
-        return sb.ToString();
+        if (OperandSize == 0)
+            return string.Format("{0:X04} {1}", Position, OpCode);
+        return string.Format("{0:X04} {1,-10}{2}", Position, OpCode, DecodeOperand());
     }
 
     public T AsToken<T>(uint index = 0)
