@@ -61,9 +61,13 @@ class OracleHttpsProtocol : IOracleProtocol
                 message = await client.GetAsync(uri, HttpCompletionOption.ResponseContentRead, cancellation);
                 if (message.Headers.Location is not null)
                 {
-                    uri = message.Headers.Location;
-                    if (uri.Scheme != Uri.UriSchemeHttps)
+                    if (!TryResolveHttpsRedirect(uri, message.Headers.Location, out var next))
+                    {
+                        message.Dispose();
                         return (OracleResponseCode.ProtocolNotSupported, null);
+                    }
+                    message.Dispose();
+                    uri = next;
                     message = null;
                 }
             } while (message == null && redirects-- > 0);
@@ -80,7 +84,8 @@ class OracleHttpsProtocol : IOracleProtocol
             return (OracleResponseCode.Forbidden, null);
         if (!message.IsSuccessStatusCode)
             return (OracleResponseCode.Error, message.StatusCode.ToString());
-        if (!OracleSettings.Default.AllowedContentTypes.Contains(message.Content.Headers.ContentType.MediaType))
+        var mediaType = message.Content.Headers.ContentType?.MediaType;
+        if (string.IsNullOrEmpty(mediaType) || !OracleSettings.Default.AllowedContentTypes.Contains(mediaType))
             return (OracleResponseCode.ContentTypeNotSupported, null);
         if (message.Content.Headers.ContentLength.HasValue && message.Content.Headers.ContentLength > OracleResponse.MaxResultSize)
             return (OracleResponseCode.ResponseTooLarge, null);
@@ -108,5 +113,15 @@ class OracleHttpsProtocol : IOracleProtocol
         }
 
         return encoding ?? Encoding.UTF8;
+    }
+
+    /// <summary>
+    /// Resolves an HTTP Location header against the current request URI.
+    /// Relative redirects stay on HTTPS when the current request is HTTPS.
+    /// </summary>
+    internal static bool TryResolveHttpsRedirect(Uri current, Uri location, out Uri next)
+    {
+        next = location.IsAbsoluteUri ? location : new Uri(current, location);
+        return next.IsAbsoluteUri && next.Scheme == Uri.UriSchemeHttps;
     }
 }
