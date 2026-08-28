@@ -119,6 +119,15 @@ partial class UT_RpcServer
         Assert.IsTrue(json.ContainsProperty("useragent"));
         Assert.IsTrue(json.ContainsProperty("version"));
         Assert.AreEqual(_rpcServer.GetType().Assembly.GetName().Version?.ToString(3), json["version"]!.AsString());
+        Assert.IsFalse(string.IsNullOrEmpty(json["version"]!.AsString()));
+        Assert.HasCount(3, json["version"]!.AsString().Split('.'));
+
+        Assert.IsTrue(json.ContainsProperty("rpc"));
+        var rpc = (JObject)json["rpc"]!;
+        Assert.IsTrue(rpc.ContainsProperty("maxiteratorresultitems"));
+        Assert.IsTrue(rpc.ContainsProperty("sessionenabled"));
+        Assert.AreEqual(_rpcServerSettings.MaxIteratorResultItems, rpc["maxiteratorresultitems"]!.AsNumber());
+        Assert.AreEqual(_rpcServerSettings.SessionEnabled, rpc["sessionenabled"]!.AsBoolean());
 
         Assert.IsTrue(json.ContainsProperty("protocol"));
         var protocol = (JObject)json["protocol"];
@@ -132,6 +141,17 @@ partial class UT_RpcServer
         Assert.IsTrue(protocol.ContainsProperty("memorypoolmaxtransactions"));
         Assert.IsTrue(protocol.ContainsProperty("standbycommittee"));
         Assert.IsTrue(protocol.ContainsProperty("seedlist"));
+    }
+
+    [TestMethod]
+    public void TestGetVersion_VersionIsNodeAssemblyNotUserAgent()
+    {
+        var json = (JObject)_rpcServer.GetVersion();
+        var version = json["version"]!.AsString();
+        var useragent = json["useragent"]!.AsString();
+        Assert.AreEqual(_rpcServer.GetType().Assembly.GetName().Version?.ToString(3), version);
+        Assert.IsFalse(string.IsNullOrEmpty(useragent));
+        Assert.AreNotEqual(version, useragent);
     }
 
     [TestMethod]
