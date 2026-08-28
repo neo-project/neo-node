@@ -65,3 +65,7 @@ Command output popup — **Rerun command** / **Close**:
 Menu command parameters:
 
 ![Command parameters](command-params.png)
+
+`clear` from the command line (popup when there is no stdout):
+
+![clear output](command-clear.png)
