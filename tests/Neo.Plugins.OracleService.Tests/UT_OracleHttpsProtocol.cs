@@ -10,6 +10,8 @@
 // modifications are permitted.
 
 using Neo.Plugins.OracleService.Protocols;
+using System.Net.Http.Headers;
+using System.Text;
 
 namespace Neo.Plugins.OracleService.Tests;
 
@@ -40,5 +42,60 @@ public class UT_OracleHttpsProtocol
         var current = new Uri("https://example.com/oracle");
         var location = new Uri("http://example.com/oracle");
         Assert.IsFalse(OracleHttpsProtocol.TryResolveHttpsRedirect(current, location, out _));
+    }
+
+    [TestMethod]
+    public void TryResolveHttpsRedirect_ResolvesRelativePathWithoutSlash()
+    {
+        var current = new Uri("https://example.com/v1/oracle");
+        var location = new Uri("next", UriKind.Relative);
+        Assert.IsTrue(OracleHttpsProtocol.TryResolveHttpsRedirect(current, location, out var next));
+        Assert.AreEqual("https://example.com/v1/next", next.AbsoluteUri);
+    }
+
+    [TestMethod]
+    public void TryResolveHttpsRedirect_RejectsFtp()
+    {
+        var current = new Uri("https://example.com/oracle");
+        Assert.IsFalse(OracleHttpsProtocol.TryResolveHttpsRedirect(current, new Uri("ftp://example.com/file"), out _));
+    }
+
+    [TestMethod]
+    public void IsSupportedContentType_MissingHeader_IsRejected()
+    {
+        using var message = new HttpResponseMessage();
+        Assert.IsNull(message.Content.Headers.ContentType);
+        Assert.IsFalse(OracleHttpsProtocol.IsSupportedContentType(message.Content.Headers, ["application/json"]));
+    }
+
+    [TestMethod]
+    public void IsSupportedContentType_JsonIsAllowed_XmlIsNot()
+    {
+        using var ok = new HttpResponseMessage();
+        ok.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+        using var bad = new HttpResponseMessage();
+        bad.Content.Headers.ContentType = new MediaTypeHeaderValue("text/html");
+        string[] allowed = ["application/json"];
+        Assert.IsTrue(OracleHttpsProtocol.IsSupportedContentType(ok.Content.Headers, allowed));
+        Assert.IsFalse(OracleHttpsProtocol.IsSupportedContentType(bad.Content.Headers, allowed));
+    }
+
+    [TestMethod]
+    public void GetEncoding_DefaultsToUtf8_WhenCharsetMissing()
+    {
+        using var message = new HttpResponseMessage();
+        Assert.AreEqual(Encoding.UTF8, OracleHttpsProtocol.GetEncoding(message.Content.Headers));
+        message.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+        Assert.AreEqual(Encoding.UTF8, OracleHttpsProtocol.GetEncoding(message.Content.Headers));
+    }
+
+    [TestMethod]
+    public void GetEncoding_UsesDeclaredCharset()
+    {
+        using var message = new HttpResponseMessage();
+        message.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
+        Assert.AreEqual(Encoding.UTF8, OracleHttpsProtocol.GetEncoding(message.Content.Headers));
+        message.Content.Headers.ContentType.CharSet = "utf-16";
+        Assert.AreEqual(Encoding.Unicode, OracleHttpsProtocol.GetEncoding(message.Content.Headers));
     }
 }

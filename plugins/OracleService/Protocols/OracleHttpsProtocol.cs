@@ -84,8 +84,7 @@ class OracleHttpsProtocol : IOracleProtocol
             return (OracleResponseCode.Forbidden, null);
         if (!message.IsSuccessStatusCode)
             return (OracleResponseCode.Error, message.StatusCode.ToString());
-        var mediaType = message.Content.Headers.ContentType?.MediaType;
-        if (string.IsNullOrEmpty(mediaType) || !OracleSettings.Default.AllowedContentTypes.Contains(mediaType))
+        if (!IsSupportedContentType(message.Content.Headers, OracleSettings.Default.AllowedContentTypes))
             return (OracleResponseCode.ContentTypeNotSupported, null);
         if (message.Content.Headers.ContentLength.HasValue && message.Content.Headers.ContentLength > OracleResponse.MaxResultSize)
             return (OracleResponseCode.ResponseTooLarge, null);
@@ -104,7 +103,13 @@ class OracleHttpsProtocol : IOracleProtocol
         return (OracleResponseCode.Success, buffer.ToStrictUtf8String(0, read));
     }
 
-    private static Encoding GetEncoding(HttpContentHeaders headers)
+    internal static bool IsSupportedContentType(HttpContentHeaders headers, IEnumerable<string> allowed)
+    {
+        var mediaType = headers.ContentType?.MediaType;
+        return !string.IsNullOrEmpty(mediaType) && allowed.Contains(mediaType);
+    }
+
+    internal static Encoding GetEncoding(HttpContentHeaders headers)
     {
         Encoding encoding = null;
         if ((headers.ContentType != null) && (headers.ContentType.CharSet != null))
