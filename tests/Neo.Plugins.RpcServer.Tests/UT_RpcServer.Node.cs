@@ -117,10 +117,10 @@ partial class UT_RpcServer
         Assert.IsTrue(json.ContainsProperty("tcpport"));
         Assert.IsTrue(json.ContainsProperty("nonce"));
         Assert.IsTrue(json.ContainsProperty("useragent"));
-        Assert.IsTrue(json.ContainsProperty("version"));
-        Assert.AreEqual(_rpcServer.GetType().Assembly.GetName().Version?.ToString(3), json["version"]!.AsString());
-        Assert.IsFalse(string.IsNullOrEmpty(json["version"]!.AsString()));
-        Assert.HasCount(3, json["version"]!.AsString().Split('.'));
+        Assert.IsFalse(json.ContainsProperty("version"));
+        var nodeVersion = _rpcServer.GetType().Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+        Assert.AreEqual(RpcServer.UserAgentWithVersion(LocalNode.UserAgent, nodeVersion), json["useragent"]!.AsString());
+        Assert.Contains($":{nodeVersion}/", json["useragent"]!.AsString());
 
         Assert.IsTrue(json.ContainsProperty("rpc"));
         var rpc = (JObject)json["rpc"]!;
@@ -144,14 +144,12 @@ partial class UT_RpcServer
     }
 
     [TestMethod]
-    public void TestGetVersion_VersionIsNodeAssemblyNotUserAgent()
+    public void TestUserAgentWithVersion_ReplacesVersionKeepsProduct()
     {
-        var json = (JObject)_rpcServer.GetVersion();
-        var version = json["version"]!.AsString();
-        var useragent = json["useragent"]!.AsString();
-        Assert.AreEqual(_rpcServer.GetType().Assembly.GetName().Version?.ToString(3), version);
-        Assert.IsFalse(string.IsNullOrEmpty(useragent));
-        Assert.AreNotEqual(version, useragent);
+        Assert.AreEqual("/Neo:3.10.2/", RpcServer.UserAgentWithVersion("/Neo:3.10.1/", "3.10.2"));
+        Assert.AreEqual("/MyNode:3.10.2/", RpcServer.UserAgentWithVersion("/MyNode:1.0.0/", "3.10.2"));
+        Assert.AreEqual("/Neo:3.10.2/", RpcServer.UserAgentWithVersion("not-a-ua", "3.10.2"));
+        Assert.AreEqual("/Neo:3.10.2/", RpcServer.UserAgentWithVersion(string.Empty, "3.10.2"));
     }
 
     [TestMethod]

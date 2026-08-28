@@ -123,8 +123,7 @@ partial class RpcServer
     ///   "result": {
     ///     "tcpport": 10333, // The TCP port,
     ///     "nonce": 1, // The nonce,
-    ///     "useragent": "The Neo library user agent",
-    ///     "version": "The neo-node / RpcServer assembly version",
+    ///     "useragent": "/Neo:3.10.2/", // Node assembly version in the existing useragent field,
     ///     "rpc": {
     ///       "maxiteratorresultitems": 100, // The maximum number of items in the iterator result,
     ///       "sessionenabled": false // Whether session is enabled,
@@ -153,9 +152,8 @@ partial class RpcServer
         JObject json = new();
         json["tcpport"] = localNode.ListenerTcpPort;
         json["nonce"] = LocalNode.Nonce;
-        json["useragent"] = LocalNode.UserAgent;
-        // UserAgent comes from Neo.dll; version is this node/plugin assembly (neo-node#983).
-        json["version"] = typeof(RpcServer).Assembly.GetName().Version?.ToString(3);
+        var nodeVersion = typeof(RpcServer).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+        json["useragent"] = UserAgentWithVersion(LocalNode.UserAgent, nodeVersion);
         // rpc settings
         JObject rpc = new();
         rpc["maxiteratorresultitems"] = settings.MaxIteratorResultItems;
@@ -184,6 +182,19 @@ partial class RpcServer
         json["rpc"] = rpc;
         json["protocol"] = protocol;
         return json;
+    }
+
+    /// <summary>
+    /// Keeps the P2P useragent product name and replaces the version with <paramref name="version"/>.
+    /// <c>/Neo:3.10.1/</c> plus <c>3.10.2</c> becomes <c>/Neo:3.10.2/</c>.
+    /// </summary>
+    internal static string UserAgentWithVersion(string userAgent, string version)
+    {
+        var colon = userAgent.IndexOf(':');
+        var slash = userAgent.LastIndexOf('/');
+        if (colon >= 0 && slash > colon)
+            return string.Concat(userAgent.AsSpan(0, colon + 1), version, userAgent.AsSpan(slash));
+        return $"/Neo:{version}/";
     }
 
     /// <summary>
