@@ -53,6 +53,30 @@ public class UT_VMInstruction
     }
 
     [TestMethod]
+    public void DecodeOperand_CommentsStrictUtf8PrintableRunes()
+    {
+        var text = "价格 café — ✓"u8.ToArray();
+        var instruction = new VMInstruction(PushData1(text));
+        Assert.Contains(" // 价格 café — ✓", instruction.DecodeOperand());
+    }
+
+    [TestMethod]
+    public void DecodeOperand_RejectsInvalidUtf8AsText()
+    {
+        var invalid = new byte[] { 0xC0, 0x80, 0xFF };
+        var instruction = new VMInstruction(PushData1(invalid));
+        Assert.AreEqual(Convert.ToHexString(invalid), instruction.DecodeOperand());
+    }
+
+    [TestMethod]
+    public void DecodeOperand_RejectsControlRunesAsText()
+    {
+        var withNl = "ab\ncd"u8.ToArray();
+        var instruction = new VMInstruction(PushData1(withNl));
+        Assert.DoesNotContain(" // ", instruction.DecodeOperand());
+    }
+
+    [TestMethod]
     public void DecodeOperand_FormatsUInt160()
     {
         var hash = new UInt160(Convert.FromHexString("ABCC7F51C334D4F958BE8B6C54142AC4493F0103"));

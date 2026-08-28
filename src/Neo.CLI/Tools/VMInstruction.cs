@@ -20,6 +20,7 @@ using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Unicode;
 
 namespace Neo.CLI;
 
@@ -121,8 +122,6 @@ internal sealed class VMInstruction : IEnumerable<VMInstruction>
     public string DecodeOperand()
     {
         var operand = Operand[OperandPrefixSize..].ToArray();
-        var asStr = Encoding.UTF8.GetString(operand);
-        var readable = asStr.All(char.IsAsciiLetterOrDigit);
 
         return OpCode switch
         {
@@ -169,16 +168,15 @@ internal sealed class VMInstruction : IEnumerable<VMInstruction>
             OpCode.PUSHDATA1 or
             OpCode.PUSHDATA2 or
             OpCode.PUSHDATA4 => FormatPushData(operand),
-            _ => IsReadableText(asStr) ? $"\"{asStr}\"" : $"{Convert.ToHexString(operand)}",
+            _ => TryGetReadableText(operand, out var text) ? $"\"{text}\"" : $"{Convert.ToHexString(operand)}",
         };
     }
 
     private static string FormatPushData(byte[] operand)
     {
         var hex = Convert.ToHexString(operand);
-        var asStr = Encoding.UTF8.GetString(operand);
-        if (IsReadableText(asStr))
-            return $"{hex} // {asStr}";
+        if (TryGetReadableText(operand, out var text))
+            return $"{hex} // {text}";
 
         if (TryDecodeEcPoint(operand, out var point))
             return $"{hex} // {point}";
@@ -201,8 +199,28 @@ internal sealed class VMInstruction : IEnumerable<VMInstruction>
     private static string FormatInteger(long value)
         => TryFormatUnixTimestamp(value, out var ts) ? $"{value} // {ts}" : value.ToString(CultureInfo.InvariantCulture);
 
-    private static bool IsReadableText(string value)
-        => value.Length > 0 && value.Any(char.IsAsciiLetter) && value.All(static c => char.IsAscii(c) && !char.IsControl(c));
+    /// <summary>
+    /// Strict UTF-8 whose runes are all printable (not control characters).
+    /// Invalid sequences are rejected; <see cref="Encoding.UTF8"/> replacement is not used.
+    /// </summary>
+    private static bool TryGetReadableText(ReadOnlySpan<byte> utf8, out string text)
+    {
+        text = null!;
+        if (utf8.IsEmpty || !Utf8.IsValid(utf8))
+            return false;
+
+        text = Encoding.UTF8.GetString(utf8);
+        foreach (var rune in text.EnumerateRunes())
+        {
+            if (Rune.IsControl(rune))
+            {
+                text = null!;
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     private static bool TryDecodeEcPoint(byte[] operand, out ECPoint point)
     {
