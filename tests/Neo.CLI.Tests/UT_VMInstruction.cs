@@ -45,6 +45,31 @@ public class UT_VMInstruction
     }
 
     [TestMethod]
+    public void DecimalWidth_GrowsPastFourDigits()
+    {
+        Assert.AreEqual(4, VMInstruction.DecimalWidth(0));
+        Assert.AreEqual(4, VMInstruction.DecimalWidth(9999));
+        Assert.AreEqual(5, VMInstruction.DecimalWidth(10000));
+        Assert.AreEqual(6, VMInstruction.DecimalWidth(100000));
+    }
+
+    [TestMethod]
+    public void HexWidth_GrowsWithScriptLength()
+    {
+        Assert.AreEqual(4, VMInstruction.HexWidth(1));
+        Assert.AreEqual(4, VMInstruction.HexWidth(0x10000));
+        Assert.AreEqual(5, VMInstruction.HexWidth(0x10001));
+    }
+
+    [TestMethod]
+    public void FormatListing_PadsLineNumbersToAtLeastFourDigits()
+    {
+        var listing = VMInstruction.FormatListing(new byte[] { (byte)OpCode.NOP, (byte)OpCode.RET });
+        Assert.StartsWith("L0000:", listing);
+        Assert.Contains("L0001:", listing);
+    }
+
+    [TestMethod]
     public void DecodeOperand_CommentsReadableTextIncludingColon()
     {
         var text = "TWELVEDATA:CNY-USD"u8.ToArray();

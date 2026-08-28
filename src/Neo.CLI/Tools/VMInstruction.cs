@@ -100,10 +100,42 @@ internal sealed class VMInstruction : IEnumerable<VMInstruction>
 
     public override string ToString()
     {
+        var posWidth = HexWidth(_script.Length);
         if (OperandSize == 0)
-            return string.Format("{0:X04} {1}", Position, OpCode);
-        return string.Format("{0:X04} {1,-10}{2}", Position, OpCode, DecodeOperand());
+            return string.Format($"{{0:X{posWidth}}} {{1}}", Position, OpCode);
+        return string.Format($"{{0:X{posWidth}}} {{1,-10}}{{2}}", Position, OpCode, DecodeOperand());
     }
+
+    /// <summary>
+    /// Lists instructions as <c>L0000:0000 NOP</c>. The L-prefix width is at least 4 digits
+    /// and grows with the script size / instruction count.
+    /// </summary>
+    internal static string FormatListing(ReadOnlyMemory<byte> script)
+    {
+        var rows = new List<VMInstruction>();
+        foreach (var instruct in new VMInstruction(script))
+            rows.Add(instruct);
+
+        var lastIndex = Math.Max(0, rows.Count - 1);
+        var width = DecimalWidth(Math.Max(lastIndex, script.Length));
+        var sb = new StringBuilder();
+        for (var i = 0; i < rows.Count; i++)
+        {
+            sb.Append('L');
+            sb.Append(i.ToString($"D{width}", CultureInfo.InvariantCulture));
+            sb.Append(':');
+            sb.Append(rows[i]);
+            sb.AppendLine();
+        }
+
+        return sb.ToString();
+    }
+
+    internal static int DecimalWidth(int value)
+        => Math.Max(4, Math.Max(0, value).ToString(CultureInfo.InvariantCulture).Length);
+
+    internal static int HexWidth(int length)
+        => Math.Max(4, Math.Max(0, length == 0 ? 0 : length - 1).ToString("X").Length);
 
     public T AsToken<T>(uint index = 0)
         where T : unmanaged

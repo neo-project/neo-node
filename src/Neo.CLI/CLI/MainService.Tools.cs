@@ -409,7 +409,7 @@ partial class MainService
     /// <summary>
     /// Base64 Smart Contract Script Analysis
     /// input: DARkYXRhAgBlzR0MFPdcrAXPVptVduMEs2lf1jQjxKIKDBT3XKwFz1abVXbjBLNpX9Y0I8SiChTAHwwIdHJhbnNmZXIMFKNSbimM12LkFYX/8KGvm2ttFxulQWJ9W1I=
-    /// output (VMInstruction.ToString, with a line number prefix):
+    /// output (VMInstruction.ToString, with an L-prefix padded to at least 4 digits):
     /// L0000:0000 PUSHDATA1 64617461 // data
     /// L0001:0006 PUSHINT32 500000000
     /// L0002:000B PUSHDATA1 0AA2C42334D65F69B304E376559B56CF05AC5CF7
@@ -420,17 +420,7 @@ partial class MainService
         try
         {
             var bytes = Convert.FromBase64String(base64);
-            var sb = new StringBuilder();
-            var line = 0;
-
-            foreach (var instruct in new VMInstruction(bytes))
-            {
-                sb.AppendFormat("L{0:D04}:{1}", line, instruct);
-                sb.AppendLine();
-                line++;
-            }
-
-            return sb.ToString();
+            return VMInstruction.FormatListing(bytes);
         }
         catch
         {
