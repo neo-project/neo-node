@@ -123,7 +123,8 @@ partial class RpcServer
     ///   "result": {
     ///     "tcpport": 10333, // The TCP port,
     ///     "nonce": 1, // The nonce,
-    ///     "useragent": "The user agent",
+    ///     "useragent": "The Neo library user agent",
+    ///     "version": "The neo-node / RpcServer assembly version",
     ///     "rpc": {
     ///       "maxiteratorresultitems": 100, // The maximum number of items in the iterator result,
     ///       "sessionenabled": false // Whether session is enabled,
@@ -153,6 +154,8 @@ partial class RpcServer
         json["tcpport"] = localNode.ListenerTcpPort;
         json["nonce"] = LocalNode.Nonce;
         json["useragent"] = LocalNode.UserAgent;
+        // UserAgent comes from Neo.dll; version is this node/plugin assembly (neo-node#983).
+        json["version"] = typeof(RpcServer).Assembly.GetName().Version?.ToString(3);
         // rpc settings
         JObject rpc = new();
         rpc["maxiteratorresultitems"] = settings.MaxIteratorResultItems;

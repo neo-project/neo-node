@@ -117,6 +117,8 @@ partial class UT_RpcServer
         Assert.IsTrue(json.ContainsProperty("tcpport"));
         Assert.IsTrue(json.ContainsProperty("nonce"));
         Assert.IsTrue(json.ContainsProperty("useragent"));
+        Assert.IsTrue(json.ContainsProperty("version"));
+        Assert.AreEqual(_rpcServer.GetType().Assembly.GetName().Version?.ToString(3), json["version"]!.AsString());
 
         Assert.IsTrue(json.ContainsProperty("protocol"));
         var protocol = (JObject)json["protocol"];
