@@ -611,7 +611,7 @@ partial class RpcServer
             throw new RpcException(RpcError.InternalServerError.WithData("Can't get next block validators"));
         }
 
-        return json;
+        return new JArray();
     }
 
     /// <summary>
