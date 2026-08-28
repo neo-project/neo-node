@@ -32,7 +32,16 @@ static class Program
             return 1;
         }
 
-        if (!service.OnStart(app.ToMainServiceArgs(parseResult)))
+        var startArgs = app.ToMainServiceArgs(parseResult);
+        if (!startArgs.Contains("--config", StringComparer.OrdinalIgnoreCase))
+        {
+            var besideExe = Path.Combine(AppContext.BaseDirectory, "config.json");
+            var inCwd = Path.Combine(Directory.GetCurrentDirectory(), "config.json");
+            if (!File.Exists(inCwd) && File.Exists(besideExe))
+                startArgs = [.. startArgs, "--config", besideExe];
+        }
+
+        if (!service.OnStart(startArgs))
             return 1;
 
         try

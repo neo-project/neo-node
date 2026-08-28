@@ -36,6 +36,9 @@ internal sealed class CommandLineApp
         foreach (var option in new Option[] { Config, Wallet, Password, DbEngine, DbPath, NoVerify })
             Root.Options.Add(option);
 
+        // Root must have an action so `neo-tui` with only options (or none) is valid.
+        Root.SetAction(static _ => { });
+
         foreach (var info in commands)
             AddCommand(Root, info, invoke);
     }
