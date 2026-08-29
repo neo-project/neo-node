@@ -235,8 +235,13 @@ public sealed class OracleService : Plugin
                 if (span > TimeSpan.FromMilliseconds(RefreshIntervalMilliSeconds))
                 {
                     foreach (var account in wallet.GetAccounts())
-                        if (task.BackupSigns.TryGetValue(account.GetKey().PublicKey, out byte[] sign))
-                            tasks.Add(SendResponseSignatureAsync(id, sign, account.GetKey()));
+                    {
+                        if (!account.HasKey || account.Lock) continue;
+                        var key = account.GetKey();
+                        if (key is null) continue;
+                        if (task.BackupSigns.TryGetValue(key.PublicKey, out byte[] sign))
+                            tasks.Add(SendResponseSignatureAsync(id, sign, key));
+                    }
                 }
             }
 
