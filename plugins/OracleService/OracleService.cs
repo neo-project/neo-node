@@ -334,7 +334,8 @@ public sealed class OracleService : Plugin
         foreach (var (requestId, request) in NativeContract.Oracle.GetRequestsByUrl(snapshot, req.Url))
         {
             var result = Array.Empty<byte>();
-            if (code == OracleResponseCode.Success)
+            var responseCode = code;
+            if (responseCode == OracleResponseCode.Success)
             {
                 try
                 {
@@ -342,11 +343,11 @@ public sealed class OracleService : Plugin
                 }
                 catch (Exception ex)
                 {
-                    code = OracleResponseCode.Error;
+                    responseCode = OracleResponseCode.Error;
                     PluginLogger?.Warning("Filter '{Filter}' error: {ErrorMessage}", request.Filter, ex.Message);
                 }
             }
-            var response = new OracleResponse() { Id = requestId, Code = code, Result = result };
+            var response = new OracleResponse() { Id = requestId, Code = responseCode, Result = result };
             var responseTx = CreateResponseTx(snapshot, request, response, oracleNodes, _system.Settings);
             var backupTx = CreateResponseTx(snapshot, request, new OracleResponse()
             {
@@ -356,7 +357,7 @@ public sealed class OracleService : Plugin
             }, oracleNodes, _system.Settings, true);
 
             PluginLogger?.Information("Built response tx: {OriginalTxid}-({RequestId}) {ResponseTxHash}, responseCode:{ResponseCode}, result:{Result}, validUntilBlock:{ValidUntilBlock}, backupTx:{BackupTxHash}-{BackupValidUntilBlock}",
-                req.OriginalTxid, requestId, responseTx.Hash, code, result.ToHexString(), responseTx.ValidUntilBlock, backupTx.Hash, backupTx.ValidUntilBlock);
+                req.OriginalTxid, requestId, responseTx.Hash, responseCode, result.ToHexString(), responseTx.ValidUntilBlock, backupTx.Hash, backupTx.ValidUntilBlock);
 
             var tasks = new List<Task>();
             ECPoint[] oraclePublicKeys = NativeContract.RoleManagement.GetDesignatedByRole(snapshot, Role.Oracle, height);
