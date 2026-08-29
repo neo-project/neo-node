@@ -306,7 +306,7 @@ partial class MainService
                 return;
             }
 
-            if (wifOrFile.Length > 1024 * 1024)
+            if (fileInfo.Length > 1024 * 1024)
             {
                 if (!ConsoleHelper.ReadUserInput($"The file '{fileInfo.FullName}' is too big, do you want to continue? (yes|no)", false).IsYes())
                 {
