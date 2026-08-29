@@ -587,7 +587,7 @@ partial class RpcServer
                 return FormatCandidates(resultstack, []);
 
             var validators = NativeContract.NEO.GetNextBlockValidators(snapshot, system.Settings.ValidatorsCount)
-                ?? throw new RpcException(RpcError.InternalServerError.WithData("Can't get next block validators."));
+                ?? throw new Exception();
             return FormatCandidates(resultstack, validators);
         }
         catch
