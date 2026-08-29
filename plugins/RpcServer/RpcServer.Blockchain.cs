@@ -590,11 +590,7 @@ partial class RpcServer
                 ?? throw new RpcException(RpcError.InternalServerError.WithData("Can't get next block validators."));
             return FormatCandidates(resultstack, validators);
         }
-        catch (RpcException)
-        {
-            throw;
-        }
-        catch
+        catch (Exception ex) when (ex is not RpcException)
         {
             throw new RpcException(RpcError.InternalServerError.WithData("Can't get next block validators"));
         }
