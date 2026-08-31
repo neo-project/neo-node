@@ -131,6 +131,18 @@ partial class UT_RpcServer
     }
 
     [TestMethod]
+    public void TestDumpPrivKey_WatchOnly_ThrowsUnknownAccount()
+    {
+        TestUtilOpenWallet();
+        var watchOnly = UInt160.Parse("0x0000000000000000000000000000000000000001");
+        _rpcServer.wallet.CreateAccount(watchOnly);
+        var address = watchOnly.ToAddress(ProtocolSettings.Default.AddressVersion);
+        var ex = Assert.ThrowsExactly<RpcException>(() => _rpcServer.DumpPrivKey(new JString(address).AsParameter<Address>()));
+        Assert.AreEqual(RpcError.UnknownAccount.Code, ex.HResult);
+        TestUtilCloseWallet();
+    }
+
+    [TestMethod]
     public void TestDumpPrivKey_InvalidAddressFormat()
     {
         TestUtilOpenWallet();
