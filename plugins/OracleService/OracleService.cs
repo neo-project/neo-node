@@ -234,9 +234,8 @@ public sealed class OracleService : Plugin
 
                 if (span > TimeSpan.FromMilliseconds(RefreshIntervalMilliSeconds))
                 {
-                    foreach (var account in wallet.GetAccounts())
-                        if (task.BackupSigns.TryGetValue(account.GetKey().PublicKey, out byte[] sign))
-                            tasks.Add(SendResponseSignatureAsync(id, sign, account.GetKey()));
+                    foreach (var (key, sign) in CollectRefreshSignatures(wallet, task.BackupSigns))
+                        tasks.Add(SendResponseSignatureAsync(id, sign, key));
                 }
             }
 
@@ -636,6 +635,20 @@ public sealed class OracleService : Plugin
     private static bool CheckOracleAccount(ISigner signer, ECPoint[] oracles)
     {
         return signer is not null && oracles.Any(p => signer.ContainsSignable(p));
+    }
+
+    internal static List<(KeyPair Key, byte[] Sign)> CollectRefreshSignatures(Wallet wallet, IReadOnlyDictionary<ECPoint, byte[]> backupSigns)
+    {
+        var matches = new List<(KeyPair Key, byte[] Sign)>();
+        foreach (var account in wallet.GetAccounts())
+        {
+            if (!account.HasKey || account.Lock) continue;
+            var key = account.GetKey();
+            if (key is null) continue;
+            if (backupSigns.TryGetValue(key.PublicKey, out byte[] sign))
+                matches.Add((key, sign));
+        }
+        return matches;
     }
 
     class OracleTask
