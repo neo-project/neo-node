@@ -16,11 +16,23 @@ namespace Neo.Plugins.OracleService;
 
 class HttpsSettings
 {
+    /// <summary>
+    /// Default number of HTTPS redirects to follow after the first request.
+    /// </summary>
+    public const int DefaultMaxRedirects = 2;
+
     public TimeSpan Timeout { get; }
+
+    /// <summary>
+    /// Maximum number of HTTPS redirects to follow. Zero means the first response is used as-is
+    /// (a <c>Location</c> header is not followed). Negative config values are treated as zero.
+    /// </summary>
+    public int MaxRedirects { get; }
 
     public HttpsSettings(IConfigurationSection section)
     {
         Timeout = TimeSpan.FromMilliseconds(section.GetValue("Timeout", 5000));
+        MaxRedirects = Math.Max(0, section.GetValue("MaxRedirects", DefaultMaxRedirects));
     }
 }
 
