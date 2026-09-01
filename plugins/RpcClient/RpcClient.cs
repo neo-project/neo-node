@@ -115,6 +115,7 @@ public class RpcClient : IDisposable
 
         using var requestMsg = AsHttpRequest(request);
         using var responseMsg = _httpClient.Send(requestMsg);
+        responseMsg.EnsureSuccessStatusCode();
         using var contentStream = responseMsg.Content.ReadAsStream();
         using var contentReader = new StreamReader(contentStream);
         return AsRpcResponse(contentReader.ReadToEnd(), throwOnError);
@@ -126,7 +127,8 @@ public class RpcClient : IDisposable
 
         using var requestMsg = AsHttpRequest(request);
         using var responseMsg = await _httpClient.SendAsync(requestMsg).ConfigureAwait(false);
-        var content = await responseMsg.Content.ReadAsStringAsync();
+        responseMsg.EnsureSuccessStatusCode();
+        var content = await responseMsg.Content.ReadAsStringAsync().ConfigureAwait(false);
         return AsRpcResponse(content, throwOnError);
     }
 
