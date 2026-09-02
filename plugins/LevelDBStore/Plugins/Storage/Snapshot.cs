@@ -69,9 +69,9 @@ internal class Snapshot : IStoreSnapshot, IEnumerable<KeyValuePair<byte[], byte[
     }
 
     /// <inheritdoc/>
-    public IEnumerable<(byte[] Key, byte[] Value)> Find(byte[]? keyOrPrefix, SeekDirection direction = SeekDirection.Forward)
+    public IEnumerable<(byte[] Key, byte[] Value)> Find(byte[]? keyOrPrefix, SeekDirection direction = SeekDirection.Forward, int skip = 0)
     {
-        return _db.Seek(_readOptions, keyOrPrefix, direction);
+        return _db.Seek(_readOptions, keyOrPrefix, direction, skip);
     }
 
     public bool Contains(byte[] key)
