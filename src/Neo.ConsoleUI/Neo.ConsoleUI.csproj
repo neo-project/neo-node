@@ -1,10 +1,11 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <AssemblyTitle>Neo.CLI</AssemblyTitle>
-    <AssemblyName>neo-cli</AssemblyName>
+    <AssemblyTitle>Neo.ConsoleUI</AssemblyTitle>
+    <AssemblyName>neo-tui</AssemblyName>
     <OutputType>Exe</OutputType>
-    <ApplicationIcon>neo.ico</ApplicationIcon>
+    <Description>Cross-platform console UI for neo-cli (menus, hotkeys, line editing).</Description>
+    <RootNamespace>Neo.ConsoleUI</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,11 +13,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Neo" Version="3.10.1" />
+    <PackageReference Include="Spectre.Console" Version="0.51.1" />
     <PackageReference Include="System.CommandLine" Version="2.0.9" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Neo.CLI\Neo.CLI.csproj" />
     <ProjectReference Include="..\Neo.ConsoleService\Neo.ConsoleService.csproj" />
   </ItemGroup>
 
@@ -24,17 +26,10 @@
   <Import Project="..\CopyNodePlugins.targets" />
 
   <ItemGroup>
-    <InternalsVisibleTo Include="neo-tui" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="neo.ico" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="config*.json">
+    <None Include="..\Neo.CLI\config*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <Link>%(Filename)%(Extension)</Link>
     </None>
   </ItemGroup>
 
