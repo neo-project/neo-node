@@ -199,6 +199,7 @@ public class WalletAPI
     {
         DateTime deadline = DateTime.UtcNow.AddSeconds(timeout);
         RpcTransaction rpcTx = null;
+        var pollDelay = Math.Max(100, (int)rpcClient.protocolSettings.MillisecondsPerBlock / 2);
         while (rpcTx == null || rpcTx.Confirmations == null)
         {
             if (deadline < DateTime.UtcNow)
@@ -211,10 +212,15 @@ public class WalletAPI
                 rpcTx = await rpcClient.GetRawTransactionAsync(transaction.Hash.ToString()).ConfigureAwait(false);
                 if (rpcTx == null || rpcTx.Confirmations == null)
                 {
-                    await Task.Delay((int)rpcClient.protocolSettings.MillisecondsPerBlock / 2);
+                    await Task.Delay(pollDelay).ConfigureAwait(false);
                 }
             }
-            catch (Exception) { }
+            catch (Exception)
+            {
+                // Unknown tx and transient RPC errors retry until timeout;
+                // sleep so a persistent failure cannot busy-loop the CPU.
+                await Task.Delay(pollDelay).ConfigureAwait(false);
+            }
         }
         return rpcTx;
     }
