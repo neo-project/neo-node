@@ -337,7 +337,12 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         try
         {
             await StartCore(options).ConfigureAwait(false);
-            _startCompleted.TrySetResult();
+            if (_neoSystem is null)
+            {
+                _startCompleted.TrySetException(new InvalidOperationException(
+                    "NEO node failed to start. See console output for details."));
+                return;
+            }
         }
         catch (Exception ex)
         {
