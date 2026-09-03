@@ -117,6 +117,17 @@ partial class UT_RpcServer
         Assert.IsTrue(json.ContainsProperty("tcpport"));
         Assert.IsTrue(json.ContainsProperty("nonce"));
         Assert.IsTrue(json.ContainsProperty("useragent"));
+        Assert.IsFalse(json.ContainsProperty("version"));
+        var nodeVersion = _rpcServer.GetType().Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+        Assert.AreEqual(RpcServer.UserAgentWithVersion(LocalNode.UserAgent, nodeVersion), json["useragent"]!.AsString());
+        Assert.Contains($":{nodeVersion}/", json["useragent"]!.AsString());
+
+        Assert.IsTrue(json.ContainsProperty("rpc"));
+        var rpc = (JObject)json["rpc"]!;
+        Assert.IsTrue(rpc.ContainsProperty("maxiteratorresultitems"));
+        Assert.IsTrue(rpc.ContainsProperty("sessionenabled"));
+        Assert.AreEqual(_rpcServerSettings.MaxIteratorResultItems, rpc["maxiteratorresultitems"]!.AsNumber());
+        Assert.AreEqual(_rpcServerSettings.SessionEnabled, rpc["sessionenabled"]!.AsBoolean());
 
         Assert.IsTrue(json.ContainsProperty("protocol"));
         var protocol = (JObject)json["protocol"];
@@ -130,6 +141,15 @@ partial class UT_RpcServer
         Assert.IsTrue(protocol.ContainsProperty("memorypoolmaxtransactions"));
         Assert.IsTrue(protocol.ContainsProperty("standbycommittee"));
         Assert.IsTrue(protocol.ContainsProperty("seedlist"));
+    }
+
+    [TestMethod]
+    public void TestUserAgentWithVersion_ReplacesVersionKeepsProduct()
+    {
+        Assert.AreEqual("/Neo:3.10.2/", RpcServer.UserAgentWithVersion("/Neo:3.10.1/", "3.10.2"));
+        Assert.AreEqual("/MyNode:3.10.2/", RpcServer.UserAgentWithVersion("/MyNode:1.0.0/", "3.10.2"));
+        Assert.AreEqual("/Neo:3.10.2/", RpcServer.UserAgentWithVersion("not-a-ua", "3.10.2"));
+        Assert.AreEqual("/Neo:3.10.2/", RpcServer.UserAgentWithVersion(string.Empty, "3.10.2"));
     }
 
     [TestMethod]
