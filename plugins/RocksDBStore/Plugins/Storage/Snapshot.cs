@@ -23,7 +23,8 @@ internal class Snapshot : IStoreSnapshot
     private readonly RocksDb _db;
     private readonly RocksDbSharp.Snapshot _snapshot;
     private readonly WriteBatch _batch;
-    private readonly ReadOptions _options;
+    private readonly ReadOptions _scanOptions;
+    private readonly ReadOptions _pointOptions;
     private readonly Lock _lock = new();
 
     public IStore Store { get; }
@@ -35,9 +36,12 @@ internal class Snapshot : IStoreSnapshot
         _snapshot = db.CreateSnapshot();
         _batch = new WriteBatch();
 
-        _options = new ReadOptions();
-        _options.SetFillCache(false);
-        _options.SetSnapshot(_snapshot);
+        _scanOptions = new ReadOptions();
+        _scanOptions.SetFillCache(false);
+        _scanOptions.SetSnapshot(_snapshot);
+
+        _pointOptions = new ReadOptions();
+        _pointOptions.SetSnapshot(_snapshot);
     }
 
     public void Commit()
@@ -63,7 +67,7 @@ internal class Snapshot : IStoreSnapshot
     {
         keyOrPrefix ??= [];
 
-        using var it = _db.NewIterator(readOptions: _options);
+        using var it = _db.NewIterator(readOptions: _scanOptions);
 
         if (direction == SeekDirection.Forward)
             for (it.Seek(keyOrPrefix); it.Valid(); it.Next())
@@ -75,17 +79,17 @@ internal class Snapshot : IStoreSnapshot
 
     public bool Contains(byte[] key)
     {
-        return _db.Get(key, Array.Empty<byte>(), 0, 0, readOptions: _options) >= 0;
+        return _db.Get(key, Array.Empty<byte>(), 0, 0, readOptions: _pointOptions) >= 0;
     }
 
     public byte[]? TryGet(byte[] key)
     {
-        return _db.Get(key, readOptions: _options);
+        return _db.Get(key, readOptions: _pointOptions);
     }
 
     public bool TryGet(byte[] key, [NotNullWhen(true)] out byte[]? value)
     {
-        value = _db.Get(key, readOptions: _options);
+        value = _db.Get(key, readOptions: _pointOptions);
         return value != null;
     }
 
