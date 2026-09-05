@@ -9,15 +9,18 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using Neo.Cryptography.ECC;
 using Neo.SmartContract;
 using Neo.VM;
 using System.Buffers.Binary;
 using System.Collections;
 using System.Diagnostics;
+using System.Globalization;
 using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Unicode;
 
 namespace Neo.CLI;
 
@@ -97,10 +100,42 @@ internal sealed class VMInstruction : IEnumerable<VMInstruction>
 
     public override string ToString()
     {
+        var posWidth = HexWidth(_script.Length);
+        if (OperandSize == 0)
+            return string.Format($"{{0:X{posWidth}}} {{1}}", Position, OpCode);
+        return string.Format($"{{0:X{posWidth}}} {{1,-10}}{{2}}", Position, OpCode, DecodeOperand());
+    }
+
+    /// <summary>
+    /// Lists instructions as <c>L0000:0000 NOP</c>. The L-prefix width is at least 4 digits
+    /// and grows with the script size / instruction count.
+    /// </summary>
+    internal static string FormatListing(ReadOnlyMemory<byte> script)
+    {
+        var rows = new List<VMInstruction>();
+        foreach (var instruct in new VMInstruction(script))
+            rows.Add(instruct);
+
+        var lastIndex = Math.Max(0, rows.Count - 1);
+        var width = DecimalWidth(Math.Max(lastIndex, script.Length));
         var sb = new StringBuilder();
-        sb.AppendFormat("{0:X04} {1,-10}{2}", Position, OpCode, DecodeOperand());
+        for (var i = 0; i < rows.Count; i++)
+        {
+            sb.Append('L');
+            sb.Append(i.ToString($"D{width}", CultureInfo.InvariantCulture));
+            sb.Append(':');
+            sb.Append(rows[i]);
+            sb.AppendLine();
+        }
+
         return sb.ToString();
     }
+
+    internal static int DecimalWidth(int value)
+        => Math.Max(4, Math.Max(0, value).ToString(CultureInfo.InvariantCulture).Length);
+
+    internal static int HexWidth(int length)
+        => Math.Max(4, Math.Max(0, length == 0 ? 0 : length - 1).ToString("X").Length);
 
     public T AsToken<T>(uint index = 0)
         where T : unmanaged
@@ -119,8 +154,6 @@ internal sealed class VMInstruction : IEnumerable<VMInstruction>
     public string DecodeOperand()
     {
         var operand = Operand[OperandPrefixSize..].ToArray();
-        var asStr = Encoding.UTF8.GetString(operand);
-        var readable = asStr.All(char.IsAsciiLetterOrDigit);
 
         return OpCode switch
         {
@@ -157,17 +190,140 @@ internal sealed class VMInstruction : IEnumerable<VMInstruction>
             OpCode.LDARG or
             OpCode.STARG or
             OpCode.INITSSLOT => $"{AsToken<byte>()}",
-            OpCode.PUSHINT8 => $"{AsToken<sbyte>()}",
-            OpCode.PUSHINT16 => $"{AsToken<short>()}",
-            OpCode.PUSHINT32 => $"{AsToken<int>()}",
-            OpCode.PUSHINT64 => $"{AsToken<long>()}",
+            OpCode.PUSHINT8 => FormatInteger(AsToken<sbyte>()),
+            OpCode.PUSHINT16 => FormatInteger(AsToken<short>()),
+            OpCode.PUSHINT32 => FormatInteger(AsToken<int>()),
+            OpCode.PUSHINT64 => FormatInteger(AsToken<long>()),
             OpCode.PUSHINT128 or
             OpCode.PUSHINT256 => $"{new BigInteger(operand)}",
             OpCode.SYSCALL => $"[{ApplicationEngine.Services[Unsafe.As<byte, uint>(ref operand[0])].Name}]",
             OpCode.PUSHDATA1 or
             OpCode.PUSHDATA2 or
-            OpCode.PUSHDATA4 => readable ? $"{Convert.ToHexString(operand)} // {asStr}" : Convert.ToHexString(operand),
-            _ => readable ? $"\"{asStr}\"" : $"{Convert.ToHexString(operand)}",
+            OpCode.PUSHDATA4 => FormatPushData(operand),
+            _ => TryGetReadableText(operand, out var text)
+                ? $"\"{text}\""
+                : $"{Convert.ToHexString(operand)} // blob {operand.Length} bytes",
         };
+    }
+
+    private static string FormatPushData(byte[] operand)
+    {
+        var hex = Convert.ToHexString(operand);
+        if (TryGetReadableText(operand, out var text))
+            return $"{hex} // {text}";
+
+        if (TryDecodeEcPoint(operand, out var point))
+            return $"{hex} // {point}";
+
+        if (operand.Length == UInt160.Length)
+            return $"{hex} // {new UInt160(operand)}";
+
+        if (operand.Length == UInt256.Length)
+            return $"{hex} // {new UInt256(operand)}";
+
+        if (operand.Length == 4 && TryFormatUnixTimestamp(BinaryPrimitives.ReadUInt32LittleEndian(operand), out var ts32))
+            return $"{hex} // {ts32}";
+
+        if (operand.Length == 8 && TryFormatUnixTimestamp(BinaryPrimitives.ReadInt64LittleEndian(operand), out var ts64))
+            return $"{hex} // {ts64}";
+
+        return $"{hex} // blob {operand.Length} bytes";
+    }
+
+    private static string FormatInteger(long value)
+        => TryFormatUnixTimestamp(value, out var ts) ? $"{value} // {ts}" : value.ToString(CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// Strict UTF-8 with at least one non-control rune. Control runes are escaped
+    /// (<c>\n</c>, <c>\r</c>, <c>\t</c>, <c>\xNN</c>) so they are not written as raw output.
+    /// Invalid sequences are rejected; <see cref="Encoding.UTF8"/> replacement is not used.
+    /// </summary>
+    private static bool TryGetReadableText(ReadOnlySpan<byte> utf8, out string text)
+    {
+        text = null!;
+        if (utf8.IsEmpty || !Utf8.IsValid(utf8))
+            return false;
+
+        var decoded = Encoding.UTF8.GetString(utf8);
+        var hasGraphic = false;
+        var sb = new StringBuilder(decoded.Length);
+        foreach (var rune in decoded.EnumerateRunes())
+        {
+            if (Rune.IsControl(rune) || rune.Value == 0x7F)
+                sb.Append(EscapeControlRune(rune));
+            else
+            {
+                hasGraphic = true;
+                sb.Append(rune);
+            }
+        }
+
+        if (!hasGraphic)
+            return false;
+
+        text = sb.ToString();
+        return true;
+    }
+
+    private static string EscapeControlRune(Rune rune)
+        => rune.Value switch
+        {
+            '\n' => "\\n",
+            '\r' => "\\r",
+            '\t' => "\\t",
+            '\0' => "\\0",
+            _ => rune.Value <= 0xFF ? $"\\x{rune.Value:X2}" : $"\\u{rune.Value:X4}",
+        };
+
+    private static bool TryDecodeEcPoint(byte[] operand, out ECPoint point)
+    {
+        point = null!;
+        if (operand.Length is not (33 or 65))
+            return false;
+        if (operand[0] is not (0x02 or 0x03 or 0x04))
+            return false;
+        try
+        {
+            point = ECPoint.DecodePoint(operand, ECCurve.Secp256r1);
+            return true;
+        }
+        catch (FormatException)
+        {
+            try
+            {
+                point = ECPoint.DecodePoint(operand, ECCurve.Secp256k1);
+                return true;
+            }
+            catch (FormatException)
+            {
+                return false;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Unix seconds in 2000–2100, or unix milliseconds in that same window.
+    /// </summary>
+    private static bool TryFormatUnixTimestamp(long value, out string text)
+    {
+        const long UnixSeconds2000 = 946_684_800;
+        const long UnixSeconds2100 = 4_102_444_800;
+        const long UnixMilliseconds2000 = 946_684_800_000;
+        const long UnixMilliseconds2100 = 4_102_444_800_000;
+
+        if (value >= UnixSeconds2000 && value <= UnixSeconds2100)
+        {
+            text = DateTimeOffset.FromUnixTimeSeconds(value).UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
+            return true;
+        }
+
+        if (value >= UnixMilliseconds2000 && value <= UnixMilliseconds2100)
+        {
+            text = DateTimeOffset.FromUnixTimeMilliseconds(value).UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
+            return true;
+        }
+
+        text = null!;
+        return false;
     }
 }
