@@ -84,8 +84,8 @@ partial class ConsensusContext
         // Iterate transaction until reach the size or maximum system fee
         foreach (Transaction tx in txs)
         {
-            if (InvalidTransactions.TryGetValue(tx.Hash, out var hashset))
-                if (hashset.Count > F) continue;
+            if (InvalidTransactions.TryGet(tx.Hash, out var hashset))
+                if (hashset.Value.Count > F) continue;
 
             // Check if maximum block size has been already exceeded with the current selected set
             blockSize += tx.Size;
