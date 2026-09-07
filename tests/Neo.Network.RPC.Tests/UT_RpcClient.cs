@@ -616,4 +616,24 @@ public class UT_RpcClient
     }
 
     #endregion Plugins
+
+    [TestMethod]
+    public async Task TestHttpErrorStatus_ThrowsBeforeJsonParse()
+    {
+        handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+        handlerMock.Protected()
+           .Setup<Task<HttpResponseMessage>>(
+              "SendAsync",
+              ItExpr.IsAny<HttpRequestMessage>(),
+              ItExpr.IsAny<CancellationToken>())
+           .ReturnsAsync(new HttpResponseMessage()
+           {
+               StatusCode = HttpStatusCode.InternalServerError,
+               Content = new StringContent("<html>gateway error</html>"),
+           })
+           .Verifiable();
+        rpc = new RpcClient(new HttpClient(handlerMock.Object), new Uri("http://seed1.neo.org:10331"), null);
+
+        await Assert.ThrowsExactlyAsync<HttpRequestException>(() => rpc.GetBlockCountAsync());
+    }
 }
