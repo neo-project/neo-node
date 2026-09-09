@@ -18,6 +18,7 @@ using Neo.Persistence;
 using Neo.Persistence.Providers;
 using Neo.Plugins.ApplicationLogs;
 using Neo.Plugins.ApplicationLogs.Store.Models;
+using Neo.Plugins.RpcServer;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;
@@ -157,8 +158,11 @@ public class UT_LogReader
         Assert.HasCount(1, executions);
         Assert.AreEqual("PostPersist", executions[0]["trigger"]);
 
-        // "true" is invalid but still works
-        JObject transactionJson = (JObject)s_neoSystemFixture.logReader.GetApplicationLog(s_neoSystemFixture.txs[0].Hash.ToString(), "true");
+        var invalidTrigger = Assert.ThrowsExactly<RpcException>(() =>
+            s_neoSystemFixture.logReader.GetApplicationLog(block.Hash, "true"));
+        Assert.AreEqual(RpcError.InvalidParams.Code, invalidTrigger.HResult);
+
+        JObject transactionJson = (JObject)s_neoSystemFixture.logReader.GetApplicationLog(s_neoSystemFixture.txs[0].Hash);
         executions = (JArray)transactionJson["executions"];
         Assert.HasCount(1, executions);
         Assert.AreEqual(nameof(VMState.HALT), executions[0]["vmstate"]);
