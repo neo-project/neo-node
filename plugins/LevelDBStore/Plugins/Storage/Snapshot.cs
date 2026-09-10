@@ -38,7 +38,7 @@ internal class Snapshot : IStoreSnapshot, IEnumerable<KeyValuePair<byte[], byte[
         _db = db;
         _snapshot = db.CreateSnapshot();
         _scanReadOptions = new ReadOptions { FillCache = false, Snapshot = _snapshot };
-        _pointReadOptions = new ReadOptions { Snapshot = _snapshot };
+        _pointReadOptions = new ReadOptions { FillCache = true, Snapshot = _snapshot };
         _batch = new WriteBatch();
     }
 

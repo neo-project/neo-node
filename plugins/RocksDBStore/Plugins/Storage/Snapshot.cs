@@ -41,6 +41,7 @@ internal class Snapshot : IStoreSnapshot
         _scanOptions.SetSnapshot(_snapshot);
 
         _pointOptions = new ReadOptions();
+        _pointOptions.SetFillCache(true);
         _pointOptions.SetSnapshot(_snapshot);
     }
 
