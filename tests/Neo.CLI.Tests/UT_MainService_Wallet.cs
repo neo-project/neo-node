@@ -15,6 +15,8 @@ using Neo.Persistence.Providers;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;
+using Neo.Wallets;
+using Neo.Wallets.NEP6;
 using System.Reflection;
 using System.Text;
 
@@ -339,6 +341,173 @@ public class UT_MainService_Wallet
         finally
         {
             Settings.Custom = previousSettings;
+        }
+    }
+
+    [TestMethod]
+    public void ImportKey_MissingFile_WritesError()
+    {
+        var wallet = CreateTempWallet();
+        var missing = Path.Combine(Path.GetTempPath(), $"missing-keys-{Guid.NewGuid():N}.txt");
+        try
+        {
+            var output = RunImportKey(wallet, missing, (_, _) => throw new InvalidOperationException("prompt should not run"));
+
+            Assert.Contains("doesn't exists", output);
+            Assert.IsEmpty(wallet.GetAccounts().ToList());
+        }
+        finally
+        {
+            TryDelete(wallet.Path);
+        }
+    }
+
+    [TestMethod]
+    public void ImportKey_SmallFile_DoesNotPromptAndImports()
+    {
+        var wallet = CreateTempWallet();
+        var source = CreateTempWallet();
+        var wif = source.CreateAccount()!.GetKey()!.Export();
+        var path = Path.Combine(Path.GetTempPath(), $"keys-{Guid.NewGuid():N}.txt");
+        try
+        {
+            File.WriteAllText(path, wif + Environment.NewLine);
+            Assert.IsLessThan(1024 * 1024, new FileInfo(path).Length);
+
+            var prompted = false;
+            var output = RunImportKey(wallet, path, (_, _) =>
+            {
+                prompted = true;
+                return "no";
+            });
+
+            Assert.IsFalse(prompted, "A short key file must not use the too-big prompt (path length is not the file size).");
+            Assert.HasCount(1, wallet.GetAccounts().ToList());
+            Assert.DoesNotContain("doesn't exists", output);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+            TryDelete(wallet.Path);
+        }
+    }
+
+    [TestMethod]
+    public void ImportKey_LargeFileDeclined_DoesNotImport()
+    {
+        var wallet = CreateTempWallet();
+        var source = CreateTempWallet();
+        var wif = source.CreateAccount()!.GetKey()!.Export();
+        var path = Path.Combine(Path.GetTempPath(), $"keys-{Guid.NewGuid():N}.txt");
+        try
+        {
+            WriteOversizedKeyFile(path, wif);
+            Assert.IsGreaterThan(1024 * 1024, new FileInfo(path).Length);
+            Assert.IsLessThan(1024 * 1024, path.Length);
+
+            var output = RunImportKey(wallet, path, (prompt, _) =>
+            {
+                Assert.Contains("too big", prompt);
+                return "no";
+            });
+
+            Assert.IsEmpty(wallet.GetAccounts().ToList());
+            Assert.DoesNotContain("doesn't exists", output);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+            TryDelete(wallet.Path);
+        }
+    }
+
+    [TestMethod]
+    public void ImportKey_LargeFileAccepted_Imports()
+    {
+        var wallet = CreateTempWallet();
+        var source = CreateTempWallet();
+        var wif = source.CreateAccount()!.GetKey()!.Export();
+        var path = Path.Combine(Path.GetTempPath(), $"keys-{Guid.NewGuid():N}.txt");
+        try
+        {
+            WriteOversizedKeyFile(path, wif);
+
+            RunImportKey(wallet, path, (prompt, _) =>
+            {
+                Assert.Contains("too big", prompt);
+                return "yes";
+            });
+
+            Assert.HasCount(1, wallet.GetAccounts().ToList());
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+            TryDelete(wallet.Path);
+        }
+    }
+
+    private string RunImportKey(NEP6Wallet wallet, string wifOrFile, Func<string, bool, string> readInput)
+    {
+        var service = new MainService();
+        TestUtils.TrySet(service, "NeoSystem", _neoSystem);
+        TestUtils.TrySetField(service, "_neoSystem", _neoSystem);
+        TestUtils.TrySet(service, "CurrentWallet", wallet);
+        TestUtils.TrySetField(service, "_currentWallet", wallet);
+        var readInputProp = service.GetType().GetProperty(
+            "ReadUserInput",
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        Assert.IsNotNull(readInputProp, "ReadUserInput property not found on MainService");
+        readInputProp!.SetValue(service, readInput);
+
+        var originalOut = Console.Out;
+        var originalErr = Console.Error;
+        using var outputWriter = new StringWriter();
+        Console.SetOut(outputWriter);
+        Console.SetError(outputWriter);
+        try
+        {
+            TestUtils.InvokeNonPublic(service, "OnImportKeyCommand", wifOrFile);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalErr);
+        }
+
+        return outputWriter.ToString();
+    }
+
+    private static NEP6Wallet CreateTempWallet()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"neo-cli-wallet-{Guid.NewGuid():N}.json");
+        var json = new JObject()
+        {
+            ["name"] = "noname",
+            ["version"] = new Version("1.0").ToString(),
+            ["scrypt"] = new ScryptParameters(2, 1, 1).ToJson(),
+            ["accounts"] = new JArray(),
+            ["extra"] = null
+        };
+        return new NEP6Wallet(path, "test_pwd", TestProtocolSettings.Default, json);
+    }
+
+    private static void WriteOversizedKeyFile(string path, string wif)
+    {
+        using var writer = new StreamWriter(path);
+        writer.WriteLine(wif);
+        writer.Write(new string('\n', 1024 * 1024));
+    }
+
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(path) && File.Exists(path))
+                File.Delete(path);
+        }
+        catch (IOException)
+        {
         }
     }
 

@@ -49,7 +49,7 @@ public class UT_WalletAPI
     [TestMethod]
     public async Task TestGetUnclaimedGas()
     {
-        byte[] testScript = NativeContract.NEO.Hash.MakeScript("unclaimedGas", sender, 99);
+        byte[] testScript = NativeContract.NEO.Hash.MakeScript("unclaimedGas", sender, 100);
         UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript, new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(1_10000000) });
 
         var balance = await walletAPI.GetUnclaimedGasAsync(address1);

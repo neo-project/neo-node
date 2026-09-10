@@ -33,7 +33,7 @@ public class PolicyAPI : ContractClient
     public async Task<uint> GetExecFeeFactorAsync()
     {
         var result = await TestInvokeAsync(scriptHash, "getExecFeeFactor").ConfigureAwait(false);
-        return (uint)result.Stack.Single().GetInteger();
+        return (uint)RequireHaltResult(result).GetInteger();
     }
 
     /// <summary>
@@ -43,7 +43,7 @@ public class PolicyAPI : ContractClient
     public async Task<uint> GetStoragePriceAsync()
     {
         var result = await TestInvokeAsync(scriptHash, "getStoragePrice").ConfigureAwait(false);
-        return (uint)result.Stack.Single().GetInteger();
+        return (uint)RequireHaltResult(result).GetInteger();
     }
 
     /// <summary>
@@ -53,7 +53,7 @@ public class PolicyAPI : ContractClient
     public async Task<long> GetFeePerByteAsync()
     {
         var result = await TestInvokeAsync(scriptHash, "getFeePerByte").ConfigureAwait(false);
-        return (long)result.Stack.Single().GetInteger();
+        return (long)RequireHaltResult(result).GetInteger();
     }
 
     /// <summary>
@@ -63,6 +63,6 @@ public class PolicyAPI : ContractClient
     public async Task<bool> IsBlockedAsync(UInt160 account)
     {
         var result = await TestInvokeAsync(scriptHash, "isBlocked", new object[] { account }).ConfigureAwait(false);
-        return result.Stack.Single().GetBoolean();
+        return RequireHaltResult(result).GetBoolean();
     }
 }

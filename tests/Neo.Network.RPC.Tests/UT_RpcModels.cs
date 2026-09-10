@@ -137,6 +137,80 @@ public class UT_RpcModels
     }
 
     [TestMethod()]
+    public void TestRpcFindStorage()
+    {
+        var json = TestUtils.RpcTestCases
+            .Find(p => p.Name.Equals(nameof(RpcClient.FindStorageAsync), StringComparison.CurrentCultureIgnoreCase))
+            .Response
+            .Result;
+        var item = RpcFindStorage.FromJson((JObject)json);
+        Assert.AreEqual(json.ToString(), item.ToJson().ToString());
+        Assert.IsFalse(item.Truncated);
+        Assert.AreEqual(2, item.Next);
+        Assert.AreEqual(2, item.Results.Count);
+    }
+
+    [TestMethod()]
+    public void TestRpcFindStorage_WithId()
+    {
+        var json = TestUtils.RpcTestCases
+            .Find(p => p.Name.Equals(nameof(RpcClient.FindStorageAsync) + "_with_id", StringComparison.CurrentCultureIgnoreCase))
+            .Response
+            .Result;
+        var item = RpcFindStorage.FromJson((JObject)json);
+        Assert.AreEqual(json.ToString(), item.ToJson().ToString());
+        Assert.IsTrue(item.Truncated);
+        Assert.AreEqual(51, item.Next);
+        Assert.AreEqual(1, item.Results.Count);
+        Assert.AreEqual("AAEC", item.Results[0].Key);
+        Assert.AreEqual("AQID", item.Results[0].Value);
+    }
+
+    [TestMethod()]
+    public void TestRpcCandidate()
+    {
+        var json = TestUtils.RpcTestCases
+            .Find(p => p.Name.Equals(nameof(RpcClient.GetCandidatesAsync), StringComparison.CurrentCultureIgnoreCase))
+            .Response
+            .Result;
+        var item = ((JArray)json).Select(p => RpcCandidate.FromJson((JObject)p));
+        Assert.AreEqual(json.ToString(), ((JArray)item.Select(p => p.ToJson()).ToArray()).ToString());
+    }
+
+    [TestMethod()]
+    public void TestRpcNep11Balances()
+    {
+        var json = TestUtils.RpcTestCases
+            .Find(p => p.Name.Equals(nameof(RpcClient.GetNep11BalancesAsync), StringComparison.CurrentCultureIgnoreCase))
+            .Response
+            .Result;
+        var item = RpcNep11Balances.FromJson((JObject)json, rpc.protocolSettings);
+        Assert.AreEqual(json.ToString(), item.ToJson(rpc.protocolSettings).ToString());
+        Assert.AreEqual("TestNFT", item.Balances[0].Name);
+        Assert.AreEqual(2, item.Balances[0].Tokens.Count);
+    }
+
+    [TestMethod()]
+    public void TestRpcNep11Transfers()
+    {
+        var json = TestUtils.RpcTestCases
+            .Find(p => p.Name.Equals(nameof(RpcClient.GetNep11TransfersAsync), StringComparison.CurrentCultureIgnoreCase))
+            .Response
+            .Result;
+        var item = RpcNep11Transfers.FromJson((JObject)json, rpc.protocolSettings);
+        Assert.AreEqual(json.ToString(), item.ToJson(rpc.protocolSettings).ToString());
+        Assert.AreEqual("010203", item.Sent[0].TokenId);
+
+        json = TestUtils.RpcTestCases
+            .Find(p => p.Name == (nameof(RpcClient.GetNep11TransfersAsync).ToLower() + "_with_null_transferaddress"))
+            .Response
+            .Result;
+        item = RpcNep11Transfers.FromJson((JObject)json, rpc.protocolSettings);
+        Assert.AreEqual(json.ToString(), item.ToJson(rpc.protocolSettings).ToString());
+        Assert.IsNull(item.Sent[0].UserScriptHash);
+    }
+
+    [TestMethod()]
     public void TestRpcPeers()
     {
         var json = TestUtils.RpcTestCases

@@ -4030,5 +4030,215 @@
         "address": "NVVwFw6XyhtRCFQ8SpUTMdPyYt4Vd9A1XQ"
       }
     }
+  },
+  {
+    "Name": "findstorageasync",
+    "Request": {
+      "jsonrpc": "2.0",
+      "method": "findstorage",
+      "params": [ "0x8c23f196d8a1bfd103a9dcb1f9ccf0c611377d3b", "AA==", 0 ],
+      "id": 1
+    },
+    "Response": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "truncated": false,
+        "next": 2,
+        "results": [
+          {
+            "key": "AAEC",
+            "value": "AQID"
+          },
+          {
+            "key": "AAED",
+            "value": "BAUG"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "Name": "findstorageasync_with_id",
+    "Request": {
+      "jsonrpc": "2.0",
+      "method": "findstorage",
+      "params": [ -1, "AA==", 1 ],
+      "id": 1
+    },
+    "Response": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "truncated": true,
+        "next": 51,
+        "results": [
+          {
+            "key": "AAEC",
+            "value": "AQID"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "Name": "getcandidatesasync",
+    "Request": {
+      "jsonrpc": "2.0",
+      "method": "getcandidates",
+      "params": [],
+      "id": 1
+    },
+    "Response": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": [
+        {
+          "publickey": "03aa052fbcb8e5b33a4eefd662536f8684641f04109f1d5e69cdda6f084890286a",
+          "votes": "100000000",
+          "active": true
+        },
+        {
+          "publickey": "02b3622bf4017bdfe317c58aed5b4dba1a4aaeeaf1d2fd982db5b8d1d2aae1c9e6",
+          "votes": "0",
+          "active": false
+        }
+      ]
+    }
+  },
+  {
+    "Name": "getnep11transfersasync",
+    "Request": {
+      "jsonrpc": "2.0",
+      "method": "getnep11transfers",
+      "params": [ "NVVwFw6XyhtRCFQ8SpUTMdPyYt4Vd9A1XQ", 0, 1868595301000 ],
+      "id": 1
+    },
+    "Response": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "sent": [
+          {
+            "timestamp": 1579250114541,
+            "assethash": "0x8c23f196d8a1bfd103a9dcb1f9ccf0c611377d3b",
+            "transferaddress": "NVVwFw6XyhtRCFQ8SpUTMdPyYt4Vd9A1XQ",
+            "amount": "1",
+            "blockindex": 603,
+            "transfernotifyindex": 0,
+            "txhash": "0x5e177b8d1dc33e9103c0cfd42f6dbf4efbe43029e2d6a18ea5ba0cb8437056b3",
+            "tokenid": "010203"
+          }
+        ],
+        "received": [
+          {
+            "timestamp": 1579250114541,
+            "assethash": "0x8c23f196d8a1bfd103a9dcb1f9ccf0c611377d3b",
+            "transferaddress": "NUMK37TV9yYKbJr1Gufh74nZiM623eBLqX",
+            "amount": "1",
+            "blockindex": 603,
+            "transfernotifyindex": 0,
+            "txhash": "0x5e177b8d1dc33e9103c0cfd42f6dbf4efbe43029e2d6a18ea5ba0cb8437056b3",
+            "tokenid": "010203"
+          }
+        ],
+        "address": "NVVwFw6XyhtRCFQ8SpUTMdPyYt4Vd9A1XQ"
+      }
+    }
+  },
+  {
+    "Name": "getnep11transfersasync_with_null_transferaddress",
+    "Request": {
+      "jsonrpc": "2.0",
+      "method": "getnep11transfers",
+      "params": [ "Ncb7jVsYWBt1q5T5k3ZTP8bn5eK4DuanLd", 0, 1868595301000 ],
+      "id": 1
+    },
+    "Response": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "sent": [
+          {
+            "timestamp": 1579250114541,
+            "assethash": "0x8c23f196d8a1bfd103a9dcb1f9ccf0c611377d3b",
+            "transferaddress": null,
+            "amount": "1",
+            "blockindex": 603,
+            "transfernotifyindex": 0,
+            "txhash": "0x5e177b8d1dc33e9103c0cfd42f6dbf4efbe43029e2d6a18ea5ba0cb8437056b3",
+            "tokenid": "aabbcc"
+          }
+        ],
+        "received": [
+          {
+            "timestamp": 1579406581635,
+            "assethash": "0x8c23f196d8a1bfd103a9dcb1f9ccf0c611377d3b",
+            "transferaddress": null,
+            "amount": "1",
+            "blockindex": 1525,
+            "transfernotifyindex": 1,
+            "txhash": "0xc9c618b48972b240e0058d97b8d79b807ad51015418c84012765298526aeb77d",
+            "tokenid": "aabbcc"
+          }
+        ],
+        "address": "Ncb7jVsYWBt1q5T5k3ZTP8bn5eK4DuanLd"
+      }
+    }
+  },
+  {
+    "Name": "getnep11balancesasync",
+    "Request": {
+      "jsonrpc": "2.0",
+      "method": "getnep11balances",
+      "params": [ "NVVwFw6XyhtRCFQ8SpUTMdPyYt4Vd9A1XQ" ],
+      "id": 1
+    },
+    "Response": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "balance": [
+          {
+            "assethash": "0x8c23f196d8a1bfd103a9dcb1f9ccf0c611377d3b",
+            "name": "TestNFT",
+            "symbol": "TNFT",
+            "decimals": "0",
+            "tokens": [
+              {
+                "tokenid": "010203",
+                "amount": "1",
+                "lastupdatedblock": 3101
+              },
+              {
+                "tokenid": "040506",
+                "amount": "2",
+                "lastupdatedblock": 3096
+              }
+            ]
+          }
+        ],
+        "address": "NVVwFw6XyhtRCFQ8SpUTMdPyYt4Vd9A1XQ"
+      }
+    }
+  },
+  {
+    "Name": "getnep11propertiesasync",
+    "Request": {
+      "jsonrpc": "2.0",
+      "method": "getnep11properties",
+      "params": [ "0x8c23f196d8a1bfd103a9dcb1f9ccf0c611377d3b", "010203" ],
+      "id": 1
+    },
+    "Response": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "name": "Neo NFT #1",
+        "description": "A sample NEP-11 token",
+        "image": "https://example.com/nft/1.png",
+        "tokenURI": "aHR0cHM6Ly9leGFtcGxlLmNvbS9tZXRhLzEuanNvbg=="
+      }
+    }
   }
 ]
