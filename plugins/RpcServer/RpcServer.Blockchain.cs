@@ -459,6 +459,7 @@ partial class RpcServer
     {
         contractNameOrHashOrId.NotNull_Or(RpcError.InvalidParams.WithData($"Invalid 'contractNameOrHashOrId'"));
         base64KeyPrefix.NotNull_Or(RpcError.InvalidParams.WithData($"Invalid 'base64KeyPrefix'"));
+        (start >= 0).True_Or(RpcError.InvalidParams.WithData($"Invalid 'start': {start}"));
 
         using var snapshot = system.GetSnapshotCache();
         int id = GetContractId(snapshot, contractNameOrHashOrId);
