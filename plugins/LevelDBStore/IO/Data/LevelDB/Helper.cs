@@ -16,14 +16,17 @@ namespace Neo.IO.Data.LevelDB;
 
 public static class Helper
 {
-    public static IEnumerable<(byte[], byte[])> Seek(this DB db, ReadOptions options, byte[]? keyOrPrefix, SeekDirection direction)
+    public static IEnumerable<(byte[], byte[])> Seek(this DB db, ReadOptions options, byte[]? keyOrPrefix, SeekDirection direction, int skip = 0)
     {
         keyOrPrefix ??= [];
 
         using var it = db.CreateIterator(options);
         if (direction == SeekDirection.Forward)
         {
-            for (it.Seek(keyOrPrefix); it.Valid(); it.Next())
+            it.Seek(keyOrPrefix);
+            it.Skip(skip);
+
+            for (; it.Valid(); it.Next())
                 yield return new(it.Key()!, it.Value()!);
         }
         else
@@ -34,6 +37,8 @@ public static class Helper
                 it.SeekToLast();
             else if (it.Key().AsSpan().SequenceCompareTo(keyOrPrefix) > 0)
                 it.Prev();
+
+            it.SkipPrev(skip);
 
             for (; it.Valid(); it.Prev())
                 yield return new(it.Key()!, it.Value()!);
