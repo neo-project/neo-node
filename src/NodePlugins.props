@@ -1,0 +1,28 @@
+<Project>
+  <!-- All node plugins (not RpcClient / MPTTrie libraries). Copied next to the exe: $(TargetDir)Plugins/<Name>/ -->
+  <ItemGroup>
+    <NodePlugin Include="ApplicationLogs" />
+    <NodePlugin Include="DBFTPlugin" />
+    <NodePlugin Include="DeferredRelay" />
+    <NodePlugin Include="LevelDBStore" />
+    <NodePlugin Include="OracleService" />
+    <NodePlugin Include="RestServer" />
+    <NodePlugin Include="RocksDBStore" />
+    <NodePlugin Include="RpcServer" />
+    <NodePlugin Include="SignClient" />
+    <NodePlugin Include="SQLiteWallet" />
+    <NodePlugin Include="StateService" />
+    <NodePlugin Include="StorageDumper" />
+    <NodePlugin Include="TokensTracker" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="@(NodePlugin->'$(MSBuildThisFileDirectory)..\plugins\%(Identity)\%(Identity).csproj')">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <Private>false</Private>
+    </ProjectReference>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\plugins\MPTTrie\MPTTrie.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <Private>false</Private>
+    </ProjectReference>
+  </ItemGroup>
+</Project>

@@ -3,6 +3,7 @@
   <PropertyGroup>
     <PackageId>Neo.Network.RPC.RpcClient</PackageId>
     <RootNamespace>Neo.Network.RPC</RootNamespace>
+    <CopyToNodePlugins>false</CopyToNodePlugins>
   </PropertyGroup>
 
   <ItemGroup>

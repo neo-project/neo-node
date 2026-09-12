@@ -68,6 +68,10 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         private set => _localNode = value;
     }
 
+    private readonly TaskCompletionSource _startCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    internal Task WhenStarted => _startCompleted.Task;
+
     protected override string Prompt => "neo";
     public override string ServiceName => "NEO-CLI";
 
@@ -329,6 +333,24 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
     }
 
     public async void Start(CommandLineOptions options)
+    {
+        try
+        {
+            await StartCore(options).ConfigureAwait(false);
+            if (_neoSystem is null)
+            {
+                _startCompleted.TrySetException(new InvalidOperationException(
+                    "NEO node failed to start. See console output for details."));
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            _startCompleted.TrySetException(ex);
+        }
+    }
+
+    private async Task StartCore(CommandLineOptions options)
     {
         if (NeoSystem != null) return;
         bool verifyImport = !(options.NoVerify ?? false);
