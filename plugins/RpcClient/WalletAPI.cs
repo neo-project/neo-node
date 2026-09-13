@@ -58,7 +58,8 @@ public class WalletAPI
     {
         UInt160 scriptHash = NativeContract.NEO.Hash;
         var blockCount = await rpcClient.GetBlockCountAsync().ConfigureAwait(false);
-        var result = await nep17API.TestInvokeAsync(scriptHash, "unclaimedGas", account, blockCount - 1).ConfigureAwait(false);
+        // Match getunclaimedgas: UnclaimedGas(..., CurrentIndex + 1) == GetBlockCount().
+        var result = await nep17API.TestInvokeAsync(scriptHash, "unclaimedGas", account, blockCount).ConfigureAwait(false);
         BigInteger balance = result.Stack.Single().GetInteger();
         return ((decimal)balance) / (long)NativeContract.GAS.Factor;
     }
