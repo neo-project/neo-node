@@ -19,7 +19,9 @@ using Neo.Network.P2P.Payloads;
 using Neo.Plugins.RpcServer.Model;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
+using Neo.VM.Types;
 using static Neo.SmartContract.Native.NeoToken;
+using Array = Neo.VM.Types.Array;
 
 namespace Neo.Plugins.RpcServer.Tests;
 
@@ -612,6 +614,52 @@ public partial class UT_RpcServer
             json.Add(item);
         }
         Assert.AreEqual(json.ToString(), result.ToString());
+        Assert.IsInstanceOfType<JArray>(result);
+    }
+
+    [TestMethod]
+    public void TestGetCandidates_EmptyStack_ReturnsArray()
+    {
+        var result = Neo.Plugins.RpcServer.RpcServer.FormatCandidates([], []);
+        Assert.IsInstanceOfType<JArray>(result);
+        Assert.IsEmpty((JArray)result);
+        Assert.AreEqual("[]", result.ToString());
+    }
+
+    [TestMethod]
+    public void TestGetCandidates_EmptyInnerArray_ReturnsArray()
+    {
+        var result = Neo.Plugins.RpcServer.RpcServer.FormatCandidates([new Array()], []);
+        Assert.IsInstanceOfType<JArray>(result);
+        Assert.IsEmpty((JArray)result);
+    }
+
+    [TestMethod]
+    public void TestGetCandidates_FormatsVotesAsStringAndActiveFlag()
+    {
+        var pubkey = TestProtocolSettings.Default.StandbyCommittee[0];
+        var other = TestProtocolSettings.Default.StandbyCommittee[1];
+        var stack = new Array(
+        [
+            new Struct([pubkey.EncodePoint(true), 12_345]),
+            new Struct([other.EncodePoint(true), 0]),
+        ]);
+
+        var result = (JArray)Neo.Plugins.RpcServer.RpcServer.FormatCandidates([stack], [pubkey]);
+        Assert.HasCount(2, result);
+        Assert.AreEqual(pubkey.ToString(), result[0]!["publickey"]!.AsString());
+        Assert.AreEqual("12345", result[0]!["votes"]!.AsString());
+        Assert.IsTrue(result[0]!["active"]!.AsBoolean());
+        Assert.AreEqual(other.ToString(), result[1]!["publickey"]!.AsString());
+        Assert.AreEqual("0", result[1]!["votes"]!.AsString());
+        Assert.IsFalse(result[1]!["active"]!.AsBoolean());
+    }
+
+    [TestMethod]
+    public void TestGetCandidates_InvalidStack_Throws()
+    {
+        Assert.ThrowsExactly<InvalidCastException>(() =>
+            Neo.Plugins.RpcServer.RpcServer.FormatCandidates([StackItem.Null], []));
     }
 
     [TestMethod]
