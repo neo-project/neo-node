@@ -101,8 +101,8 @@ public class UT_NeoStore
 
         public bool TryGet(byte[] key, [NotNullWhen(true)] out byte[]? value) => _inner.TryGet(key, out value);
 
-        public IEnumerable<(byte[] Key, byte[] Value)> Find(byte[]? keyPrefix = null, SeekDirection direction = SeekDirection.Forward) =>
-            _inner.Find(keyPrefix, direction);
+        public IEnumerable<(byte[] Key, byte[] Value)> Find(byte[]? keyPrefix = null, SeekDirection direction = SeekDirection.Forward, int skip = 0) =>
+            _inner.Find(keyPrefix, direction, skip);
     }
 
     private sealed class TrackingSnapshot(TrackingStore store, IStoreSnapshot inner) : IStoreSnapshot
@@ -121,8 +121,8 @@ public class UT_NeoStore
             inner.Dispose();
         }
 
-        public IEnumerable<(byte[] Key, byte[] Value)> Find(byte[]? keyPrefix = null, SeekDirection direction = SeekDirection.Forward) =>
-            inner.Find(keyPrefix, direction);
+        public IEnumerable<(byte[] Key, byte[] Value)> Find(byte[]? keyPrefix = null, SeekDirection direction = SeekDirection.Forward, int skip = 0) =>
+            inner.Find(keyPrefix, direction, skip);
 
         public bool Contains(byte[] key) => inner.Contains(key);
 

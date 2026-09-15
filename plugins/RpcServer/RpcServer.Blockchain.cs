@@ -459,6 +459,7 @@ partial class RpcServer
     {
         contractNameOrHashOrId.NotNull_Or(RpcError.InvalidParams.WithData($"Invalid 'contractNameOrHashOrId'"));
         base64KeyPrefix.NotNull_Or(RpcError.InvalidParams.WithData($"Invalid 'base64KeyPrefix'"));
+        (start >= 0).True_Or(RpcError.InvalidParams.WithData($"Invalid 'start': {start}"));
 
         using var snapshot = system.GetSnapshotCache();
         int id = GetContractId(snapshot, contractNameOrHashOrId);
@@ -471,7 +472,7 @@ partial class RpcServer
         var items = new JArray();
         int pageSize = settings.FindStoragePageSize;
         int i = 0;
-        using (var iter = NativeContract.ContractManagement.FindContractStorage(snapshot, id, prefix).Skip(count: start).GetEnumerator())
+        using (var iter = NativeContract.ContractManagement.FindContractStorage(snapshot, id, prefix, skip: start).GetEnumerator())
         {
             var hasMore = false;
             while (iter.MoveNext())

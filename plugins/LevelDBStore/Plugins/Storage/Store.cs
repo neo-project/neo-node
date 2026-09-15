@@ -75,8 +75,8 @@ internal class Store : IStore, IEnumerable<KeyValuePair<byte[], byte[]>>
     }
 
     /// <inheritdoc/>
-    public IEnumerable<(byte[], byte[])> Find(byte[]? keyOrPrefix, SeekDirection direction = SeekDirection.Forward) =>
-        _db.Seek(ReadOptions.Default, keyOrPrefix, direction);
+    public IEnumerable<(byte[], byte[])> Find(byte[]? keyOrPrefix, SeekDirection direction = SeekDirection.Forward, int skip = 0) =>
+        _db.Seek(ReadOptions.Default, keyOrPrefix, direction, skip);
 
     public IEnumerator<KeyValuePair<byte[], byte[]>> GetEnumerator() =>
         _db.GetEnumerator();
