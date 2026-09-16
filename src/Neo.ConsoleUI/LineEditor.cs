@@ -50,8 +50,12 @@ internal sealed class LineEditor
         }
 
         Redraw();
-        while (true)
+        var previousTreatControlC = Console.TreatControlCAsInput;
+        Console.TreatControlCAsInput = true;
+        try
         {
+            while (true)
+            {
             var key = Console.ReadKey(intercept: true);
             if (key.Key == ConsoleKey.Enter)
             {
@@ -73,7 +77,10 @@ internal sealed class LineEditor
             }
 
             if (key.Key == ConsoleKey.C && key.Modifiers.HasFlag(ConsoleModifiers.Control))
+            {
+                AnsiConsole.WriteLine();
                 return null;
+            }
 
             if (key.Key == ConsoleKey.LeftArrow)
             {
@@ -179,6 +186,11 @@ internal sealed class LineEditor
                 cursor++;
                 Redraw();
             }
+        }
+        }
+        finally
+        {
+            Console.TreatControlCAsInput = previousTreatControlC;
         }
     }
 }

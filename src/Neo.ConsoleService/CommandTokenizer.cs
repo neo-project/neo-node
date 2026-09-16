@@ -198,4 +198,17 @@ public static class CommandTokenizer
         while (tokens.Count > 0 && tokens[^1].IsWhiteSpace) tokens.RemoveAt(tokens.Count - 1);
         return tokens;
     }
+
+    /// <summary>
+    /// Quote <paramref name="value"/> so <see cref="Tokenize"/> returns it as one token,
+    /// including Windows paths and values with spaces.
+    /// </summary>
+    public static string Quote(string value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        var escaped = value
+            .Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("\"", "\\\"", StringComparison.Ordinal);
+        return $"\"{escaped}\"";
+    }
 }

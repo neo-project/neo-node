@@ -343,6 +343,7 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
                     "NEO node failed to start. See console output for details."));
                 return;
             }
+            _startCompleted.TrySetResult();
         }
         catch (Exception ex)
         {

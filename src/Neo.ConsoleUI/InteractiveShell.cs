@@ -10,6 +10,7 @@
 // modifications are permitted.
 
 using Neo.CLI;
+using Neo.ConsoleService;
 using Spectre.Console;
 using System.Reflection;
 
@@ -62,7 +63,8 @@ internal sealed class InteractiveShell
                 if (next == StatusAction.CommandLine)
                 {
                     AnsiConsole.Clear();
-                    RunCommandLine();
+                    if (RunCommandLine())
+                        break;
                     continue;
                 }
 
@@ -103,10 +105,7 @@ internal sealed class InteractiveShell
             return true;
         }
         if (action == "Command line")
-        {
-            RunCommandLine();
-            return true;
-        }
+            return !RunCommandLine();
         if (action == "Command palette")
         {
             RunPalette();
@@ -160,21 +159,22 @@ internal sealed class InteractiveShell
         }
     }
 
-    private void RunCommandLine()
+    /// <returns><see langword="true"/> when the user typed exit/quit.</returns>
+    private bool RunCommandLine()
     {
         AnsiConsole.MarkupLine("[grey]Tab complete · arrows move · Up/Down history · Esc back · Ctrl+C cancel[/]");
         while (true)
         {
             var line = _editor.Read("neo> ");
             if (line is null)
-                return;
+                return false;
             if (string.IsNullOrWhiteSpace(line))
                 continue;
             if (line.Equals("exit", StringComparison.OrdinalIgnoreCase) ||
                 line.Equals("quit", StringComparison.OrdinalIgnoreCase))
-                return;
+                return true;
             if (line.Trim().Equals("show state", StringComparison.OrdinalIgnoreCase))
-                return;
+                return false;
             RunLine(line.Trim());
         }
     }
@@ -183,16 +183,18 @@ internal sealed class InteractiveShell
     {
         var parameters = command.Method.GetParameters();
         var parts = new List<string> { command.Key };
+        var display = new List<string> { command.Key };
         foreach (var parameter in parameters)
         {
             var hint = parameter.HasDefaultValue
                 ? $"optional, default {parameter.DefaultValue ?? "null"}"
                 : "required";
-            var title = $"[green]{parameter.Name}[/] ({parameter.ParameterType.Name}, {hint})";
+            var title = $"[green]{Markup.Escape(parameter.Name ?? "arg")}[/] ({parameter.ParameterType.Name}, {hint})";
             if (IsPassword(parameter))
             {
                 var secret = AnsiConsole.Prompt(new TextPrompt<string>(title).Secret());
-                parts.Add(Quote(secret));
+                parts.Add(CommandTokenizer.Quote(secret));
+                display.Add("****");
                 continue;
             }
 
@@ -203,17 +205,20 @@ internal sealed class InteractiveShell
                         .AllowEmpty());
                 if (string.IsNullOrEmpty(value))
                     continue;
-                parts.Add(Quote(value));
+                var quoted = CommandTokenizer.Quote(value);
+                parts.Add(quoted);
+                display.Add(quoted);
             }
             else
             {
                 var value = AnsiConsole.Prompt(new TextPrompt<string>(title));
-                parts.Add(Quote(value));
+                var quoted = CommandTokenizer.Quote(value);
+                parts.Add(quoted);
+                display.Add(quoted);
             }
         }
 
-        var line = string.Join(' ', parts);
-        RunLine(line);
+        CommandOutputPopup.Run(string.Join(' ', parts), _invoke, string.Join(' ', display));
     }
 
     private bool RunLine(string line)
@@ -260,13 +265,14 @@ internal sealed class InteractiveShell
     }
 
     private static string FormatChoice(CommandInfo command)
-        => string.IsNullOrWhiteSpace(command.Description)
-            ? command.Key
-            : $"{command.Key}  [grey]{Markup.Escape(command.Description)}[/]";
+    {
+        var signature = string.Join(", ", command.Method.GetParameters().Select(p => p.ParameterType.Name));
+        var label = string.IsNullOrEmpty(signature) ? command.Key : $"{command.Key}  ({signature})";
+        if (string.IsNullOrWhiteSpace(command.Description))
+            return Markup.Escape(label);
+        return $"{Markup.Escape(label)}  [grey]{Markup.Escape(command.Description)}[/]";
+    }
 
     private static bool IsPassword(ParameterInfo parameter)
         => parameter.Name is not null && parameter.Name.Contains("password", StringComparison.OrdinalIgnoreCase);
-
-    private static string Quote(string value)
-        => value.Contains(' ', StringComparison.Ordinal) ? $"\"{value.Replace("\"", "\\\"", StringComparison.Ordinal)}\"" : value;
 }

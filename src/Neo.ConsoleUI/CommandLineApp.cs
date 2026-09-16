@@ -9,6 +9,7 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using Neo.ConsoleService;
 using System.CommandLine;
 
 namespace Neo.ConsoleUI;
@@ -34,9 +35,9 @@ internal sealed class CommandLineApp
         DbPath = NewOption<string?>("--db-path", "Specify the db path.", "/db-path");
         Plugins = new Option<string[]>("--plugins")
         {
-            Description = "Plugins to install if not already present [plugin1 plugin2].",
+            Description = "Plugins to install if not already present. Repeat the option for each plugin.",
             Arity = ArgumentArity.ZeroOrMore,
-            AllowMultipleArgumentsPerToken = true
+            AllowMultipleArgumentsPerToken = false
         };
         Plugins.Aliases.Add("/plugins");
         NoVerify = NewOption<bool>("--noverify", "Skip block verification when importing.", "/noverify");
@@ -106,7 +107,9 @@ internal sealed class CommandLineApp
             current.SetAction(parseResult =>
             {
                 var extra = parseResult.GetValue(rest) ?? [];
-                var line = extra.Length == 0 ? info.Key : $"{info.Key} {string.Join(' ', extra)}";
+                var line = extra.Length == 0
+                    ? info.Key
+                    : $"{info.Key} {string.Join(' ', extra.Select(CommandTokenizer.Quote))}";
                 invoke(line);
             });
         }

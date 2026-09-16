@@ -10,6 +10,7 @@
 // modifications are permitted.
 
 using Spectre.Console;
+using System.Text;
 
 namespace Neo.ConsoleUI;
 
@@ -18,19 +19,20 @@ namespace Neo.ConsoleUI;
 /// </summary>
 internal static class CommandOutputPopup
 {
-    public static bool Run(string commandLine, Func<string, bool> invoke)
+    public static bool Run(string commandLine, Func<string, bool> invoke, string? displayLine = null)
     {
         var found = true;
+        var display = displayLine ?? commandLine;
         while (true)
         {
-            var result = Execute(commandLine, invoke);
+            var result = Execute(commandLine, display, invoke);
             found = result.Found;
-            if (!Show(commandLine, result.Output, result.Ok))
+            if (!Show(display, result.Output, result.Ok))
                 return found;
         }
     }
 
-    private static (bool Found, bool Ok, string Output) Execute(string commandLine, Func<string, bool> invoke)
+    private static (bool Found, bool Ok, string Output) Execute(string commandLine, string display, Func<string, bool> invoke)
     {
         var buffer = new StringWriter();
         var stdout = Console.Out;
@@ -39,36 +41,34 @@ internal static class CommandOutputPopup
         var ok = true;
 
         AnsiConsole.Clear();
-        AnsiConsole.Status()
-            .Spinner(Spinner.Known.Dots)
-            .SpinnerStyle(Style.Parse("green"))
-            .Start($"Please wait — running {commandLine}", _ =>
-            {
-                try
-                {
-                    Console.SetOut(buffer);
-                    Console.SetError(buffer);
-                    found = invoke(commandLine);
-                    if (!found)
-                        buffer.WriteLine("Command not found");
-                }
-                catch (Exception ex)
-                {
-                    ok = false;
-                    buffer.WriteLine(ex.InnerException?.Message ?? ex.Message);
-                }
-                finally
-                {
-                    Console.SetOut(stdout);
-                    Console.SetError(stderr);
-                }
-            });
+        // Do not wrap invoke in Status(): wallet/relay prompts use Console.ReadKey
+        // and must stay visible. Tee so prompts appear while output is captured.
+        AnsiConsole.MarkupLine($"[grey]Please wait — running {Markup.Escape(display)}[/]");
+        var tee = new TeeTextWriter(buffer, stdout);
+        try
+        {
+            Console.SetOut(tee);
+            Console.SetError(tee);
+            found = invoke(commandLine);
+            if (!found)
+                buffer.WriteLine("Command not found");
+        }
+        catch (Exception ex)
+        {
+            ok = false;
+            buffer.WriteLine(ex.InnerException?.Message ?? ex.Message);
+        }
+        finally
+        {
+            Console.SetOut(stdout);
+            Console.SetError(stderr);
+        }
 
         return (found, ok && found, buffer.ToString());
     }
 
     /// <returns><see langword="true"/> to rerun the command.</returns>
-    private static bool Show(string commandLine, string output, bool ok)
+    private static bool Show(string display, string output, bool ok)
     {
         AnsiConsole.Clear();
         var width = Math.Max(40, Console.WindowWidth - 2);
@@ -77,11 +77,11 @@ internal static class CommandOutputPopup
         var body = string.IsNullOrWhiteSpace(output) ? "(no output)" : output.TrimEnd();
         body = WrapOutput(body, innerWidth, maxLines);
 
-        var title = commandLine.Length > 60
-            ? string.Concat(commandLine.AsSpan(0, 57), "…")
-            : commandLine;
+        var title = display.Length > 60
+            ? string.Concat(display.AsSpan(0, 57), "…")
+            : display;
         var panel = new Panel(new Text(body))
-            .Header($" neo> {title} ")
+            .Header($" neo> {Markup.Escape(title)} ")
             .Border(BoxBorder.Rounded)
             .BorderColor(ok ? Color.Green : Color.Red)
             .Padding(1, 0, 1, 0)
@@ -124,5 +124,43 @@ internal static class CommandOutputPopup
             return string.Join('\n', wrapped);
         return string.Join('\n', wrapped.Take(maxLines - 1))
                + $"\n… ({wrapped.Count - maxLines + 1} more lines)";
+    }
+
+    private sealed class TeeTextWriter : TextWriter
+    {
+        private readonly TextWriter _capture;
+        private readonly TextWriter _live;
+
+        public TeeTextWriter(TextWriter capture, TextWriter live)
+        {
+            _capture = capture;
+            _live = live;
+        }
+
+        public override Encoding Encoding => _capture.Encoding;
+
+        public override void Write(char value)
+        {
+            _capture.Write(value);
+            _live.Write(value);
+        }
+
+        public override void Write(string? value)
+        {
+            _capture.Write(value);
+            _live.Write(value);
+        }
+
+        public override void WriteLine(string? value)
+        {
+            _capture.WriteLine(value);
+            _live.WriteLine(value);
+        }
+
+        public override void Flush()
+        {
+            _capture.Flush();
+            _live.Flush();
+        }
     }
 }
