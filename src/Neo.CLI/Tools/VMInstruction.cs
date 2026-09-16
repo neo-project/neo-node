@@ -221,17 +221,11 @@ internal sealed class VMInstruction : IEnumerable<VMInstruction>
         if (operand.Length == UInt256.Length)
             return $"{hex} // {new UInt256(operand)}";
 
-        if (operand.Length == 4 && TryFormatUnixTimestamp(BinaryPrimitives.ReadUInt32LittleEndian(operand), out var ts32))
-            return $"{hex} // {ts32}";
-
-        if (operand.Length == 8 && TryFormatUnixTimestamp(BinaryPrimitives.ReadInt64LittleEndian(operand), out var ts64))
-            return $"{hex} // {ts64}";
-
         return $"{hex} // blob {operand.Length} bytes";
     }
 
     private static string FormatInteger(long value)
-        => TryFormatUnixTimestamp(value, out var ts) ? $"{value} // {ts}" : value.ToString(CultureInfo.InvariantCulture);
+        => value.ToString(CultureInfo.InvariantCulture);
 
     /// <summary>
     /// Strict UTF-8 with at least one non-control rune. Control runes are escaped
@@ -301,29 +295,4 @@ internal sealed class VMInstruction : IEnumerable<VMInstruction>
         }
     }
 
-    /// <summary>
-    /// Unix seconds in 2000–2100, or unix milliseconds in that same window.
-    /// </summary>
-    private static bool TryFormatUnixTimestamp(long value, out string text)
-    {
-        const long UnixSeconds2000 = 946_684_800;
-        const long UnixSeconds2100 = 4_102_444_800;
-        const long UnixMilliseconds2000 = 946_684_800_000;
-        const long UnixMilliseconds2100 = 4_102_444_800_000;
-
-        if (value >= UnixSeconds2000 && value <= UnixSeconds2100)
-        {
-            text = DateTimeOffset.FromUnixTimeSeconds(value).UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
-            return true;
-        }
-
-        if (value >= UnixMilliseconds2000 && value <= UnixMilliseconds2100)
-        {
-            text = DateTimeOffset.FromUnixTimeMilliseconds(value).UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
-            return true;
-        }
-
-        text = null!;
-        return false;
-    }
 }

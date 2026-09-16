@@ -128,14 +128,19 @@ public class UT_VMInstruction
     }
 
     [TestMethod]
-    public void DecodeOperand_CommentsUnixTimestampOnPushInt32()
+    public void DecodeOperand_DoesNotTreatIntegersAsUnixTimestamps()
     {
-        const int unix = 1_787_908_101;
-        var script = new byte[5];
-        script[0] = (byte)OpCode.PUSHINT32;
-        BitConverter.GetBytes(unix).CopyTo(script, 1);
-        var instruction = new VMInstruction(script);
-        Assert.AreEqual("1787908101 // 2026-08-28T09:08:21Z", instruction.DecodeOperand());
+        // 2491470000 fits 2000–2100 as unix seconds (2048-12-13) but is a
+        // contract integer, not a timestamp. Same for 1787908101.
+        var pushInt64 = new byte[9];
+        pushInt64[0] = (byte)OpCode.PUSHINT64;
+        BitConverter.GetBytes(2_491_470_000L).CopyTo(pushInt64, 1);
+        Assert.AreEqual("2491470000", new VMInstruction(pushInt64).DecodeOperand());
+
+        var pushInt32 = new byte[5];
+        pushInt32[0] = (byte)OpCode.PUSHINT32;
+        BitConverter.GetBytes(1_787_908_101).CopyTo(pushInt32, 1);
+        Assert.AreEqual("1787908101", new VMInstruction(pushInt32).DecodeOperand());
     }
 
     [TestMethod]
