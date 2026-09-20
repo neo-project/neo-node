@@ -28,6 +28,9 @@ public class UT_CommandServiceBase
         [ConsoleCommand("testenum", Category = "Test Commands")]
         public void TestEnumMethod(TestEnum enumParam) { }
 
+        [ConsoleCommand("testenumrest", Category = "Test Commands")]
+        public void TestEnumThenString(TestEnum enumParam, string rest) { }
+
         [ConsoleCommand("testversion", Category = "Test Commands")]
         public Version TestMethodVersion() { return new Version("1.0.0"); }
 
@@ -132,6 +135,14 @@ public class UT_CommandServiceBase
         var result3 = service.ParseSequentialArguments(enumMethod, args3[1..].Trim());
         Assert.HasCount(1, result3);
         Assert.AreEqual(TestConsoleService.TestEnum.Value1, result3[0]);
+
+        // Sequential enum must consume the token so later args parse.
+        var enumRestMethod = typeof(TestConsoleService).GetMethod("TestEnumThenString");
+        var argsEnumRest = "testenumrest Value2 leftover".Tokenize();
+        var resultEnumRest = service.ParseSequentialArguments(enumRestMethod, argsEnumRest[1..].Trim());
+        Assert.HasCount(2, resultEnumRest);
+        Assert.AreEqual(TestConsoleService.TestEnum.Value2, resultEnumRest[0]);
+        Assert.AreEqual("leftover", resultEnumRest[1]);
 
         // Test case 4: Missing required parameter should throw exception
         var args4 = "test hello".Tokenize();
