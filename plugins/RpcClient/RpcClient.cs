@@ -339,10 +339,13 @@ public class RpcClient : IDisposable
     /// </summary>
     /// <param name="scriptHashOrId">Contract script hash, native name, or contract Id.</param>
     /// <param name="base64KeyPrefix">Base64-encoded storage key prefix.</param>
-    /// <param name="start">Start index for pagination. Defaults to 0.</param>
-    public async Task<RpcFindStorage> FindStorageAsync(string scriptHashOrId, string base64KeyPrefix, int start = 0)
+    /// <param name="base64StartKey">
+    /// Exclusive start key for pagination (Base64), usually the previous page's <see cref="RpcFindStorage.Next"/>.
+    /// Omit or pass empty to start at the prefix.
+    /// </param>
+    public async Task<RpcFindStorage> FindStorageAsync(string scriptHashOrId, string base64KeyPrefix, string base64StartKey = null)
     {
-        var result = await RpcSendByHashOrIndexAsync(GetRpcName(), scriptHashOrId, base64KeyPrefix, start)
+        var result = await RpcSendByHashOrIndexAsync(GetRpcName(), scriptHashOrId, base64KeyPrefix, base64StartKey ?? string.Empty)
             .ConfigureAwait(false);
         return RpcFindStorage.FromJson((JObject)result);
     }

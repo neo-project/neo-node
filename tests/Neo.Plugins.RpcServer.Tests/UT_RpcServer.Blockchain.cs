@@ -416,7 +416,7 @@ public partial class UT_RpcServer
         var value = new byte[] { 0x02 };
         TestUtils.StorageItemAdd(snapshot, contractState.Id, key, value);
         snapshot.Commit();
-        var result = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String(key), 0);
+        var result = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String(key));
 
         var jarr = new JArray();
         var j = new JObject()
@@ -429,7 +429,7 @@ public partial class UT_RpcServer
         var json = new JObject()
         {
             ["truncated"] = false,
-            ["next"] = 1,
+            ["next"] = Convert.ToBase64String(key),
             ["results"] = jarr,
         };
         Assert.AreEqual(json.ToString(), result.ToString());
@@ -441,9 +441,10 @@ public partial class UT_RpcServer
             .ToList()
             .ForEach(i => TestUtils.StorageItemAdd(snapshot, contractState.Id, [0x01, (byte)i], [0x02]));
         snapshot.Commit();
-        var result4 = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String(new byte[] { 0x01 }), 0);
-        Assert.AreEqual(RpcServersSettings.Default.FindStoragePageSize, result4["next"].AsNumber());
+        var result4 = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String(new byte[] { 0x01 }));
         Assert.IsTrue(result4["truncated"].AsBoolean());
+        Assert.AreEqual(RpcServersSettings.Default.FindStoragePageSize, ((JArray)result4["results"]).Count);
+        Assert.AreEqual(result4["results"][RpcServersSettings.Default.FindStoragePageSize - 1]["key"].AsString(), result4["next"].AsString());
     }
 
     [TestMethod]
@@ -466,13 +467,13 @@ public partial class UT_RpcServer
         Assert.AreEqual(RpcError.InvalidParams.Code, ex.HResult);
 
         // FindStorage
-        var result2 = _rpcServer.FindStorage(new("GasToken"), Convert.ToBase64String(key), 0);
+        var result2 = _rpcServer.FindStorage(new("GasToken"), Convert.ToBase64String(key));
         Assert.AreEqual(Convert.ToBase64String(value), result2["results"][0]["value"].AsString());
 
-        ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.FindStorage(null, Convert.ToBase64String(key), 0));
+        ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.FindStorage(null, Convert.ToBase64String(key)));
         Assert.AreEqual(RpcError.InvalidParams.Code, ex.HResult);
 
-        ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.FindStorage(new("GasToken"), null, 0));
+        ex = Assert.ThrowsExactly<RpcException>(() => _ = _rpcServer.FindStorage(new("GasToken"), null));
         Assert.AreEqual(RpcError.InvalidParams.Code, ex.HResult);
     }
 
@@ -494,17 +495,17 @@ public partial class UT_RpcServer
         snapshot.Commit();
 
         // Get first page
-        var resultPage1 = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String(prefix), 0);
+        var resultPage1 = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String(prefix));
         Assert.IsTrue(resultPage1["truncated"].AsBoolean());
         Assert.AreEqual(RpcServersSettings.Default.FindStoragePageSize, ((JArray)resultPage1["results"]).Count);
-        int nextIndex = (int)resultPage1["next"].AsNumber();
-        Assert.AreEqual(RpcServersSettings.Default.FindStoragePageSize, nextIndex);
+        var nextKey = Convert.FromBase64String(resultPage1["next"].AsString());
+        Assert.AreEqual(resultPage1["results"][RpcServersSettings.Default.FindStoragePageSize - 1]["key"].AsString(), resultPage1["next"].AsString());
 
         // Get second page
-        var resultPage2 = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String(prefix), nextIndex);
+        var resultPage2 = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String(prefix), nextKey);
         Assert.IsFalse(resultPage2["truncated"].AsBoolean());
         Assert.HasCount(5, (JArray)resultPage2["results"]);
-        Assert.AreEqual(totalItems, (int)resultPage2["next"].AsNumber()); // Next should be total count
+        Assert.AreEqual(resultPage2["results"][4]["key"].AsString(), resultPage2["next"].AsString());
     }
 
     [TestMethod]
@@ -525,25 +526,171 @@ public partial class UT_RpcServer
         snapshot.Commit();
 
         // Get all items (assuming page size is larger than 3)
-        var resultPage1 = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String(prefix), 0);
+        var resultPage1 = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String(prefix));
         Assert.IsFalse(resultPage1["truncated"].AsBoolean());
         Assert.AreEqual(totalItems, ((JArray)resultPage1["results"]).Count);
-        int nextIndex = (int)resultPage1["next"].AsNumber();
-        Assert.AreEqual(totalItems, nextIndex);
+        var nextKey = Convert.FromBase64String(resultPage1["next"].AsString());
+        Assert.AreEqual(resultPage1["results"][totalItems - 1]["key"].AsString(), resultPage1["next"].AsString());
 
         // Try to get next page (should be empty)
-        var resultPage2 = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String(prefix), nextIndex);
+        var resultPage2 = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String(prefix), nextKey);
         Assert.IsFalse(resultPage2["truncated"].AsBoolean());
         Assert.IsEmpty((JArray)resultPage2["results"]);
-        Assert.AreEqual(nextIndex, (int)resultPage2["next"].AsNumber()); // Next index should remain the same
+        Assert.AreEqual(resultPage1["next"].AsString(), resultPage2["next"].AsString());
 
         var ex = Assert.ThrowsExactly<RpcException>(
-            () => _ = _rpcServer.FindStorage(null, Convert.ToBase64String(prefix), 0));
+            () => _ = _rpcServer.FindStorage(null, Convert.ToBase64String(prefix)));
         Assert.AreEqual(RpcError.InvalidParams.Code, ex.HResult);
 
         var ex2 = Assert.ThrowsExactly<RpcException>(
-            () => _ = _rpcServer.FindStorage(new(contractState.Hash), null, 0));
+            () => _ = _rpcServer.FindStorage(new(contractState.Hash), null));
         Assert.AreEqual(RpcError.InvalidParams.Code, ex2.HResult);
+    }
+
+    [TestMethod]
+    public void TestFindStorage_Pagination_StableAcrossMutations()
+    {
+        var snapshot = _neoSystem.GetSnapshotCache();
+        var contractState = TestUtils.GetContract();
+        snapshot.AddContract(contractState.Hash, contractState);
+        var prefix = new byte[] { 0xCC };
+        int totalItems = RpcServersSettings.Default.FindStoragePageSize + 3;
+
+        for (int i = 0; i < totalItems; i++)
+        {
+            var key = prefix.Concat([(byte)i]).ToArray();
+            TestUtils.StorageItemAdd(snapshot, contractState.Id, key, [(byte)i]);
+        }
+        snapshot.Commit();
+
+        var page1 = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String(prefix));
+        Assert.IsTrue(page1["truncated"].AsBoolean());
+        var page1Keys = ((JArray)page1["results"]).Select(p => p["key"].AsString()).ToHashSet();
+        var cursor = Convert.FromBase64String(page1["next"].AsString());
+
+        // Insert and delete keys inside the already-returned range between pages.
+        TestUtils.StorageItemAdd(snapshot, contractState.Id, [.. prefix, 0x00, 0xFF], [0xFF]);
+        var deletedKey = Convert.FromBase64String(page1["results"][0]["key"].AsString());
+        snapshot.Delete(new StorageKey { Id = contractState.Id, Key = deletedKey });
+        snapshot.Commit();
+
+        var page2 = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String(prefix), cursor);
+        var page2Keys = ((JArray)page2["results"]).Select(p => p["key"].AsString()).ToHashSet();
+
+        Assert.IsFalse(page1Keys.Overlaps(page2Keys));
+        Assert.IsFalse(page2Keys.Contains(Convert.ToBase64String(deletedKey)));
+        Assert.IsFalse(page2Keys.Contains(Convert.ToBase64String([.. prefix, 0x00, 0xFF])));
+    }
+
+    [TestMethod]
+    public void TestFindStorage_InvalidStart_MustMatchPrefix()
+    {
+        var snapshot = _neoSystem.GetSnapshotCache();
+        var contractState = TestUtils.GetContract();
+        snapshot.AddContract(contractState.Hash, contractState);
+        TestUtils.StorageItemAdd(snapshot, contractState.Id, [0x01, 0x02], [0x03]);
+        snapshot.Commit();
+
+        var ex = Assert.ThrowsExactly<RpcException>(
+            () => _ = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String([0x01]), [0x02]));
+        Assert.AreEqual(RpcError.InvalidParams.Code, ex.HResult);
+
+        ex = Assert.ThrowsExactly<RpcException>(
+            () => _ = _rpcServer.FindStorage(new(contractState.Hash), "@@@"));
+        Assert.AreEqual(RpcError.InvalidParams.Code, ex.HResult);
+    }
+
+    [TestMethod]
+    public void TestFindStorage_EmptyResult()
+    {
+        var snapshot = _neoSystem.GetSnapshotCache();
+        var contractState = TestUtils.GetContract();
+        snapshot.AddContract(contractState.Hash, contractState);
+        TestUtils.StorageItemAdd(snapshot, contractState.Id, [0x01], [0x02]);
+        snapshot.Commit();
+
+        var result = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String([0xFF]));
+        Assert.IsFalse(result["truncated"].AsBoolean());
+        Assert.IsEmpty((JArray)result["results"]);
+        Assert.AreEqual(string.Empty, result["next"].AsString());
+    }
+
+    [TestMethod]
+    public void TestFindStorage_ExclusiveStart_SkipsCursorKey()
+    {
+        var snapshot = _neoSystem.GetSnapshotCache();
+        var contractState = TestUtils.GetContract();
+        snapshot.AddContract(contractState.Hash, contractState);
+        var prefix = new byte[] { 0xDD };
+        byte[][] keys =
+        [
+            [.. prefix, 0x01],
+            [.. prefix, 0x02],
+            [.. prefix, 0x03],
+        ];
+        foreach (var key in keys)
+            TestUtils.StorageItemAdd(snapshot, contractState.Id, key, key);
+        snapshot.Commit();
+
+        // Empty start and null start both begin at the prefix.
+        var fromNull = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String(prefix));
+        var fromEmpty = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String(prefix), []);
+        Assert.AreEqual(fromNull.ToString(), fromEmpty.ToString());
+        Assert.HasCount(3, (JArray)fromNull["results"]);
+
+        // Exclusive: start at the first key must omit it and return the rest.
+        var fromFirst = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String(prefix), keys[0]);
+        Assert.IsFalse(fromFirst["truncated"].AsBoolean());
+        Assert.HasCount(2, (JArray)fromFirst["results"]);
+        Assert.AreEqual(Convert.ToBase64String(keys[1]), fromFirst["results"][0]["key"].AsString());
+        Assert.AreEqual(Convert.ToBase64String(keys[2]), fromFirst["results"][1]["key"].AsString());
+        Assert.AreEqual(Convert.ToBase64String(keys[2]), fromFirst["next"].AsString());
+    }
+
+    [TestMethod]
+    public void TestFindStorage_DeletedCursor_ContinuesFromNextKey()
+    {
+        var snapshot = _neoSystem.GetSnapshotCache();
+        var contractState = TestUtils.GetContract();
+        snapshot.AddContract(contractState.Hash, contractState);
+        var prefix = new byte[] { 0xEE };
+        byte[][] keys =
+        [
+            [.. prefix, 0x01],
+            [.. prefix, 0x02],
+            [.. prefix, 0x03],
+        ];
+        foreach (var key in keys)
+            TestUtils.StorageItemAdd(snapshot, contractState.Id, key, key);
+        snapshot.Commit();
+
+        snapshot.Delete(new StorageKey { Id = contractState.Id, Key = keys[1] });
+        snapshot.Commit();
+
+        // Cursor points at a deleted key; Seek lands on/after it and must still return later keys.
+        var result = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String(prefix), keys[1]);
+        Assert.IsFalse(result["truncated"].AsBoolean());
+        Assert.HasCount(1, (JArray)result["results"]);
+        Assert.AreEqual(Convert.ToBase64String(keys[2]), result["results"][0]["key"].AsString());
+        Assert.AreEqual(Convert.ToBase64String(keys[2]), result["next"].AsString());
+    }
+
+    [TestMethod]
+    public void TestFindStorage_DoesNotLeakOtherPrefixes()
+    {
+        var snapshot = _neoSystem.GetSnapshotCache();
+        var contractState = TestUtils.GetContract();
+        snapshot.AddContract(contractState.Hash, contractState);
+        TestUtils.StorageItemAdd(snapshot, contractState.Id, [0x10, 0x01], [0x01]);
+        TestUtils.StorageItemAdd(snapshot, contractState.Id, [0x10, 0x02], [0x02]);
+        TestUtils.StorageItemAdd(snapshot, contractState.Id, [0x11, 0x01], [0x03]);
+        snapshot.Commit();
+
+        var result = _rpcServer.FindStorage(new(contractState.Hash), Convert.ToBase64String([0x10]));
+        Assert.IsFalse(result["truncated"].AsBoolean());
+        Assert.HasCount(2, (JArray)result["results"]);
+        Assert.AreEqual(Convert.ToBase64String([0x10, 0x01]), result["results"][0]["key"].AsString());
+        Assert.AreEqual(Convert.ToBase64String([0x10, 0x02]), result["results"][1]["key"].AsString());
     }
 
     [TestMethod]
