@@ -1,0 +1,50 @@
+<Project>
+  <Target Name="CopyNodePlugins" AfterTargets="Build">
+    <PropertyGroup>
+      <_PluginRoot>$(MSBuildThisFileDirectory)..\plugins</_PluginRoot>
+      <_PluginOut>$(TargetDir)Plugins</_PluginOut>
+    </PropertyGroup>
+    <ItemGroup>
+      <_PluginAllDll Include="$(_PluginRoot)\%(NodePlugin.Identity)\bin\$(Configuration)\$(TargetFramework)\*.dll">
+        <PluginName>%(NodePlugin.Identity)</PluginName>
+      </_PluginAllDll>
+      <_PluginJson Include="$(_PluginRoot)\%(NodePlugin.Identity)\bin\$(Configuration)\$(TargetFramework)\%(NodePlugin.Identity).json">
+        <PluginName>%(NodePlugin.Identity)</PluginName>
+      </_PluginJson>
+      <_PluginRuntime Include="$(_PluginRoot)\%(NodePlugin.Identity)\bin\$(Configuration)\$(TargetFramework)\runtimes\**\*">
+        <PluginName>%(NodePlugin.Identity)</PluginName>
+      </_PluginRuntime>
+    </ItemGroup>
+    <ItemGroup>
+      <!-- Plugin assembly itself. -->
+      <_PluginOwnDll Include="@(_PluginAllDll)" Condition="Exists('%(FullPath)') AND '%(Filename)' == '%(PluginName)'" />
+      <!-- Extra dependency dlls: not already next to the exe, and not another plugin project. -->
+      <_PluginDepDll Include="@(_PluginAllDll)" Condition="Exists('%(FullPath)') AND '%(Filename)' != '%(PluginName)' AND !Exists('$(TargetDir)%(Filename)%(Extension)') AND !Exists('$(_PluginRoot)\%(Filename)\%(Filename).csproj')" />
+      <_PluginJsonExisting Include="@(_PluginJson)" Condition="Exists('%(FullPath)')" />
+      <_PluginRuntimeExisting Include="@(_PluginRuntime)" Condition="Exists('%(FullPath)')" />
+    </ItemGroup>
+    <MakeDir Directories="$(_PluginOut);@(_PluginOwnDll->'$(_PluginOut)\%(PluginName)')" />
+    <Copy SourceFiles="@(_PluginOwnDll)" DestinationFolder="$(_PluginOut)\%(PluginName)\" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_PluginDepDll)" DestinationFolder="$(_PluginOut)\%(PluginName)\" SkipUnchangedFiles="true" />
+    <!-- Plugin.Load(byte[]) resolves managed deps from the exe directory, not only Plugins/<Name>/. -->
+    <Copy SourceFiles="@(_PluginDepDll)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_PluginJsonExisting)" DestinationFolder="$(_PluginOut)\%(PluginName)\" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_PluginRuntimeExisting)" DestinationFiles="$(_PluginOut)\%(PluginName)\runtimes\%(RecursiveDir)%(Filename)%(Extension)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(_PluginRoot)\MPTTrie\bin\$(Configuration)\$(TargetFramework)\MPTTrie.dll" DestinationFolder="$(_PluginOut)\StateService\" SkipUnchangedFiles="true" Condition="Exists('$(_PluginRoot)\MPTTrie\bin\$(Configuration)\$(TargetFramework)\MPTTrie.dll')" />
+    <PropertyGroup>
+      <_HostRid>$([System.Runtime.InteropServices.RuntimeInformation]::RuntimeIdentifier)</_HostRid>
+      <_CopyRid>$(_HostRid)</_CopyRid>
+      <_CopyRid Condition="!Exists('$(_PluginRoot)\LevelDBStore\bin\$(Configuration)\$(TargetFramework)\runtimes\$(_CopyRid)\native')">win-x64</_CopyRid>
+    </PropertyGroup>
+    <ItemGroup>
+      <_HostNative Include="$(_PluginRoot)\LevelDBStore\bin\$(Configuration)\$(TargetFramework)\runtimes\$(_CopyRid)\native\*.*" />
+      <_HostNative Include="$(_PluginRoot)\RocksDBStore\bin\$(Configuration)\$(TargetFramework)\runtimes\$(_CopyRid)\native\*.*" />
+      <_HostNative Include="$(_PluginRoot)\SQLiteWallet\bin\$(Configuration)\$(TargetFramework)\runtimes\$(_CopyRid)\native\*.*" />
+      <_HostNativeExisting Include="@(_HostNative)" Condition="Exists('%(FullPath)')" />
+      <_LevelDbNative Include="$(_PluginRoot)\LevelDBStore\bin\$(Configuration)\$(TargetFramework)\runtimes\**\*" Condition="Exists('$(_PluginRoot)\LevelDBStore\bin\$(Configuration)\$(TargetFramework)\runtimes')" />
+    </ItemGroup>
+    <!-- P/Invoke looks next to the exe, not in runtimes/, when LevelDBStore is loaded as a plugin. -->
+    <Copy SourceFiles="@(_HostNativeExisting)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_LevelDbNative)" DestinationFiles="$(TargetDir)runtimes\%(_LevelDbNative.RecursiveDir)%(_LevelDbNative.Filename)%(_LevelDbNative.Extension)" SkipUnchangedFiles="true" Condition="'@(_LevelDbNative)' != ''" />
+  </Target>
+</Project>

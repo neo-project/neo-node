@@ -28,4 +28,31 @@
     </None>
   </ItemGroup>
 
+  <!-- Copy this plugin next to neo-cli / neo-tui binaries: {TargetDir}Plugins/{Name}/ -->
+  <PropertyGroup>
+    <CopyToNodePlugins Condition="'$(CopyToNodePlugins)' == ''">true</CopyToNodePlugins>
+  </PropertyGroup>
+
+  <Target Name="CopyPluginToNodeOutput" AfterTargets="Build" Condition="'$(CopyToNodePlugins)' == 'true'">
+    <PropertyGroup>
+      <_CliTargetDir>$(MSBuildThisFileDirectory)..\src\Neo.CLI\bin\$(Configuration)\$(TargetFramework)\</_CliTargetDir>
+      <_TuiTargetDir>$(MSBuildThisFileDirectory)..\src\Neo.ConsoleUI\bin\$(Configuration)\$(TargetFramework)\</_TuiTargetDir>
+      <_CliPlugins>$(_CliTargetDir)Plugins\$(MSBuildProjectName)\</_CliPlugins>
+      <_TuiPlugins>$(_TuiTargetDir)Plugins\$(MSBuildProjectName)\</_TuiPlugins>
+    </PropertyGroup>
+    <MakeDir Directories="$(_CliTargetDir)Plugins;$(_CliPlugins);$(_TuiTargetDir)Plugins;$(_TuiPlugins)" />
+    <ItemGroup>
+      <_AllDll Include="$(TargetDir)*.dll" />
+      <_PluginCopyCli Include="@(_AllDll)" Condition="'%(Filename)' == '$(MSBuildProjectName)' OR (!Exists('$(_CliTargetDir)%(Filename)%(Extension)') AND !Exists('$(MSBuildThisFileDirectory)%(Filename)\%(Filename).csproj'))" />
+      <_PluginCopyTui Include="@(_AllDll)" Condition="'%(Filename)' == '$(MSBuildProjectName)' OR (!Exists('$(_TuiTargetDir)%(Filename)%(Extension)') AND !Exists('$(MSBuildThisFileDirectory)%(Filename)\%(Filename).csproj'))" />
+      <_PluginCopyCli Include="$(TargetDir)$(MSBuildProjectName).json" Condition="Exists('$(TargetDir)$(MSBuildProjectName).json')" />
+      <_PluginCopyTui Include="$(TargetDir)$(MSBuildProjectName).json" Condition="Exists('$(TargetDir)$(MSBuildProjectName).json')" />
+      <_PluginRuntime Include="$(TargetDir)runtimes\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_PluginCopyCli)" DestinationFolder="$(_CliPlugins)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_PluginCopyTui)" DestinationFolder="$(_TuiPlugins)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_PluginRuntime)" DestinationFiles="$(_CliPlugins)runtimes\%(RecursiveDir)%(Filename)%(Extension)" SkipUnchangedFiles="true" Condition="'@(_PluginRuntime)' != ''" />
+    <Copy SourceFiles="@(_PluginRuntime)" DestinationFiles="$(_TuiPlugins)runtimes\%(RecursiveDir)%(Filename)%(Extension)" SkipUnchangedFiles="true" Condition="'@(_PluginRuntime)' != ''" />
+  </Target>
+
 </Project>
