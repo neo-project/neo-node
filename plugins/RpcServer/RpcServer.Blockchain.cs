@@ -424,15 +424,17 @@ partial class RpcServer
 
     /// <summary>
     /// Finds storage items by contract ID or script hash and prefix.
+    /// Pagination uses an exclusive key cursor (like <c>findstates</c>), not a skip count,
+    /// so continuing after storage mutations does not skip or duplicate keys around the cursor.
     /// <para>Request format:</para>
     /// <code>{
     ///   "jsonrpc": "2.0",
     ///   "id": 1,
     ///   "method": "findstorage",
-    ///   "params": ["
+    ///   "params": [
     ///     "The contract id(int), hash(UInt160) or native contract name(string)",
     ///     "The base64-encoded key prefix",
-    ///     0 /*The start index, optional*/
+    ///     "" /* Optional exclusive start key (base64), usually previous result.next */
     ///   ]
     /// }</code>
     /// <para>Response format:</para>
@@ -441,7 +443,7 @@ partial class RpcServer
     ///   "id": 1,
     ///   "result": {
     ///     "truncated": true,
-    ///     "next": 100,
+    ///     "next": "The Base64-encoded last key (pass as start for the next page)",
     ///     "results": [
     ///       {"key": "The Base64-encoded storage key", "value": "The Base64-encoded storage value"},
     ///       {"key": "The Base64-encoded storage key", "value": "The Base64-encoded storage value"},
@@ -452,10 +454,13 @@ partial class RpcServer
     /// </summary>
     /// <param name="contractNameOrHashOrId">The contract ID (int) or script hash (UInt160).</param>
     /// <param name="base64KeyPrefix">The Base64-encoded storage key prefix.</param>
-    /// <param name="start">The start index.</param>
+    /// <param name="start">
+    /// Exclusive start key (same encoding as result keys). Omit or pass empty to start at the prefix.
+    /// When continuing, pass the previous page's <c>next</c> (last returned key).
+    /// </param>
     /// <returns>The found storage items <see cref="StorageItem"/> as a <see cref="JToken"/>.</returns>
     [RpcMethod]
-    protected internal virtual JToken FindStorage(ContractNameOrHashOrId contractNameOrHashOrId, string base64KeyPrefix, int start = 0)
+    protected internal virtual JToken FindStorage(ContractNameOrHashOrId contractNameOrHashOrId, string base64KeyPrefix, byte[]? start = null)
     {
         contractNameOrHashOrId.NotNull_Or(RpcError.InvalidParams.WithData($"Invalid 'contractNameOrHashOrId'"));
         base64KeyPrefix.NotNull_Or(RpcError.InvalidParams.WithData($"Invalid 'base64KeyPrefix'"));
@@ -466,34 +471,48 @@ partial class RpcServer
         var prefix = Result.Ok_Or(
             () => Convert.FromBase64String(base64KeyPrefix),
             RpcError.InvalidParams.WithData($"Invalid Base64 string: {base64KeyPrefix}"));
+        start ??= [];
+        if (start.Length > 0 && !start.AsSpan().StartsWith(prefix))
+            throw new RpcException(RpcError.InvalidParams.WithData("Invalid 'start': must start with the given prefix"));
+
+        var prefixKey = StorageKey.CreateSearchPrefix(id, prefix);
+        var seekKey = start.Length > 0
+            ? StorageKey.CreateSearchPrefix(id, start)
+            : prefixKey;
 
         var json = new JObject();
         var items = new JArray();
         int pageSize = settings.FindStoragePageSize;
-        int i = 0;
-        using (var iter = NativeContract.ContractManagement.FindContractStorage(snapshot, id, prefix).Skip(count: start).GetEnumerator())
-        {
-            var hasMore = false;
-            while (iter.MoveNext())
-            {
-                if (i == pageSize)
-                {
-                    hasMore = true;
-                    break;
-                }
+        byte[]? lastKey = start.Length > 0 ? start : null;
+        var hasMore = false;
+        var count = 0;
 
-                var item = new JObject
-                {
-                    ["key"] = Convert.ToBase64String(iter.Current.Key.Key.Span),
-                    ["value"] = Convert.ToBase64String(iter.Current.Value.Value.Span)
-                };
-                items.Add(item);
-                i++;
+        foreach (var (key, value) in snapshot.Seek(seekKey))
+        {
+            if (key.Id != id || !key.Key.Span.StartsWith(prefix))
+                break;
+
+            // Exclusive cursor: skip the start key itself when it still exists.
+            if (start.Length > 0 && key.Key.Span.SequenceEqual(start))
+                continue;
+
+            if (count == pageSize)
+            {
+                hasMore = true;
+                break;
             }
-            json["truncated"] = hasMore;
+
+            lastKey = key.Key.ToArray();
+            items.Add(new JObject
+            {
+                ["key"] = Convert.ToBase64String(lastKey),
+                ["value"] = Convert.ToBase64String(value.Value.Span)
+            });
+            count++;
         }
 
-        json["next"] = start + i;
+        json["truncated"] = hasMore;
+        json["next"] = lastKey is null ? string.Empty : Convert.ToBase64String(lastKey);
         json["results"] = items;
         return json;
     }
