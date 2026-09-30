@@ -13,6 +13,7 @@ using Neo.Cryptography;
 using Neo.Cryptography.ECC;
 using Neo.Extensions;
 using Neo.IO;
+using Neo.IO.Caching;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
@@ -26,6 +27,15 @@ namespace Neo.Plugins.DBFTPlugin.Consensus;
 
 public sealed partial class ConsensusContext : IDisposable, ISerializable
 {
+    public record UnvalidTxCacheItem(UInt256 Key, HashSet<ECPoint> Value);
+    public class InvalidCache(int maxCapacity) : FIFOCache<UInt256, UnvalidTxCacheItem>(maxCapacity)
+    {
+        protected override UInt256 GetKeyForItem(UnvalidTxCacheItem item)
+        {
+            return item.Key;
+        }
+    }
+
     /// <summary>
     /// Key for saving consensus state.
     /// </summary>
@@ -50,7 +60,7 @@ public sealed partial class ConsensusContext : IDisposable, ISerializable
     /// Store all verified unsorted transactions' senders' fee currently in the consensus context.
     /// </summary>
     public TransactionVerificationContext VerificationContext = new();
-    public Dictionary<UInt256, HashSet<ECPoint>> InvalidTransactions = new();
+    public InvalidCache InvalidTransactions;
 
     public StoreCache Snapshot { get; private set; }
     private ECPoint _myPublicKey;
@@ -115,6 +125,7 @@ public sealed partial class ConsensusContext : IDisposable, ISerializable
         _signer = signer;
         this.neoSystem = neoSystem;
         dbftSettings = settings;
+        InvalidTransactions = new InvalidCache(neoSystem.Settings.MemoryPoolMaxTransactions);
 
         if (dbftSettings.IgnoreRecoveryLogs == false)
         {
