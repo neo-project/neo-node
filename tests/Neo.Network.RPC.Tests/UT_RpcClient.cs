@@ -289,10 +289,10 @@ public class UT_RpcClient
     public async Task TestFindStorage()
     {
         var test = TestUtils.RpcTestCases.Find(p => p.Name.Equals(nameof(rpc.FindStorageAsync), StringComparison.CurrentCultureIgnoreCase));
-        var result = await rpc.FindStorageAsync(test.Request.Params[0].AsString(), test.Request.Params[1].AsString(), (int)test.Request.Params[2].AsNumber());
+        var result = await rpc.FindStorageAsync(test.Request.Params[0].AsString(), test.Request.Params[1].AsString(), test.Request.Params[2].AsString());
         Assert.AreEqual(test.Response.Result.ToString(), result.ToJson().ToString());
         Assert.IsFalse(result.Truncated);
-        Assert.AreEqual(2, result.Next);
+        Assert.AreEqual("AAED", result.Next);
         Assert.AreEqual(2, result.Results.Count);
         Assert.AreEqual("AAEC", result.Results[0].Key);
         Assert.AreEqual("AQID", result.Results[0].Value);
@@ -302,10 +302,10 @@ public class UT_RpcClient
     public async Task TestFindStorage_WithId()
     {
         var test = TestUtils.RpcTestCases.Find(p => p.Name.Equals(nameof(rpc.FindStorageAsync) + "_with_id", StringComparison.CurrentCultureIgnoreCase));
-        var result = await rpc.FindStorageAsync(test.Request.Params[0].AsString(), test.Request.Params[1].AsString(), (int)test.Request.Params[2].AsNumber());
+        var result = await rpc.FindStorageAsync(test.Request.Params[0].AsString(), test.Request.Params[1].AsString(), test.Request.Params[2].AsString());
         Assert.AreEqual(test.Response.Result.ToString(), result.ToJson().ToString());
         Assert.IsTrue(result.Truncated);
-        Assert.AreEqual(51, result.Next);
+        Assert.AreEqual("AAEC", result.Next);
         Assert.AreEqual(1, result.Results.Count);
     }
 

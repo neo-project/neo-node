@@ -61,6 +61,32 @@ public class Iterator : LevelDBHandle
     }
 
     /// <summary>
+    /// Advances the iterator <paramref name="count"/> entries by calling the native
+    /// leveldb_iter_next repeatedly (leveldb has no batch-skip primitive).
+    /// Does not marshal keys/values while skipping.
+    /// </summary>
+    public void Skip(int count)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+
+        while (count-- > 0 && Valid())
+            Next();
+    }
+
+    /// <summary>
+    /// Moves the iterator backwards <paramref name="count"/> entries by calling the native
+    /// leveldb_iter_prev repeatedly (leveldb has no batch-skip primitive).
+    /// Does not marshal keys/values while skipping.
+    /// </summary>
+    public void SkipPrev(int count)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+
+        while (count-- > 0 && Valid())
+            Prev();
+    }
+
+    /// <summary>
     /// Position at the first key in the source that at or past target
     /// The iterator is Valid() after this call if the source contains
     /// an entry that comes at or past target.
