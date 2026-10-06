@@ -17,7 +17,11 @@ public class RpcFindStorage
 {
     public bool Truncated { get; set; }
 
-    public int Next { get; set; }
+    /// <summary>
+    /// Exclusive cursor for the next page: Base64 of the last returned key (or empty when there are no results).
+    /// Pass as <c>start</c> when <see cref="Truncated"/> is true.
+    /// </summary>
+    public string Next { get; set; }
 
     public List<RpcStorageKeyValue> Results { get; set; }
 
@@ -36,7 +40,7 @@ public class RpcFindStorage
         return new()
         {
             Truncated = json["truncated"].AsBoolean(),
-            Next = (int)json["next"].AsNumber(),
+            Next = json["next"]?.AsString() ?? string.Empty,
             Results = ((JArray)json["results"]).Select(p => RpcStorageKeyValue.FromJson((JObject)p)).ToList()
         };
     }
