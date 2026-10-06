@@ -56,137 +56,137 @@ internal sealed class LineEditor
         {
             while (true)
             {
-            var key = Console.ReadKey(intercept: true);
-            if (key.Key == ConsoleKey.Enter)
-            {
-                AnsiConsole.WriteLine();
-                var result = input.ToString();
-                if (!string.IsNullOrWhiteSpace(result))
+                var key = Console.ReadKey(intercept: true);
+                if (key.Key == ConsoleKey.Enter)
                 {
-                    _history.Add(result);
-                    if (_history.Count > HistorySize)
-                        _history.RemoveAt(0);
+                    AnsiConsole.WriteLine();
+                    var result = input.ToString();
+                    if (!string.IsNullOrWhiteSpace(result))
+                    {
+                        _history.Add(result);
+                        if (_history.Count > HistorySize)
+                            _history.RemoveAt(0);
+                    }
+                    return result;
                 }
-                return result;
-            }
 
-            if (key.Key == ConsoleKey.Escape)
-            {
-                AnsiConsole.WriteLine();
-                return null;
-            }
-
-            if (key.Key == ConsoleKey.C && key.Modifiers.HasFlag(ConsoleModifiers.Control))
-            {
-                AnsiConsole.WriteLine();
-                return null;
-            }
-
-            if (key.Key == ConsoleKey.LeftArrow)
-            {
-                if (cursor > 0) cursor--;
-                Redraw();
-                continue;
-            }
-
-            if (key.Key == ConsoleKey.RightArrow)
-            {
-                if (cursor < input.Length) cursor++;
-                Redraw();
-                continue;
-            }
-
-            if (key.Key == ConsoleKey.Home || (key.Key == ConsoleKey.A && key.Modifiers.HasFlag(ConsoleModifiers.Control)))
-            {
-                cursor = 0;
-                Redraw();
-                continue;
-            }
-
-            if (key.Key == ConsoleKey.End || (key.Key == ConsoleKey.E && key.Modifiers.HasFlag(ConsoleModifiers.Control)))
-            {
-                cursor = input.Length;
-                Redraw();
-                continue;
-            }
-
-            if (key.Key == ConsoleKey.U && key.Modifiers.HasFlag(ConsoleModifiers.Control))
-            {
-                input.Clear();
-                cursor = 0;
-                Redraw();
-                continue;
-            }
-
-            if (key.Key == ConsoleKey.Backspace)
-            {
-                if (cursor > 0)
+                if (key.Key == ConsoleKey.Escape)
                 {
-                    input.Remove(cursor - 1, 1);
-                    cursor--;
+                    AnsiConsole.WriteLine();
+                    return null;
                 }
-                Redraw();
-                continue;
-            }
 
-            if (key.Key == ConsoleKey.Delete)
-            {
-                if (cursor < input.Length)
-                    input.Remove(cursor, 1);
-                Redraw();
-                continue;
-            }
-
-            if (key.Key == ConsoleKey.UpArrow)
-            {
-                if (_history.Count == 0) continue;
-                historyIndex = historyIndex < 0 ? _history.Count - 1 : Math.Max(0, historyIndex - 1);
-                input.Clear();
-                input.Append(_history[historyIndex]);
-                cursor = input.Length;
-                Redraw();
-                continue;
-            }
-
-            if (key.Key == ConsoleKey.DownArrow)
-            {
-                if (historyIndex < 0) continue;
-                historyIndex++;
-                input.Clear();
-                if (historyIndex >= _history.Count)
+                if (key.Key == ConsoleKey.C && key.Modifiers.HasFlag(ConsoleModifiers.Control))
                 {
-                    historyIndex = -1;
+                    AnsiConsole.WriteLine();
+                    return null;
                 }
-                else
-                {
-                    input.Append(_history[historyIndex]);
-                }
-                cursor = input.Length;
-                Redraw();
-                continue;
-            }
 
-            if (key.Key == ConsoleKey.Tab)
-            {
-                var prefix = input.ToString();
-                var match = _completions.FirstOrDefault(c => c.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
-                if (match is not null)
+                if (key.Key == ConsoleKey.LeftArrow)
                 {
-                    input.Clear();
-                    input.Append(match);
+                    if (cursor > 0) cursor--;
+                    Redraw();
+                    continue;
+                }
+
+                if (key.Key == ConsoleKey.RightArrow)
+                {
+                    if (cursor < input.Length) cursor++;
+                    Redraw();
+                    continue;
+                }
+
+                if (key.Key == ConsoleKey.Home || (key.Key == ConsoleKey.A && key.Modifiers.HasFlag(ConsoleModifiers.Control)))
+                {
+                    cursor = 0;
+                    Redraw();
+                    continue;
+                }
+
+                if (key.Key == ConsoleKey.End || (key.Key == ConsoleKey.E && key.Modifiers.HasFlag(ConsoleModifiers.Control)))
+                {
                     cursor = input.Length;
                     Redraw();
+                    continue;
                 }
-                continue;
-            }
 
-            if (!char.IsControl(key.KeyChar))
-            {
-                input.Insert(cursor, key.KeyChar);
-                cursor++;
-                Redraw();
+                if (key.Key == ConsoleKey.U && key.Modifiers.HasFlag(ConsoleModifiers.Control))
+                {
+                    input.Clear();
+                    cursor = 0;
+                    Redraw();
+                    continue;
+                }
+
+                if (key.Key == ConsoleKey.Backspace)
+                {
+                    if (cursor > 0)
+                    {
+                        input.Remove(cursor - 1, 1);
+                        cursor--;
+                    }
+                    Redraw();
+                    continue;
+                }
+
+                if (key.Key == ConsoleKey.Delete)
+                {
+                    if (cursor < input.Length)
+                        input.Remove(cursor, 1);
+                    Redraw();
+                    continue;
+                }
+
+                if (key.Key == ConsoleKey.UpArrow)
+                {
+                    if (_history.Count == 0) continue;
+                    historyIndex = historyIndex < 0 ? _history.Count - 1 : Math.Max(0, historyIndex - 1);
+                    input.Clear();
+                    input.Append(_history[historyIndex]);
+                    cursor = input.Length;
+                    Redraw();
+                    continue;
+                }
+
+                if (key.Key == ConsoleKey.DownArrow)
+                {
+                    if (historyIndex < 0) continue;
+                    historyIndex++;
+                    input.Clear();
+                    if (historyIndex >= _history.Count)
+                    {
+                        historyIndex = -1;
+                    }
+                    else
+                    {
+                        input.Append(_history[historyIndex]);
+                    }
+                    cursor = input.Length;
+                    Redraw();
+                    continue;
+                }
+
+                if (key.Key == ConsoleKey.Tab)
+                {
+                    var prefix = input.ToString();
+                    var match = _completions.FirstOrDefault(c => c.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+                    if (match is not null)
+                    {
+                        input.Clear();
+                        input.Append(match);
+                        cursor = input.Length;
+                        Redraw();
+                    }
+                    continue;
+                }
+
+                if (!char.IsControl(key.KeyChar))
+                {
+                    input.Insert(cursor, key.KeyChar);
+                    cursor++;
+                    Redraw();
+                }
             }
-        }
         }
         finally
         {
