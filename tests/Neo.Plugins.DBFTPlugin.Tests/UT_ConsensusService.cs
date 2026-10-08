@@ -318,7 +318,7 @@ public class UT_ConsensusService : TestKit
         InvokeConsensusMethod(actor, "OnConsensusPayload", changeViewPayload);
 
         Assert.AreSame(changeViewPayload, context.ChangeViewPayloads[2]);
-        CollectionAssert.Contains(context.InvalidTransactions[rejectedHash].ToArray(), context.Validators[2]);
+        CollectionAssert.Contains(context.InvalidTransactions[rejectedHash].Value.ToArray(), context.Validators[2]);
 
         context.TransactionHashes = null;
         var commit = new Commit
