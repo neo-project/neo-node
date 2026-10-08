@@ -97,7 +97,7 @@ jobs:
   Test-native-core:
     runs-on: ubuntu-latest
     env:
-      NATIVE_CORE_COMMIT: a898d728986a5679dbd7df50467972e68bf477b5
+      NATIVE_CORE_COMMIT: ff422d940a4722c361c32398c6f28c00fb7f0693
     steps:
     - name: Checkout node
       uses: actions/checkout@v6

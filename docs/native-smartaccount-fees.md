@@ -43,7 +43,7 @@ legacy behavior when the field is absent; native-account clients must require
 the capability before claiming a bounded-callback admission quote.
 
 CI keeps the normal published-package jobs and adds a separate source-core job
-pinned to commit `a898d728986a5679dbd7df50467972e68bf477b5`. The source lane
+pinned to commit `ff422d940a4722c361c32398c6f28c00fb7f0693`. The source lane
 asserts the capability exists and the published lane asserts it is absent, so
 passing compatibility tests cannot be mistaken for native runtime validation.
 
