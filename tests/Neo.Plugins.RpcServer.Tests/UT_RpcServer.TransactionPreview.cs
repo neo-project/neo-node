@@ -21,14 +21,15 @@ public partial class UT_RpcServer
         catch (TargetInvocationException e) when (e.InnerException is not null) { throw e.InnerException; }
     }
 
-    private Transaction SignedPreviewTransaction(byte[] script = null, long systemFee = 1_000_000)
+    private Transaction SignedPreviewTransaction(byte[] script = null, long systemFee = 1_000_000,
+        WitnessScope scope = WitnessScope.None)
     {
         using var snapshot = _neoSystem.GetSnapshotCache();
         var tx = new Transaction
         {
             Version = 0, Nonce = 0x8127, ValidUntilBlock = NativeContract.Ledger.CurrentIndex(snapshot) + 100,
             SystemFee = systemFee, NetworkFee = 20_000_000, Attributes = [],
-            Signers = [new Signer { Account = _walletAccount.ScriptHash, Scopes = WitnessScope.None }],
+            Signers = [new Signer { Account = _walletAccount.ScriptHash, Scopes = scope }],
             Script = script ?? [(byte)OpCode.PUSH1], Witnesses = []
         };
         var context = new ContractParametersContext(snapshot, tx, _neoSystem.Settings.Network);
@@ -79,5 +80,45 @@ public partial class UT_RpcServer
         var tx = SignedPreviewTransaction();
         Assert.ThrowsExactly<RpcException>(() => PreviewRaw(Convert.ToBase64String([.. tx.ToArray(), 0])));
         Assert.ThrowsExactly<RpcException>(() => Preview(SignedPreviewTransaction(systemFee: _rpcServerSettings.MaxGasInvoke + 1)));
+    }
+
+    [TestMethod]
+    public void TransactionPreviewBoundsStackSerializationByConfiguredItemSize()
+    {
+        using var builder = new ScriptBuilder();
+        builder.EmitPush(new byte[256]);
+        var tx = SignedPreviewTransaction(builder.ToArray());
+        var unrestricted = Preview(tx);
+        Assert.AreEqual("HALT", unrestricted["state"].GetString());
+        Assert.AreEqual(256, Convert.FromBase64String(unrestricted["stack"][0]["value"].GetString()).Length);
+
+        _rpcServerSettings = _rpcServerSettings with { MaxItemResponseSize = 64 };
+        _rpcServer = new RpcServer(_neoSystem, _rpcServerSettings);
+        var bounded = Preview(tx);
+        Assert.AreEqual("Succeed", bounded["verification"].GetString());
+        Assert.AreEqual("HALT", bounded["state"].GetString());
+        Assert.AreEqual("error: result cannot be serialized", bounded["stack"].GetString());
+        Assert.IsFalse(bounded["relayed"].GetBoolean());
+    }
+
+    [TestMethod]
+    public void TransactionPreviewBoundsNotificationSerializationByConfiguredItemSize()
+    {
+        using var builder = new ScriptBuilder();
+        builder.EmitDynamicCall(NativeContract.GAS.Hash, "transfer", _walletAccount.ScriptHash,
+            UInt160.Parse("0x0102030405060708091011121314151617181920"), 1, null);
+        var tx = SignedPreviewTransaction(builder.ToArray(), 10_000_000, WitnessScope.CalledByEntry);
+        var unrestricted = Preview(tx);
+        Assert.AreEqual("HALT", unrestricted["state"].GetString());
+        Assert.AreEqual("Transfer", unrestricted["notifications"][0]["eventname"].GetString());
+        Assert.AreEqual(3, ((JArray)unrestricted["notifications"][0]["state"]["value"]).Count);
+
+        _rpcServerSettings = _rpcServerSettings with { MaxItemResponseSize = 64 };
+        _rpcServer = new RpcServer(_neoSystem, _rpcServerSettings);
+        var bounded = Preview(tx);
+        Assert.AreEqual("Succeed", bounded["verification"].GetString());
+        Assert.AreEqual("HALT", bounded["state"].GetString());
+        Assert.AreEqual("error: result cannot be serialized", bounded["notifications"].GetString());
+        Assert.IsFalse(bounded["relayed"].GetBoolean());
     }
 }

@@ -58,12 +58,17 @@ partial class RpcServer
         result["gasconsumed"] = engine.FeeConsumed.ToString();
         result["minimumrequiredfee"] = engine.MinimumRequiredFee.ToString();
         result["exception"] = GetExceptionMessage(engine.FaultException);
-        try { result["stack"] = new JArray(engine.ResultStack.Select(item => item.ToJson())); }
+        try { result["stack"] = new JArray(engine.ResultStack.Select(item => item.ToJson(settings.MaxItemResponseSize))); }
         catch (InvalidOperationException) { result["stack"] = "error: result cannot be serialized"; }
-        result["notifications"] = new JArray(engine.Notifications.Select(item => new JObject
+        try
         {
-            ["eventname"] = item.EventName, ["contract"] = item.ScriptHash.ToString(), ["state"] = item.State.ToJson()
-        }));
+            result["notifications"] = new JArray(engine.Notifications.Select(item => new JObject
+            {
+                ["eventname"] = item.EventName, ["contract"] = item.ScriptHash.ToString(),
+                ["state"] = item.State.ToJson(settings.MaxItemResponseSize)
+            }));
+        }
+        catch (InvalidOperationException) { result["notifications"] = "error: result cannot be serialized"; }
         return result;
     }
 }
