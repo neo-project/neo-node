@@ -15,6 +15,7 @@ using Neo.Network.P2P.Payloads;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;
+using System.Globalization;
 using System.Reflection;
 
 namespace Neo.Plugins.RpcServer.Tests;
@@ -76,6 +77,185 @@ public partial class UT_RpcServer
         result = Preview(tx);
         Assert.AreEqual("InvalidSignature", result["verification"].GetString());
         Assert.IsFalse(result.ContainsProperty("stack"));
+    }
+
+    [TestMethod]
+    [DataRow(true, false, false)]
+    [DataRow(true, true, false)]
+    [DataRow(true, true, true)]
+    [DataRow(false, false, false)]
+    [DataRow(false, true, false)]
+    [DataRow(false, true, true)]
+    public void TransactionPreviewAppliesNativeFeesAndPrimaryReward(bool payerIsPrimary,
+        bool exceedsAvailableBalance, bool assertTransfer)
+    {
+        using var initial = _neoSystem.GetSnapshotCache();
+        var validators = NativeContract.NEO.GetNextBlockValidators(initial, _neoSystem.Settings.ValidatorsCount);
+        var primary = Contract.CreateSignatureRedeemScript(validators[0]).ToScriptHash();
+        Assert.AreEqual(primary, _walletAccount.ScriptHash);
+        if (!payerIsPrimary)
+        {
+            _walletAccount = _wallet.CreateAccount();
+            var key = new KeyBuilder(NativeContract.GAS.Id, 20).Add(_walletAccount.ScriptHash);
+            initial.Add(key, new StorageItem(new AccountState { Balance = 100_000_000 }));
+            initial.Commit();
+        }
+        const long systemFee = 10_000_000;
+        const long networkFee = 20_000_000;
+        var available = NativeContract.GAS.BalanceOf(initial, _walletAccount.ScriptHash)
+            - systemFee - (payerIsPrimary ? 0 : networkFee);
+        var amount = available + (exceedsAvailableBalance ? 1 : 0);
+        using var builder = new ScriptBuilder();
+        builder.EmitDynamicCall(NativeContract.GAS.Hash, "transfer", _walletAccount.ScriptHash,
+            UInt160.Parse("0x0102030405060708091011121314151617181920"), amount, null);
+        if (assertTransfer) builder.Emit(OpCode.ASSERT);
+        var tx = SignedPreviewTransaction(builder.ToArray(), systemFee, WitnessScope.CalledByEntry);
+        var rawBefore = tx.ToArray();
+        var storageBefore = PreviewStorage();
+        var poolCount = _neoSystem.MemPool.Count;
+
+        var result = Preview(tx);
+
+        Assert.AreEqual("Succeed", result["verification"].GetString());
+        Assert.AreEqual(assertTransfer ? "FAULT" : "HALT", result["state"].GetString());
+        if (!assertTransfer)
+            Assert.AreEqual(!exceedsAvailableBalance, result["stack"][0]["value"].GetBoolean());
+        // Compare the entire persistent store, including GAS balances/supply and ledger records.
+        CollectionAssert.AreEqual(storageBefore, PreviewStorage());
+        CollectionAssert.AreEqual(rawBefore, tx.ToArray());
+        Assert.AreEqual(poolCount, _neoSystem.MemPool.Count);
+    }
+
+    private string[] PreviewStorage()
+    {
+        using var snapshot = _neoSystem.GetSnapshotCache();
+        return snapshot.Find(null).Select(p => Convert.ToHexString(p.Key.ToArray()) + ":"
+            + Convert.ToHexString(p.Value.Value.Span)).ToArray();
+    }
+
+    [TestMethod]
+    public void TransactionPreviewDeclaresItsSingleTransactionBlockAssumptions()
+    {
+        var tx = SignedPreviewTransaction();
+        var storageBefore = PreviewStorage();
+        using var snapshot = _neoSystem.GetSnapshotCache();
+        var height = NativeContract.Ledger.CurrentIndex(snapshot);
+        var hash = NativeContract.Ledger.CurrentHash(snapshot);
+        var previous = NativeContract.Ledger.GetBlock(snapshot, hash);
+        var validators = NativeContract.NEO.GetNextBlockValidators(snapshot, _neoSystem.Settings.ValidatorsCount);
+        var result = Preview(tx);
+        var simulation = result["simulation"];
+        Assert.IsNotNull(simulation);
+        Assert.AreEqual(_neoSystem.Settings.Network, result["network"].AsNumber());
+        Assert.AreEqual(tx.Hash.ToString(), result["hash"].GetString());
+        Assert.AreEqual(height, result["snapshot"]["height"].AsNumber());
+        Assert.AreEqual(hash.ToString(), result["snapshot"]["hash"].GetString());
+        Assert.AreEqual("single-transaction-next-block", simulation["mode"].GetString());
+        Assert.AreEqual(height + 1, simulation["height"].AsNumber());
+        Assert.AreEqual((previous.Timestamp + (ulong)snapshot.GetTimePerBlock(_neoSystem.Settings).TotalMilliseconds)
+            .ToString(CultureInfo.InvariantCulture), simulation["timestamp"].GetString());
+        Assert.AreEqual((height + 1) % validators.Length, simulation["primaryIndex"].AsNumber());
+        Assert.AreEqual(0, simulation["view"].AsNumber());
+        Assert.AreEqual(1, simulation["transactionCount"].AsNumber());
+        Assert.AreEqual("HALT", simulation["onPersist"].GetString());
+        Assert.AreEqual(Contract.GetBFTAddress(NativeContract.NEO.ComputeNextBlockValidators(snapshot, _neoSystem.Settings))
+            .ToString(), simulation["nextConsensus"].GetString());
+        Assert.AreEqual(0, ((JArray)result["notifications"]).Count, "Fee burn/reward notifications must not leak into Application.");
+        using var applicationOnly = ApplicationEngine.Run(tx.Script, snapshot, tx,
+            settings: _neoSystem.Settings, gas: tx.SystemFee);
+        Assert.AreEqual(applicationOnly.FeeConsumed.ToString(), result["gasconsumed"].GetString(),
+            "OnPersist gas must not enter the Application fee quote.");
+        CollectionAssert.AreEqual(storageBefore, PreviewStorage());
+    }
+
+    [TestMethod]
+    public void TransactionPreviewRefusesApplicationWhenNativeOnPersistFails()
+    {
+        var tx = SignedPreviewTransaction();
+        using (var snapshot = _neoSystem.GetSnapshotCache())
+        {
+            // Corrupt supply only: signature/fee verification still succeeds, but native Burn
+            // faults after changing its disposable payer balance and cannot reach Application.
+            snapshot.Delete(NativeContract.GAS.CreateStorageKey(11));
+            snapshot.Commit();
+        }
+        var storageBefore = PreviewStorage();
+        var poolCount = _neoSystem.MemPool.Count;
+        var exception = Assert.ThrowsExactly<RpcException>(() => Preview(tx));
+        Assert.AreEqual(RpcError.InternalServerError.Code, exception.HResult);
+        StringAssert.Contains(exception.GetError().Data, "Transaction preview preparation failed:");
+        CollectionAssert.AreEqual(storageBefore, PreviewStorage());
+        Assert.AreEqual(poolCount, _neoSystem.MemPool.Count);
+    }
+
+    [TestMethod]
+    public void TransactionPreviewRejectsTimestampOverflowBeforeApplication()
+    {
+        var tx = SignedPreviewTransaction();
+        using (var snapshot = _neoSystem.GetSnapshotCache())
+        {
+            var hash = NativeContract.Ledger.CurrentHash(snapshot);
+            var previous = NativeContract.Ledger.GetBlock(snapshot, hash);
+            previous.Header.Timestamp = ulong.MaxValue;
+            snapshot.GetAndChange(NativeContract.Ledger.CreateStorageKey(5, hash)).Value
+                = previous.ToTrimmedBlock().ToArray();
+            snapshot.Commit();
+        }
+        var storageBefore = PreviewStorage();
+        var exception = Assert.ThrowsExactly<RpcException>(() => Preview(tx));
+        Assert.AreEqual(RpcError.InternalServerError.Code, exception.HResult);
+        StringAssert.Contains(exception.GetError().Data, "Transaction preview preparation failed:");
+        CollectionAssert.AreEqual(storageBefore, PreviewStorage());
+    }
+
+    [TestMethod]
+    [DataRow(1u)]
+    [DataRow(21u)]
+    [DataRow(0x80000000u)]
+    public void TransactionPreviewBlockFollowsDbftPrimaryAndCommitteeRefresh(uint nextHeight)
+    {
+        using var multiSystem = new NeoSystem(TestProtocolSettings.Default,
+            new TestMemoryStoreProvider(new Neo.Persistence.Providers.MemoryStore()));
+        using var snapshot = multiSystem.GetSnapshotCache();
+        var hash = NativeContract.Ledger.CurrentHash(snapshot);
+        var previous = NativeContract.Ledger.GetBlock(snapshot, hash);
+        previous.Header.Index = nextHeight - 1;
+        snapshot.GetAndChange(NativeContract.Ledger.CreateStorageKey(5, hash)).Value = previous.ToTrimmedBlock().ToArray();
+        snapshot.GetAndChange(NativeContract.Ledger.CreateStorageKey(12))
+            .GetInteroperable<HashIndexState>().Index = nextHeight - 1;
+        // Distinguish the cached current validators from a newly computed refresh roster.
+        var protocol = multiSystem.Settings with { StandbyCommittee = multiSystem.Settings.StandbyCommittee.Reverse().ToArray() };
+        var validators = NativeContract.NEO.GetNextBlockValidators(snapshot, protocol.ValidatorsCount);
+        var computed = NativeContract.NEO.ComputeNextBlockValidators(snapshot, protocol);
+        Assert.AreNotEqual(Contract.GetBFTAddress(validators), Contract.GetBFTAddress(computed));
+        var tx = SignedPreviewTransaction();
+        var block = RpcServer.CreateTransactionPreviewBlock(snapshot, tx, protocol);
+        int primary = unchecked((int)nextHeight) % validators.Length;
+        if (primary < 0) primary += validators.Length;
+        Assert.AreEqual((byte)primary, block.PrimaryIndex);
+        Assert.AreEqual(Contract.GetBFTAddress(NeoToken.ShouldRefreshCommittee(nextHeight, protocol.CommitteeMembersCount)
+            ? computed : validators), block.NextConsensus);
+        Assert.AreEqual(nextHeight, block.Index);
+        Assert.AreEqual(hash, block.PrevHash);
+        Assert.AreEqual(tx.Hash, block.MerkleRoot);
+        Assert.HasCount(1, block.Transactions);
+        Assert.AreSame(tx, block.Transactions[0]);
+    }
+
+    [TestMethod]
+    public void TransactionPreviewBlockRejectsHeightOverflowAndEmptyValidators()
+    {
+        var tx = SignedPreviewTransaction();
+        var storageBefore = PreviewStorage();
+        using var snapshot = _neoSystem.GetSnapshotCache();
+        var noValidators = _neoSystem.Settings with { ValidatorsCount = 0 };
+        Assert.ThrowsExactly<InvalidOperationException>(() =>
+            RpcServer.CreateTransactionPreviewBlock(snapshot, tx, noValidators));
+        snapshot.GetAndChange(NativeContract.Ledger.CreateStorageKey(12))
+            .GetInteroperable<HashIndexState>().Index = uint.MaxValue;
+        Assert.ThrowsExactly<OverflowException>(() =>
+            RpcServer.CreateTransactionPreviewBlock(snapshot, tx, _neoSystem.Settings));
+        CollectionAssert.AreEqual(storageBefore, PreviewStorage());
     }
 
     [TestMethod]

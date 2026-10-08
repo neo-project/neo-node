@@ -10,7 +10,11 @@ use it when supplied and retain legacy consumed-fee behavior for older nodes.
 
 `invoketransaction` accepts one base64 serialized, fully signed transaction.
 It verifies the actual witnesses and fees against a disposable ledger snapshot,
-then executes its exact script and container with the submitted system fee.
+then prepares a hypothetical next block containing only that transaction. It runs
+actual native `OnPersist` with that block before executing the exact script and
+container with the submitted system fee. This applies native fee burns, primary
+network-fee rewards, activation and ledger preparation in their real order; a
+preparation failure returns an RPC error and never an Application result.
 It never relays, signs, reserves fees or commits state. The response identifies
 the transaction and snapshot, reports the verification result, and includes
 application state, fee measurements and stack only after verification succeeds.
@@ -23,10 +27,43 @@ does not promise mempool acceptance: pending competing transactions, a new block
 time or policy changes can invalidate the result. An admitted transaction that
 later faults still charges the external fee payer.
 
-The snapshot precedes the next block's OnPersist fee debits and rewards. Contracts
-whose behavior depends on a payer balance or a future timestamp may therefore
-behave differently at persistence; the result is a ledger-snapshot preview, not a
-prediction of the next block. No live state is modified.
+The `snapshot` identity remains the original persisted ledger. After successful
+preparation the response additionally declares:
+
+```json
+{
+  "simulation": {
+    "mode": "single-transaction-next-block",
+    "height": 101,
+    "timestamp": "1800000000000",
+    "primaryIndex": 3,
+    "view": 0,
+    "transactionCount": 1,
+    "onPersist": "HALT",
+    "nextConsensus": "0x0000000000000000000000000000000000000000"
+  }
+}
+```
+
+These values are illustrative. `height` is the snapshot height plus one. The
+primary follows DBFT's view-zero calculation over the current validator roster;
+`nextConsensus` uses the newly computed validators at committee-refresh heights.
+The timestamp assumes the previous timestamp plus the snapshot's block interval,
+and is a canonical unsigned decimal UInt64 string to avoid JSON number precision
+loss. The hypothetical header has nonce zero and the single transaction hash as
+its Merkle root. Empty validator rosters and height/timestamp overflow fail closed.
+Both native `OnPersist` and Application use this same block. `PostPersist` does
+not run, and the root snapshot is never committed, on either HALT or FAULT.
+`gasconsumed`, `minimumrequiredfee` and notifications describe Application only;
+fee burn/reward notifications from preparation are excluded.
+
+Actual consensus can select another view, primary, timestamp and nonce and
+include other transactions. Those differences, current mempool conflicts and
+subsequent state changes can change execution; this is a declared single-transaction
+simulation, not an inclusion or outcome guarantee. Clients requiring fee-aware
+preflight must validate the simulation declaration and reject older responses
+without it rather than treating a pre-fee HALT as an equivalent result. No live
+state is modified.
 
 For source integration before the matching core package is released, build with
 `-p:NativeCoreRoot=/absolute/path/to/the/reviewed/core/checkout`. The optional
