@@ -26,6 +26,8 @@ namespace Neo.Plugins.RpcServer;
 
 partial class RpcServer
 {
+    private static readonly MinimumRequiredFeeReader<ApplicationEngine> MinimumRequiredFee = new();
+
     private readonly Dictionary<Guid, Session> sessions = new();
     private Timer? timer;
 
@@ -73,7 +75,8 @@ partial class RpcServer
             json["state"] = session.Engine.State;
             // Gas consumed in the unit of datoshi, 1 GAS = 10^8 datoshi
             json["gasconsumed"] = session.Engine.FeeConsumed.ToString();
-            json["minimumrequiredfee"] = session.Engine.MinimumRequiredFee.ToString();
+            if (MinimumRequiredFee.Read(session.Engine, session.Engine.FeeConsumed) is long minimumFee)
+                json["minimumrequiredfee"] = minimumFee.ToString(System.Globalization.CultureInfo.InvariantCulture);
             json["exception"] = GetExceptionMessage(session.Engine.FaultException);
             json["notifications"] = new JArray(session.Engine.Notifications.Select(n =>
             {

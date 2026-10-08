@@ -2,8 +2,8 @@
 
 Bounded callbacks need enough remaining transaction gas to admit their declared
 child budget. Actual consumed gas alone can therefore underquote an otherwise
-successful invocation. `invokescript` and `invokefunction` return
-`minimumrequiredfee` as a decimal string in datoshi, alongside the unchanged
+successful invocation. On a capable core, `invokescript` and `invokefunction`
+return `minimumrequiredfee` as a decimal string in datoshi, alongside the unchanged
 `gasconsumed`. It includes the bounded admission peak and is always at least
 the consumed fee. RPC clients preserve this optional field; transaction builders
 use it when supplied and retain legacy consumed-fee behavior for older nodes.
@@ -31,8 +31,21 @@ prediction of the next block. No live state is modified.
 For source integration before the matching core package is released, build with
 `-p:NativeCoreRoot=/absolute/path/to/the/reviewed/core/checkout`. The optional
 project reference replaces the published Neo package; keep the core source
-identity alongside the node build receipt. This draft is not build-compatible
-with a published core that lacks `ApplicationEngine.MinimumRequiredFee`.
+identity alongside the node build receipt. The server also builds against the published Neo core. It caches an optional
+public instance `long MinimumRequiredFee` getter once, rather than requiring that
+member at compile time. A core without the property omits `minimumrequiredfee`;
+for example, a legacy response contains `"gasconsumed":"30"` without a minimum
+field. A capable core may return `"gasconsumed":"30", "minimumrequiredfee":"100"`.
+The adapter never substitutes consumed gas or zero for an absent capability. A
+malformed property, failing getter, negative result or result below consumed gas
+fails the request instead of silently degrading. Existing clients may retain
+legacy behavior when the field is absent; native-account clients must require
+the capability before claiming a bounded-callback admission quote.
+
+CI keeps the normal published-package jobs and adds a separate source-core job
+pinned to commit `a898d728986a5679dbd7df50467972e68bf477b5`. The source lane
+asserts the capability exists and the published lane asserts it is absent, so
+passing compatibility tests cannot be mistaken for native runtime validation.
 
 The native account is never its transaction's fee payer. Its operation signature
 authorizes its exact asset operation, while the external payer signs the entire

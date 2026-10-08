@@ -64,7 +64,8 @@ partial class RpcServer
             settings: system.Settings, gas: tx.SystemFee);
         result["state"] = engine.State.ToString();
         result["gasconsumed"] = engine.FeeConsumed.ToString();
-        result["minimumrequiredfee"] = engine.MinimumRequiredFee.ToString();
+        if (MinimumRequiredFee.Read(engine, engine.FeeConsumed) is long minimumFee)
+            result["minimumrequiredfee"] = minimumFee.ToString(System.Globalization.CultureInfo.InvariantCulture);
         result["exception"] = GetExceptionMessage(engine.FaultException);
         try { result["stack"] = new JArray(engine.ResultStack.Select(item => item.ToJson(settings.MaxItemResponseSize))); }
         catch (InvalidOperationException) { result["stack"] = "error: result cannot be serialized"; }

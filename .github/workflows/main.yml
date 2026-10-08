@@ -94,6 +94,42 @@ jobs:
         done
         expect ./.github/workflows/test-neo-cli-plugins.expect "$expected_count"
       
+  Test-native-core:
+    runs-on: ubuntu-latest
+    env:
+      NATIVE_CORE_COMMIT: a898d728986a5679dbd7df50467972e68bf477b5
+    steps:
+    - name: Checkout node
+      uses: actions/checkout@v6
+      with:
+        path: node
+    - name: Checkout pinned native core
+      uses: actions/checkout@v6
+      with:
+        repository: neo-project/neo
+        ref: ${{ env.NATIVE_CORE_COMMIT }}
+        path: native-core
+    - name: Verify source identity
+      working-directory: native-core
+      run: test "$(git rev-parse HEAD)" = "$NATIVE_CORE_COMMIT"
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+    - name: Test RPC client against pinned native core
+      working-directory: node
+      run: dotnet test tests/Neo.Network.RPC.Tests/Neo.Network.RPC.Tests.csproj -p:NativeCoreRoot="${{ github.workspace }}/native-core" --logger "trx;LogFileName=native-rpc-client.trx"
+    - name: Test RPC server and required native fee capability
+      working-directory: node
+      run: dotnet test tests/Neo.Plugins.RpcServer.Tests/Neo.Plugins.RpcServer.Tests.csproj -p:NativeCoreRoot="${{ github.workspace }}/native-core" --logger "trx;LogFileName=native-rpc-server.trx"
+    - name: Upload native RPC test evidence
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: native-rpc-test-results
+        path: node/tests/**/TestResults/*.trx
+        if-no-files-found: error
+
   Release:
     if: github.ref == 'refs/heads/master-n3' && github.repository == 'neo-project/neo-node'
     needs: Test

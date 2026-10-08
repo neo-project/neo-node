@@ -28,6 +28,23 @@ namespace Neo.Plugins.RpcServer.Tests;
 
 public partial class UT_RpcServer
 {
+#if NATIVE_CORE_PREVIEW
+    private const int MinimumFeeFieldCount = 1;
+#else
+    private const int MinimumFeeFieldCount = 0;
+#endif
+
+    private static void AssertMinimumFeeCapability(JObject response)
+    {
+        Assert.AreEqual(MinimumFeeFieldCount == 1, response.ContainsProperty("minimumrequiredfee"),
+            "This test lane must exercise its declared runtime capability.");
+#if NATIVE_CORE_PREVIEW
+        long required = long.Parse(response["minimumrequiredfee"].GetString(), System.Globalization.CultureInfo.InvariantCulture);
+        long consumed = long.Parse(response["gasconsumed"].GetString(), System.Globalization.CultureInfo.InvariantCulture);
+        Assert.IsTrue(required >= consumed);
+#endif
+    }
+
     static readonly string NeoTotalSupplyScript = "wh8MC3RvdGFsU3VwcGx5DBT1Y\u002BpAvCg9TQ4FxI6jBbPyoHNA70FifVtS";
     static readonly string NeoTransferScript = "CxEMFPlu76Cuc\u002BbgteStE4ozsOWTNUdrDBQtYNweHko3YcnMFOes3ceblcI/lRTAHwwIdHJhbnNmZXIMFPVj6kC8KD1NDgXEjqMFs/Kgc0DvQWJ9W1I=";
     static readonly UInt160 ValidatorScriptHash = Contract
@@ -69,10 +86,10 @@ public partial class UT_RpcServer
     {
         _rpcServer.wallet = _wallet;
         var resp = (JObject)_rpcServer.InvokeFunction(s_neoHash, "totalSupply", [], validatorSigner.AsParameter<SignersAndWitnesses>(), true);
-        Assert.AreEqual(9, resp.Count);
+        Assert.AreEqual(8 + MinimumFeeFieldCount, resp.Count);
         Assert.AreEqual(resp["script"], NeoTotalSupplyScript);
         Assert.IsTrue(resp.ContainsProperty("gasconsumed"));
-        Assert.IsTrue(resp.ContainsProperty("minimumrequiredfee"));
+        AssertMinimumFeeCapability(resp);
         Assert.IsTrue(resp.ContainsProperty("diagnostics"));
         Assert.AreEqual(resp["diagnostics"]["invokedcontracts"]["call"][0]["hash"], s_neoHash);
         Assert.IsEmpty((JArray)resp["diagnostics"]["storagechanges"]);
@@ -84,10 +101,10 @@ public partial class UT_RpcServer
         Assert.IsTrue(resp.ContainsProperty("tx"));
 
         resp = (JObject)_rpcServer.InvokeFunction(s_neoHash, "symbol");
-        Assert.AreEqual(7, resp.Count);
+        Assert.AreEqual(6 + MinimumFeeFieldCount, resp.Count);
         Assert.IsTrue(resp.ContainsProperty("script"));
         Assert.IsTrue(resp.ContainsProperty("gasconsumed"));
-        Assert.IsTrue(resp.ContainsProperty("minimumrequiredfee"));
+        AssertMinimumFeeCapability(resp);
         Assert.AreEqual(nameof(VMState.HALT), resp["state"]);
         Assert.IsNull(resp["exception"]);
         Assert.IsEmpty((JArray)resp["notifications"]);
@@ -107,10 +124,10 @@ public partial class UT_RpcServer
             multisigSigner.AsParameter<SignersAndWitnesses>(),
             true
         );
-        Assert.AreEqual(8, resp.Count);
+        Assert.AreEqual(7 + MinimumFeeFieldCount, resp.Count);
         Assert.AreEqual(resp["script"], NeoTransferScript);
         Assert.IsTrue(resp.ContainsProperty("gasconsumed"));
-        Assert.IsTrue(resp.ContainsProperty("minimumrequiredfee"));
+        AssertMinimumFeeCapability(resp);
         Assert.IsTrue(resp.ContainsProperty("diagnostics"));
         Assert.AreEqual(resp["diagnostics"]["invokedcontracts"]["call"][0]["hash"], s_neoHash);
         Assert.HasCount(4, (JArray)resp["diagnostics"]["storagechanges"]);
@@ -161,9 +178,9 @@ public partial class UT_RpcServer
             validatorSigner.AsParameter<SignersAndWitnesses>(),
             true
         );
-        Assert.AreEqual(8, resp.Count);
+        Assert.AreEqual(7 + MinimumFeeFieldCount, resp.Count);
         Assert.IsTrue(resp.ContainsProperty("gasconsumed"));
-        Assert.IsTrue(resp.ContainsProperty("minimumrequiredfee"));
+        AssertMinimumFeeCapability(resp);
         Assert.IsTrue(resp.ContainsProperty("diagnostics"));
         Assert.AreEqual(resp["diagnostics"]["invokedcontracts"]["call"][0]["hash"], s_neoHash);
         Assert.AreEqual(nameof(VMState.HALT), resp["state"]);
@@ -173,7 +190,7 @@ public partial class UT_RpcServer
         Assert.AreEqual("100000000", resp["stack"][0]["value"]);
 
         resp = (JObject)_rpcServer.InvokeScript(Convert.FromBase64String(NeoTransferScript));
-        Assert.AreEqual(7, resp.Count);
+        Assert.AreEqual(6 + MinimumFeeFieldCount, resp.Count);
         Assert.AreEqual(nameof(Boolean), resp["stack"][0]["type"]);
         Assert.IsFalse(resp["stack"][0]["value"].GetBoolean());
     }

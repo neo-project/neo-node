@@ -65,6 +65,7 @@ public partial class UT_RpcServer
         Assert.AreEqual(tx.Hash.ToString(), result["hash"].GetString());
         Assert.AreEqual("Succeed", result["verification"].GetString());
         Assert.AreEqual("HALT", result["state"].GetString());
+        AssertMinimumFeeCapability(result);
         Assert.AreEqual("1", result["stack"][0]["value"].GetString());
         Assert.IsFalse(result["relayed"].GetBoolean());
         Assert.IsFalse(result["mempoolChecked"].GetBoolean());
@@ -83,9 +84,11 @@ public partial class UT_RpcServer
         var fault = Preview(SignedPreviewTransaction([(byte)OpCode.ABORT]));
         Assert.AreEqual("Succeed", fault["verification"].GetString());
         Assert.AreEqual("FAULT", fault["state"].GetString());
+        AssertMinimumFeeCapability(fault);
         var underfunded = Preview(SignedPreviewTransaction(systemFee: 0));
         Assert.AreEqual("Succeed", underfunded["verification"].GetString());
         Assert.AreEqual("FAULT", underfunded["state"].GetString());
+        AssertMinimumFeeCapability(underfunded);
     }
 
     [TestMethod]
