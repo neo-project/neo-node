@@ -1,3 +1,14 @@
+// Copyright (C) 2015-2026 The Neo Project.
+//
+// UT_RpcServer.TransactionPreview.cs file belongs to the neo project and is free
+// software distributed under the MIT software license, see the
+// accompanying file LICENSE in the main directory of the
+// repository or http://www.opensource.org/licenses/mit-license.php
+// for more details.
+//
+// Redistribution and use in source and binary forms with or without
+// modifications are permitted.
+
 using Neo.Extensions;
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
@@ -27,10 +38,15 @@ public partial class UT_RpcServer
         using var snapshot = _neoSystem.GetSnapshotCache();
         var tx = new Transaction
         {
-            Version = 0, Nonce = 0x8127, ValidUntilBlock = NativeContract.Ledger.CurrentIndex(snapshot) + 100,
-            SystemFee = systemFee, NetworkFee = 20_000_000, Attributes = [],
+            Version = 0,
+            Nonce = 0x8127,
+            ValidUntilBlock = NativeContract.Ledger.CurrentIndex(snapshot) + 100,
+            SystemFee = systemFee,
+            NetworkFee = 20_000_000,
+            Attributes = [],
             Signers = [new Signer { Account = _walletAccount.ScriptHash, Scopes = scope }],
-            Script = script ?? [(byte)OpCode.PUSH1], Witnesses = []
+            Script = script ?? [(byte)OpCode.PUSH1],
+            Witnesses = []
         };
         var context = new ContractParametersContext(snapshot, tx, _neoSystem.Settings.Network);
         Assert.IsTrue(_wallet.Sign(context));

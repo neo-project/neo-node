@@ -155,8 +155,11 @@ public class UT_TransactionManager
         byte[] script = [0];
         var response = new JObject
         {
-            ["script"] = Convert.ToBase64String(script), ["state"] = "HALT", ["gasconsumed"] = "100",
-            ["minimumrequiredfee"] = "100000100", ["stack"] = new JArray()
+            ["script"] = Convert.ToBase64String(script),
+            ["state"] = "HALT",
+            ["gasconsumed"] = "100",
+            ["minimumrequiredfee"] = "100000100",
+            ["stack"] = new JArray()
         };
         rpcClientMock.Setup(p => p.RpcSendAsync("invokescript", It.Is<JToken[]>(j =>
             Convert.FromBase64String(j[0].AsString()).SequenceEqual(script)))).ReturnsAsync(response);
