@@ -374,8 +374,7 @@ public class UT_ConsensusService : TestKit
         var primaryServiceRef = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, settings, new TestSigner()));
         var primaryActor = primaryServiceRef.UnderlyingActor;
 
-        primaryServiceRef.Tell(new ConsensusService.Start());
-
+        InvokeConsensusMethod(primaryActor, "OnStart");
         Assert.IsTrue(GetBooleanField(primaryActor, "started"));
 
         var primaryContext = GetConsensusContext(primaryActor);
@@ -448,9 +447,11 @@ public class UT_ConsensusService : TestKit
         var serviceRef = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, settings, new TestSigner()));
         var actor = serviceRef.UnderlyingActor;
 
-        serviceRef.Tell(new ConsensusService.Start());
+        InvokeConsensusMethod(actor, "OnStart");
+        Assert.IsTrue(GetBooleanField(actor, "started"));
 
         var context = GetConsensusContext(actor);
+        Assert.IsNotNull(context.Validators);
         context.ChangeViewPayloads ??= new ExtensiblePayload[context.Validators.Length];
         context.LastChangeViewPayloads ??= new ExtensiblePayload[context.Validators.Length];
 

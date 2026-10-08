@@ -40,8 +40,7 @@ public class Nep17API : ContractClient
     public async Task<BigInteger> BalanceOfAsync(UInt160 scriptHash, UInt160 account)
     {
         var result = await TestInvokeAsync(scriptHash, "balanceOf", account).ConfigureAwait(false);
-        BigInteger balance = result.Stack.Single().GetInteger();
-        return balance;
+        return RequireHaltResult(result).GetInteger();
     }
 
     /// <summary>
@@ -52,7 +51,7 @@ public class Nep17API : ContractClient
     public async Task<string> SymbolAsync(UInt160 scriptHash)
     {
         var result = await TestInvokeAsync(scriptHash, "symbol").ConfigureAwait(false);
-        return result.Stack.Single().GetString();
+        return RequireHaltResult(result).GetString();
     }
 
     /// <summary>
@@ -63,7 +62,7 @@ public class Nep17API : ContractClient
     public async Task<byte> DecimalsAsync(UInt160 scriptHash)
     {
         var result = await TestInvokeAsync(scriptHash, "decimals").ConfigureAwait(false);
-        return (byte)result.Stack.Single().GetInteger();
+        return (byte)RequireHaltResult(result).GetInteger();
     }
 
     /// <summary>
@@ -74,7 +73,7 @@ public class Nep17API : ContractClient
     public async Task<BigInteger> TotalSupplyAsync(UInt160 scriptHash)
     {
         var result = await TestInvokeAsync(scriptHash, "totalSupply").ConfigureAwait(false);
-        return result.Stack.Single().GetInteger();
+        return RequireHaltResult(result).GetInteger();
     }
 
     /// <summary>
@@ -91,6 +90,7 @@ public class Nep17API : ContractClient
             .. scriptHash.MakeScript("totalSupply")];
         var name = contractState.Manifest.Name;
         var result = await rpcClient.InvokeScriptAsync(script).ConfigureAwait(false);
+        RequireHaltResult(result, 3);
         var stack = result.Stack;
 
         return new RpcNep17TokenInfo
@@ -111,6 +111,7 @@ public class Nep17API : ContractClient
             .. contractState.Hash.MakeScript("totalSupply")];
         var name = contractState.Manifest.Name;
         var result = await rpcClient.InvokeScriptAsync(script).ConfigureAwait(false);
+        RequireHaltResult(result, 3);
         var stack = result.Stack;
 
         return new RpcNep17TokenInfo

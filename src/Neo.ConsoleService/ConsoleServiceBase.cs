@@ -200,7 +200,7 @@ public abstract class ConsoleServiceBase
 
             if (parameterType.IsEnum)
             {
-                value = Enum.Parse(parameterType, args[0].Value, true);
+                value = Enum.Parse(parameterType, consumeAll ? args.ConsumeAll() : args.Consume(), true);
                 return true;
             }
         }

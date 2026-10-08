@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <AssemblyTitle>Neo.CLI</AssemblyTitle>
@@ -12,8 +12,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Neo" Version="3.10.0" />
-    <PackageReference Include="System.CommandLine" Version="2.0.2" />
+    <PackageReference Include="Neo" Version="3.10.2-CI02099" />
+    <PackageReference Include="System.CommandLine" Version="2.0.9" />
   </ItemGroup>
 
   <ItemGroup>

@@ -10,6 +10,7 @@
 // modifications are permitted.
 
 using Microsoft.Extensions.Configuration;
+using Neo.Network.P2P.Payloads;
 using Neo.SmartContract.Native;
 using System.Net;
 
@@ -37,6 +38,7 @@ public record RpcServersSettings
     public string[] TrustedAuthorities { get; init; } = [];
     public int MaxConcurrentConnections { get; init; } = 40;
     public int MaxRequestBodySize { get; init; } = 1 * 1024 * 1024;
+    public int MaxItemResponseSize { get; init; } = Transaction.MaxTransactionSize;
     public string RpcUser { get; init; } = string.Empty;
     public string RpcPass { get; init; } = string.Empty;
     public bool EnableCors { get; init; } = true;
@@ -89,6 +91,7 @@ public record RpcServersSettings
             MaxGasInvoke = GetGasAmount(section, "MaxGasInvoke", @default.MaxGasInvoke),
             MaxFee = GetGasAmount(section, "MaxFee", @default.MaxFee),
             MaxIteratorResultItems = section.GetValue("MaxIteratorResultItems", @default.MaxIteratorResultItems),
+            MaxItemResponseSize = section.GetValue("MaxItemResponseSize", @default.MaxItemResponseSize),
             MaxStackSize = section.GetValue("MaxStackSize", @default.MaxStackSize),
             DisabledMethods = GetStrings(section, "DisabledMethods"),
             MaxConcurrentConnections = section.GetValue("MaxConcurrentConnections", @default.MaxConcurrentConnections),

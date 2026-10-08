@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
     <ProjectReference Include="..\..\plugins\SQLiteWallet\SQLiteWallet.csproj" />
   </ItemGroup>
 

@@ -49,7 +49,7 @@ public class UT_WalletAPI
     [TestMethod]
     public async Task TestGetUnclaimedGas()
     {
-        byte[] testScript = NativeContract.NEO.Hash.MakeScript("unclaimedGas", sender, 99);
+        byte[] testScript = NativeContract.NEO.Hash.MakeScript("unclaimedGas", sender, 100);
         UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript, new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(1_10000000) });
 
         var balance = await walletAPI.GetUnclaimedGasAsync(address1);
@@ -171,5 +171,31 @@ public class UT_WalletAPI
         var tx = await walletAPI.WaitTransactionAsync(transaction);
         Assert.AreEqual(VMState.HALT, tx.VMState);
         Assert.AreEqual(UInt256.Zero, tx.BlockHash);
+    }
+
+    [TestMethod]
+    public async Task TestWaitTransaction_RetriesAfterRpcError()
+    {
+        Transaction transaction = TestUtils.GetTransaction();
+        var callCount = 0;
+        rpcClientMock.Setup(p => p.RpcSendAsync("getrawtransaction", It.Is<JToken[]>(j => j[0].AsString() == transaction.Hash.ToString())))
+            .Returns(() =>
+            {
+                callCount++;
+                if (callCount == 1)
+                    return Task.FromException<JToken>(new RpcException(-100, "Unknown transaction"));
+                return Task.FromResult<JToken>(new RpcTransaction
+                {
+                    Transaction = transaction,
+                    VMState = VMState.HALT,
+                    BlockHash = UInt256.Zero,
+                    BlockTime = 100,
+                    Confirmations = 1
+                }.ToJson(client.protocolSettings));
+            });
+
+        var tx = await walletAPI.WaitTransactionAsync(transaction, timeout: 20);
+        Assert.AreEqual(2, callCount);
+        Assert.AreEqual(VMState.HALT, tx.VMState);
     }
 }

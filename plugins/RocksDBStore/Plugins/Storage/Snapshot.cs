@@ -10,6 +10,7 @@
 // modifications are permitted.
 
 using Neo.Persistence;
+using Neo.Plugins.Storage.Extensions;
 using RocksDbSharp;
 using System.Diagnostics.CodeAnalysis;
 
@@ -23,7 +24,8 @@ internal class Snapshot : IStoreSnapshot
     private readonly RocksDb _db;
     private readonly RocksDbSharp.Snapshot _snapshot;
     private readonly WriteBatch _batch;
-    private readonly ReadOptions _options;
+    private readonly ReadOptions _scanOptions;
+    private readonly ReadOptions _pointOptions;
     private readonly Lock _lock = new();
 
     public IStore Store { get; }
@@ -35,9 +37,13 @@ internal class Snapshot : IStoreSnapshot
         _snapshot = db.CreateSnapshot();
         _batch = new WriteBatch();
 
-        _options = new ReadOptions();
-        _options.SetFillCache(false);
-        _options.SetSnapshot(_snapshot);
+        _scanOptions = new ReadOptions();
+        _scanOptions.SetFillCache(false);
+        _scanOptions.SetSnapshot(_snapshot);
+
+        _pointOptions = new ReadOptions();
+        _pointOptions.SetFillCache(true);
+        _pointOptions.SetSnapshot(_snapshot);
     }
 
     public void Commit()
@@ -59,33 +65,43 @@ internal class Snapshot : IStoreSnapshot
     }
 
     /// <inheritdoc/>
-    public IEnumerable<(byte[] Key, byte[] Value)> Find(byte[]? keyOrPrefix, SeekDirection direction)
+    public IEnumerable<(byte[] Key, byte[] Value)> Find(byte[]? keyOrPrefix, SeekDirection direction = SeekDirection.Forward, int skip = 0)
     {
         keyOrPrefix ??= [];
 
-        using var it = _db.NewIterator(readOptions: _options);
+        using var it = _db.NewIterator(readOptions: _scanOptions);
 
         if (direction == SeekDirection.Forward)
-            for (it.Seek(keyOrPrefix); it.Valid(); it.Next())
+        {
+            it.Seek(keyOrPrefix);
+            it.Skip(skip);
+
+            for (; it.Valid(); it.Next())
                 yield return (it.Key(), it.Value());
+        }
         else
-            for (it.SeekForPrev(keyOrPrefix); it.Valid(); it.Prev())
+        {
+            it.SeekForPrev(keyOrPrefix);
+            it.SkipPrev(skip);
+
+            for (; it.Valid(); it.Prev())
                 yield return (it.Key(), it.Value());
+        }
     }
 
     public bool Contains(byte[] key)
     {
-        return _db.Get(key, Array.Empty<byte>(), 0, 0, readOptions: _options) >= 0;
+        return _db.Get(key, Array.Empty<byte>(), 0, 0, readOptions: _pointOptions) >= 0;
     }
 
     public byte[]? TryGet(byte[] key)
     {
-        return _db.Get(key, readOptions: _options);
+        return _db.Get(key, readOptions: _pointOptions);
     }
 
     public bool TryGet(byte[] key, [NotNullWhen(true)] out byte[]? value)
     {
-        value = _db.Get(key, readOptions: _options);
+        value = _db.Get(key, readOptions: _pointOptions);
         return value != null;
     }
 
