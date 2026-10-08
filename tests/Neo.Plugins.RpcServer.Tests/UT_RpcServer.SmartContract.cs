@@ -69,9 +69,10 @@ public partial class UT_RpcServer
     {
         _rpcServer.wallet = _wallet;
         var resp = (JObject)_rpcServer.InvokeFunction(s_neoHash, "totalSupply", [], validatorSigner.AsParameter<SignersAndWitnesses>(), true);
-        Assert.AreEqual(8, resp.Count);
+        Assert.AreEqual(9, resp.Count);
         Assert.AreEqual(resp["script"], NeoTotalSupplyScript);
         Assert.IsTrue(resp.ContainsProperty("gasconsumed"));
+        Assert.IsTrue(resp.ContainsProperty("minimumrequiredfee"));
         Assert.IsTrue(resp.ContainsProperty("diagnostics"));
         Assert.AreEqual(resp["diagnostics"]["invokedcontracts"]["call"][0]["hash"], s_neoHash);
         Assert.IsEmpty((JArray)resp["diagnostics"]["storagechanges"]);
@@ -83,9 +84,10 @@ public partial class UT_RpcServer
         Assert.IsTrue(resp.ContainsProperty("tx"));
 
         resp = (JObject)_rpcServer.InvokeFunction(s_neoHash, "symbol");
-        Assert.AreEqual(6, resp.Count);
+        Assert.AreEqual(7, resp.Count);
         Assert.IsTrue(resp.ContainsProperty("script"));
         Assert.IsTrue(resp.ContainsProperty("gasconsumed"));
+        Assert.IsTrue(resp.ContainsProperty("minimumrequiredfee"));
         Assert.AreEqual(nameof(VMState.HALT), resp["state"]);
         Assert.IsNull(resp["exception"]);
         Assert.IsEmpty((JArray)resp["notifications"]);
@@ -105,9 +107,10 @@ public partial class UT_RpcServer
             multisigSigner.AsParameter<SignersAndWitnesses>(),
             true
         );
-        Assert.AreEqual(7, resp.Count);
+        Assert.AreEqual(8, resp.Count);
         Assert.AreEqual(resp["script"], NeoTransferScript);
         Assert.IsTrue(resp.ContainsProperty("gasconsumed"));
+        Assert.IsTrue(resp.ContainsProperty("minimumrequiredfee"));
         Assert.IsTrue(resp.ContainsProperty("diagnostics"));
         Assert.AreEqual(resp["diagnostics"]["invokedcontracts"]["call"][0]["hash"], s_neoHash);
         Assert.HasCount(4, (JArray)resp["diagnostics"]["storagechanges"]);
@@ -158,8 +161,9 @@ public partial class UT_RpcServer
             validatorSigner.AsParameter<SignersAndWitnesses>(),
             true
         );
-        Assert.AreEqual(7, resp.Count);
+        Assert.AreEqual(8, resp.Count);
         Assert.IsTrue(resp.ContainsProperty("gasconsumed"));
+        Assert.IsTrue(resp.ContainsProperty("minimumrequiredfee"));
         Assert.IsTrue(resp.ContainsProperty("diagnostics"));
         Assert.AreEqual(resp["diagnostics"]["invokedcontracts"]["call"][0]["hash"], s_neoHash);
         Assert.AreEqual(nameof(VMState.HALT), resp["state"]);
@@ -169,7 +173,7 @@ public partial class UT_RpcServer
         Assert.AreEqual("100000000", resp["stack"][0]["value"]);
 
         resp = (JObject)_rpcServer.InvokeScript(Convert.FromBase64String(NeoTransferScript));
-        Assert.AreEqual(6, resp.Count);
+        Assert.AreEqual(7, resp.Count);
         Assert.AreEqual(nameof(Boolean), resp["stack"][0]["type"]);
         Assert.IsFalse(resp["stack"][0]["value"].GetBoolean());
     }

@@ -12,6 +12,7 @@
 using Neo.Extensions.Factories;
 using Neo.Network.P2P.Payloads;
 using Neo.Network.RPC.Models;
+using Neo.VM;
 
 namespace Neo.Network.RPC;
 
@@ -37,8 +38,10 @@ public class TransactionManagerFactory
     /// <returns></returns>
     public async Task<TransactionManager> MakeTransactionAsync(ReadOnlyMemory<byte> script, Signer[] signers = null, TransactionAttribute[] attributes = null)
     {
-        RpcInvokeResult invokeResult = await rpcClient.InvokeScriptAsync(script, signers).ConfigureAwait(false);
-        return await MakeTransactionAsync(script, invokeResult.GasConsumed, signers, attributes).ConfigureAwait(false);
+        RpcInvokeResult invokeResult = await rpcClient.InvokeScriptAsync(script, signers ?? []).ConfigureAwait(false);
+        if (invokeResult.State != VMState.HALT)
+            throw new InvalidOperationException("Transaction simulation did not HALT: " + invokeResult.Exception);
+        return await MakeTransactionAsync(script, invokeResult.MinimumRequiredFee ?? invokeResult.GasConsumed, signers, attributes).ConfigureAwait(false);
     }
 
     /// <summary>

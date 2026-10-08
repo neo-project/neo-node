@@ -10,10 +10,13 @@
 // modifications are permitted.
 
 using Neo.Cryptography.ECC;
+using Neo.Extensions;
 using Neo.Network.P2P.Payloads;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
+using Neo.VM;
 using Neo.Wallets;
+using System.Numerics;
 
 namespace Neo.Network.RPC;
 
@@ -165,14 +168,20 @@ public class TransactionManager
         // Calculate NetworkFee
         Tx.Witnesses = Tx.GetScriptHashesForVerifying(null).Select(u => new Witness()
         {
-            InvocationScript = ReadOnlyMemory<byte>.Empty,
+            InvocationScript = GetInvocationScript(u),
             VerificationScript = GetVerificationScript(u)
         }).ToArray();
-        Tx.NetworkFee = await rpcClient.CalculateNetworkFeeAsync(Tx).ConfigureAwait(false);
-        Tx.Witnesses = null;
+        try
+        {
+            Tx.NetworkFee = await rpcClient.CalculateNetworkFeeAsync(Tx).ConfigureAwait(false);
+        }
+        finally
+        {
+            Tx.Witnesses = null;
+        }
 
         var gasBalance = await new Nep17API(rpcClient).BalanceOfAsync(NativeContract.GAS.Hash, Tx.Sender).ConfigureAwait(false);
-        if (gasBalance < Tx.SystemFee + Tx.NetworkFee)
+        if (gasBalance < (BigInteger)Tx.SystemFee + Tx.NetworkFee)
             throw new InvalidOperationException($"Insufficient GAS in address: {Tx.Sender.ToAddress(rpcClient.protocolSettings.AddressVersion)}");
 
         // Sign with signStore
@@ -194,7 +203,19 @@ public class TransactionManager
             throw new Exception($"Please add signature or witness first!");
         }
         Tx.Witnesses = context.GetWitnesses();
+        if (await rpcClient.CalculateNetworkFeeAsync(Tx).ConfigureAwait(false) > Tx.NetworkFee)
+            throw new InvalidOperationException("The complete witnesses require a higher network fee. Rebuild the transaction before signing again.");
         return Tx;
+    }
+
+    private byte[] GetInvocationScript(UInt160 hash)
+    {
+        var parameters = context.GetParameters(hash);
+        if (parameters is null) return Array.Empty<byte>();
+        using var builder = new ScriptBuilder();
+        for (int i = parameters.Count - 1; i >= 0; i--)
+            builder.EmitPush(parameters[i]);
+        return builder.ToArray();
     }
 
     private byte[] GetVerificationScript(UInt160 hash)
@@ -204,6 +225,6 @@ public class TransactionManager
             if (item.Contract.ScriptHash == hash) return item.Contract.Script;
         }
 
-        return Array.Empty<byte>();
+        return context.GetScript(hash) ?? Array.Empty<byte>();
     }
 }

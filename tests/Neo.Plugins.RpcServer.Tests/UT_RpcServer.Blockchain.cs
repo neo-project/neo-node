@@ -630,7 +630,9 @@ public partial class UT_RpcServer
         var snapshot = _neoSystem.GetSnapshotCache();
         var result = _rpcServer.GetNativeContracts();
         var states = NativeContract.Contracts
-            .Select(p => NativeContract.ContractManagement.GetContract(snapshot, p.Hash).ToJson());
+            .Select(p => NativeContract.ContractManagement.GetContract(snapshot, p.Hash))
+            .Where(p => p is not null)
+            .Select(p => p.ToJson());
         var contracts = new JArray(states);
         Assert.AreEqual(contracts.ToString(), result.ToString());
     }

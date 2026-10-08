@@ -73,6 +73,7 @@ partial class RpcServer
             json["state"] = session.Engine.State;
             // Gas consumed in the unit of datoshi, 1 GAS = 10^8 datoshi
             json["gasconsumed"] = session.Engine.FeeConsumed.ToString();
+            json["minimumrequiredfee"] = session.Engine.MinimumRequiredFee.ToString();
             json["exception"] = GetExceptionMessage(session.Engine.FaultException);
             json["notifications"] = new JArray(session.Engine.Notifications.Select(n =>
             {
