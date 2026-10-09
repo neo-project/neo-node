@@ -51,7 +51,7 @@ partial class MainService
         Console.WriteLine($"total: {NeoSystem.MemPool.Count}, verified: {verifiedCount}, unverified: {unverifiedCount}");
     }
 
-    private Task CreateBroadcastTask(CancellationToken cancellationToken)
+    internal Task CreateBroadcastTask(CancellationToken cancellationToken)
     {
         return Task.Run(async () =>
         {
@@ -633,7 +633,7 @@ partial class MainService
         return ConsoleColor.Red;
     }
 
-    private uint GetMaxPeerBlockHeight()
+    internal uint GetMaxPeerBlockHeight()
     {
         var nodes = LocalNode.GetRemoteNodes().ToArray();
         if (nodes.Length == 0) return 0;

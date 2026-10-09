@@ -4,6 +4,7 @@
     <PackageId>Neo.Cryptography.MPT</PackageId>
     <RootNamespace>Neo.Cryptography.MPTTrie</RootNamespace>
     <Nullable>enable</Nullable>
+    <CopyToNodePlugins>false</CopyToNodePlugins>
   </PropertyGroup>
 
 </Project>

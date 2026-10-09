@@ -239,4 +239,21 @@ public class UT_CommandTokenizer
         Assert.AreEqual(" ", args[1].Value);
         Assert.AreEqual("Hello World", args[2].Value);
     }
+
+    [TestMethod]
+    public void Quote_RoundTripsWindowsPathAndSpaces()
+    {
+        var path = @"C:\wallet\neo.json";
+        var tokens = CommandTokenizer.Quote(path).Tokenize();
+        Assert.HasCount(1, tokens);
+        Assert.AreEqual(path, tokens[0].Value);
+
+        var message = "hello world";
+        var line = $"sign message {CommandTokenizer.Quote(message)} true";
+        var args = line.Tokenize().Trim();
+        Assert.AreEqual("sign", args.Consume());
+        Assert.AreEqual("message", args.Consume());
+        Assert.AreEqual(message, args.Consume());
+        Assert.AreEqual("true", args.Consume());
+    }
 }
