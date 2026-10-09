@@ -234,10 +234,19 @@ public static partial class RestServerUtility
             Permissions = manifest.Permissions.Select(s => ContractPermissionToJToken(s, serializer)),
             Trusts = manifest.Trusts.Select(s => ContractPermissionDescriptorToJToken(s, serializer)),
             manifest.SupportedStandards,
-            Extra = manifest.Extra?.Count > 0 ?
-                new JObject(manifest.Extra.Properties.Select(s => new JProperty(s.Key.ToString(), s.Value?.AsString()))) :
-                null,
+            Extra = ManifestExtraToJToken(manifest.Extra),
         }, serializer);
+
+    private static JToken ManifestExtraToJToken(Neo.Json.JToken? value) => value switch
+    {
+        null => JValue.CreateNull(),
+        Neo.Json.JObject obj => new JObject(obj.Properties.Select(p => new JProperty(p.Key, ManifestExtraToJToken(p.Value)))),
+        Neo.Json.JArray array => new JArray(array.Select(ManifestExtraToJToken)),
+        Neo.Json.JString text => new JValue(text.Value),
+        Neo.Json.JNumber number => new JValue(number.Value),
+        Neo.Json.JBoolean boolean => new JValue(boolean.Value),
+        _ => throw new NotSupportedException($"JSON token type {value.GetType().Name} is not supported.")
+    };
 
     public static JToken ContractAbiToJToken(ContractAbi abi, global::Newtonsoft.Json.JsonSerializer serializer) =>
         JToken.FromObject(new
