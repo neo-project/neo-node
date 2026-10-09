@@ -101,6 +101,25 @@ public class UT_RpcModels
         Assert.AreEqual(json.ToString(), item.ToJson().ToString());
     }
 
+    [TestMethod]
+    public void InvokeResultPreservesMinimumRequiredFee()
+    {
+        var json = (JObject)JToken.Parse("""{"script":"EA==","state":"HALT","gasconsumed":"10","minimumrequiredfee":"100000010","stack":[]}""");
+        var item = RpcInvokeResult.FromJson(json);
+        Assert.AreEqual("100000010", item.ToJson()["minimumrequiredfee"]?.AsString());
+    }
+
+    [TestMethod]
+    public void InvokeResultRejectsInvalidRequiredFee()
+    {
+        foreach (var fee in new[] { "-1", "9", "9223372036854775808", "1.5" })
+        {
+            var json = (JObject)JToken.Parse("""{"script":"EA==","state":"HALT","gasconsumed":"10","stack":[]}""");
+            json["minimumrequiredfee"] = fee;
+            Assert.ThrowsExactly<FormatException>(() => RpcInvokeResult.FromJson(json));
+        }
+    }
+
     [TestMethod()]
     public void TestRpcMethodToken()
     {
