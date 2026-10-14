@@ -107,12 +107,28 @@ internal sealed class CommandLineApp
             current.SetAction(parseResult =>
             {
                 var extra = parseResult.GetValue(rest) ?? [];
-                var line = extra.Length == 0
-                    ? info.Key
-                    : $"{info.Key} {string.Join(' ', extra.Select(CommandTokenizer.Quote))}";
+                var line = BuildInvokeLine(info, extra);
                 invoke(line);
             });
         }
+    }
+
+    /// <summary>
+    /// The console service consumes a trailing <see cref="string"/> parameter as the raw
+    /// remainder of the line, including quote characters. Quote only the arguments before that.
+    /// </summary>
+    internal static string BuildInvokeLine(CommandInfo info, IReadOnlyList<string> extra)
+    {
+        if (extra.Count == 0)
+            return info.Key;
+
+        var parameters = info.Method.GetParameters();
+        var rawTail = parameters.Length > 0 && parameters[^1].ParameterType == typeof(string);
+        var headCount = rawTail ? Math.Min(Math.Max(0, parameters.Length - 1), extra.Count) : extra.Count;
+        var parts = extra.Take(headCount).Select(CommandTokenizer.Quote).ToList();
+        if (headCount < extra.Count)
+            parts.Add(string.Join(' ', extra.Skip(headCount)));
+        return $"{info.Key} {string.Join(' ', parts)}";
     }
 
     private static Option<T> NewOption<T>(string name, string description, params string[] aliases)

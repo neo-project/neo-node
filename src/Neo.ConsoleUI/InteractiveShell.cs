@@ -193,8 +193,7 @@ internal sealed class InteractiveShell
             if (IsPassword(parameter))
             {
                 var secret = AnsiConsole.Prompt(new TextPrompt<string>(title).Secret());
-                parts.Add(CommandTokenizer.Quote(secret));
-                display.Add("****");
+                AddArgument(parts, display, parameter, parameters, secret, redact: true);
                 continue;
             }
 
@@ -205,16 +204,12 @@ internal sealed class InteractiveShell
                         .AllowEmpty());
                 if (string.IsNullOrEmpty(value))
                     continue;
-                var quoted = CommandTokenizer.Quote(value);
-                parts.Add(quoted);
-                display.Add(quoted);
+                AddArgument(parts, display, parameter, parameters, value);
             }
             else
             {
                 var value = AnsiConsole.Prompt(new TextPrompt<string>(title));
-                var quoted = CommandTokenizer.Quote(value);
-                parts.Add(quoted);
-                display.Add(quoted);
+                AddArgument(parts, display, parameter, parameters, value);
             }
         }
 
@@ -271,6 +266,20 @@ internal sealed class InteractiveShell
         if (string.IsNullOrWhiteSpace(command.Description))
             return Markup.Escape(label);
         return $"{Markup.Escape(label)}  [grey]{Markup.Escape(command.Description)}[/]";
+    }
+
+    private static void AddArgument(
+        List<string> parts,
+        List<string> display,
+        ParameterInfo parameter,
+        ParameterInfo[] parameters,
+        string value,
+        bool redact = false)
+    {
+        var rawTail = parameter == parameters[^1] && parameter.ParameterType == typeof(string);
+        var rendered = rawTail ? value : CommandTokenizer.Quote(value);
+        parts.Add(rendered);
+        display.Add(redact ? "****" : rendered);
     }
 
     private static bool IsPassword(ParameterInfo parameter)
