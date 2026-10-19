@@ -146,7 +146,7 @@ public class UT_RpcModels
         var item = RpcFindStorage.FromJson((JObject)json);
         Assert.AreEqual(json.ToString(), item.ToJson().ToString());
         Assert.IsFalse(item.Truncated);
-        Assert.AreEqual(2, item.Next);
+        Assert.AreEqual("AAED", item.Next);
         Assert.AreEqual(2, item.Results.Count);
     }
 
@@ -160,7 +160,7 @@ public class UT_RpcModels
         var item = RpcFindStorage.FromJson((JObject)json);
         Assert.AreEqual(json.ToString(), item.ToJson().ToString());
         Assert.IsTrue(item.Truncated);
-        Assert.AreEqual(51, item.Next);
+        Assert.AreEqual("AAEC", item.Next);
         Assert.AreEqual(1, item.Results.Count);
         Assert.AreEqual("AAEC", item.Results[0].Key);
         Assert.AreEqual("AQID", item.Results[0].Value);
