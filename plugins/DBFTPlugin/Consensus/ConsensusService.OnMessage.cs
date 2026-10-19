@@ -224,7 +224,7 @@ partial class ConsensusService
                     if (context.InvalidTransactions.TryGet(hash, out var hashset))
                         hashset.Value.Add(pubkey);
                     else
-                        context.InvalidTransactions.Add(new ConsensusContext.UnvalidTxCacheItem(hash, new HashSet<ECPoint> { pubkey }));
+                        context.InvalidTransactions.Add(new ConsensusContext.InvalidTxCacheItem(hash, new HashSet<ECPoint> { pubkey }));
                 }
                 break;
         }

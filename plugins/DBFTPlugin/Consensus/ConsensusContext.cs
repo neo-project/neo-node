@@ -27,8 +27,8 @@ namespace Neo.Plugins.DBFTPlugin.Consensus;
 
 public sealed partial class ConsensusContext : IDisposable, ISerializable
 {
-    public record UnvalidTxCacheItem(UInt256 Key, HashSet<ECPoint> Value);
-    public class InvalidCache(int maxCapacity) : FIFOCache<UInt256, UnvalidTxCacheItem>(maxCapacity)
+    public record InvalidTxCacheItem(UInt256 Key, HashSet<ECPoint> Value);
+    public class InvalidCache(int maxCapacity) : FIFOCache<UInt256, InvalidTxCacheItem>(maxCapacity)
     {
         protected override UInt256 GetKeyForItem(UnvalidTxCacheItem item)
         {
