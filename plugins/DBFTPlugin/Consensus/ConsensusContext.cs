@@ -30,7 +30,7 @@ public sealed partial class ConsensusContext : IDisposable, ISerializable
     public record InvalidTxCacheItem(UInt256 Key, HashSet<ECPoint> Value);
     public class InvalidCache(int maxCapacity) : FIFOCache<UInt256, InvalidTxCacheItem>(maxCapacity)
     {
-        protected override UInt256 GetKeyForItem(UnvalidTxCacheItem item)
+        protected override UInt256 GetKeyForItem(InvalidTxCacheItem item)
         {
             return item.Key;
         }
