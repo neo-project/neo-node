@@ -12,10 +12,12 @@
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence.Providers;
+using Neo.Sign;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;
 using Neo.Wallets;
+using Neo.Wallets.BIP32;
 using Neo.Wallets.NEP6;
 using System.Reflection;
 using System.Text;
@@ -447,6 +449,174 @@ public class UT_MainService_Wallet
         }
     }
 
+    [TestMethod]
+    public void ImportMnemonic_SharedEnglishWords_ImportsDerivedAccount()
+    {
+        const string phrase = "bonus caution capable label digital village surprise image figure sentence exact capable";
+        var wallet = CreateTempWallet();
+        try
+        {
+            var output = RunImportMnemonic(wallet, phrase, "", 0, out bool prompted);
+
+            Assert.IsTrue(prompted);
+            AssertImportedMnemonic(wallet, output, phrase, "", 0);
+        }
+        finally
+        {
+            TryDelete(wallet.Path);
+        }
+    }
+
+    [TestMethod]
+    public void ImportMnemonic_PassphraseAndIndex_ChangeDerivedAccount()
+    {
+        const string phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+        var emptyWallet = CreateTempWallet();
+        var passphraseWallet = CreateTempWallet();
+        try
+        {
+            RunImportMnemonic(emptyWallet, phrase, "", 0, out _);
+            RunImportMnemonic(emptyWallet, phrase, "", 1, out _);
+            RunImportMnemonic(passphraseWallet, phrase, "TREZOR", 0, out _);
+
+            var accounts = emptyWallet.GetAccounts().ToList();
+            Assert.HasCount(2, accounts);
+            Assert.IsTrue(accounts[0].GetKey()!.PublicKey.Equals(KeyFromMnemonic(phrase, "", 0).PublicKey) ||
+                accounts[1].GetKey()!.PublicKey.Equals(KeyFromMnemonic(phrase, "", 0).PublicKey));
+            Assert.IsTrue(accounts.Any(account => account.GetKey()!.PublicKey.Equals(KeyFromMnemonic(phrase, "", 1).PublicKey)));
+            Assert.IsFalse(accounts.Any(account => account.GetKey()!.PublicKey.Equals(KeyFromMnemonic(phrase, "TREZOR", 0).PublicKey)));
+            Assert.IsTrue(passphraseWallet.GetAccounts().Single().GetKey()!.PublicKey.Equals(KeyFromMnemonic(phrase, "TREZOR", 0).PublicKey));
+        }
+        finally
+        {
+            TryDelete(emptyWallet.Path);
+            TryDelete(passphraseWallet.Path);
+        }
+    }
+
+    [TestMethod]
+    public void ImportMnemonic_InvalidPhrase_DoesNotImport()
+    {
+        var wallet = CreateTempWallet();
+        try
+        {
+            var output = RunImportMnemonic(
+                wallet,
+                "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon",
+                "",
+                0,
+                out bool prompted);
+
+            Assert.IsFalse(prompted);
+            Assert.Contains("Error", output);
+            Assert.IsEmpty(wallet.GetAccounts().ToList());
+        }
+        finally
+        {
+            TryDelete(wallet.Path);
+        }
+    }
+
+    [TestMethod]
+    public void ImportMnemonic_WithoutWallet_WritesError()
+    {
+        var service = new MainService();
+        var output = CaptureConsole(() =>
+            TestUtils.InvokeNonPublic(service, "OnImportMnemonicCommand", "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about", 0u));
+
+        Assert.Contains("open the wallet first", output);
+    }
+
+    [TestMethod]
+    public void ImportMnemonic_IndexOutOfRange_WritesError()
+    {
+        var wallet = CreateTempWallet();
+        try
+        {
+            var output = RunImportMnemonic(wallet, "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about", "", 0x80000000, out bool prompted);
+
+            Assert.IsFalse(prompted);
+            Assert.Contains("Address index", output);
+            Assert.IsEmpty(wallet.GetAccounts().ToList());
+        }
+        finally
+        {
+            TryDelete(wallet.Path);
+        }
+    }
+
+    [TestMethod]
+    public void CreateAddress_ShowsMnemonicOnceAndDoesNotWriteItToFile()
+    {
+        var wallet = CreateTempWallet();
+        var addressFile = Path.Combine(Directory.GetCurrentDirectory(), "address.txt");
+        if (File.Exists(addressFile))
+            File.Delete(addressFile);
+
+        var service = CreateWalletService(wallet);
+        try
+        {
+            var output = CaptureConsole(() => TestUtils.InvokeNonPublic(service, "OnCreateAddressCommand", (ushort)2));
+
+            Assert.Contains("only be shown once", output);
+            var phrases = ExtractLabeledLines(output, "Mnemonic:");
+            var addresses = ExtractLabeledLines(output, "Address:");
+            Assert.HasCount(2, phrases);
+            Assert.HasCount(2, addresses);
+            Assert.AreEqual(12, phrases[0].Split(' ', StringSplitOptions.RemoveEmptyEntries).Length);
+            Assert.AreNotEqual(phrases[0], phrases[1]);
+
+            var accounts = wallet.GetAccounts().ToList();
+            Assert.HasCount(2, accounts);
+            foreach (string phrase in phrases)
+            {
+                var expected = KeyFromMnemonic(phrase, "", 0);
+                Assert.IsTrue(accounts.Any(account => account.GetKey()!.PublicKey.Equals(expected.PublicKey)));
+            }
+
+            string exported = File.ReadAllText(addressFile);
+            foreach (string phrase in phrases)
+                Assert.DoesNotContain(phrase, exported);
+            foreach (string address in addresses)
+                Assert.Contains(address, exported);
+            Assert.DoesNotContain(phrases[0], File.ReadAllText(wallet.Path));
+        }
+        finally
+        {
+            if (File.Exists(addressFile))
+                File.Delete(addressFile);
+            TryDelete(wallet.Path);
+        }
+    }
+
+    [TestMethod]
+    public void CreateWallet_ShowsMnemonicOnce()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"neo-cli-wallet-{Guid.NewGuid():N}.json");
+        var service = new MainService();
+        TestUtils.TrySet(service, "NeoSystem", _neoSystem);
+        TestUtils.TrySetField(service, "_neoSystem", _neoSystem);
+        try
+        {
+            var output = CaptureConsole(() => service.CreateWallet(path, "test_pwd", true, "mnemonic-wallet"));
+
+            Assert.Contains("only be shown once", output);
+            string phrase = ExtractLabeledLines(output, "Mnemonic:").Single();
+            Assert.AreEqual(12, phrase.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length);
+            Assert.Contains("m/44'/888'/0'/0/0", output);
+
+            var account = service.CurrentWallet!.GetAccounts().Single();
+            Assert.IsTrue(account.GetKey()!.PublicKey.Equals(KeyFromMnemonic(phrase, "", 0).PublicKey));
+            Assert.DoesNotContain(phrase, File.ReadAllText(path));
+        }
+        finally
+        {
+            if (service.CurrentWallet is not null)
+                SignerManager.UnregisterSigner(service.CurrentWallet.Name);
+            TryDelete(path);
+        }
+    }
+
     private string RunImportKey(NEP6Wallet wallet, string wifOrFile, Func<string, bool, string> readInput)
     {
         var service = new MainService();
@@ -476,6 +646,96 @@ public class UT_MainService_Wallet
         }
 
         return outputWriter.ToString();
+    }
+
+    private string RunImportMnemonic(NEP6Wallet wallet, string mnemonic, string passphrase, uint index, out bool prompted)
+    {
+        var service = CreateWalletService(wallet);
+        var wasPrompted = false;
+        var readInputProp = service.GetType().GetProperty(
+            "ReadUserInput",
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        Assert.IsNotNull(readInputProp, "ReadUserInput property not found on MainService");
+        readInputProp!.SetValue(service, (Func<string, bool, string>)((prompt, hidden) =>
+        {
+            wasPrompted = true;
+            Assert.Contains("passphrase", prompt);
+            Assert.IsTrue(hidden);
+            return passphrase;
+        }));
+
+        var output = CaptureConsole(() => TestUtils.InvokeNonPublic(service, "OnImportMnemonicCommand", mnemonic, index));
+        prompted = wasPrompted;
+        return output;
+    }
+
+    private static void AssertImportedMnemonic(NEP6Wallet wallet, string output, string phrase, string passphrase, uint index)
+    {
+        var expected = KeyFromMnemonic(phrase, passphrase, index);
+        var account = wallet.GetAccounts().Single();
+        Assert.IsTrue(account.GetKey()!.PublicKey.Equals(expected.PublicKey));
+        Assert.Contains(account.Address, output);
+        Assert.Contains($"m/44'/888'/0'/0/{index}", output);
+        Assert.DoesNotContain(phrase, File.ReadAllText(wallet.Path));
+    }
+
+    private static MainService CreateWalletService(NEP6Wallet wallet)
+    {
+        var service = new MainService();
+        var system = TestBlockchain.GetSystem();
+        TestUtils.TrySet(service, "NeoSystem", system);
+        TestUtils.TrySetField(service, "_neoSystem", system);
+        TestUtils.TrySet(service, "CurrentWallet", wallet);
+        TestUtils.TrySetField(service, "_currentWallet", wallet);
+        return service;
+    }
+
+    private static string CaptureConsole(Action action)
+    {
+        var originalOut = Console.Out;
+        var originalErr = Console.Error;
+        using var outputWriter = new StringWriter();
+        Console.SetOut(outputWriter);
+        Console.SetError(outputWriter);
+        try
+        {
+            action();
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalErr);
+        }
+
+        return outputWriter.ToString();
+    }
+
+    private static List<string> ExtractLabeledLines(string output, string label)
+    {
+        var values = new List<string>();
+        foreach (string raw in output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+        {
+            int index = raw.IndexOf(label, StringComparison.Ordinal);
+            if (index < 0)
+                continue;
+            values.Add(raw[(index + label.Length)..].Trim());
+        }
+
+        return values;
+    }
+
+    private static KeyPair KeyFromMnemonic(string phrase, string passphrase, uint index)
+    {
+        byte[] seed = Mnemonic.Parse(phrase).DeriveSeed(passphrase);
+        try
+        {
+            ExtendedKey key = ExtendedKey.Create(seed, $"m/44'/888'/0'/0/{index}");
+            return new KeyPair((byte[])key.PrivateKey.Clone());
+        }
+        finally
+        {
+            Array.Clear(seed, 0, seed.Length);
+        }
     }
 
     private static NEP6Wallet CreateTempWallet()
