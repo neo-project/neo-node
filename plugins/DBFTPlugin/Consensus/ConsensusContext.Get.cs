@@ -23,8 +23,13 @@ partial class ConsensusContext
     {
         if (payload is null) return null;
         if (!cachedMessages.TryGetValue(payload.Hash, out ConsensusMessage message))
-            cachedMessages.Add(payload.Hash, message = ConsensusMessage.DeserializeFrom(payload.Data));
+            cachedMessages.Add(payload.Hash, message = ConsensusMessage.DeserializeFrom(payload.Data, IsPrepareRequestExtensionEnabled));
         return message;
+    }
+
+    public bool IsPrepareRequestExtensionEnabled(uint blockIndex)
+    {
+        return neoSystem.Settings.IsHardforkEnabled(Hardfork.HF_Iara, blockIndex);
     }
 
     public T GetMessage<T>(ExtensiblePayload payload) where T : ConsensusMessage

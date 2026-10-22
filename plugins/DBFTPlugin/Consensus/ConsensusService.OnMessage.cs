@@ -79,10 +79,12 @@ partial class ConsensusService
         if (context.RequestSentOrReceived || context.NotAcceptingPayloadsDueToViewChanging) return;
         if (message.ValidatorIndex != context.Block.PrimaryIndex || message.ViewNumber != context.ViewNumber) return;
         if (message.Version != context.Block.Version || message.PrevHash != context.Block.PrevHash) return;
-        if (message.TransactionHashes.Length > neoSystem.Settings.MaxTransactionsPerBlock) return;
+
+        var transactionHashes = message.GetTransactionHashes();
+        if (transactionHashes.Length > neoSystem.Settings.MaxTransactionsPerBlock) return;
 
         DBFTPlugin.PluginLogger?.Information("OnPrepareRequestReceived: height={BlockIndex} view={ViewNumber} index={ValidatorIndex} tx={TransactionHashesLength}",
-            message.BlockIndex, message.ViewNumber, message.ValidatorIndex, message.TransactionHashes.Length);
+            message.BlockIndex, message.ViewNumber, message.ValidatorIndex, transactionHashes.Length);
         if (message.Timestamp <= context.PrevHeader.Timestamp
             || message.Timestamp > TimeProvider.Current.UtcNow.AddMilliseconds(8 * context.TimePerBlock.TotalMilliseconds).ToTimestampMS())
         {
@@ -90,7 +92,7 @@ partial class ConsensusService
             return;
         }
 
-        if (message.TransactionHashes.Any(p => NativeContract.Ledger.ContainsTransaction(context.Snapshot, p)))
+        if (transactionHashes.Any(p => NativeContract.Ledger.ContainsTransaction(context.Snapshot, p)))
         {
             DBFTPlugin.PluginLogger?.Warning("Invalid request: transaction already exists");
             return;
@@ -105,7 +107,7 @@ partial class ConsensusService
 
         context.Block.Header.Timestamp = message.Timestamp;
         context.Block.Header.Nonce = message.Nonce;
-        context.TransactionHashes = message.TransactionHashes;
+        context.TransactionHashes = transactionHashes;
 
         context.Transactions = new Dictionary<UInt256, Transaction>();
         context.VerificationContext = new TransactionVerificationContext();
@@ -137,8 +139,30 @@ partial class ConsensusService
         }
 
         Dictionary<UInt256, Transaction> mempoolVerified = neoSystem.MemPool.GetVerifiedTransactions().ToDictionary(p => p.Hash);
-        var unverified = new List<Transaction>();
         var mtb = neoSystem.GetMaxTraceableBlocks();
+        if (message.Extended)
+        {
+            foreach (Transaction tx in message.Transactions)
+            {
+                if (NativeContract.Ledger.ContainsConflictHash(context.Snapshot, tx.Hash, tx.Signers.Select(s => s.Account), mtb))
+                {
+                    DBFTPlugin.PluginLogger?.Warning("Invalid request: transaction has on-chain conflict");
+                    return;
+                }
+                if (mempoolVerified.TryGetValue(tx.Hash, out Transaction poolTx))
+                {
+                    if (!AddTransaction(poolTx, false))
+                        return;
+                }
+                else
+                {
+                    if (!AddTransaction(tx, true))
+                        return;
+                }
+            }
+            return;
+        }
+        var unverified = new List<Transaction>();
         foreach (UInt256 hash in context.TransactionHashes)
         {
             if (mempoolVerified.TryGetValue(hash, out Transaction tx))

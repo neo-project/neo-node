@@ -219,7 +219,8 @@ internal partial class ConsensusService : UntypedActor
         if (context.Validators.Length == 1)
             CheckPreparations();
 
-        if (context.TransactionHashes.Length > 0)
+        // Since HF_Iara backups receive transactions inside PrepareRequest, no need to announce them.
+        if (context.TransactionHashes.Length > 0 && !context.IsPrepareRequestExtensionEnabled(context.Block.Index))
         {
             foreach (InvPayload payload in InvPayload.CreateGroup(InventoryType.TX, context.TransactionHashes))
                 localNode.Tell(Message.Create(MessageCommand.Inv, payload));

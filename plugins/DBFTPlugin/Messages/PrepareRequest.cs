@@ -11,6 +11,7 @@
 
 using Neo.Extensions;
 using Neo.IO;
+using Neo.Network.P2P.Payloads;
 using Neo.Plugins.DBFTPlugin.Types;
 
 namespace Neo.Plugins.DBFTPlugin.Messages;
@@ -22,32 +23,44 @@ public class PrepareRequest : ConsensusMessage
     public ulong Timestamp;
     public ulong Nonce;
     public UInt256[] TransactionHashes;
+    internal bool Extended;
+    public Transaction[] Transactions;
 
     public override int Size => base.Size
         + sizeof(uint)                      //Version
         + UInt256.Length                    //PrevHash
         + sizeof(ulong)                     //Timestamp
         + sizeof(ulong)                     // Nonce
-        + TransactionHashes.GetVarSize();   //TransactionHashes
+        + (Extended ? Transactions.GetVarSize() : TransactionHashes.GetVarSize());   //TransactionHashes or Transactions
 
     public PrepareRequest() : base(ConsensusMessageType.PrepareRequest) { }
 
     public override void Deserialize(ref MemoryReader reader)
     {
         base.Deserialize(ref reader);
+        Extended = IsExtended?.Invoke(BlockIndex) ?? false;
         Version = reader.ReadUInt32();
         PrevHash = reader.ReadSerializable<UInt256>();
         Timestamp = reader.ReadUInt64();
         Nonce = reader.ReadUInt64();
-        TransactionHashes = reader.ReadSerializableArray<UInt256>(ushort.MaxValue);
-        if (TransactionHashes.Distinct().Count() != TransactionHashes.Length)
-            throw new FormatException($"Transaction hashes are duplicate");
+        if (Extended)
+        {
+            Transactions = reader.ReadSerializableArray<Transaction>(ushort.MaxValue);
+            if (Transactions.Select(p => p.Hash).Distinct().Count() != Transactions.Length)
+                throw new FormatException("Transactions are duplicate");
+        }
+        else
+        {
+            TransactionHashes = reader.ReadSerializableArray<UInt256>(ushort.MaxValue);
+            if (TransactionHashes.Distinct().Count() != TransactionHashes.Length)
+                throw new FormatException($"Transaction hashes are duplicate");
+        }
     }
 
     public override bool Verify(ProtocolSettings protocolSettings)
     {
         if (!base.Verify(protocolSettings)) return false;
-        return TransactionHashes.Length <= protocolSettings.MaxTransactionsPerBlock;
+        return (Extended ? Transactions.Length : TransactionHashes.Length) <= protocolSettings.MaxTransactionsPerBlock;
     }
 
     public override void Serialize(BinaryWriter writer)
@@ -57,6 +70,18 @@ public class PrepareRequest : ConsensusMessage
         writer.Write(PrevHash);
         writer.Write(Timestamp);
         writer.Write(Nonce);
-        writer.Write(TransactionHashes);
+        if (Extended)
+        {
+            writer.Write(Transactions);
+        }
+        else
+        {
+            writer.Write(TransactionHashes);
+        }
+    }
+
+    public UInt256[] GetTransactionHashes()
+    {
+        return Extended ? Transactions.Select(p => p.Hash).ToArray() : TransactionHashes;
     }
 }

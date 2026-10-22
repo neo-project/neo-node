@@ -110,14 +110,23 @@ partial class ConsensusContext
         EnsureMaxBlockLimitation(neoSystem.MemPool.GetSortedVerifiedTransactions((int)maxTransactionsPerBlock));
         Block.Header.Timestamp = Math.Max(TimeProvider.Current.UtcNow.ToTimestampMS(), PrevHeader.Timestamp + 1);
         Block.Header.Nonce = GetNonce();
-        return PreparationPayloads[MyIndex] = MakeSignedPayload(new PrepareRequest
+        var req = new PrepareRequest
         {
             Version = Block.Version,
             PrevHash = Block.PrevHash,
             Timestamp = Block.Timestamp,
             Nonce = Block.Nonce,
-            TransactionHashes = TransactionHashes
-        });
+        };
+        if (IsPrepareRequestExtensionEnabled(Block.Index))
+        {
+            req.Extended = true;
+            req.Transactions = TransactionHashes.Select(p => Transactions[p]).ToArray();
+        }
+        else
+        {
+            req.TransactionHashes = TransactionHashes;
+        }
+        return PreparationPayloads[MyIndex] = MakeSignedPayload(req);
     }
 
     public ExtensiblePayload MakeRecoveryRequest()
@@ -133,17 +142,24 @@ partial class ConsensusContext
         PrepareRequest prepareRequestMessage = null;
         if (TransactionHashes != null)
         {
-            prepareRequestMessage = new PrepareRequest
+            if (IsPrepareRequestExtensionEnabled(Block.Index))
             {
-                Version = Block.Version,
-                PrevHash = Block.PrevHash,
-                ViewNumber = ViewNumber,
-                Timestamp = Block.Timestamp,
-                Nonce = Block.Nonce,
-                BlockIndex = Block.Index,
-                ValidatorIndex = Block.PrimaryIndex,
-                TransactionHashes = TransactionHashes
-            };
+                prepareRequestMessage = GetMessage<PrepareRequest>(PreparationPayloads[Block.PrimaryIndex]);
+            }
+            else
+            {
+                prepareRequestMessage = new PrepareRequest
+                {
+                    Version = Block.Version,
+                    PrevHash = Block.PrevHash,
+                    ViewNumber = ViewNumber,
+                    Timestamp = Block.Timestamp,
+                    Nonce = Block.Nonce,
+                    BlockIndex = Block.Index,
+                    ValidatorIndex = Block.PrimaryIndex,
+                    TransactionHashes = TransactionHashes
+                };
+            }
         }
         return MakeSignedPayload(new RecoveryMessage
         {
