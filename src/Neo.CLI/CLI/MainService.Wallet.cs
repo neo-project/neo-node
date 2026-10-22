@@ -347,16 +347,23 @@ partial class MainService
     /// <summary>
     /// Process "import mnemonic" command.
     /// Derives the account at <c>m/44'/888'/0'/0/index</c> on secp256r1 and adds it to the open wallet.
+    /// The mnemonic is read from a hidden prompt so it is not kept in command history.
     /// </summary>
-    /// <param name="mnemonic">BIP-39 mnemonic phrase. Quote it when it contains spaces.</param>
     /// <param name="index">Address index in the derivation path. Defaults to 0.</param>
     [ConsoleCommand("import mnemonic", Category = "Wallet Commands", Description = "Import a private key from a BIP-39 mnemonic.")]
-    private void OnImportMnemonicCommand(string mnemonic, uint index = 0)
+    private void OnImportMnemonicCommand(uint index = 0)
     {
         if (NoWallet()) return;
         if (index >= 0x80000000)
         {
             ConsoleHelper.Error("Address index must be between 0 and 2147483647.");
+            return;
+        }
+
+        string mnemonic = ReadUserInput("mnemonic", true);
+        if (mnemonic.Length == 0)
+        {
+            ConsoleHelper.Info("Cancelled");
             return;
         }
 

@@ -522,9 +522,27 @@ public class UT_MainService_Wallet
     {
         var service = new MainService();
         var output = CaptureConsole(() =>
-            TestUtils.InvokeNonPublic(service, "OnImportMnemonicCommand", "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about", 0u));
+            TestUtils.InvokeNonPublic(service, "OnImportMnemonicCommand", 0u));
 
         Assert.Contains("open the wallet first", output);
+    }
+
+    [TestMethod]
+    public void ImportMnemonic_EmptyPhrase_Cancels()
+    {
+        var wallet = CreateTempWallet();
+        try
+        {
+            var output = RunImportMnemonic(wallet, "", "", 0, out bool prompted);
+
+            Assert.IsFalse(prompted);
+            Assert.Contains("Cancelled", output);
+            Assert.IsEmpty(wallet.GetAccounts().ToList());
+        }
+        finally
+        {
+            TryDelete(wallet.Path);
+        }
     }
 
     [TestMethod]
@@ -658,13 +676,16 @@ public class UT_MainService_Wallet
         Assert.IsNotNull(readInputProp, "ReadUserInput property not found on MainService");
         readInputProp!.SetValue(service, (Func<string, bool, string>)((prompt, hidden) =>
         {
+            Assert.IsTrue(hidden);
+            if (prompt.Contains("mnemonic", StringComparison.OrdinalIgnoreCase))
+                return mnemonic;
+
             wasPrompted = true;
             Assert.Contains("passphrase", prompt);
-            Assert.IsTrue(hidden);
             return passphrase;
         }));
 
-        var output = CaptureConsole(() => TestUtils.InvokeNonPublic(service, "OnImportMnemonicCommand", mnemonic, index));
+        var output = CaptureConsole(() => TestUtils.InvokeNonPublic(service, "OnImportMnemonicCommand", index));
         prompted = wasPrompted;
         return output;
     }
@@ -676,6 +697,7 @@ public class UT_MainService_Wallet
         Assert.IsTrue(account.GetKey()!.PublicKey.Equals(expected.PublicKey));
         Assert.Contains(account.Address, output);
         Assert.Contains($"m/44'/888'/0'/0/{index}", output);
+        Assert.DoesNotContain(phrase, output);
         Assert.DoesNotContain(phrase, File.ReadAllText(wallet.Path));
     }
 
