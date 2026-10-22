@@ -1003,6 +1003,7 @@ partial class MainService
             ConsoleHelper.Error("Failed to change password");
         }
     }
+
     /// <summary>
     /// Creates a standard account from a new English BIP-39 mnemonic.
     /// The private key is <c>m/44'/888'/0'/0/0</c> on secp256r1, with no BIP-39 passphrase.
