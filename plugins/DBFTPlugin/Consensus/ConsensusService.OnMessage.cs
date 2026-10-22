@@ -180,6 +180,7 @@ partial class ConsensusService
 
     private void OnPrepareResponseReceived(ExtensiblePayload payload, PrepareResponse message)
     {
+        if (message.ValidatorIndex == context.Block.PrimaryIndex) return;
         if (message.ViewNumber != context.ViewNumber) return;
         if (context.PreparationPayloads[message.ValidatorIndex] != null || context.NotAcceptingPayloadsDueToViewChanging) return;
         if (context.PreparationPayloads[context.Block.PrimaryIndex] != null
