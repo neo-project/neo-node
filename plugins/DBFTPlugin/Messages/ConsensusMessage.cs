@@ -21,6 +21,7 @@ public abstract class ConsensusMessage : ISerializable
     public uint BlockIndex;
     public byte ValidatorIndex;
     public byte ViewNumber;
+    public Func<uint, bool> IsExtended;
 
     public virtual int Size =>
         sizeof(ConsensusMessageType) +  //Type
@@ -45,13 +46,17 @@ public abstract class ConsensusMessage : ISerializable
         ViewNumber = reader.ReadByte();
     }
 
-    public static ConsensusMessage DeserializeFrom(ReadOnlyMemory<byte> data)
+    public static ConsensusMessage DeserializeFrom(ReadOnlyMemory<byte> data, Func<uint, bool> isExtended = null)
     {
         ConsensusMessageType type = (ConsensusMessageType)data.Span[0];
         Type t = typeof(ConsensusMessage);
         t = t.Assembly.GetType($"{t.Namespace}.{type}", false);
         if (t is null) throw new FormatException($"Invalid consensus message type: {type}");
-        return (ConsensusMessage)data.AsSerializable(t);
+        var message = (ConsensusMessage)Activator.CreateInstance(t)!;
+        message.IsExtended = isExtended;
+        var reader = new MemoryReader(data);
+        message.Deserialize(ref reader);
+        return message;
     }
 
     public virtual bool Verify(ProtocolSettings protocolSettings)

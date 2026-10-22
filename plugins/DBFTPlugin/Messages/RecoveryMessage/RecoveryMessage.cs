@@ -42,7 +42,11 @@ public partial class RecoveryMessage : ConsensusMessage
         ChangeViewMessages = reader.ReadSerializableArray<ChangeViewPayloadCompact>(byte.MaxValue).ToDictionary(p => p.ValidatorIndex);
         if (reader.ReadBoolean())
         {
-            PrepareRequestMessage = reader.ReadSerializable<PrepareRequest>();
+            var req = new PrepareRequest { IsExtended = IsExtended };
+            req.Deserialize(ref reader);
+            if (req.BlockIndex != BlockIndex)
+                throw new FormatException($"Invalid PrepareRequest block index: {req.BlockIndex}/{BlockIndex}");
+            PrepareRequestMessage = req;
         }
         else
         {
