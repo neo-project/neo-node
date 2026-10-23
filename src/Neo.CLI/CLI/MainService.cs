@@ -147,12 +147,17 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         }
         if (createDefaultAccount)
         {
-            WalletAccount account = wallet.CreateAccount();
+            (WalletAccount account, string mnemonic) = CreateNewAccount(wallet);
             ConsoleHelper.Info("   Address: ", account.Address);
             ConsoleHelper.Info("    Pubkey: ", account.GetKey()!.PublicKey.EncodePoint(true).ToHexString());
             ConsoleHelper.Info("ScriptHash: ", $"{account.ScriptHash}");
+            wallet.Save();
+            ShowMnemonicOnce(mnemonic);
         }
-        wallet.Save();
+        else
+        {
+            wallet.Save();
+        }
 
         if (CurrentWallet is not null) SignerManager.UnregisterSigner(CurrentWallet.Name);
         CurrentWallet = wallet;
