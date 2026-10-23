@@ -576,6 +576,72 @@ public class UT_ConsensusService : TestKit
         Assert.IsFalse(GetBooleanField(actor, "started"));
     }
 
+    [TestMethod]
+    [DataRow(0)]
+    [DataRow(1)]
+    [DataRow(2)]
+    public void RecoveryMessage_RejectsEmptyCompactInvocation(int kind)
+    {
+        var service = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, CreateCompatibleSettings(), new TestSigner()));
+        service.Tell(new ConsensusService.Start());
+        var actor = service.UnderlyingActor;
+        var context = GetConsensusContext(actor);
+        var message = new RecoveryMessage
+        {
+            BlockIndex = context.Block.Index,
+            ValidatorIndex = 0,
+            ViewNumber = kind == 0 ? (byte)1 : (byte)0,
+            ChangeViewMessages = [],
+            PreparationMessages = [],
+            CommitMessages = []
+        };
+        if (kind == 0)
+            message.ChangeViewMessages[0] = new RecoveryMessage.ChangeViewPayloadCompact
+            { ValidatorIndex = 0, OriginalViewNumber = 0, Timestamp = 1, InvocationScript = ReadOnlyMemory<byte>.Empty };
+        else if (kind == 1)
+            message.PreparationMessages[0] = new RecoveryMessage.PreparationPayloadCompact
+            { ValidatorIndex = 0, InvocationScript = ReadOnlyMemory<byte>.Empty };
+        else
+            message.CommitMessages[0] = new RecoveryMessage.CommitPayloadCompact
+            { ValidatorIndex = 0, ViewNumber = 0, Signature = new byte[64], InvocationScript = ReadOnlyMemory<byte>.Empty };
+
+        var decoded = (RecoveryMessage)ConsensusMessage.DeserializeFrom(message.ToArray());
+        Assert.IsFalse(decoded.Verify(neoSystem.Settings));
+        service.Tell(new Blockchain.RelayResult(WithWitness(context.CreatePayload(decoded)), VerifyResult.Succeed));
+        Assert.AreSame(actor, service.UnderlyingActor);
+        Assert.IsTrue(GetBooleanField(actor, "started"));
+        Assert.IsFalse(GetBooleanField(actor, "isRecovering"));
+
+        // Non-empty scripts pass structural checks; signature checks remain in reverification.
+        var script = new byte[] { (byte)OpCode.PUSH1 };
+        if (kind == 0) decoded.ChangeViewMessages[0].InvocationScript = script;
+        else if (kind == 1) decoded.PreparationMessages[0].InvocationScript = script;
+        else decoded.CommitMessages[0].InvocationScript = script;
+        Assert.IsTrue(decoded.Verify(neoSystem.Settings));
+    }
+
+    [TestMethod]
+    public void RecoveryReverification_MissingReplyTimesOut()
+    {
+        var service = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, CreateCompatibleSettings(), new TestSigner()));
+        var actor = service.UnderlyingActor;
+        typeof(ConsensusService).GetField("blockchain", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(actor, blockchain.Ref);
+        var payload = new ExtensiblePayload { Category = "dBFT", Sender = UInt160.Zero, Witness = new Witness() };
+        Assert.IsFalse((bool)InvokeConsensusMethod(actor, "ReverifyAndProcessPayload", payload));
+        blockchain.ExpectMsg<Blockchain.Reverify>(cancellationToken: CancellationToken.None);
+        Assert.AreSame(actor, service.UnderlyingActor);
+    }
+
+    [TestMethod]
+    public void RecoveryReverification_NullWitnessDoesNotReachBlockchain()
+    {
+        var service = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, CreateCompatibleSettings(), new TestSigner()));
+        var actor = service.UnderlyingActor;
+        typeof(ConsensusService).GetField("blockchain", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(actor, blockchain.Ref);
+        Assert.IsFalse((bool)InvokeConsensusMethod(actor, "ReverifyAndProcessPayload", new ExtensiblePayload { Category = "dBFT", Sender = UInt160.Zero, Witness = null }));
+        blockchain.ExpectNoMsg(TimeSpan.FromMilliseconds(100), cancellationToken: CancellationToken.None);
+    }
+
     private static ConsensusContext GetConsensusContext(ConsensusService actor)
     {
         return (ConsensusContext)typeof(ConsensusService)
