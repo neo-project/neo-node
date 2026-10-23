@@ -80,7 +80,7 @@ partial class RpcServer
                 {
                     ["eventname"] = n.EventName,
                     ["contract"] = n.ScriptHash.ToString(),
-                    ["state"] = ToJson(n.State, session),
+                    ["state"] = ToJson(n.State, session, settings.MaxItemResponseSize),
                 };
             }));
             if (useDiagnostic)
@@ -98,7 +98,7 @@ partial class RpcServer
             {
                 try
                 {
-                    stack.Add(ToJson(item, session));
+                    stack.Add(ToJson(item, session, settings.MaxItemResponseSize));
                 }
                 catch (Exception ex)
                 {
@@ -173,9 +173,9 @@ partial class RpcServer
         return array;
     }
 
-    private static JObject ToJson(StackItem item, Session session)
+    private JObject ToJson(StackItem item, Session session, int maxItemResponseSize)
     {
-        var json = item.ToJson();
+        var json = item.ToJson(maxItemResponseSize);
         if (item is InteropInterface interopInterface && interopInterface.GetInterface<object>() is IIterator iterator)
         {
             Guid id = Guid.NewGuid();

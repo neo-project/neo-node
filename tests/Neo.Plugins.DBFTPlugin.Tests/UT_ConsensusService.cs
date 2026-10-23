@@ -318,7 +318,7 @@ public class UT_ConsensusService : TestKit
         InvokeConsensusMethod(actor, "OnConsensusPayload", changeViewPayload);
 
         Assert.AreSame(changeViewPayload, context.ChangeViewPayloads[2]);
-        CollectionAssert.Contains(context.InvalidTransactions[rejectedHash].ToArray(), context.Validators[2]);
+        CollectionAssert.Contains(context.InvalidTransactions[rejectedHash].Value.ToArray(), context.Validators[2]);
 
         context.TransactionHashes = null;
         var commit = new Commit
@@ -374,8 +374,7 @@ public class UT_ConsensusService : TestKit
         var primaryServiceRef = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, settings, new TestSigner()));
         var primaryActor = primaryServiceRef.UnderlyingActor;
 
-        primaryServiceRef.Tell(new ConsensusService.Start());
-
+        InvokeConsensusMethod(primaryActor, "OnStart");
         Assert.IsTrue(GetBooleanField(primaryActor, "started"));
 
         var primaryContext = GetConsensusContext(primaryActor);
@@ -448,9 +447,11 @@ public class UT_ConsensusService : TestKit
         var serviceRef = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, settings, new TestSigner()));
         var actor = serviceRef.UnderlyingActor;
 
-        serviceRef.Tell(new ConsensusService.Start());
+        InvokeConsensusMethod(actor, "OnStart");
+        Assert.IsTrue(GetBooleanField(actor, "started"));
 
         var context = GetConsensusContext(actor);
+        Assert.IsNotNull(context.Validators);
         context.ChangeViewPayloads ??= new ExtensiblePayload[context.Validators.Length];
         context.LastChangeViewPayloads ??= new ExtensiblePayload[context.Validators.Length];
 
@@ -573,6 +574,56 @@ public class UT_ConsensusService : TestKit
 
         InvokeConsensusMethod(actor, "PostStop");
         Assert.IsFalse(GetBooleanField(actor, "started"));
+    }
+
+    [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public void PrepareResponseBeforeRequest_OnlyAcceptsBackup(bool fromPrimary)
+    {
+        var service = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, CreateCompatibleSettings(), new TestSigner()));
+        service.Tell(new ConsensusService.Start());
+        var actor = service.UnderlyingActor;
+        var context = GetConsensusContext(actor);
+        Assert.IsTrue(context.IsBackup);
+        Assert.IsFalse(context.RequestSentOrReceived);
+        Assert.IsNull(context.Transactions);
+
+        var request = WithWitness(context.CreatePayload(new PrepareRequest
+        {
+            BlockIndex = context.Block.Index,
+            ValidatorIndex = context.Block.PrimaryIndex,
+            ViewNumber = context.ViewNumber,
+            Version = context.Block.Version,
+            PrevHash = context.Block.PrevHash,
+            Timestamp = Math.Max(context.PrevHeader.Timestamp + 1, TimeProvider.Current.UtcNow.ToTimestampMS()),
+            Nonce = 123,
+            TransactionHashes = new[] { UInt256.Zero }
+        }));
+        var index = fromPrimary ? context.Block.PrimaryIndex : (byte)((context.Block.PrimaryIndex + 1) % context.Validators.Length);
+        var response = WithWitness(context.CreatePayload(new PrepareResponse
+        {
+            BlockIndex = context.Block.Index,
+            ValidatorIndex = index,
+            ViewNumber = context.ViewNumber,
+            PreparationHash = request.Hash
+        }));
+        service.Tell(new Blockchain.RelayResult(response, VerifyResult.Succeed));
+        Assert.IsNull(context.PreparationPayloads[context.Block.PrimaryIndex]);
+        if (!fromPrimary) Assert.AreSame(response, context.PreparationPayloads[index]);
+        Assert.IsFalse(context.RequestSentOrReceived);
+
+        // A relayed transaction must not crash or restart the waiting backup.
+        service.Tell(new Transaction { Signers = [], Attributes = [], Witnesses = [], Script = new byte[] { (byte)OpCode.RET } });
+        Assert.AreSame(actor, service.UnderlyingActor);
+        Assert.IsTrue(GetBooleanField(actor, "started"));
+
+        // A subsequent legitimate request must still initialize proposal state.
+        service.Tell(new Blockchain.RelayResult(request, VerifyResult.Succeed));
+        Assert.AreSame(request, context.PreparationPayloads[context.Block.PrimaryIndex]);
+        Assert.IsTrue(context.RequestSentOrReceived);
+        Assert.IsNotNull(context.Transactions);
+        CollectionAssert.AreEqual(new[] { UInt256.Zero }, context.TransactionHashes);
     }
 
     private static ConsensusContext GetConsensusContext(ConsensusService actor)

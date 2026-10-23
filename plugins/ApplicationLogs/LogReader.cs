@@ -118,13 +118,18 @@ public class LogReader : Plugin
             if (raw == null) throw new RpcException(RpcError.InvalidParams.WithData("Unknown transaction/blockhash"));
         }
 
-        if (!string.IsNullOrEmpty(triggerType) && Enum.TryParse(triggerType, true, out TriggerType _))
+        if (!string.IsNullOrEmpty(triggerType))
         {
+            if (!Enum.TryParse(triggerType, true, out TriggerType trigger)
+                || !Enum.GetNames<TriggerType>().Any(n => n.Equals(triggerType, StringComparison.OrdinalIgnoreCase)))
+                throw new RpcException(RpcError.InvalidParams.WithData($"Invalid trigger type: {triggerType}"));
+
             if (raw["executions"] is JArray executions)
             {
+                var triggerName = trigger.ToString();
                 for (var i = 0; i < executions.Count;)
                 {
-                    if (executions[i]!["trigger"]?.AsString().Equals(triggerType, StringComparison.OrdinalIgnoreCase) == false)
+                    if (executions[i]!["trigger"]?.AsString().Equals(triggerName, StringComparison.OrdinalIgnoreCase) == false)
                         executions.RemoveAt(i);
                     else
                         i++;

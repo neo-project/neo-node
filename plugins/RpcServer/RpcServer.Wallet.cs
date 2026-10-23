@@ -78,7 +78,8 @@ partial class RpcServer
     {
         return CheckWallet().GetAccount(address.ScriptHash)
             .NotNull_Or(RpcError.UnknownAccount.WithData($"{address.ScriptHash}"))
-            .GetKey()!
+            .GetKey()
+            .NotNull_Or(RpcError.UnknownAccount.WithData($"{address.ScriptHash}"))
             .Export();
     }
 

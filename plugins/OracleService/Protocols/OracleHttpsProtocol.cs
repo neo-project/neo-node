@@ -49,7 +49,7 @@ class OracleHttpsProtocol : IOracleProtocol
         HttpResponseMessage message;
         try
         {
-            int redirects = 2;
+            int redirects = OracleSettings.Default.Https.MaxRedirects;
             do
             {
                 if (!OracleSettings.Default.AllowPrivateHost)
@@ -61,9 +61,13 @@ class OracleHttpsProtocol : IOracleProtocol
                 message = await client.GetAsync(uri, HttpCompletionOption.ResponseContentRead, cancellation);
                 if (message.Headers.Location is not null)
                 {
-                    uri = message.Headers.Location;
-                    if (uri.Scheme != Uri.UriSchemeHttps)
+                    if (!TryResolveHttpsRedirect(uri, message.Headers.Location, out var next))
+                    {
+                        message.Dispose();
                         return (OracleResponseCode.ProtocolNotSupported, null);
+                    }
+                    message.Dispose();
+                    uri = next;
                     message = null;
                 }
             } while (message == null && redirects-- > 0);
@@ -80,7 +84,7 @@ class OracleHttpsProtocol : IOracleProtocol
             return (OracleResponseCode.Forbidden, null);
         if (!message.IsSuccessStatusCode)
             return (OracleResponseCode.Error, message.StatusCode.ToString());
-        if (!OracleSettings.Default.AllowedContentTypes.Contains(message.Content.Headers.ContentType.MediaType))
+        if (!IsSupportedContentType(message.Content.Headers, OracleSettings.Default.AllowedContentTypes))
             return (OracleResponseCode.ContentTypeNotSupported, null);
         if (message.Content.Headers.ContentLength.HasValue && message.Content.Headers.ContentLength > OracleResponse.MaxResultSize)
             return (OracleResponseCode.ResponseTooLarge, null);
@@ -99,7 +103,13 @@ class OracleHttpsProtocol : IOracleProtocol
         return (OracleResponseCode.Success, buffer.ToStrictUtf8String(0, read));
     }
 
-    private static Encoding GetEncoding(HttpContentHeaders headers)
+    internal static bool IsSupportedContentType(HttpContentHeaders headers, IEnumerable<string> allowed)
+    {
+        var mediaType = headers.ContentType?.MediaType;
+        return !string.IsNullOrEmpty(mediaType) && allowed.Contains(mediaType);
+    }
+
+    internal static Encoding GetEncoding(HttpContentHeaders headers)
     {
         Encoding encoding = null;
         if ((headers.ContentType != null) && (headers.ContentType.CharSet != null))
@@ -108,5 +118,15 @@ class OracleHttpsProtocol : IOracleProtocol
         }
 
         return encoding ?? Encoding.UTF8;
+    }
+
+    /// <summary>
+    /// Resolves an HTTP Location header against the current request URI.
+    /// Relative redirects stay on HTTPS when the current request is HTTPS.
+    /// </summary>
+    internal static bool TryResolveHttpsRedirect(Uri current, Uri location, out Uri next)
+    {
+        next = location.IsAbsoluteUri ? location : new Uri(current, location);
+        return next.IsAbsoluteUri && next.Scheme == Uri.UriSchemeHttps;
     }
 }

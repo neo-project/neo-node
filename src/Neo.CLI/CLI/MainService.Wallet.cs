@@ -24,7 +24,9 @@ using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;
 using Neo.Wallets;
+using Neo.Wallets.BIP32;
 using Neo.Wallets.NEP6;
+using System.Globalization;
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
@@ -130,15 +132,15 @@ partial class MainService
             }
         }
 
-        List<string> addresses = new List<string>();
+        var created = new (string Address, string Mnemonic)[count];
         using (var percent = new ConsolePercent(0, count))
         {
-            Parallel.For(0, count, (i) =>
+            Parallel.For(0, count, i =>
             {
-                WalletAccount account = CurrentWallet!.CreateAccount();
-                lock (addresses)
+                (WalletAccount account, string mnemonic) = CreateNewAccount(CurrentWallet!);
+                created[i] = (account.Address, mnemonic);
+                lock (created)
                 {
-                    addresses.Add(account.Address);
                     percent.Value++;
                 }
             });
@@ -147,8 +149,10 @@ partial class MainService
         if (CurrentWallet is NEP6Wallet wallet)
             wallet.Save();
 
+        ShowMnemonicOnce(created);
+
         Console.WriteLine($"Export addresses to {path}");
-        File.WriteAllLines(path, addresses);
+        File.WriteAllLines(path, created.Select(p => p.Address));
     }
 
     /// <summary>
@@ -306,9 +310,9 @@ partial class MainService
                 return;
             }
 
-            if (wifOrFile.Length > 1024 * 1024)
+            if (fileInfo.Length > 1024 * 1024)
             {
-                if (!ConsoleHelper.ReadUserInput($"The file '{fileInfo.FullName}' is too big, do you want to continue? (yes|no)", false).IsYes())
+                if (!ReadUserInput($"The file '{fileInfo.FullName}' is too big, do you want to continue? (yes|no)", false).IsYes())
                 {
                     return;
                 }
@@ -336,6 +340,65 @@ partial class MainService
             ConsoleHelper.Info("Address: ", account.Address);
             ConsoleHelper.Info(" Pubkey: ", account.GetKey()!.PublicKey.EncodePoint(true).ToHexString());
         }
+        if (CurrentWallet is NEP6Wallet wallet)
+            wallet.Save();
+    }
+
+    /// <summary>
+    /// Process "import mnemonic" command.
+    /// Derives the account at <c>m/44'/888'/0'/0/index</c> on secp256r1 and adds it to the open wallet.
+    /// The mnemonic is read from a hidden prompt so it is not kept in command history.
+    /// </summary>
+    /// <param name="index">Address index in the derivation path. Defaults to 0.</param>
+    [ConsoleCommand("import mnemonic", Category = "Wallet Commands", Description = "Import a private key from a BIP-39 mnemonic.")]
+    private void OnImportMnemonicCommand(uint index = 0)
+    {
+        if (NoWallet()) return;
+        if (index >= 0x80000000)
+        {
+            ConsoleHelper.Error("Address index must be between 0 and 2147483647.");
+            return;
+        }
+
+        string mnemonic = ReadUserInput("mnemonic", true);
+        if (mnemonic.Length == 0)
+        {
+            ConsoleHelper.Info("Cancelled");
+            return;
+        }
+
+        Mnemonic parsed;
+        try
+        {
+            parsed = Mnemonic.Parse(mnemonic);
+        }
+        catch (ArgumentException e)
+        {
+            ConsoleHelper.Error(GetExceptionMessage(e));
+            return;
+        }
+
+        string passphrase = ReadUserInput("BIP-39 passphrase (optional, press Enter for none)", true);
+        byte[]? privateKey = null;
+        try
+        {
+            privateKey = DerivePrivateKey(parsed, passphrase, index);
+            WalletAccount account = CurrentWallet!.CreateAccount(privateKey);
+            ConsoleHelper.Info("   Address: ", account.Address);
+            ConsoleHelper.Info("    Pubkey: ", account.GetKey()!.PublicKey.EncodePoint(true).ToHexString());
+            ConsoleHelper.Info("      Path: ", FormatNeoAccountPath(index));
+        }
+        catch (Exception e) when (e is FormatException or InvalidOperationException or ArgumentException)
+        {
+            ConsoleHelper.Error(GetExceptionMessage(e));
+            return;
+        }
+        finally
+        {
+            if (privateKey is not null)
+                Array.Clear(privateKey, 0, privateKey.Length);
+        }
+
         if (CurrentWallet is NEP6Wallet wallet)
             wallet.Save();
     }
@@ -940,6 +1003,97 @@ partial class MainService
             ConsoleHelper.Error("Failed to change password");
         }
     }
+
+    /// <summary>
+    /// Creates a standard account from a new English BIP-39 mnemonic.
+    /// The private key is <c>m/44'/888'/0'/0/0</c> on secp256r1, with no BIP-39 passphrase.
+    /// </summary>
+    private static (WalletAccount Account, string Mnemonic) CreateNewAccount(Wallet wallet)
+    {
+        while (true)
+        {
+            byte[] entropy = RandomNumberGenerator.GetBytes(16);
+            try
+            {
+                Mnemonic mnemonic = Mnemonic.Create(entropy, CultureInfo.GetCultureInfo("en"));
+                string phrase = mnemonic.ToString();
+                byte[] privateKey;
+                try
+                {
+                    privateKey = DerivePrivateKey(mnemonic, "", 0);
+                }
+                catch (InvalidOperationException)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    return (wallet.CreateAccount(privateKey), phrase);
+                }
+                catch (ArgumentException)
+                {
+                    continue;
+                }
+                finally
+                {
+                    Array.Clear(privateKey, 0, privateKey.Length);
+                }
+            }
+            finally
+            {
+                Array.Clear(entropy, 0, entropy.Length);
+            }
+        }
+    }
+
+    private static void ShowMnemonicOnce(string mnemonic)
+    {
+        ConsoleHelper.Warning("This mnemonic will only be shown once. Write it down and store it safely. It cannot be recovered from the wallet.");
+        ConsoleHelper.Info("  Mnemonic: ", mnemonic);
+        ConsoleHelper.Info("      Path: ", FormatNeoAccountPath(0));
+    }
+
+    private static void ShowMnemonicOnce((string Address, string Mnemonic)[] created)
+    {
+        if (created.Length == 0) return;
+
+        ConsoleHelper.Warning(created.Length == 1
+            ? "This mnemonic will only be shown once. Write it down and store it safely. It cannot be recovered from the wallet."
+            : "Each mnemonic below will only be shown once. Write it down and store it safely. It cannot be recovered from the wallet.");
+        foreach ((string address, string mnemonic) in created)
+        {
+            ConsoleHelper.Info("   Address: ", address);
+            ConsoleHelper.Info("  Mnemonic: ", mnemonic);
+            ConsoleHelper.Info("      Path: ", FormatNeoAccountPath(0));
+            Console.WriteLine();
+        }
+    }
+
+    /// <summary>
+    /// Derives a secp256r1 private key from a BIP-39 mnemonic at <c>m/44'/888'/0'/0/index</c>.
+    /// </summary>
+    private static byte[] DerivePrivateKey(Mnemonic mnemonic, string passphrase, uint index)
+    {
+        byte[] seed = mnemonic.DeriveSeed(passphrase);
+        try
+        {
+            ExtendedKey key = ExtendedKey.Create(seed, FormatNeoAccountPath(index));
+            byte[] privateKey = (byte[])key.PrivateKey.Clone();
+            Array.Clear(key.PrivateKey, 0, key.PrivateKey.Length);
+            return privateKey;
+        }
+        finally
+        {
+            Array.Clear(seed, 0, seed.Length);
+        }
+    }
+
+    private static string FormatNeoAccountPath(uint index)
+    {
+        return string.Format(CultureInfo.InvariantCulture, "m/44'/888'/0'/0/{0}", index);
+    }
+
     private string NormalizeMessage(string message)
     {
         if (string.IsNullOrEmpty(message) || message.Length < 2) return message;
