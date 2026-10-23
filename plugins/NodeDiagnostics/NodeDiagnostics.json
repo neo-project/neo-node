@@ -1,0 +1,84 @@
+{
+  "PluginConfiguration": {
+    "Environment": "production",
+    "ServiceName": "neo-node",
+    "NodeName": "",
+    "Tags": {
+      "role": "",
+      "region": ""
+    },
+    "CaptureUnhandledExceptions": true,
+    "CaptureUnobservedTaskExceptions": true,
+    "SendStartupDiagnosticEvent": false,
+    "IncludeStackTrace": true,
+    "HeartbeatIntervalSeconds": 60,
+    "ConsensusStallThresholdSeconds": 30,
+    "MaxQueueSize": 1024,
+    "BatchSize": 10,
+    "MaxRetries": 3,
+    "RetryDelayMilliseconds": 1000,
+    "RequestTimeoutMilliseconds": 5000,
+    "FlushTimeoutMilliseconds": 5000,
+    "MaxMessageLength": 4096,
+    "MaxStackTraceLength": 32768,
+    "Sinks": [
+      {
+        "Name": "custom-errors",
+        "Description": "Generic crash and error collector. Set Endpoint and Token for an internal gateway or webhook-compatible service.",
+        "Kind": "ErrorCollector",
+        "Provider": "CustomWebhook",
+        "Endpoint": "",
+        "Token": "",
+        "TokenHeader": "Authorization",
+        "TokenScheme": "Bearer",
+        "Headers": {},
+        "MinimumSeverity": "Error"
+      },
+      {
+        "Name": "sentry",
+        "Description": "Experimental Sentry event ingestion endpoint. Configure Endpoint from the project DSN store endpoint and provide the DSN auth header or key as required by your deployment.",
+        "Kind": "ErrorCollector",
+        "Provider": "Sentry",
+        "Endpoint": "",
+        "Token": "",
+        "TokenHeader": "X-Sentry-Auth",
+        "TokenScheme": "",
+        "Headers": {},
+        "MinimumSeverity": "Error"
+      },
+      {
+        "Name": "google-cloud-error-reporting",
+        "Description": "Experimental Google Cloud Error Reporting events.report endpoint. Configure Endpoint with the project path and use either an API key in the URL or an authorization token header.",
+        "Kind": "ErrorCollector",
+        "Provider": "GoogleCloudErrorReporting",
+        "Endpoint": "",
+        "Token": "",
+        "Headers": {},
+        "MinimumSeverity": "Error"
+      },
+      {
+        "Name": "betterstack-heartbeat",
+        "Description": "Better Stack heartbeat URL. The plugin sends periodic GET requests while the node process is running.",
+        "Kind": "StatusMonitor",
+        "Provider": "BetterStackHeartbeat",
+        "Endpoint": "",
+        "Method": "GET",
+        "Headers": {}
+      },
+      {
+        "Name": "ops-notifications",
+        "Description": "Webhook-compatible notification channel for node exceptions.",
+        "Kind": "Notification",
+        "Provider": "CustomWebhook",
+        "Endpoint": "",
+        "Token": "",
+        "TokenHeader": "Authorization",
+        "TokenScheme": "Bearer",
+        "Headers": {},
+        "MinimumSeverity": "Error"
+      }
+    ],
+    "UnhandledExceptionPolicy": "Ignore"
+  },
+  "Dependency": []
+}
