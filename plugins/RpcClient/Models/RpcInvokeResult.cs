@@ -13,6 +13,7 @@ using Neo.Extensions;
 using Neo.Json;
 using Neo.VM;
 using Neo.VM.Types;
+using System.Globalization;
 
 namespace Neo.Network.RPC.Models;
 
@@ -23,6 +24,9 @@ public class RpcInvokeResult
     public VMState State { get; set; }
 
     public long GasConsumed { get; set; }
+
+    /// <summary>Minimum system fee including bounded-call admission, when the node supplies it.</summary>
+    public long? MinimumRequiredFee { get; set; }
 
     public StackItem[] Stack { get; set; }
 
@@ -40,6 +44,9 @@ public class RpcInvokeResult
             ["state"] = State,
             ["gasconsumed"] = GasConsumed.ToString()
         };
+
+        if (MinimumRequiredFee is { } requiredFee)
+            json["minimumrequiredfee"] = requiredFee.ToString(CultureInfo.InvariantCulture);
 
         if (!string.IsNullOrEmpty(Exception))
             json["exception"] = Exception;
@@ -68,6 +75,13 @@ public class RpcInvokeResult
             Exception = json["exception"]?.AsString(),
             Session = json["session"]?.AsString()
         };
+        if (json["minimumrequiredfee"] is { } value)
+        {
+            if (value is not JString || !long.TryParse(value.GetString(), NumberStyles.None,
+                CultureInfo.InvariantCulture, out var requiredFee) || requiredFee < invokeScriptResult.GasConsumed)
+                throw new FormatException("The minimum required fee must be a nonnegative datoshi integer at least as large as gas consumed.");
+            invokeScriptResult.MinimumRequiredFee = requiredFee;
+        }
         try
         {
             invokeScriptResult.Stack = ((JArray)json["stack"]).Select(p => Utility.StackItemFromJson((JObject)p)).ToArray();

@@ -1,5 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup Condition="'$(NativeCoreRoot)' != ''">
+    <DefineConstants>$(DefineConstants);NATIVE_CORE_PREVIEW</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Moq" Version="4.20.72" />
   </ItemGroup>
