@@ -21,7 +21,7 @@ WORKDIR /neo
 COPY . .
 RUN dos2unix prepare-node.sh start.sh && chmod +x prepare-node.sh start.sh
 
-ARG CLI_VERSION=v3.10.1
+ARG CLI_VERSION=v3.10.2
 ARG PLUGIN_VERSION=
 ARG GITHUB_REPO=neo-project/neo-node
 ENV NEO_CLI_DIR=neo-cli-${CLI_VERSION}

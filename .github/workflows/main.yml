@@ -2,7 +2,7 @@ name: .NET Core Test and Publish
 
 on:
   push:
-    branches: [master-n3]
+    branches: [master-n3, v3.10.2]
   pull_request:
 
 env:
@@ -95,7 +95,7 @@ jobs:
         expect ./.github/workflows/test-neo-cli-plugins.expect "$expected_count"
       
   Release:
-    if: github.ref == 'refs/heads/master-n3' && github.repository == 'neo-project/neo-node'
+    if: (github.ref == 'refs/heads/master-n3' || github.ref == 'refs/heads/v3.10.2') && github.repository == 'neo-project/neo-node'
     needs: Test
     runs-on: ubuntu-latest
     permissions:
