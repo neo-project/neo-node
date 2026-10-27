@@ -112,6 +112,9 @@ abstract class TrackerBase : IDisposable
             return null;
         if (amountItem is not ByteString && amountItem is not Integer)
             return null;
+        // Notifications can contain byte strings larger than a VM integer.
+        if (amountItem is ByteString amountBytes && amountBytes.Size > Integer.MaxSize)
+            return null;
 
         var fromBytes = fromItem.IsNull ? null : fromItem.GetSpan().ToArray();
         if (fromBytes != null && fromBytes.Length != UInt160.Length)
