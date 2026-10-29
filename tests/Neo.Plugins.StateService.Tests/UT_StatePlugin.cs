@@ -214,8 +214,13 @@ public class UT_StatePlugin
             Extra = new JObject { ["padding"] = new string('A', 20_000) }
         };
         Assert.IsTrue(manifest.IsValid(ExecutionEngineLimits.Default, hash));
-        var contract = new ContractState { Id = 123, Hash = hash, Nef = NefFile.Parse(nef.ToArray()),
-            Manifest = ContractManifest.Parse(manifest.ToJson().ToByteArray(false)) };
+        var contract = new ContractState
+        {
+            Id = 123,
+            Hash = hash,
+            Nef = NefFile.Parse(nef.ToArray()),
+            Manifest = ContractManifest.Parse(manifest.ToJson().ToByteArray(false))
+        };
         Neo.SmartContract.Helper.Check(new Script(contract.Nef.Script, true), contract.Manifest.Abi);
         var item = StorageItem.CreateSealed(contract);
         var bytes = item.ToArray();
@@ -235,7 +240,7 @@ public class UT_StatePlugin
     public void FailedSnapshotPreparationDoesNotCommitPartialTrieChanges()
     {
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
-            { ["PluginConfiguration:FullState"] = "false" }).Build().GetSection("PluginConfiguration");
+        { ["PluginConfiguration:FullState"] = "false" }).Build().GetSection("PluginConfiguration");
         StateServiceSettings.Load(config);
         var key = new StorageKey { Id = 123, Key = new byte[] { 1 } };
         using var changes = _system!.GetSnapshotCache();
