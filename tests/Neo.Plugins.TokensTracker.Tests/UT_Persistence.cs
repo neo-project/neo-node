@@ -29,9 +29,12 @@ namespace Neo.Plugins.TokensTracker.Tests;
 public class UT_Persistence
 {
     [TestMethod]
-    [DataRow(false)]
-    [DataRow(true)]
-    public void MalformedTransferDoesNotPreventLaterBalanceAndHistory(bool nft)
+    [DataRow(false, false, false)]
+    [DataRow(true, false, false)]
+    [DataRow(true, true, false)]
+    [DataRow(false, false, true)]
+    [DataRow(true, true, true)]
+    public void BalanceQueriesPreserveConsensusStorageAndHandleMalformedTransfers(bool nft, bool divisible, bool writesStorage)
     {
         var settings = ProtocolSettings.Default with
         {
@@ -45,7 +48,14 @@ public class UT_Persistence
         var asset = UInt160.Parse("0x0000000000000000000000000000000000000002");
         var token = Enumerable.Repeat((byte)0xab, 64).ToArray();
         using var balanceScript = new ScriptBuilder();
-        balanceScript.Emit(OpCode.INITSLOT, new byte[] { 0, 1 });
+        balanceScript.Emit(OpCode.INITSLOT, new byte[] { 0, divisible ? (byte)2 : (byte)1 });
+        if (writesStorage)
+        {
+            balanceScript.EmitPush(new byte[] { 0x99 });
+            balanceScript.EmitPush(new byte[] { 0x01 });
+            balanceScript.EmitSysCall(ApplicationEngine.System_Storage_GetContext);
+            balanceScript.EmitSysCall(ApplicationEngine.System_Storage_Put);
+        }
         balanceScript.EmitPush(500);
         balanceScript.Emit(OpCode.RET);
         var contract = new ContractState
@@ -62,8 +72,11 @@ public class UT_Persistence
                 Trusts = WildcardContainer<ContractPermissionDescriptor>.Create(),
                 Abi = new ContractAbi
                 {
-                    Methods = [new ContractMethodDescriptor { Name = "balanceOf", Offset = 0, Safe = true,
-                        Parameters = [new ContractParameterDefinition { Name = "account", Type = ContractParameterType.Hash160 }],
+                    Methods = [new ContractMethodDescriptor { Name = "balanceOf", Offset = 0, Safe = false,
+                        Parameters = divisible
+                            ? [new ContractParameterDefinition { Name = "account", Type = ContractParameterType.Hash160 },
+                               new ContractParameterDefinition { Name = "tokenId", Type = ContractParameterType.ByteArray }]
+                            : [new ContractParameterDefinition { Name = "account", Type = ContractParameterType.Hash160 }],
                         ReturnType = ContractParameterType.Integer }],
                     Events = [new ContractEventDescriptor { Name = "Transfer", Parameters =
                         Enumerable.Range(0, nft ? 4 : 3).Select(i => new ContractParameterDefinition
@@ -107,10 +120,23 @@ public class UT_Persistence
         tracker.OnPersist(system, block, snapshot, [execution]);
         tracker.Commit();
 
+        var storageKey = new KeyBuilder(contract.Id, 0x01);
+        Assert.IsFalse(snapshot.Contains(storageKey), "Tracker queries must not modify consensus storage.");
+        snapshot.Commit();
+        using var persisted = system.GetSnapshotCache();
+        Assert.IsFalse(persisted.Contains(storageKey));
+        if (writesStorage)
+        {
+            Assert.IsFalse(database.FindPrefix<Nep17BalanceKey, TokenBalance>(new byte[] { 0xe8 }).Any());
+            Assert.IsFalse(database.FindPrefix<Nep11BalanceKey, TokenBalance>(new byte[] { 0xf8 }).Any());
+            return;
+        }
+
         if (nft)
         {
-            var balance = database.FindPrefix<Nep11BalanceKey, TokenBalance>(new byte[] { 0xf8 }).Single();
-            Assert.AreEqual(System.Numerics.BigInteger.One, balance.Item2.Balance);
+            var balance = database.FindPrefix<Nep11BalanceKey, TokenBalance>(new byte[] { 0xf8 })
+                .Single(p => p.Item1.UserScriptHash == recipient);
+            Assert.AreEqual(new System.Numerics.BigInteger(divisible ? 500 : 1), balance.Item2.Balance);
             CollectionAssert.AreEqual(token, balance.Item1.Token.GetSpan().ToArray());
             Assert.HasCount(1, tracker.QueryTransfers<Nep11TransferKey, TokenTransfer>(0xfa, recipient, 0, 2));
         }
