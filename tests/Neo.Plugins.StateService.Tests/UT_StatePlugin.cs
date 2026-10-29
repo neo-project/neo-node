@@ -14,6 +14,7 @@ using Neo.Cryptography.MPTTrie;
 using Neo.Extensions;
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
+using Neo.Persistence;
 using Neo.Plugins.RpcServer;
 using Neo.Plugins.StateService.Network;
 using Neo.Plugins.StateService.Storage;
@@ -187,6 +188,85 @@ public class UT_StatePlugin
 
         Assert.IsTrue(AddStateRoot(futureRoot));
         Assert.IsFalse(AddStateRoot(futureRoot));
+    }
+
+    [TestMethod]
+    public void LargeContractStateCanBePersistedAndReloaded()
+    {
+        var script = Enumerable.Repeat((byte)OpCode.NOP, 50_000).ToArray();
+        script[^1] = (byte)OpCode.RET;
+        var nef = new NefFile { Compiler = "test", Source = "", Tokens = [], Script = script };
+        nef.CheckSum = NefFile.ComputeChecksum(nef);
+        var hash = UInt160.Parse(ScriptHashHex);
+        var manifest = new ContractManifest
+        {
+            Name = "LargeContract",
+            Groups = [],
+            SupportedStandards = [],
+            Abi = new ContractAbi
+            {
+                Methods = [new ContractMethodDescriptor { Name = "main", Offset = 0, Parameters = [],
+                    ReturnType = ContractParameterType.Void, Safe = true }],
+                Events = []
+            },
+            Permissions = [],
+            Trusts = WildcardContainer<ContractPermissionDescriptor>.CreateWildcard(),
+            Extra = new JObject { ["padding"] = new string('A', 20_000) }
+        };
+        Assert.IsTrue(manifest.IsValid(ExecutionEngineLimits.Default, hash));
+        var contract = new ContractState { Id = 123, Hash = hash, Nef = NefFile.Parse(nef.ToArray()),
+            Manifest = ContractManifest.Parse(manifest.ToJson().ToByteArray(false)) };
+        Neo.SmartContract.Helper.Check(new Script(contract.Nef.Script, true), contract.Manifest.Abi);
+        var item = StorageItem.CreateSealed(contract);
+        var bytes = item.ToArray();
+        Assert.IsTrue(bytes.Length > 65_539);
+        Assert.IsTrue(bytes.Length <= ExecutionEngineLimits.Default.MaxItemSize);
+        var key = new KeyBuilder(NativeContract.ContractManagement.Id, 8).Add(hash);
+        using var changes = _system!.GetSnapshotCache();
+        changes.Add(key, item);
+        StateStore.Singleton.UpdateLocalStateRootSnapshot(1, changes.GetChangeSet().ToArray());
+        StateStore.Singleton.UpdateLocalStateRoot(1);
+        using var reloaded = StateStore.Singleton.GetSnapshot();
+        Assert.AreEqual(1u, reloaded.CurrentLocalRootIndex());
+        CollectionAssert.AreEqual(bytes, reloaded.Trie[key.ToArray()]);
+    }
+
+    [TestMethod]
+    public void FailedSnapshotPreparationDoesNotCommitPartialTrieChanges()
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+            { ["PluginConfiguration:FullState"] = "false" }).Build().GetSection("PluginConfiguration");
+        StateServiceSettings.Load(config);
+        var key = new StorageKey { Id = 123, Key = new byte[] { 1 } };
+        using var changes = _system!.GetSnapshotCache();
+        changes.Add(key, new StorageItem(new byte[] { 0xaa }));
+        StateStore.Singleton.UpdateLocalStateRootSnapshot(1, changes.GetChangeSet().ToArray());
+        changes.Commit();
+        StateStore.Singleton.UpdateLocalStateRoot(1);
+        var previousRoot = StateStore.Singleton.CurrentLocalRootHash;
+
+        using var failingChanges = _system.GetSnapshotCache();
+        failingChanges.GetAndChange(key)!.Value = new byte[] { 0xbb };
+        // Fail after modifying a live trie path, independently of the leaf size limit.
+        IEnumerable<KeyValuePair<StorageKey, DataCache.Trackable>> FailAfterFirstChange()
+        {
+            foreach (var change in failingChanges.GetChangeSet()) yield return change;
+            throw new InvalidOperationException("Injected preparation failure");
+        }
+        Assert.ThrowsExactly<InvalidOperationException>(() =>
+            StateStore.Singleton.UpdateLocalStateRootSnapshot(2, FailAfterFirstChange()));
+        StateStore.Singleton.UpdateLocalStateRoot(2);
+        Assert.AreEqual(1u, StateStore.Singleton.LocalRootIndex);
+        Assert.AreEqual(previousRoot, StateStore.Singleton.CurrentLocalRootHash);
+        using (var reloaded = StateStore.Singleton.GetSnapshot())
+            CollectionAssert.AreEqual(new StorageItem(new byte[] { 0xaa }).ToArray(), reloaded.Trie[key.ToArray()]);
+
+        // Retrying the complete change set must still resolve the original trie nodes.
+        StateStore.Singleton.UpdateLocalStateRootSnapshot(2, failingChanges.GetChangeSet().ToArray());
+        StateStore.Singleton.UpdateLocalStateRoot(2);
+        using var recovered = StateStore.Singleton.GetSnapshot();
+        Assert.AreEqual(2u, recovered.CurrentLocalRootIndex());
+        CollectionAssert.AreEqual(new StorageItem(new byte[] { 0xbb }).ToArray(), recovered.Trie[key.ToArray()]);
     }
 
     private static void SetupMockStateRoot(uint index, UInt256 rootHash)
