@@ -130,7 +130,7 @@ abstract class TrackerBase : IDisposable
         return stateItems.Count switch
         {
             3 => new TransferRecord(asset, @from, to, null, amountItem.GetInteger()),
-            4 when stateItems[3] is ByteString tokenId && tokenId.Size <= 64 => new TransferRecord(asset, @from, to, tokenId.Memory.ToArray(), amountItem.GetInteger()),
+            4 when stateItems[3] is ByteString tokenId && tokenId.Size <= ApplicationEngine.MaxStorageKeySize => new TransferRecord(asset, @from, to, tokenId.Memory.ToArray(), amountItem.GetInteger()),
             _ => null
         };
     }
