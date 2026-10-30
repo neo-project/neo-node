@@ -155,6 +155,23 @@ public class UT_Trie
     }
 
     [TestMethod]
+    public void MaximumLeafValueSurvivesCommitAndReload()
+    {
+        var value = new byte[Node.MaxValueLength];
+        value[^1] = 0xab;
+        using var store = new MemoryStore();
+        using var snapshot = store.GetSnapshot();
+        var trie = new Trie(snapshot, null);
+        trie.Put([1], value);
+        var root = trie.Root.Hash;
+        trie.Commit();
+        snapshot.Commit();
+        using var reloaded = store.GetSnapshot();
+        CollectionAssert.AreEqual(value, new Trie(reloaded, root)[new byte[] { 1 }]);
+        Assert.ThrowsExactly<ArgumentException>(() => trie.Put([2], new byte[Node.MaxValueLength + 1]));
+    }
+
+    [TestMethod]
     public void TestPutCantResolve()
     {
         var mpt = new Trie(_mptdb.GetSnapshot(), _root.Hash);
