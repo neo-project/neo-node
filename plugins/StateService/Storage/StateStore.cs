@@ -19,6 +19,7 @@ using Neo.Persistence;
 using Neo.Plugins.StateService.Network;
 using Neo.Plugins.StateService.Verification;
 using Neo.SmartContract;
+using System.Collections.Concurrent;
 
 namespace Neo.Plugins.StateService.Storage;
 
@@ -27,20 +28,32 @@ class StateStore : UntypedActor
     private readonly StatePlugin _system;
     private readonly IStore _store;
     private const int MaxCacheCount = 100;
-    private readonly Dictionary<uint, StateRoot> _cache = [];
+    private readonly ConcurrentDictionary<uint, StateRoot> _cache = new();
+    private readonly object _snapshotLock = new();
+    private bool _disposed;
     private StateSnapshot _currentSnapshot;
     private StateSnapshot? _stateSnapshot;
-    public UInt256 CurrentLocalRootHash => _currentSnapshot.CurrentLocalRootHash();
-    public uint? LocalRootIndex => _currentSnapshot.CurrentLocalRootIndex();
-    public uint? ValidatedRootIndex => _currentSnapshot.CurrentValidatedRootIndex();
+    public UInt256 CurrentLocalRootHash => ReadCurrentSnapshot(snapshot => snapshot.CurrentLocalRootHash());
+    public uint? LocalRootIndex => ReadCurrentSnapshot(snapshot => snapshot.CurrentLocalRootIndex());
+    public uint? ValidatedRootIndex => ReadCurrentSnapshot(snapshot => snapshot.CurrentValidatedRootIndex());
+
+    private T ReadCurrentSnapshot<T>(Func<StateSnapshot, T> read)
+    {
+        lock (_snapshotLock)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            return read(_currentSnapshot);
+        }
+    }
 
     private static StateStore? _singleton;
     public static StateStore Singleton
     {
         get
         {
-            while (_singleton is null) Thread.Sleep(10);
-            return _singleton;
+            StateStore? store;
+            while ((store = Volatile.Read(ref _singleton)) is null) Thread.Sleep(10);
+            return store;
         }
     }
 
@@ -49,14 +62,20 @@ class StateStore : UntypedActor
         if (_singleton != null) throw new InvalidOperationException(nameof(StateStore));
         _system = system;
         _store = StatePlugin.NeoSystem.LoadStore(path);
-        _singleton = this;
         StatePlugin.NeoSystem.ActorSystem.EventStream.Subscribe(Self, typeof(Blockchain.RelayResult));
         _currentSnapshot = GetSnapshot();
+        Volatile.Write(ref _singleton, this);
     }
 
     public void Dispose()
     {
-        _store.Dispose();
+        lock (_snapshotLock)
+        {
+            if (_disposed) return;
+            _disposed = true;
+            _currentSnapshot.Dispose();
+            _store.Dispose();
+        }
     }
 
     public StateSnapshot GetSnapshot()
@@ -181,22 +200,27 @@ class StateStore : UntypedActor
 
     private void CheckValidatedStateRoot(uint index)
     {
-        if (_cache.TryGetValue(index, out var stateRoot))
+        if (_cache.TryRemove(index, out var stateRoot))
         {
-            _cache.Remove(index);
             Self.Tell(stateRoot);
         }
     }
 
     private void UpdateCurrentSnapshot()
     {
-        Interlocked.Exchange(ref _currentSnapshot, GetSnapshot())?.Dispose();
+        lock (_snapshotLock)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            var previous = _currentSnapshot;
+            _currentSnapshot = GetSnapshot();
+            previous.Dispose();
+        }
     }
 
     protected override void PostStop()
     {
-        _currentSnapshot?.Dispose();
-        _store?.Dispose();
+        Dispose();
+        Interlocked.CompareExchange(ref _singleton, null, this);
         base.PostStop();
     }
 
