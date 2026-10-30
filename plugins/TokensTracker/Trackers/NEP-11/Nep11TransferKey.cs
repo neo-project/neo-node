@@ -40,7 +40,8 @@ public class Nep11TransferKey : TokenTransferKey, IComparable<Nep11TransferKey>,
         if (result3 != 0) return result3;
         var result4 = BlockXferNotificationIndex.CompareTo(other.BlockXferNotificationIndex);
         if (result4 != 0) return result4;
-        return (Token.GetInteger() - other.Token.GetInteger()).Sign;
+        // Token IDs are opaque bytes, not VM integers; distinct encodings must stay distinct.
+        return Token.GetSpan().SequenceCompareTo(other.Token.GetSpan());
     }
 
     public bool Equals(Nep11TransferKey? other)

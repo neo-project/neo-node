@@ -43,7 +43,8 @@ public class Nep11BalanceKey : IComparable<Nep11BalanceKey>, IEquatable<Nep11Bal
         if (result != 0) return result;
         result = AssetScriptHash.CompareTo(other.AssetScriptHash);
         if (result != 0) return result;
-        return (Token.GetInteger() - other.Token.GetInteger()).Sign;
+        // Token IDs are opaque bytes, not VM integers; distinct encodings must stay distinct.
+        return Token.GetSpan().SequenceCompareTo(other.Token.GetSpan());
     }
 
     public bool Equals(Nep11BalanceKey? other)

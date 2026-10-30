@@ -15,6 +15,7 @@ using Neo.Json;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
+using Neo.SmartContract;
 using Neo.VM.Types;
 using Neo.Wallets;
 using System.Buffers.Binary;
@@ -112,6 +113,9 @@ abstract class TrackerBase : IDisposable
             return null;
         if (amountItem is not ByteString && amountItem is not Integer)
             return null;
+        // Notifications can contain byte strings larger than a VM integer.
+        if (amountItem is ByteString amountBytes && amountBytes.Size > Integer.MaxSize)
+            return null;
 
         var fromBytes = fromItem.IsNull ? null : fromItem.GetSpan().ToArray();
         if (fromBytes != null && fromBytes.Length != UInt160.Length)
@@ -127,7 +131,7 @@ abstract class TrackerBase : IDisposable
         return stateItems.Count switch
         {
             3 => new TransferRecord(asset, @from, to, null, amountItem.GetInteger()),
-            4 when stateItems[3] is ByteString tokenId => new TransferRecord(asset, @from, to, tokenId.Memory.ToArray(), amountItem.GetInteger()),
+            4 when stateItems[3] is ByteString tokenId && tokenId.Size <= ApplicationEngine.MaxStorageKeySize => new TransferRecord(asset, @from, to, tokenId.Memory.ToArray(), amountItem.GetInteger()),
             _ => null
         };
     }
