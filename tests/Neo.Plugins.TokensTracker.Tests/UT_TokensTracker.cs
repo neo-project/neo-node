@@ -6,8 +6,8 @@
 // repository or http://www.opensource.org/licenses/mit-license.php
 // for more details.
 //
-// Redistribution and use in source and binary forms, with or without
-// modifications, are permitted.
+// Redistribution and use in source and binary forms with or without
+// modifications are permitted.
 
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
