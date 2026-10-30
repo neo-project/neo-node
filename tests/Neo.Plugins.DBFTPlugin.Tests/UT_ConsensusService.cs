@@ -582,13 +582,9 @@ public class UT_ConsensusService : TestKit
     [DataRow(2)]
     public void RecoveryMessage_RejectsEmptyCompactInvocation(int kind)
     {
-        var service = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, CreateCompatibleSettings(), new TestSigner()));
-        service.Tell(new ConsensusService.Start());
-        var actor = service.UnderlyingActor;
-        var context = GetConsensusContext(actor);
         var message = new RecoveryMessage
         {
-            BlockIndex = context.Block.Index,
+            BlockIndex = 1,
             ValidatorIndex = 0,
             ViewNumber = kind == 0 ? (byte)1 : (byte)0,
             ChangeViewMessages = [],
@@ -605,18 +601,14 @@ public class UT_ConsensusService : TestKit
             message.CommitMessages[0] = new RecoveryMessage.CommitPayloadCompact
             { ValidatorIndex = 0, ViewNumber = 0, Signature = new byte[64], InvocationScript = ReadOnlyMemory<byte>.Empty };
 
-        var decoded = (RecoveryMessage)ConsensusMessage.DeserializeFrom(message.ToArray());
-        Assert.IsFalse(decoded.Verify(neoSystem.Settings));
-        service.Tell(new Blockchain.RelayResult(WithWitness(context.CreatePayload(decoded)), VerifyResult.Succeed));
-        Assert.AreSame(actor, service.UnderlyingActor);
-        Assert.IsTrue(GetBooleanField(actor, "started"));
-        Assert.IsFalse(GetBooleanField(actor, "isRecovering"));
+        Assert.ThrowsExactly<FormatException>(() => ConsensusMessage.DeserializeFrom(message.ToArray()));
 
         // Non-empty scripts pass structural checks; signature checks remain in reverification.
         var script = new byte[] { (byte)OpCode.PUSH1 };
-        if (kind == 0) decoded.ChangeViewMessages[0].InvocationScript = script;
-        else if (kind == 1) decoded.PreparationMessages[0].InvocationScript = script;
-        else decoded.CommitMessages[0].InvocationScript = script;
+        if (kind == 0) message.ChangeViewMessages[0].InvocationScript = script;
+        else if (kind == 1) message.PreparationMessages[0].InvocationScript = script;
+        else message.CommitMessages[0].InvocationScript = script;
+        var decoded = (RecoveryMessage)ConsensusMessage.DeserializeFrom(message.ToArray());
         Assert.IsTrue(decoded.Verify(neoSystem.Settings));
     }
 
