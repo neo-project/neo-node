@@ -11,13 +11,16 @@
 
 using Neo.Extensions;
 using Neo.IO;
-using Neo.SmartContract;
+using Neo.VM;
 
 namespace Neo.Cryptography.MPTTrie;
 
 partial class Node
 {
-    public const int MaxValueLength = 3 + ApplicationEngine.MaxStorageValueSize + sizeof(bool);
+    // Native contract state can reach the VM item limit, beyond System.Storage.Put's limit.
+    // Include the variable-length prefix and legacy StorageItem flag.
+    public static readonly int MaxValueLength = checked((int)ExecutionEngineLimits.Default.MaxItemSize
+        + ExecutionEngineLimits.Default.MaxItemSize.GetVarSize() + sizeof(bool));
     public ReadOnlyMemory<byte> Value { get; set; } = ReadOnlyMemory<byte>.Empty;
 
     public static Node NewLeaf(byte[] value)

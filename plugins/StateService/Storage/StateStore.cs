@@ -128,32 +128,42 @@ class StateStore : UntypedActor
     public void UpdateLocalStateRootSnapshot(uint height, IEnumerable<KeyValuePair<StorageKey, DataCache.Trackable>> changeSet)
     {
         _stateSnapshot?.Dispose();
-        _stateSnapshot = Singleton.GetSnapshot();
-        foreach (var item in changeSet)
+        _stateSnapshot = null;
+        var snapshot = GetSnapshot();
+        try
         {
-            switch (item.Value.State)
+            foreach (var item in changeSet)
             {
-                case TrackState.Added:
-                    _stateSnapshot.Trie.Put(item.Key.ToArray(), item.Value.Item.ToArray());
-                    break;
-                case TrackState.Changed:
-                    _stateSnapshot.Trie.Put(item.Key.ToArray(), item.Value.Item.ToArray());
-                    break;
-                case TrackState.Deleted:
-                    _stateSnapshot.Trie.Delete(item.Key.ToArray());
-                    break;
+                switch (item.Value.State)
+                {
+                    case TrackState.Added:
+                        snapshot.Trie.Put(item.Key.ToArray(), item.Value.Item.ToArray());
+                        break;
+                    case TrackState.Changed:
+                        snapshot.Trie.Put(item.Key.ToArray(), item.Value.Item.ToArray());
+                        break;
+                    case TrackState.Deleted:
+                        snapshot.Trie.Delete(item.Key.ToArray());
+                        break;
+                }
             }
-        }
 
-        var rootHash = _stateSnapshot.Trie.Root.Hash;
-        var stateRoot = new StateRoot
+            var rootHash = snapshot.Trie.Root.Hash;
+            var stateRoot = new StateRoot
+            {
+                Version = StateRoot.CurrentVersion,
+                Index = height,
+                RootHash = rootHash,
+                Witness = null,
+            };
+            snapshot.AddLocalStateRoot(stateRoot);
+            _stateSnapshot = snapshot;
+        }
+        catch
         {
-            Version = StateRoot.CurrentVersion,
-            Index = height,
-            RootHash = rootHash,
-            Witness = null,
-        };
-        _stateSnapshot.AddLocalStateRoot(stateRoot);
+            snapshot.Dispose();
+            throw;
+        }
     }
 
     public void UpdateLocalStateRoot(uint height)
