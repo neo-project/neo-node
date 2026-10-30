@@ -11,6 +11,7 @@
 
 using Neo.Extensions;
 using Neo.IO;
+using Neo.Plugins.DBFTPlugin.Types;
 
 namespace Neo.Plugins.DBFTPlugin.Messages;
 
@@ -22,12 +23,20 @@ partial class RecoveryMessage
         public byte OriginalViewNumber;
         public ulong Timestamp;
         public ReadOnlyMemory<byte> InvocationScript;
+        public ChangeViewReason Reason;
+        public UInt256[] RejectedHashes;
 
         int ISerializable.Size =>
             sizeof(byte) +                  //ValidatorIndex
             sizeof(byte) +                  //OriginalViewNumber
             sizeof(ulong) +                 //Timestamp
-            InvocationScript.GetVarSize();  //InvocationScript
+            InvocationScript.GetVarSize() + //InvocationScript
+            sizeof(ChangeViewReason) +      //Reason
+            (Reason switch
+            {
+                ChangeViewReason.TxRejectedByPolicy or ChangeViewReason.TxInvalid => RejectedHashes.GetVarSize(),
+                _ => 0
+            });
 
         void ISerializable.Deserialize(ref MemoryReader reader)
         {
@@ -35,6 +44,9 @@ partial class RecoveryMessage
             OriginalViewNumber = reader.ReadByte();
             Timestamp = reader.ReadUInt64();
             InvocationScript = reader.ReadVarMemory(1024);
+            Reason = (ChangeViewReason)reader.ReadByte();
+            if (Reason is ChangeViewReason.TxRejectedByPolicy or ChangeViewReason.TxInvalid)
+                RejectedHashes = reader.ReadSerializableArray<UInt256>(ushort.MaxValue);
         }
 
         void ISerializable.Serialize(BinaryWriter writer)
@@ -43,6 +55,9 @@ partial class RecoveryMessage
             writer.Write(OriginalViewNumber);
             writer.Write(Timestamp);
             writer.WriteVarBytes(InvocationScript.Span);
+            writer.Write((byte)Reason);
+            if (Reason is ChangeViewReason.TxRejectedByPolicy or ChangeViewReason.TxInvalid)
+                writer.Write(RejectedHashes);
         }
     }
 }
