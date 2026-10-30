@@ -21,6 +21,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Neo.CLI.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="neo.ico" />
   </ItemGroup>
 
