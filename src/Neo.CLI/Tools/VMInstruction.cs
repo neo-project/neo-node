@@ -178,7 +178,7 @@ internal sealed class VMInstruction : IEnumerable<VMInstruction>
             OpCode.ENDTRY_L => $"[{checked(Position + AsToken<int>()):X08}]",
             OpCode.TRY => $"[{AsToken<byte>():X02}, {AsToken<byte>(1):X02}]",
             OpCode.INITSLOT => $"{AsToken<byte>()}, {AsToken<byte>(1)}",
-            OpCode.TRY_L => $"[{checked(Position + AsToken<int>()):X08}, {checked(Position + AsToken<int>()):X08}]",
+            OpCode.TRY_L => $"[{checked(Position + AsToken<int>()):X08}, {checked(Position + AsToken<int>(4)):X08}]",
             OpCode.CALLT => $"[{checked(Position + AsToken<ushort>()):X08}]",
             OpCode.NEWARRAY_T or
             OpCode.ISTYPE or

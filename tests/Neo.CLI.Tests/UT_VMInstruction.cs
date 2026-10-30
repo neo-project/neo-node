@@ -35,6 +35,19 @@ public class UT_VMInstruction
     }
 
     [TestMethod]
+    public void DecodeOperand_UsesBothTryLongOffsets()
+    {
+        var script = new byte[9];
+        script[0] = (byte)OpCode.TRY_L;
+        BitConverter.GetBytes(4).CopyTo(script, 1);
+        BitConverter.GetBytes(8).CopyTo(script, 5);
+
+        var instruction = new VMInstruction(script);
+
+        Assert.AreEqual("[00000004, 00000008]", instruction.DecodeOperand());
+    }
+
+    [TestMethod]
     public void Enumerator_WalksFullScript()
     {
         var script = new byte[] { (byte)OpCode.NOP, (byte)OpCode.RET };
