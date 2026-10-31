@@ -13,6 +13,7 @@ using Moq;
 using Neo.Cryptography;
 using Neo.Cryptography.ECC;
 using Neo.Extensions;
+using Neo.IO;
 using Neo.Json;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
@@ -149,6 +150,27 @@ public class UT_TransactionManager
     }
 
     [TestMethod]
+    public async Task TransactionUsesRequiredAdmissionFeeAndRejectsFaultedSimulation()
+    {
+        byte[] script = [0];
+        var response = new JObject
+        {
+            ["script"] = Convert.ToBase64String(script),
+            ["state"] = "HALT",
+            ["gasconsumed"] = "100",
+            ["minimumrequiredfee"] = "100000100",
+            ["stack"] = new JArray()
+        };
+        rpcClientMock.Setup(p => p.RpcSendAsync("invokescript", It.Is<JToken[]>(j =>
+            Convert.FromBase64String(j[0].AsString()).SequenceEqual(script)))).ReturnsAsync(response);
+        var factory = new TransactionManagerFactory(rpcClientMock.Object);
+        var manager = await factory.MakeTransactionAsync(script, [new Signer { Account = sender, Scopes = WitnessScope.None }]);
+        Assert.AreEqual(100000100L, manager.Tx.SystemFee);
+        response["state"] = "FAULT";
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => factory.MakeTransactionAsync(script));
+    }
+
+    [TestMethod]
     public async Task TestSign()
     {
         Signer[] signers = new Signer[1]
@@ -225,6 +247,47 @@ public class UT_TransactionManager
             .AddMultiSig(keyPair1, 2, keyPair1.PublicKey, keyPair2.PublicKey)
             .AddMultiSig(keyPair2, 2, keyPair1.PublicKey, keyPair2.PublicKey)
             .SignAsync();
+    }
+
+    [TestMethod]
+    public async Task CustomWitnessIsPreservedInFeeQuote()
+    {
+        var custom = Contract.Create([ContractParameterType.Integer, ContractParameterType.ByteArray],
+            [(byte)OpCode.DROP, (byte)OpCode.DROP, (byte)OpCode.PUSH1]);
+        using var invocation = new ScriptBuilder();
+        invocation.EmitPush(new byte[] { 7, 8 });
+        invocation.EmitPush(42);
+        int quotes = 0;
+        rpcClientMock.Setup(p => p.RpcSendAsync("calculatenetworkfee", It.IsAny<JToken[]>()))
+            .ReturnsAsync((string _, JToken[] args) =>
+            {
+                var quoted = Convert.FromBase64String(args[0].AsString()).AsSerializable<Transaction>();
+                CollectionAssert.AreEqual(custom.Script, quoted.Witnesses[1].VerificationScript.ToArray());
+                CollectionAssert.AreEqual(invocation.ToArray(), quoted.Witnesses[1].InvocationScript.ToArray());
+                if (++quotes == 2) Assert.AreEqual(66, quoted.Witnesses[0].InvocationScript.Length);
+                return new JObject { ["networkfee"] = 100000000 };
+            });
+        var manager = await TransactionManager.MakeTransactionAsync(client, new byte[] { (byte)OpCode.PUSH1 }, 100,
+            [new Signer { Account = sender, Scopes = WitnessScope.None },
+             new Signer { Account = custom.ScriptHash, Scopes = WitnessScope.None }]);
+        var signed = await manager.AddSignature(keyPair1).AddWitness(custom, 42, new byte[] { 7, 8 }).SignAsync();
+        Assert.AreEqual(2, quotes);
+        CollectionAssert.AreEqual(custom.Script, signed.Witnesses[1].VerificationScript.ToArray());
+    }
+
+    [TestMethod]
+    public async Task FinalWitnessFeeIncreaseDoesNotMutateSignedTransaction()
+    {
+        int quotes = 0;
+        rpcClientMock.Setup(p => p.RpcSendAsync("calculatenetworkfee", It.IsAny<JToken[]>()))
+            .ReturnsAsync(() => new JObject { ["networkfee"] = ++quotes == 1 ? 100000000 : 100000001 });
+        var manager = await TransactionManager.MakeTransactionAsync(client, new byte[] { (byte)OpCode.PUSH1 }, 100,
+            [new Signer { Account = sender, Scopes = WitnessScope.None }]);
+        manager.AddSignature(keyPair1);
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => manager.SignAsync());
+        Assert.AreEqual(100000000L, manager.Tx.NetworkFee);
+        Assert.IsTrue(Crypto.VerifySignature(manager.Tx.GetSignData(client.protocolSettings.Network),
+            manager.Tx.Witnesses[0].InvocationScript.Span[2..], keyPair1.PublicKey));
     }
 
     [TestMethod]

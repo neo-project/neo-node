@@ -1,0 +1,7 @@
+<Project>
+  <!-- Preview integration with the matching unreleased native core source. -->
+  <ItemGroup Condition="'$(NativeCoreRoot)' != '' and '@(PackageReference->WithMetadataValue('Identity', 'Neo'))' != ''">
+    <PackageReference Remove="Neo" />
+    <ProjectReference Include="$(NativeCoreRoot)/src/Neo/Neo.csproj" />
+  </ItemGroup>
+</Project>
