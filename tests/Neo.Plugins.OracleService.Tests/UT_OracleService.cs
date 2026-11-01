@@ -187,9 +187,13 @@ public class UT_OracleService
         using var snapshot = TestBlockchain.GetTestSnapshotCache();
         var request = new OracleRequest
         {
-            OriginalTxid = UInt256.Zero, GasForResponse = 10_000_000,
-            Url = "https://example.invalid/test", Filter = "",
-            CallbackContract = UInt160.Zero, CallbackMethod = "callback", UserData = []
+            OriginalTxid = UInt256.Zero,
+            GasForResponse = 10_000_000,
+            Url = "https://example.invalid/test",
+            Filter = "",
+            CallbackContract = UInt160.Zero,
+            CallbackMethod = "callback",
+            UserData = []
         };
         snapshot.Add(NativeContract.Ledger.CreateStorageKey(11, request.OriginalTxid), new(new TransactionState
         {
@@ -200,9 +204,12 @@ public class UT_OracleService
             .Select(i => new KeyPair(Enumerable.Repeat((byte)i, 32).ToArray()).PublicKey).ToArray();
         foreach (bool backup in new[] { false, true })
         {
-            var response = new OracleResponse { Id = 1,
+            var response = new OracleResponse
+            {
+                Id = 1,
                 Code = backup ? OracleResponseCode.ConsensusUnreachable : OracleResponseCode.Success,
-                Result = backup ? ReadOnlyMemory<byte>.Empty : new byte[] { 0 } };
+                Result = backup ? ReadOnlyMemory<byte>.Empty : new byte[] { 0 }
+            };
             var tx = OracleService.CreateResponseTx(snapshot, request, response, nodes, TestUtils.settings, backup);
             if (count >= 9)
                 Assert.IsNull(tx);
@@ -255,9 +262,13 @@ public class UT_OracleService
         using var snapshot = TestBlockchain.GetTestSnapshotCache();
         var request = new OracleRequest
         {
-            OriginalTxid = UInt256.Zero, GasForResponse = 10_000_000,
-            Url = "unsupported://example.invalid", Filter = "", CallbackContract = UInt160.Zero,
-            CallbackMethod = "callback", UserData = []
+            OriginalTxid = UInt256.Zero,
+            GasForResponse = 10_000_000,
+            Url = "unsupported://example.invalid",
+            Filter = "",
+            CallbackContract = UInt160.Zero,
+            CallbackMethod = "callback",
+            UserData = []
         };
         snapshot.Add(NativeContract.Ledger.CreateStorageKey(11, request.OriginalTxid), new(new TransactionState
         {
