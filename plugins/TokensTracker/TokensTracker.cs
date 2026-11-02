@@ -107,7 +107,7 @@ public class TokensTracker : Plugin
         ResetBatch();
         foreach (var tracker in trackers)
         {
-            tracker.OnPersist(system, block, snapshot, applicationExecutedList);
+            tracker.OnPersist(system, block, snapshot.CloneCache(), applicationExecutedList);
         }
     }
 
