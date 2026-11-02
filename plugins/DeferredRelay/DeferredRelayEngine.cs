@@ -98,6 +98,8 @@ internal static class DeferredRelayEngine
         UInt256 hash = tx.Hash;
         if (system.ContainsTransaction(hash) != ContainsTransactionType.NotExist)
             return false;
+        if (system.ContainsConflictHash(hash, tx.Signers.Select(s => s.Account)))
+            return false;
 
         byte[] key = hash.GetSpan().ToArray();
         if (store.Contains(key))
