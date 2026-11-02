@@ -87,12 +87,14 @@ partial class ConsensusService
             || message.Timestamp > TimeProvider.Current.UtcNow.AddMilliseconds(8 * context.TimePerBlock.TotalMilliseconds).ToTimestampMS())
         {
             DBFTPlugin.PluginLogger?.Warning("Timestamp incorrect: {Timestamp}", message.Timestamp);
+            RequestChangeView(ChangeViewReason.BlockRejectedByPolicy);
             return;
         }
 
         if (message.TransactionHashes.Any(p => NativeContract.Ledger.ContainsTransaction(context.Snapshot, p)))
         {
             DBFTPlugin.PluginLogger?.Warning("Invalid request: transaction already exists");
+            RequestChangeView(ChangeViewReason.BlockRejectedByPolicy);
             return;
         }
 
@@ -146,6 +148,7 @@ partial class ConsensusService
                 if (NativeContract.Ledger.ContainsConflictHash(context.Snapshot, hash, tx.Signers.Select(s => s.Account), mtb))
                 {
                     DBFTPlugin.PluginLogger?.Warning("Invalid request: transaction has on-chain conflict");
+                    RequestChangeView(ChangeViewReason.TxRejectedByPolicy, tx.Hash);
                     return;
                 }
 
@@ -159,6 +162,7 @@ partial class ConsensusService
                     if (NativeContract.Ledger.ContainsConflictHash(context.Snapshot, hash, tx.Signers.Select(s => s.Account), mtb))
                     {
                         DBFTPlugin.PluginLogger?.Warning("Invalid request: transaction has on-chain conflict");
+                        RequestChangeView(ChangeViewReason.TxRejectedByPolicy, tx.Hash);
                         return;
                     }
                     unverified.Add(tx);
