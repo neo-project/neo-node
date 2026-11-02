@@ -118,8 +118,8 @@ class Nep11Tracker : TrackerBase
         }
 
         using ScriptBuilder sb = new();
-        sb.EmitDynamicCall(record.asset, "balanceOf", record.from, record.tokenId);
-        sb.EmitDynamicCall(record.asset, "balanceOf", record.to, record.tokenId);
+        sb.EmitDynamicCall(record.asset, "balanceOf", CallFlags.ReadOnly, record.from, record.tokenId);
+        sb.EmitDynamicCall(record.asset, "balanceOf", CallFlags.ReadOnly, record.to, record.tokenId);
         using ApplicationEngine engine = ApplicationEngine.Run(sb.ToArray(), snapshot, settings: _neoSystem.Settings, gas: 3400_0000);
         if (engine.State.HasFlag(VMState.FAULT) || engine.ResultStack.Count != 2)
         {
