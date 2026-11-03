@@ -409,17 +409,10 @@ partial class MainService
     /// <summary>
     /// Base64 Smart Contract Script Analysis
     /// input: DARkYXRhAgBlzR0MFPdcrAXPVptVduMEs2lf1jQjxKIKDBT3XKwFz1abVXbjBLNpX9Y0I8SiChTAHwwIdHJhbnNmZXIMFKNSbimM12LkFYX/8KGvm2ttFxulQWJ9W1I=
-    /// output:
-    /// PUSHDATA1 data
-    /// PUSHINT32 500000000
-    /// PUSHDATA1 0x0aa2c42334d65f69b304e376559b56cf05ac5cf7
-    /// PUSHDATA1 0x0aa2c42334d65f69b304e376559b56cf05ac5cf7
-    /// PUSH4
-    /// PACK
-    /// PUSH15
-    /// PUSHDATA1 transfer
-    /// PUSHDATA1 0xa51b176d6b9bafa1f0ff8515e462d78c296e52a3
-    /// SYSCALL System.Contract.Call
+    /// output (VMInstruction.ToString, with an L-prefix padded to at least 4 digits):
+    /// L0000:0000 PUSHDATA1 64617461 // data
+    /// L0001:0006 PUSHINT32 500000000
+    /// L0002:000B PUSHDATA1 0AA2C42334D65F69B304E376559B56CF05AC5CF7
     /// </summary>
     [ParseFunction("Base64 Smart Contract Script Analysis")]
     private string? ScriptsToOpCode(string base64)
@@ -427,19 +420,7 @@ partial class MainService
         try
         {
             var bytes = Convert.FromBase64String(base64);
-            var sb = new StringBuilder();
-            var line = 0;
-
-            foreach (var instruct in new VMInstruction(bytes))
-            {
-                if (instruct.OperandSize == 0)
-                    sb.AppendFormat("L{0:D04}:{1:X04} {2}{3}", line, instruct.Position, instruct.OpCode, Environment.NewLine);
-                else
-                    sb.AppendFormat("L{0:D04}:{1:X04} {2,-10}{3}{4}", line, instruct.Position, instruct.OpCode, instruct.DecodeOperand(), Environment.NewLine);
-                line++;
-            }
-
-            return sb.ToString();
+            return VMInstruction.FormatListing(bytes);
         }
         catch
         {
