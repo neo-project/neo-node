@@ -250,7 +250,8 @@ internal partial class ConsensusService : UntypedActor
         // Request for next view is always one view more than the current context.ViewNumber
         // Nodes will not contribute for changing to a view higher than (context.ViewNumber+1), unless they are recovered
         // The latter may happen by nodes in higher views with, at least, `M` proofs
-        byte expectedView = (byte)(context.ViewNumber + 1);
+        byte expectedView = context.ViewNumber;
+        expectedView++;
         ChangeTimer(GetViewTimeout(expectedView));
         if ((context.CountCommitted + context.CountFailed) > context.F)
         {
