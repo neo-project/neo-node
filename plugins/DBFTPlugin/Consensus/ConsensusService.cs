@@ -196,7 +196,7 @@ internal partial class ConsensusService : UntypedActor
                 // Re-send commit periodically by sending recover message in case of a network issue.
                 DBFTPlugin.PluginLogger?.Information("Sending RecoveryMessage to resend Commit");
                 localNode.Tell(new LocalNode.SendDirectly(context.MakeRecoveryMessage()));
-                ChangeTimer(TimeSpan.FromMilliseconds((int)context.TimePerBlock.TotalMilliseconds << 1));
+                ChangeTimer(GetViewTimeout(0));
             }
             else
             {

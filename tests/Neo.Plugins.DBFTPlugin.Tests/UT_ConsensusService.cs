@@ -495,6 +495,29 @@ public class UT_ConsensusService : TestKit
     }
 
     [TestMethod]
+    public void TestCommitResendTimeoutDoesNotOverflowWithLongBlockInterval()
+    {
+        var settings = CreateCompatibleSettings();
+        var service = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, settings, new TestSigner()));
+        var actor = service.UnderlyingActor;
+        InvokeConsensusMethod(actor, "InitializeConsensus", (byte)0);
+        var context = GetConsensusContext(actor);
+        context.MyIndex = (context.Block.PrimaryIndex + 1) % context.Validators.Length;
+        context.TimePerBlock = TimeSpan.FromMinutes(30);
+        context.CommitPayloads[context.MyIndex] = WithWitness(context.CreatePayload(new Commit
+        {
+            BlockIndex = context.Block.Index,
+            ValidatorIndex = (byte)context.MyIndex,
+            ViewNumber = context.ViewNumber,
+            Signature = new byte[64]
+        }));
+
+        InvokeConsensusMethod(actor, "OnTimer", CreateTimer(context.Block.Index, context.ViewNumber));
+
+        Assert.AreEqual(TimeSpan.FromHours(1), GetExpectedDelay(actor));
+    }
+
+    [TestMethod]
     public void TestConsensusServiceExecutesWarningAndLifecyclePaths()
     {
         var settings = CreateCompatibleSettings();
