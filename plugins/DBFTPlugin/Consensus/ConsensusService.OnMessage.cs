@@ -78,8 +78,24 @@ partial class ConsensusService
     {
         if (context.RequestSentOrReceived || context.NotAcceptingPayloadsDueToViewChanging) return;
         if (message.ValidatorIndex != context.Block.PrimaryIndex || message.ViewNumber != context.ViewNumber) return;
-        if (message.Version != context.Block.Version || message.PrevHash != context.Block.PrevHash) return;
-        if (message.TransactionHashes.Length > neoSystem.Settings.MaxTransactionsPerBlock) return;
+        if (message.Version != context.Block.Version)
+        {
+            DBFTPlugin.PluginLogger?.Warning("Invalid request: invalid version: {Version}", message.Version);
+            RequestChangeView(ChangeViewReason.BlockRejectedByPolicy);
+            return;
+        }
+        if (message.PrevHash != context.Block.PrevHash)
+        {
+            DBFTPlugin.PluginLogger?.Warning("Invalid request: invalid previous block hash: {PrevHash}", message.PrevHash);
+            RequestChangeView(ChangeViewReason.BlockRejectedByPolicy);
+            return;
+        }
+        if (message.TransactionHashes.Length > neoSystem.Settings.MaxTransactionsPerBlock)
+        {
+            DBFTPlugin.PluginLogger?.Warning("Invalid request: max transactions count increased: {TxCount}", message.TransactionHashes.Length);
+            RequestChangeView(ChangeViewReason.BlockRejectedByPolicy);
+            return;
+        }
 
         DBFTPlugin.PluginLogger?.Information("OnPrepareRequestReceived: height={BlockIndex} view={ViewNumber} index={ValidatorIndex} tx={TransactionHashesLength}",
             message.BlockIndex, message.ViewNumber, message.ValidatorIndex, message.TransactionHashes.Length);
