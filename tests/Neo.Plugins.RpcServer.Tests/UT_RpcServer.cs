@@ -463,7 +463,7 @@ public partial class UT_RpcServer
         Assert.AreEqual("openwallet", settings.DisabledMethods[0]);
         Assert.AreEqual(40, settings.MaxConcurrentConnections);
         Assert.AreEqual(1 * 1024 * 1024, settings.MaxRequestBodySize);
-        Assert.AreEqual(100, settings.MaxBatchSize);
+        Assert.AreEqual(10, settings.MaxBatchSize);
         Assert.AreEqual(50, settings.FindStoragePageSize);
     }
 
