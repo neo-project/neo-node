@@ -249,10 +249,19 @@ public class UT_OracleService
     public void DeferredRequestsRetryAfterStateChangesWithoutFinishing()
     {
         using var oracle = new OracleService();
+        var deferred = (ConcurrentDictionary<ulong, byte>)typeof(OracleService)
+            .GetField("deferredRequests", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .GetValue(oracle)!;
         oracle.DeferRequest(1, 100);
+        oracle.DeferRequest(2, 100);
         Assert.IsFalse(oracle.CanRetryRequest(1, 100));
+        Assert.AreEqual(2, deferred.Count);
         Assert.IsTrue(oracle.CanRetryRequest(1, 101));
-        Assert.IsTrue(oracle.CanRetryRequest(2, 100));
+        Assert.AreEqual(0, deferred.Count);
+        oracle.DeferRequest(3, 101);
+        Assert.IsFalse(oracle.CanRetryRequest(3, 101));
+        Assert.AreEqual(1, deferred.Count);
+        Assert.IsTrue(oracle.CanRetryRequest(2, 101));
         Assert.IsFalse(oracle.finishedCache.ContainsKey(1));
     }
 

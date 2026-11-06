@@ -47,7 +47,8 @@ public sealed class OracleService : Plugin
     private Wallet wallet;
     private readonly ConcurrentDictionary<ulong, OracleTask> pendingQueue = new();
     internal readonly ConcurrentDictionary<ulong, DateTime> finishedCache = new();
-    private readonly ConcurrentDictionary<ulong, uint> deferredRequests = new();
+    private readonly ConcurrentDictionary<ulong, byte> deferredRequests = new();
+    private uint? deferredRequestsHeight;
     private Timer timer;
     internal CancellationTokenSource cancelSource = new();
     internal OracleStatus status = OracleStatus.Unstarted;
@@ -432,6 +433,7 @@ public sealed class OracleService : Plugin
 
     private void SyncPendingQueue(DataCache snapshot)
     {
+        ResetDeferredRequests(NativeContract.Ledger.CurrentIndex(snapshot) + 1);
         var offChainRequests = NativeContract.Oracle.GetRequests(snapshot).ToDictionary(r => r.Item1, r => r.Item2);
         var onChainRequests = pendingQueue.Keys.Except(offChainRequests.Keys);
         foreach (var onChainRequest in onChainRequests)
@@ -442,11 +444,25 @@ public sealed class OracleService : Plugin
             deferredRequests.TryRemove(id, out _);
     }
 
+    private void ResetDeferredRequests(uint height)
+    {
+        if (deferredRequestsHeight == height) return;
+        // A failed response must be retried after the next block changes the chain state.
+        deferredRequests.Clear();
+        deferredRequestsHeight = height;
+    }
+
     internal bool CanRetryRequest(ulong requestId, uint height)
-        => !deferredRequests.TryGetValue(requestId, out var deferredHeight) || deferredHeight != height;
+    {
+        ResetDeferredRequests(height);
+        return !deferredRequests.ContainsKey(requestId);
+    }
 
     internal void DeferRequest(ulong requestId, uint height)
-        => deferredRequests[requestId] = height;
+    {
+        ResetDeferredRequests(height);
+        deferredRequests[requestId] = 0;
+    }
 
     private async Task<(OracleResponseCode, string)> ProcessUrlAsync(string url, CancellationToken cancellation)
     {
