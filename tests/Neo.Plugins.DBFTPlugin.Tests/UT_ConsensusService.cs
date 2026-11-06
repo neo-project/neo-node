@@ -626,6 +626,87 @@ public class UT_ConsensusService : TestKit
         CollectionAssert.AreEqual(new[] { UInt256.Zero }, context.TransactionHashes);
     }
 
+    [TestMethod]
+    public void SendPrepareRequest_DiscardsMismatchedPreProposalPayloads()
+    {
+        var service = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, CreateCompatibleSettings(), new TestSigner()));
+        service.Tell(new ConsensusService.Start());
+        var actor = service.UnderlyingActor;
+        var context = GetConsensusContext(actor);
+        context.MyIndex = context.Block.PrimaryIndex;
+        int backupIndex = (context.MyIndex + 1) % context.Validators.Length;
+
+        var response = WithWitness(context.CreatePayload(new PrepareResponse
+        {
+            BlockIndex = context.Block.Index,
+            ValidatorIndex = (byte)backupIndex,
+            ViewNumber = context.ViewNumber,
+            PreparationHash = UInt256.Zero
+        }));
+        var commit = WithWitness(context.CreatePayload(new Commit
+        {
+            BlockIndex = context.Block.Index,
+            ValidatorIndex = (byte)backupIndex,
+            ViewNumber = context.ViewNumber,
+            Signature = new byte[64]
+        }));
+
+        service.Tell(new Blockchain.RelayResult(response, VerifyResult.Succeed));
+        service.Tell(new Blockchain.RelayResult(commit, VerifyResult.Succeed));
+        Assert.AreSame(response, context.PreparationPayloads[backupIndex]);
+        Assert.AreSame(commit, context.CommitPayloads[backupIndex]);
+
+        InvokeConsensusMethod(actor, "SendPrepareRequest");
+
+        Assert.IsNotNull(context.PreparationPayloads[context.MyIndex]);
+        Assert.IsNull(context.PreparationPayloads[backupIndex]);
+        Assert.IsNull(context.CommitPayloads[backupIndex]);
+    }
+
+    [TestMethod]
+    public void InvalidCommit_DoesNotExtendTimer()
+    {
+        var service = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, CreateCompatibleSettings(), new TestSigner()));
+        service.Tell(new ConsensusService.Start());
+        var actor = service.UnderlyingActor;
+        var context = GetConsensusContext(actor);
+        Assert.IsTrue(context.IsBackup);
+
+        var request = WithWitness(context.CreatePayload(new PrepareRequest
+        {
+            BlockIndex = context.Block.Index,
+            ValidatorIndex = context.Block.PrimaryIndex,
+            ViewNumber = context.ViewNumber,
+            Version = context.Block.Version,
+            PrevHash = context.Block.PrevHash,
+            Timestamp = Math.Max(context.PrevHeader.Timestamp + 1, TimeProvider.Current.UtcNow.ToTimestampMS()),
+            Nonce = 123,
+            TransactionHashes = []
+        }));
+        service.Tell(new Blockchain.RelayResult(request, VerifyResult.Succeed));
+        Assert.IsNotNull(context.EnsureHeader());
+        Assert.IsFalse(context.CommitSent);
+
+        var delayField = typeof(ConsensusService).GetField("expected_delay", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var delayBefore = (TimeSpan)delayField.GetValue(actor)!;
+        for (byte attempt = 1; attempt <= 3; attempt++)
+        {
+            var signature = new byte[64];
+            signature[0] = attempt;
+            var commit = WithWitness(context.CreatePayload(new Commit
+            {
+                BlockIndex = context.Block.Index,
+                ValidatorIndex = context.Block.PrimaryIndex,
+                ViewNumber = context.ViewNumber,
+                Signature = signature
+            }));
+            service.Tell(new Blockchain.RelayResult(commit, VerifyResult.Succeed));
+            Assert.IsNull(context.CommitPayloads[context.Block.PrimaryIndex]);
+        }
+
+        Assert.AreEqual(delayBefore, (TimeSpan)delayField.GetValue(actor)!);
+    }
+
     private static ConsensusContext GetConsensusContext(ConsensusService actor)
     {
         return (ConsensusContext)typeof(ConsensusService)
