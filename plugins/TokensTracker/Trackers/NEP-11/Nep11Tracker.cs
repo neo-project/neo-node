@@ -71,7 +71,6 @@ class Nep11Tracker : TrackerBase
                     catch (Exception ex)
                     {
                         TokensTracker.PluginLogger?.Error(ex, "Error handling NEP-11 notification");
-                        throw;
                     }
                 }
 
