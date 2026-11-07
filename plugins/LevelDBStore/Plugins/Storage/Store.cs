@@ -80,10 +80,6 @@ internal class Store : IStore, IEnumerable<KeyValuePair<byte[], byte[]>>
     }
 
     /// <inheritdoc/>
-    // Overload required by the current Neo IReadOnlyStore interface.
-    public IEnumerable<(byte[], byte[])> Find(byte[]? keyOrPrefix, SeekDirection direction) =>
-        Find(keyOrPrefix, direction, 0);
-
     public IEnumerable<(byte[], byte[])> Find(byte[]? keyOrPrefix, SeekDirection direction = SeekDirection.Forward, int skip = 0) =>
         _db.Seek(ReadOptions.Default, keyOrPrefix, direction, skip);
 

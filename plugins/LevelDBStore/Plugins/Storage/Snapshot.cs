@@ -72,10 +72,6 @@ internal class Snapshot : IStoreSnapshot, IEnumerable<KeyValuePair<byte[], byte[
     }
 
     /// <inheritdoc/>
-    // Overload required by the current Neo IReadOnlyStore interface.
-    public IEnumerable<(byte[] Key, byte[] Value)> Find(byte[]? keyOrPrefix, SeekDirection direction) =>
-        Find(keyOrPrefix, direction, 0);
-
     public IEnumerable<(byte[] Key, byte[] Value)> Find(byte[]? keyOrPrefix, SeekDirection direction = SeekDirection.Forward, int skip = 0)
     {
         return _db.Seek(_scanReadOptions, keyOrPrefix, direction, skip);
