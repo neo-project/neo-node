@@ -73,7 +73,7 @@ public sealed class NeoStore : IDisposable
     public IReadOnlyCollection<(BlockchainEventModel NotifyLog, UInt256 TxHash)> GetContractLog(UInt160 scriptHash, uint page = 1, uint pageSize = 10)
     {
         using var snapshot = _store.GetSnapshot();
-        using var lss = new LogStorageStore(snapshot, 0);
+        using var lss = new LogStorageStore(snapshot);
         var lstModels = new List<(BlockchainEventModel NotifyLog, UInt256 TxHash)>();
         foreach (var contractState in lss.FindContractState(scriptHash, page, pageSize))
             lstModels.Add((BlockchainEventModel.Create(contractState, CreateStackItemArray(lss, contractState.StackItemIds)), contractState.TransactionHash));
@@ -83,7 +83,7 @@ public sealed class NeoStore : IDisposable
     public IReadOnlyCollection<(BlockchainEventModel NotifyLog, UInt256 TxHash)> GetContractLog(UInt160 scriptHash, TriggerType triggerType, uint page = 1, uint pageSize = 10)
     {
         using var snapshot = _store.GetSnapshot();
-        using var lss = new LogStorageStore(snapshot, 0);
+        using var lss = new LogStorageStore(snapshot);
         var lstModels = new List<(BlockchainEventModel NotifyLog, UInt256 TxHash)>();
         foreach (var contractState in lss.FindContractState(scriptHash, triggerType, page, pageSize))
             lstModels.Add((BlockchainEventModel.Create(contractState, CreateStackItemArray(lss, contractState.StackItemIds)), contractState.TransactionHash));
@@ -93,7 +93,7 @@ public sealed class NeoStore : IDisposable
     public IReadOnlyCollection<(BlockchainEventModel NotifyLog, UInt256 TxHash)> GetContractLog(UInt160 scriptHash, TriggerType triggerType, string eventName, uint page = 1, uint pageSize = 10)
     {
         using var snapshot = _store.GetSnapshot();
-        using var lss = new LogStorageStore(snapshot, 0);
+        using var lss = new LogStorageStore(snapshot);
         var lstModels = new List<(BlockchainEventModel NotifyLog, UInt256 TxHash)>();
         foreach (var contractState in lss.FindContractState(scriptHash, triggerType, eventName, page, pageSize))
             lstModels.Add((BlockchainEventModel.Create(contractState, CreateStackItemArray(lss, contractState.StackItemIds)), contractState.TransactionHash));
@@ -108,7 +108,7 @@ public sealed class NeoStore : IDisposable
     {
         ArgumentNullException.ThrowIfNull(_blocklogsnapshot, nameof(_blocklogsnapshot));
 
-        using var lss = new LogStorageStore(_blocklogsnapshot, 0);
+        using var lss = new LogStorageStore(_blocklogsnapshot);
         var ids = new List<Guid>();
         foreach (var log in logs)
             ids.Add(lss.PutEngineState(EngineLogState.Create(log.ScriptHash, log.Message)));
@@ -122,7 +122,7 @@ public sealed class NeoStore : IDisposable
     public BlockchainExecutionModel? GetBlockLog(UInt256 hash, TriggerType trigger)
     {
         using var snapshot = _store.GetSnapshot();
-        using var lss = new LogStorageStore(snapshot, 0);
+        using var lss = new LogStorageStore(snapshot);
         if (lss.TryGetExecutionBlockState(hash, trigger, out var executionBlockStateId) &&
             lss.TryGetExecutionState(executionBlockStateId, out var executionLogState))
         {
@@ -145,7 +145,7 @@ public sealed class NeoStore : IDisposable
     public BlockchainExecutionModel? GetBlockLog(UInt256 hash, TriggerType trigger, string eventName)
     {
         using var snapshot = _store.GetSnapshot();
-        using var lss = new LogStorageStore(snapshot, 0);
+        using var lss = new LogStorageStore(snapshot);
         if (lss.TryGetExecutionBlockState(hash, trigger, out var executionBlockStateId) &&
             lss.TryGetExecutionState(executionBlockStateId, out var executionLogState))
         {
@@ -194,7 +194,7 @@ public sealed class NeoStore : IDisposable
     public BlockchainExecutionModel? GetTransactionLog(UInt256 hash)
     {
         using var snapshot = _store.GetSnapshot();
-        using var lss = new LogStorageStore(snapshot, 0);
+        using var lss = new LogStorageStore(snapshot);
         if (lss.TryGetExecutionTransactionState(hash, out var executionTransactionStateId) &&
             lss.TryGetExecutionState(executionTransactionStateId, out var executionLogState))
         {
@@ -228,7 +228,7 @@ public sealed class NeoStore : IDisposable
     public BlockchainExecutionModel? GetTransactionLog(UInt256 hash, string eventName)
     {
         using var snapshot = _store.GetSnapshot();
-        using var lss = new LogStorageStore(snapshot, 0);
+        using var lss = new LogStorageStore(snapshot);
         if (lss.TryGetExecutionTransactionState(hash, out var executionTransactionStateId) &&
             lss.TryGetExecutionState(executionTransactionStateId, out var executionLogState))
         {

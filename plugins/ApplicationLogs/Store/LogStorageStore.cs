@@ -51,7 +51,7 @@ public sealed class LogStorageStore : IDisposable
 
     #region Ctor
 
-    public LogStorageStore(IStoreSnapshot snapshot, uint blockIndex)
+    public LogStorageStore(IStoreSnapshot snapshot, uint blockIndex = 0)
     {
         ArgumentNullException.ThrowIfNull(snapshot, nameof(snapshot));
         _snapshot = snapshot;
