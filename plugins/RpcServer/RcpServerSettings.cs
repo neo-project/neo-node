@@ -38,6 +38,7 @@ public record RpcServersSettings
     public string[] TrustedAuthorities { get; init; } = [];
     public int MaxConcurrentConnections { get; init; } = 40;
     public int MaxRequestBodySize { get; init; } = 1 * 1024 * 1024;
+    public int MaxBatchSize { get; init; } = 10;
     public int MaxItemResponseSize { get; init; } = Transaction.MaxTransactionSize;
     public string RpcUser { get; init; } = string.Empty;
     public string RpcPass { get; init; } = string.Empty;
@@ -96,6 +97,7 @@ public record RpcServersSettings
             DisabledMethods = GetStrings(section, "DisabledMethods"),
             MaxConcurrentConnections = section.GetValue("MaxConcurrentConnections", @default.MaxConcurrentConnections),
             MaxRequestBodySize = section.GetValue("MaxRequestBodySize", @default.MaxRequestBodySize),
+            MaxBatchSize = section.GetValue(nameof(MaxBatchSize), @default.MaxBatchSize),
             SessionEnabled = section.GetValue("SessionEnabled", @default.SessionEnabled),
             SessionExpirationTime = TimeSpan.FromSeconds(section.GetValue("SessionExpirationTime", (long)@default.SessionExpirationTime.TotalSeconds)),
             FindStoragePageSize = section.GetValue("FindStoragePageSize", @default.FindStoragePageSize)
