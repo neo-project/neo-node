@@ -287,7 +287,11 @@ public partial class RpcServer : IDisposable
         {
             if (array.Count == 0)
             {
-                response = CreateErrorResponse(request["id"], RpcError.InvalidRequest);
+                response = CreateErrorResponse(null, RpcError.InvalidRequest);
+            }
+            else if (array.Count > settings.MaxBatchSize)
+            {
+                response = CreateErrorResponse(null, RpcError.InvalidRequest.WithData($"Batch size exceeds the maximum of {settings.MaxBatchSize}."));
             }
             else
             {

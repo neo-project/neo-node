@@ -188,13 +188,20 @@ public partial class UT_RpcServer
     }
 
     [TestMethod]
-    public async Task TestProcessRequest_EmptyBatch()
+    public async Task TestProcessAsync_EmptyBatch()
     {
-        var emptyBatchJson = "[]";
-        var response = await SimulatePostRequest(emptyBatchJson);
+        var context = new DefaultHttpContext();
+        context.Request.Method = "POST";
+        context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes("[]"));
+        context.Response.Body = new MemoryStream();
+
+        await _rpcServer.ProcessAsync(context);
+        context.Response.Body.Position = 0;
+        var response = JToken.Parse(await new StreamReader(context.Response.Body).ReadToEndAsync());
 
         Assert.IsNotNull(response["error"]);
         Assert.AreEqual(RpcError.InvalidRequest.Code, response["error"]["code"].AsNumber());
+        Assert.IsNull(response["id"]);
     }
 
     [TestMethod]
@@ -234,6 +241,35 @@ public partial class UT_RpcServer
         Assert.IsNull(batchResults[3]["error"]);
         Assert.IsNotNull(batchResults[3]["result"]);
         Assert.AreEqual(4, batchResults[3]["id"].AsNumber());
+    }
+
+    [TestMethod]
+    public async Task TestProcessAsync_BatchSizeLimit()
+    {
+        _rpcServer.UpdateSettings(_rpcServerSettings with { MaxBatchSize = 2 });
+        const string item = """{"jsonrpc":"2.0","method":"getblockcount","params":[],"id":1}""";
+
+        async Task<JToken> PostBatchAsync(int count)
+        {
+            var context = new DefaultHttpContext();
+            context.Request.Method = "POST";
+            context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes($"[{string.Join(',', Enumerable.Repeat(item, count))}]"));
+            context.Response.Body = new MemoryStream();
+
+            await _rpcServer.ProcessAsync(context);
+            context.Response.Body.Position = 0;
+            return JToken.Parse(await new StreamReader(context.Response.Body).ReadToEndAsync());
+        }
+
+        var allowed = (JArray)await PostBatchAsync(2);
+        Assert.HasCount(2, allowed);
+        Assert.IsNotNull(allowed[0]["result"]);
+        Assert.IsNotNull(allowed[1]["result"]);
+
+        var rejected = await PostBatchAsync(3);
+        Assert.AreEqual(RpcError.InvalidRequest.Code, rejected["error"]["code"].AsNumber());
+        StringAssert.Contains(rejected["error"]["message"].AsString(), "maximum of 2");
+        Assert.IsNull(rejected["id"]);
     }
 
     [TestMethod]
@@ -427,6 +463,7 @@ public partial class UT_RpcServer
         Assert.AreEqual("openwallet", settings.DisabledMethods[0]);
         Assert.AreEqual(40, settings.MaxConcurrentConnections);
         Assert.AreEqual(1 * 1024 * 1024, settings.MaxRequestBodySize);
+        Assert.AreEqual(10, settings.MaxBatchSize);
         Assert.AreEqual(50, settings.FindStoragePageSize);
     }
 
@@ -463,5 +500,6 @@ public partial class UT_RpcServer
 
         Assert.AreEqual(RpcServersSettings.Default.MaxGasInvoke, settings.MaxGasInvoke);
         Assert.AreEqual(RpcServersSettings.Default.MaxFee, settings.MaxFee);
+        Assert.AreEqual(RpcServersSettings.Default.MaxBatchSize, settings.MaxBatchSize);
     }
 }
