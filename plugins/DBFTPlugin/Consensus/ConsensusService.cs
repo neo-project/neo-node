@@ -16,6 +16,7 @@ using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.Plugins.DBFTPlugin.Types;
 using Neo.Sign;
+using Neo.SmartContract.Native;
 using static Neo.Ledger.Blockchain;
 
 namespace Neo.Plugins.DBFTPlugin.Consensus;
@@ -286,10 +287,17 @@ internal partial class ConsensusService : UntypedActor
                 return false;
             }
 
-            // At this step we're sure that there's no on-chain transaction that conflicts with
-            // the provided tx because of the previous Blockchain's OnReceive check. Thus, we only
-            // need to check that current context doesn't contain conflicting transactions.
             VerifyResult result;
+
+            // Ensure transaction doesn't have on-chain conflicts.
+            if (neoSystem.ContainsConflictHash(tx.Hash, tx.Signers.Select(s => s.Account)))
+            {
+                result = VerifyResult.HasConflicts;
+
+                DBFTPlugin.PluginLogger?.Warning("Rejected tx {Hash}, {Result}: {Transaction}", tx.Hash, result, tx.ToArray().ToHexString());
+                RequestChangeView(ChangeViewReason.TxInvalid, tx.Hash);
+                return false;
+            }
 
             // Firstly, check whether tx has Conlicts attribute with the hash of one of the context's transactions.
             foreach (var h in tx.GetAttributes<Conflicts>().Select(attr => attr.Hash))
