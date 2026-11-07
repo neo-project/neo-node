@@ -174,7 +174,7 @@ public sealed class NeoStore : IDisposable
 
         foreach (var appExecution in applicationExecutedList)
         {
-            using var lss = new LogStorageStore(_blocklogsnapshot);
+            using var lss = new LogStorageStore(_blocklogsnapshot, block.Index);
             var exeStateId = PutExecutionLogBlock(lss, block, appExecution);
             PutBlockAndTransactionLog(lss, block, appExecution, exeStateId);
         }
