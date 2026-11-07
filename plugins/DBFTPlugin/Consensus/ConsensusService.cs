@@ -22,6 +22,8 @@ namespace Neo.Plugins.DBFTPlugin.Consensus;
 
 internal partial class ConsensusService : UntypedActor
 {
+    private static readonly TimeSpan MaxViewTimeout = TimeSpan.FromHours(1);
+
     public class Start { }
     private class Timer { public uint Height; public byte ViewNumber; }
 
@@ -105,7 +107,7 @@ internal partial class ConsensusService : UntypedActor
         {
             if (isRecovering)
             {
-                ChangeTimer(TimeSpan.FromMilliseconds((int)context.TimePerBlock.TotalMilliseconds << (viewNumber + 1)));
+                ChangeTimer(GetViewTimeout(viewNumber));
             }
             else
             {
@@ -124,7 +126,7 @@ internal partial class ConsensusService : UntypedActor
         }
         else
         {
-            ChangeTimer(TimeSpan.FromMilliseconds((int)context.TimePerBlock.TotalMilliseconds << (viewNumber + 1)));
+            ChangeTimer(GetViewTimeout(viewNumber));
         }
     }
 
@@ -194,7 +196,7 @@ internal partial class ConsensusService : UntypedActor
                 // Re-send commit periodically by sending recover message in case of a network issue.
                 DBFTPlugin.PluginLogger?.Information("Sending RecoveryMessage to resend Commit");
                 localNode.Tell(new LocalNode.SendDirectly(context.MakeRecoveryMessage()));
-                ChangeTimer(TimeSpan.FromMilliseconds((int)context.TimePerBlock.TotalMilliseconds << 1));
+                ChangeTimer(GetViewTimeout(0));
             }
             else
             {
@@ -224,7 +226,7 @@ internal partial class ConsensusService : UntypedActor
             foreach (InvPayload payload in InvPayload.CreateGroup(InventoryType.TX, context.TransactionHashes))
                 localNode.Tell(Message.Create(MessageCommand.Inv, payload));
         }
-        ChangeTimer(TimeSpan.FromMilliseconds(((int)context.TimePerBlock.TotalMilliseconds << (context.ViewNumber + 1)) - (context.ViewNumber == 0 ? context.TimePerBlock.TotalMilliseconds : 0)));
+        ChangeTimer(GetViewTimeout(context.ViewNumber) - (context.ViewNumber == 0 ? context.TimePerBlock : TimeSpan.Zero));
     }
 
     private void RequestRecovery()
@@ -237,12 +239,20 @@ internal partial class ConsensusService : UntypedActor
     private void RequestChangeView(ChangeViewReason reason, UInt256 rejectedHash = null)
     {
         if (context.WatchOnly) return;
+        if (context.ViewNumber == byte.MaxValue)
+        {
+            // The view number cannot be represented on the wire after this point.
+            // Continue requesting recovery without wrapping back to view zero.
+            ChangeTimer(GetViewTimeout(context.ViewNumber));
+            RequestRecovery();
+            return;
+        }
         // Request for next view is always one view more than the current context.ViewNumber
         // Nodes will not contribute for changing to a view higher than (context.ViewNumber+1), unless they are recovered
         // The latter may happen by nodes in higher views with, at least, `M` proofs
         byte expectedView = context.ViewNumber;
         expectedView++;
-        ChangeTimer(TimeSpan.FromMilliseconds((int)context.TimePerBlock.TotalMilliseconds << (expectedView + 1)));
+        ChangeTimer(GetViewTimeout(expectedView));
         if ((context.CountCommitted + context.CountFailed) > context.F)
         {
             RequestRecovery();
@@ -254,6 +264,14 @@ internal partial class ConsensusService : UntypedActor
             localNode.Tell(new LocalNode.SendDirectly(context.MakeChangeView(reason, rejectedHash)));
             CheckExpectedView(expectedView);
         }
+    }
+
+    private TimeSpan GetViewTimeout(int viewNumber)
+    {
+        // Keep the exponential backoff while preventing integer shift wraparound,
+        // TimeSpan overflow, and delays beyond the scheduler's timer range.
+        double milliseconds = context.TimePerBlock.TotalMilliseconds * (1L << Math.Min(viewNumber + 1, 20));
+        return TimeSpan.FromMilliseconds(Math.Min(milliseconds, MaxViewTimeout.TotalMilliseconds));
     }
 
     private bool ReverifyAndProcessPayload(ExtensiblePayload payload)

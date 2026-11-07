@@ -18,9 +18,14 @@ namespace Neo.Plugins.DBFTPlugin.Messages;
 public class ChangeView : ConsensusMessage
 {
     /// <summary>
-    /// NewViewNumber is always set to the current ViewNumber asking changeview + 1
+    /// The next view number, capped at the maximum value representable on the wire.
     /// </summary>
-    public byte NewViewNumber => (byte)(ViewNumber + 1);
+    public byte NewViewNumber => (byte)Math.Min(ViewNumber + 1, byte.MaxValue);
+
+    public override bool Verify(ProtocolSettings protocolSettings)
+    {
+        return ViewNumber < byte.MaxValue && base.Verify(protocolSettings);
+    }
 
     /// <summary>
     /// Timestamp of when the ChangeView message was created. This allows receiving nodes to ensure
