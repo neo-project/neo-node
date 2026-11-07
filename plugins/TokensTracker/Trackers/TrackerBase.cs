@@ -16,6 +16,7 @@ using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.SmartContract;
+using Neo.SmartContract.Native;
 using Neo.VM.Types;
 using Neo.Wallets;
 using System.Buffers.Binary;
@@ -45,10 +46,25 @@ abstract class TrackerBase : IDisposable
 
     public abstract void OnPersist(NeoSystem system, Block block, DataCache snapshot, IReadOnlyList<Blockchain.ApplicationExecuted> applicationExecutedList);
 
+    // Per-block cache of ContractManagement contract lookups: a busy block can emit
+    // hundreds of notifications for the same contracts, and every uncached lookup is a
+    // read against the main chain store (read I/O amplification).
+    private readonly Dictionary<UInt160, ContractState?> _contractCache = new();
+
+    protected ContractState? GetContractCached(DataCache snapshot, UInt160 scriptHash)
+    {
+        if (_contractCache.TryGetValue(scriptHash, out var cached))
+            return cached;
+        var contract = NativeContract.ContractManagement.GetContract(snapshot, scriptHash);
+        _contractCache[scriptHash] = contract;
+        return contract;
+    }
+
     public void ResetBatch()
     {
         _levelDbSnapshot?.Dispose();
         _levelDbSnapshot = _db.GetSnapshot();
+        _contractCache.Clear();
     }
 
     public void Commit()

@@ -57,7 +57,7 @@ class Nep17Tracker : TrackerBase
             {
                 if (notifyEventArgs.EventName != "Transfer" || notifyEventArgs?.State is not Array stateItems || stateItems.Count == 0)
                     continue;
-                var contract = NativeContract.ContractManagement.GetContract(snapshot, notifyEventArgs.ScriptHash);
+                var contract = GetContractCached(snapshot, notifyEventArgs.ScriptHash);
                 if (contract?.Manifest.SupportedStandards.Contains("NEP-17") == true)
                 {
                     try
