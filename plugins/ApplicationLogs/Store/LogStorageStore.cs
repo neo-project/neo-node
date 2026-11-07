@@ -44,15 +44,30 @@ public sealed class LogStorageStore : IDisposable
     #region Global Variables
 
     private readonly IStoreSnapshot _snapshot;
+    private readonly uint _blockIndex;
+    private static long _seq;
 
     #endregion
 
     #region Ctor
 
-    public LogStorageStore(IStoreSnapshot snapshot)
+    public LogStorageStore(IStoreSnapshot snapshot, uint blockIndex)
     {
         ArgumentNullException.ThrowIfNull(snapshot, nameof(snapshot));
         _snapshot = snapshot;
+        _blockIndex = blockIndex;
+    }
+
+    // Sequential, block-clustered id: writes for one block land in one contiguous
+    // key region instead of fully random positions (random GUID keys were causing
+    // maximum LSM write amplification / disk I/O saturation).
+    private static Guid NewSequentialId(uint blockIndex)
+    {
+        var b = new byte[16];
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(b, blockIndex);
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(b.AsSpan(4), (uint)System.Threading.Interlocked.Increment(ref _seq));
+        System.Security.Cryptography.RandomNumberGenerator.Fill(b.AsSpan(8)); // disambiguate across restarts
+        return new Guid(b);
     }
 
     #endregion
@@ -70,7 +85,7 @@ public sealed class LogStorageStore : IDisposable
 
     public Guid PutEngineState(EngineLogState state)
     {
-        var id = Guid.NewGuid();
+        var id = NewSequentialId(_blockIndex);
         var key = new KeyBuilder(Prefix_Id, Prefix_Engine)
             .Add(id.ToByteArray())
             .ToArray();
@@ -97,7 +112,7 @@ public sealed class LogStorageStore : IDisposable
 
     public Guid PutNotifyState(NotifyLogState state)
     {
-        var id = Guid.NewGuid();
+        var id = NewSequentialId(_blockIndex);
         var key = new KeyBuilder(Prefix_Id, Prefix_Notify)
             .Add(id.ToByteArray())
             .ToArray();
@@ -117,7 +132,7 @@ public sealed class LogStorageStore : IDisposable
 
     public Guid PutExecutionState(ExecutionLogState state)
     {
-        var id = Guid.NewGuid();
+        var id = NewSequentialId(_blockIndex);
         var key = new KeyBuilder(Prefix_Id, Prefix_Execution)
             .Add(id.ToByteArray())
             .ToArray();
@@ -152,7 +167,7 @@ public sealed class LogStorageStore : IDisposable
 
     public Guid PutStackItemState(StackItem stackItem)
     {
-        var id = Guid.NewGuid();
+        var id = NewSequentialId(_blockIndex);
         var key = new KeyBuilder(Prefix_Id, Prefix_StackItem)
             .Add(id.ToByteArray())
             .ToArray();
