@@ -67,7 +67,6 @@ class Nep17Tracker : TrackerBase
                     catch (Exception ex)
                     {
                         TokensTracker.PluginLogger?.Error(ex, "Error handling NEP-17 notification");
-                        throw;
                     }
                 }
             }
@@ -83,7 +82,6 @@ class Nep17Tracker : TrackerBase
             catch (Exception ex)
             {
                 TokensTracker.PluginLogger?.Error(ex, "Error saving NEP-17 balance");
-                throw;
             }
         }
     }
