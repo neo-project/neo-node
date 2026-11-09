@@ -60,6 +60,7 @@ public class StoreTest
 
         TestSnapshot(store);
         TestMultiSnapshot(store);
+        TestFindWithSkip(store);
     }
 
     [TestMethod]
@@ -79,6 +80,7 @@ public class StoreTest
 
         TestSnapshot(store);
         TestMultiSnapshot(store);
+        TestFindWithSkip(store);
     }
 
     [TestMethod]
@@ -98,6 +100,7 @@ public class StoreTest
 
         TestSnapshot(store);
         TestMultiSnapshot(store);
+        TestFindWithSkip(store);
     }
 
     #endregion
@@ -312,6 +315,115 @@ public class StoreTest
             CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x01 }, entries[1].Key);
             CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x00 }, entries[2].Key);
         }
+    }
+
+    /// <summary>
+    /// Test Find with the skip argument, covering both directions and negative values.
+    /// </summary>
+    /// <param name="store">Store</param>
+    private static void TestFindWithSkip(IStore store)
+    {
+        // Clean up any leftover keys from previous tests in this key range.
+        store.Delete([0x00, 0x00, 0x00]);
+        store.Delete([0x00, 0x00, 0x01]);
+        store.Delete([0x00, 0x00, 0x02]);
+        store.Delete([0x00, 0x00, 0x03]);
+        store.Delete([0x00, 0x00, 0x04]);
+        store.Delete([0x00, 0x01, 0x02]);
+        // Leftover key from TestSnapshot/TestMultiSnapshot; must be removed since Find has no upper bound.
+        store.Delete([0x01, 0x02, 0x03]);
+
+        store.Put([0x00, 0x00, 0x00], [0x00]);
+        store.Put([0x00, 0x00, 0x01], [0x01]);
+        store.Put([0x00, 0x00, 0x02], [0x02]);
+        store.Put([0x00, 0x00, 0x03], [0x03]);
+        store.Put([0x00, 0x00, 0x04], [0x04]);
+
+        // Forward, skip = 0 (no skip)
+
+        var entries = store.Find([0x00, 0x00, 0x00], SeekDirection.Forward, 0).ToArray();
+        Assert.HasCount(5, entries);
+        CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x00 }, entries[0].Key);
+        CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x04 }, entries[4].Key);
+
+        // Forward, skip = 2
+
+        entries = store.Find([0x00, 0x00, 0x00], SeekDirection.Forward, 2).ToArray();
+        Assert.HasCount(3, entries);
+        CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x02 }, entries[0].Key);
+        CollectionAssert.AreEqual(new byte[] { 0x02 }, entries[0].Value);
+        CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x03 }, entries[1].Key);
+        CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x04 }, entries[2].Key);
+
+        // Forward, skip equal to the number of entries -> empty result
+
+        entries = store.Find([0x00, 0x00, 0x00], SeekDirection.Forward, 5).ToArray();
+        Assert.IsEmpty(entries);
+
+        // Forward, skip greater than the number of entries -> empty result
+
+        entries = store.Find([0x00, 0x00, 0x00], SeekDirection.Forward, 100).ToArray();
+        Assert.IsEmpty(entries);
+
+        // Backward, skip = 0 (no skip)
+
+        entries = store.Find([0x00, 0x00, 0x04], SeekDirection.Backward, 0).ToArray();
+        Assert.HasCount(5, entries);
+        CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x04 }, entries[0].Key);
+        CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x00 }, entries[4].Key);
+
+        // Backward, skip = 2
+
+        entries = store.Find([0x00, 0x00, 0x04], SeekDirection.Backward, 2).ToArray();
+        Assert.HasCount(3, entries);
+        CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x02 }, entries[0].Key);
+        CollectionAssert.AreEqual(new byte[] { 0x02 }, entries[0].Value);
+        CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x01 }, entries[1].Key);
+        CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x00 }, entries[2].Key);
+
+        // Backward, skip equal to the number of entries -> empty result
+
+        entries = store.Find([0x00, 0x00, 0x04], SeekDirection.Backward, 5).ToArray();
+        Assert.IsEmpty(entries);
+
+        // Backward, skip greater than the number of entries -> empty result
+
+        entries = store.Find([0x00, 0x00, 0x04], SeekDirection.Backward, 100).ToArray();
+        Assert.IsEmpty(entries);
+
+        // Negative skip is invalid and must throw for both directions
+
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
+            store.Find([0x00, 0x00, 0x00], SeekDirection.Forward, -1).ToArray());
+
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
+            store.Find([0x00, 0x00, 0x04], SeekDirection.Backward, -5).ToArray());
+
+        // Test skip using a snapshot as well, to make sure both IStore and IStoreSnapshot behave the same.
+
+        using (var snapshot = store.GetSnapshot())
+        {
+            entries = snapshot.Find([0x00, 0x00, 0x00], SeekDirection.Forward, 2).ToArray();
+            Assert.HasCount(3, entries);
+            CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x02 }, entries[0].Key);
+            CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x04 }, entries[2].Key);
+
+            entries = snapshot.Find([0x00, 0x00, 0x04], SeekDirection.Backward, 2).ToArray();
+            Assert.HasCount(3, entries);
+            CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x02 }, entries[0].Key);
+            CollectionAssert.AreEqual(new byte[] { 0x00, 0x00, 0x00 }, entries[2].Key);
+
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
+                snapshot.Find([0x00, 0x00, 0x00], SeekDirection.Forward, -3).ToArray());
+        }
+
+        // Clean up
+
+        store.Delete([0x00, 0x00, 0x00]);
+        store.Delete([0x00, 0x00, 0x01]);
+        store.Delete([0x00, 0x00, 0x02]);
+        store.Delete([0x00, 0x00, 0x03]);
+        store.Delete([0x00, 0x00, 0x04]);
     }
 
     /// <summary>

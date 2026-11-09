@@ -10,6 +10,7 @@
 // modifications are permitted.
 
 using Microsoft.Extensions.Configuration;
+using Neo.Network.P2P.Payloads;
 using Neo.SmartContract.Native;
 using System.Net;
 
@@ -30,14 +31,15 @@ class RpcServerSettings : IPluginSettings
 
 public record RpcServersSettings
 {
-    public uint Network { get; init; } = 5195086u;
     public IPAddress BindAddress { get; init; } = IPAddress.Loopback;
     public ushort Port { get; init; } = 10332;
     public string SslCert { get; init; } = string.Empty;
     public string SslCertPassword { get; init; } = string.Empty;
     public string[] TrustedAuthorities { get; init; } = [];
     public int MaxConcurrentConnections { get; init; } = 40;
-    public int MaxRequestBodySize { get; init; } = 5 * 1024 * 1024;
+    public int MaxRequestBodySize { get; init; } = 1 * 1024 * 1024;
+    public int MaxBatchSize { get; init; } = 10;
+    public int MaxItemResponseSize { get; init; } = Transaction.MaxTransactionSize;
     public string RpcUser { get; init; } = string.Empty;
     public string RpcPass { get; init; } = string.Empty;
     public bool EnableCors { get; init; } = true;
@@ -76,7 +78,6 @@ public record RpcServersSettings
         var @default = Default;
         return new()
         {
-            Network = section.GetValue("Network", @default.Network),
             BindAddress = IPAddress.Parse(section.GetValue("BindAddress", @default.BindAddress.ToString())),
             Port = section.GetValue("Port", @default.Port),
             SslCert = section.GetValue("SslCert", string.Empty),
@@ -91,10 +92,12 @@ public record RpcServersSettings
             MaxGasInvoke = GetGasAmount(section, "MaxGasInvoke", @default.MaxGasInvoke),
             MaxFee = GetGasAmount(section, "MaxFee", @default.MaxFee),
             MaxIteratorResultItems = section.GetValue("MaxIteratorResultItems", @default.MaxIteratorResultItems),
+            MaxItemResponseSize = section.GetValue("MaxItemResponseSize", @default.MaxItemResponseSize),
             MaxStackSize = section.GetValue("MaxStackSize", @default.MaxStackSize),
             DisabledMethods = GetStrings(section, "DisabledMethods"),
             MaxConcurrentConnections = section.GetValue("MaxConcurrentConnections", @default.MaxConcurrentConnections),
             MaxRequestBodySize = section.GetValue("MaxRequestBodySize", @default.MaxRequestBodySize),
+            MaxBatchSize = section.GetValue(nameof(MaxBatchSize), @default.MaxBatchSize),
             SessionEnabled = section.GetValue("SessionEnabled", @default.SessionEnabled),
             SessionExpirationTime = TimeSpan.FromSeconds(section.GetValue("SessionExpirationTime", (long)@default.SessionExpirationTime.TotalSeconds)),
             FindStoragePageSize = section.GetValue("FindStoragePageSize", @default.FindStoragePageSize)

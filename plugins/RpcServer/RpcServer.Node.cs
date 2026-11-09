@@ -208,11 +208,19 @@ partial class RpcServer
     [RpcMethod]
     protected internal virtual JToken SendRawTransaction(string base64Tx)
     {
+        var txData = Result.Ok_Or(
+            () => Convert.FromBase64String(base64Tx),
+            RpcError.InvalidParams.WithData("Invalid Transaction Format: Expected Base64-encoded string"));
+
+        if (txData.Length > Transaction.MaxTransactionSize)
+            throw new RpcException(RpcError.InvalidSize.WithData("Transaction size exceeds the maximum allowed."));
+
         var tx = Result.Ok_Or(
-            () => Convert.FromBase64String(base64Tx).AsSerializable<Transaction>(),
-            RpcError.InvalidParams.WithData($"Invalid Transaction Format: {base64Tx}"));
-        var reason = system.Blockchain.Ask<RelayResult>(tx).Result;
-        return GetRelayResult(reason.Result, tx.Hash);
+            () => txData.AsSerializable<Transaction>(),
+            RpcError.InvalidParams.WithData("Invalid Transaction Format"));
+
+        var relayResult = system.Blockchain.Ask<RelayResult>(tx, TimeSpan.FromSeconds(30)).Result;
+        return GetRelayResult(relayResult.Result, tx.Hash);
     }
 
     /// <summary>
@@ -269,8 +277,8 @@ partial class RpcServer
             throw new RpcException(RpcErrorFactory.InvalidParams("Only support to relay transaction."));
 
         tx.Witnesses = context.GetWitnesses();
-        var reason = system.Blockchain.Ask<RelayResult>(tx).Result;
-        return GetRelayResult(reason.Result, tx.Hash);
+        var relayResult = system.Blockchain.Ask<RelayResult>(tx, TimeSpan.FromSeconds(30)).Result;
+        return GetRelayResult(relayResult.Result, tx.Hash);
     }
 
     /// <summary>
@@ -289,7 +297,7 @@ partial class RpcServer
         var block = Result.Ok_Or(
             () => Convert.FromBase64String(base64Block).AsSerializable<Block>(),
             RpcError.InvalidParams.WithData($"Invalid Block Format: {base64Block}"));
-        var reason = system.Blockchain.Ask<RelayResult>(block).Result;
-        return GetRelayResult(reason.Result, block.Hash);
+        var relayResult = system.Blockchain.Ask<RelayResult>(block).Result;
+        return GetRelayResult(relayResult.Result, block.Hash);
     }
 }

@@ -269,7 +269,12 @@ public static class ParameterConverter
         }
 
         // Validate format
-        _ = signers.ToByteArray().AsSerializableArray<Signer>();
+        var signerData = signers.ToByteArray();
+        _ = signerData.AsSerializableArray<Signer>();
+
+        if (signerData.Length > Transaction.MaxTransactionSize)
+            throw new RpcException(RpcError.InvalidParams.WithData("Max transaction size exceeded."));
+
         return signers;
     }
 
@@ -305,12 +310,27 @@ public static class ParameterConverter
             var verification = obj["verification"];
             if (invocation is null && verification is null) continue; // Keep same as before
 
-            witnesses.Add(new Witness
+            var witness = new Witness
             {
                 InvocationScript = Convert.FromBase64String(invocation?.AsString() ?? string.Empty),
                 VerificationScript = Convert.FromBase64String(verification?.AsString() ?? string.Empty)
-            });
+            };
+
+            if (witness.InvocationScript.Length > Witness.MaxInvocationScript)
+                throw new RpcException(RpcError.InvalidParams.WithData($"Invocation script length exceeds the maximum allowed length at {i}."));
+            if (witness.VerificationScript.Length > Witness.MaxVerificationScript)
+                throw new RpcException(RpcError.InvalidParams.WithData($"Verification script length exceeds the maximum allowed length at {i}."));
+
+            witnesses.Add(witness);
         }
+
+        // Validate format
+        var witnessArray = witnesses.ToArray();
+        var witnessData = witnessArray.ToByteArray();
+        _ = witnessData.AsSerializableArray<Witness>();
+
+        if (witnessData.Length > Transaction.MaxTransactionSize)
+            throw new RpcException(RpcError.InvalidParams.WithData("Max transaction size exceeded."));
 
         return witnesses.ToArray();
     }

@@ -54,13 +54,13 @@ partial class Node
         }
     }
 
-    private void DeserializeBranch(ref MemoryReader reader)
+    private void DeserializeBranch(ref MemoryReader reader, int depth)
     {
         Children = new Node[BranchChildCount];
         for (var i = 0; i < BranchChildCount; i++)
         {
             var n = new Node();
-            n.Deserialize(ref reader);
+            n.Deserialize(ref reader, depth + 1);
             Children[i] = n;
         }
     }

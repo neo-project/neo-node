@@ -23,7 +23,6 @@ public class RestServerSettings
 {
     #region Settings
 
-    public uint Network { get; init; }
     public IPAddress BindAddress { get; init; } = IPAddress.None;
     public uint Port { get; init; }
     public uint KeepAliveTimeout { get; init; }
@@ -56,7 +55,6 @@ public class RestServerSettings
 
     public static RestServerSettings Default { get; } = new()
     {
-        Network = 860833102u,
         BindAddress = IPAddress.Loopback,
         Port = 10339u,
         KeepAliveTimeout = 120u,
@@ -138,7 +136,6 @@ public class RestServerSettings
     public static void Load(IConfigurationSection section) =>
         Current = new()
         {
-            Network = section.GetValue(nameof(Network), Default.Network),
             BindAddress = IPAddress.Parse(section.GetSection(nameof(BindAddress)).Value ?? "0.0.0.0"),
             Port = section.GetValue(nameof(Port), Default.Port),
             KeepAliveTimeout = section.GetValue(nameof(KeepAliveTimeout), Default.KeepAliveTimeout),

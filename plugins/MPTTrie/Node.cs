@@ -123,15 +123,22 @@ public partial class Node : ISerializable
 
     public void Deserialize(ref MemoryReader reader)
     {
+        Deserialize(ref reader, 0);
+    }
+
+    private void Deserialize(ref MemoryReader reader, int depth)
+    {
+        if (depth > MaxKeyLength)
+            throw new FormatException("MPT node nesting depth exceeds the maximum allowed limit.");
         Type = (NodeType)reader.ReadByte();
         switch (Type)
         {
             case NodeType.BranchNode:
-                DeserializeBranch(ref reader);
+                DeserializeBranch(ref reader, depth);
                 Reference = (int)reader.ReadVarInt();
                 break;
             case NodeType.ExtensionNode:
-                DeserializeExtension(ref reader);
+                DeserializeExtension(ref reader, depth);
                 Reference = (int)reader.ReadVarInt();
                 break;
             case NodeType.LeafNode:

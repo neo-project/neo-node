@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Neo.ConsoleService\Neo.ConsoleService.csproj" />
+    <ProjectReference Include="..\RpcServer\RpcServer.csproj" AdditionalProperties="IncludeSettingsFileOutput=False">
+      <Private>false</Private>
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </ProjectReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\PluginHelper\PluginHelper.cs">
+      <Link>PluginHelper\PluginHelper.cs</Link>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="DeferredRelay.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="$(PackageId).Tests" />
+  </ItemGroup>
+
+</Project>

@@ -19,6 +19,7 @@ public class RpcServerPlugin : Plugin
     private RpcServerSettings? settings;
     private static readonly Dictionary<uint, RpcServer> servers = new();
     private static readonly Dictionary<uint, List<object>> handlers = new();
+    private static int serverIndex = 0;
 
     public override string ConfigFile => System.IO.Path.Combine(RootPath, "RpcServer.json");
 
@@ -27,10 +28,18 @@ public class RpcServerPlugin : Plugin
     protected override void Configure()
     {
         settings = new RpcServerSettings(GetConfiguration());
-        foreach (var s in settings.Servers)
+        foreach (var (network, server) in servers)
         {
-            if (servers.TryGetValue(s.Network, out var server))
-                server.UpdateSettings(s);
+            var idx = 0;
+            foreach (var s in settings.Servers)
+            {
+                if (idx == serverIndex)
+                {
+                    server.UpdateSettings(s);
+                    break;
+                }
+                idx++;
+            }
         }
     }
 
@@ -45,8 +54,13 @@ public class RpcServerPlugin : Plugin
     {
         if (settings is null) throw new InvalidOperationException("RpcServer settings are not loaded");
 
-        var s = settings.Servers.FirstOrDefault(p => p.Network == system.Settings.Network);
-        if (s is null) return;
+        if (serverIndex >= settings.Servers.Count)
+        {
+            Logs.RuntimeLogger.Warning("No RpcServer configuration available for this system instance");
+            return;
+        }
+
+        var s = settings.Servers[serverIndex];
 
         if (s.EnableCors && string.IsNullOrEmpty(s.RpcUser) == false && s.AllowOrigins.Length == 0)
         {
@@ -55,10 +69,10 @@ public class RpcServerPlugin : Plugin
                 "You must add url origins to the list to have CORS work from browser with basic authentication enabled. " +
                 "Example: \"AllowOrigins\": [\"http://{BindAddress}:{Port}\"]", s.EnableCors, s.AllowOrigins, s.BindAddress, s.Port);
         }
-        Logs.RuntimeLogger.Information("RpcServer started for network {Network}", s.Network);
+        Logs.RuntimeLogger.Information("RpcServer started for network {Network}", system.Settings.Network);
 
         var rpcRpcServer = new RpcServer(system, s);
-        if (handlers.Remove(s.Network, out var list))
+        if (handlers.Remove(system.Settings.Network, out var list))
         {
             foreach (var handler in list)
             {
@@ -67,7 +81,8 @@ public class RpcServerPlugin : Plugin
         }
 
         rpcRpcServer.StartRpcServer();
-        servers.TryAdd(s.Network, rpcRpcServer);
+        servers.TryAdd(system.Settings.Network, rpcRpcServer);
+        serverIndex++;
     }
 
     public static void RegisterMethods(object handler, uint network)

@@ -13,7 +13,9 @@ using Neo.Cryptography.ECC;
 using Neo.Extensions;
 using Neo.Network.P2P.Payloads;
 using Neo.Plugins.OracleService.Protocols;
+using Neo.SmartContract;
 using Neo.SmartContract.Native;
+using Neo.Wallets;
 using System.Collections.Concurrent;
 using static Neo.Plugins.OracleService.Tests.TestBlockchain;
 
@@ -46,6 +48,63 @@ public class UT_OracleService
             OracleService.Filter(json, "$.Manufacturers[1].Products[0].Name").ToStrictUtf8String());
         Assert.AreEqual(@"[{""Name"":""Elbow Grease"",""Price"":99.95}]",
             OracleService.Filter(json, "$.Manufacturers[1].Products[0]").ToStrictUtf8String());
+    }
+
+    [TestMethod]
+    public void CollectRefreshSignatures_WatchOnlyDoesNotThrow()
+    {
+        var wallet = TestUtils.GenerateTestWallet("pwd");
+        wallet.CreateAccount(UInt160.Zero);
+        var signs = new Dictionary<ECPoint, byte[]>();
+
+        var matches = OracleService.CollectRefreshSignatures(wallet, signs);
+        Assert.IsEmpty(matches);
+    }
+
+    [TestMethod]
+    public void CollectRefreshSignatures_WatchOnlyThenKeyedStillMatches()
+    {
+        var wallet = TestUtils.GenerateTestWallet("pwd");
+        wallet.CreateAccount(UInt160.Parse("0x0000000000000000000000000000000000000001"));
+        var keyed = wallet.CreateAccount();
+        Assert.IsNotNull(keyed);
+        var key = keyed.GetKey();
+        Assert.IsNotNull(key);
+
+        byte[] signature = [1, 2, 3];
+        var signs = new Dictionary<ECPoint, byte[]> { [key.PublicKey] = signature };
+
+        var matches = OracleService.CollectRefreshSignatures(wallet, signs);
+        Assert.HasCount(1, matches);
+        Assert.AreEqual(key.PublicKey, matches[0].Key.PublicKey);
+        CollectionAssert.AreEqual(signature, matches[0].Sign);
+    }
+
+    [TestMethod]
+    public void CollectRefreshSignatures_SkipsLockedAccount()
+    {
+        var wallet = TestUtils.GenerateTestWallet("pwd");
+        var account = wallet.CreateAccount();
+        Assert.IsNotNull(account);
+        var key = account.GetKey();
+        Assert.IsNotNull(key);
+        account.Lock = true;
+
+        var signs = new Dictionary<ECPoint, byte[]> { [key.PublicKey] = new byte[] { 9 } };
+        var matches = OracleService.CollectRefreshSignatures(wallet, signs);
+        Assert.IsEmpty(matches);
+    }
+
+    [TestMethod]
+    public void CollectRefreshSignatures_IgnoresUnrelatedKeys()
+    {
+        var wallet = TestUtils.GenerateTestWallet("pwd");
+        wallet.CreateAccount();
+        var other = TestUtils.GenerateTestWallet("pwd").CreateAccount()!.GetKey()!;
+        var signs = new Dictionary<ECPoint, byte[]> { [other.PublicKey] = new byte[] { 4 } };
+
+        var matches = OracleService.CollectRefreshSignatures(wallet, signs);
+        Assert.IsEmpty(matches);
     }
 
     [TestMethod]

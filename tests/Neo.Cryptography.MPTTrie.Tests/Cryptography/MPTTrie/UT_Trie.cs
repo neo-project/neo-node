@@ -41,7 +41,7 @@ class TestSnapshot : IStoreSnapshot
 
     public bool Contains(byte[] key) { throw new NotImplementedException(); }
 
-    public IEnumerable<(byte[] Key, byte[] Value)> Find(byte[] key, SeekDirection direction) { throw new NotImplementedException(); }
+    public IEnumerable<(byte[] Key, byte[] Value)> Find(byte[]? keyPrefix = null, SeekDirection direction = SeekDirection.Forward, int skip = 0) { throw new NotImplementedException(); }
 
     public byte[] TryGet(byte[] key)
     {
@@ -152,6 +152,74 @@ public class UT_Trie
         Assert.ThrowsExactly<ArgumentException>(() => mpt.Put(new byte[Node.MaxKeyLength / 2 + 1], []));
         Assert.ThrowsExactly<ArgumentException>(() => mpt.Put("01".HexToBytes(), new byte[Node.MaxValueLength + 1]));
         mpt.Put("ac01".HexToBytes(), "ab".HexToBytes());
+    }
+
+    [TestMethod]
+    public void MaximumLeafValueSurvivesCommitAndReload()
+    {
+        var value = new byte[Node.MaxValueLength];
+        value[^1] = 0xab;
+        using var store = new MemoryStore();
+        using var snapshot = store.GetSnapshot();
+        var trie = new Trie(snapshot, null);
+        trie.Put([1], value);
+        var root = trie.Root.Hash;
+        trie.Commit();
+        snapshot.Commit();
+        using var reloaded = store.GetSnapshot();
+        CollectionAssert.AreEqual(value, new Trie(reloaded, root)[new byte[] { 1 }]);
+        Assert.ThrowsExactly<ArgumentException>(() => trie.Put([2], new byte[Node.MaxValueLength + 1]));
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void EmptyRootSurvivesCommitAndReload(bool fullState)
+    {
+        using var store = new MemoryStore();
+        using var snapshot = store.GetSnapshot();
+        var trie = new Trie(snapshot, null, fullState);
+        var emptyRoot = trie.Root.Hash;
+        trie.Commit();
+        snapshot.Commit();
+
+        using var reloaded = store.GetSnapshot();
+        var next = new Trie(reloaded, emptyRoot, fullState);
+        Assert.IsFalse(next.TryGetValue([1], out _));
+        Assert.IsEmpty(next.Find([]).ToArray());
+        Assert.IsFalse(next.Delete([1]));
+        next.Put([1], [2]);
+        next.Commit();
+        reloaded.Commit();
+
+        using var finalSnapshot = store.GetSnapshot();
+        CollectionAssert.AreEqual(new byte[] { 2 }, new Trie(finalSnapshot, next.Root.Hash, fullState)[new byte[] { 1 }]);
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void DeletedLastKeyCanBeReloaded(bool fullState)
+    {
+        using var store = new MemoryStore();
+        using var snapshot = store.GetSnapshot();
+        var trie = new Trie(snapshot, null, fullState);
+        trie.Put([1], [2]);
+        trie.Commit();
+        snapshot.Commit();
+
+        using var deletionSnapshot = store.GetSnapshot();
+        var deleting = new Trie(deletionSnapshot, trie.Root.Hash, fullState);
+        Assert.IsTrue(deleting.Delete([1]));
+        var emptyRoot = deleting.Root.Hash;
+        deleting.Commit();
+        deletionSnapshot.Commit();
+
+        using var reloaded = store.GetSnapshot();
+        var next = new Trie(reloaded, emptyRoot, fullState);
+        next.Put([3], [4]);
+        Assert.IsFalse(next.TryGetValue([1], out _));
+        CollectionAssert.AreEqual(new byte[] { 4 }, next[new byte[] { 3 }]);
     }
 
     [TestMethod]

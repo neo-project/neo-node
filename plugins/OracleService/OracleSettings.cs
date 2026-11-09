@@ -16,11 +16,23 @@ namespace Neo.Plugins.OracleService;
 
 class HttpsSettings
 {
+    /// <summary>
+    /// Default number of HTTPS redirects to follow after the first request.
+    /// </summary>
+    public const int DefaultMaxRedirects = 2;
+
     public TimeSpan Timeout { get; }
+
+    /// <summary>
+    /// Maximum number of HTTPS redirects to follow. Zero means the first response is used as-is
+    /// (a <c>Location</c> header is not followed). Negative config values are treated as zero.
+    /// </summary>
+    public int MaxRedirects { get; }
 
     public HttpsSettings(IConfigurationSection section)
     {
         Timeout = TimeSpan.FromMilliseconds(section.GetValue("Timeout", 5000));
+        MaxRedirects = Math.Max(0, section.GetValue("MaxRedirects", DefaultMaxRedirects));
     }
 }
 
@@ -38,7 +50,6 @@ class NeoFSSettings
 
 class OracleSettings : IPluginSettings
 {
-    public uint Network { get; }
     public Uri[] Nodes { get; }
     public TimeSpan MaxTaskTimeout { get; }
     public TimeSpan MaxOracleTimeout { get; }
@@ -54,7 +65,6 @@ class OracleSettings : IPluginSettings
 
     private OracleSettings(IConfigurationSection section)
     {
-        Network = section.GetValue("Network", 5195086u);
         Nodes = section.GetSection("Nodes").GetChildren().Select(p => new Uri(p.Get<string>(), UriKind.Absolute)).ToArray();
         MaxTaskTimeout = TimeSpan.FromMilliseconds(section.GetValue("MaxTaskTimeout", 432000000));
         MaxOracleTimeout = TimeSpan.FromMilliseconds(section.GetValue("MaxOracleTimeout", 15000));

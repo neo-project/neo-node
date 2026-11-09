@@ -59,7 +59,6 @@ public sealed class DBFTPlugin : Plugin
 
     protected override void OnSystemLoaded(NeoSystem system)
     {
-        if (system.Settings.Network != settings.Network) return;
         neoSystem = system;
         neoSystem.ServiceAdded += NeoSystem_ServiceAdded_Handler;
         PluginLogger ??= Logs.GetLogger($"Plugin_{Name}");

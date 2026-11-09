@@ -67,7 +67,6 @@ class Nep17Tracker : TrackerBase
                     catch (Exception ex)
                     {
                         TokensTracker.PluginLogger?.Error(ex, "Error handling NEP-17 notification");
-                        throw;
                     }
                 }
             }
@@ -83,7 +82,6 @@ class Nep17Tracker : TrackerBase
             catch (Exception ex)
             {
                 TokensTracker.PluginLogger?.Error(ex, "Error saving NEP-17 balance");
-                throw;
             }
         }
     }
@@ -113,7 +111,7 @@ class Nep17Tracker : TrackerBase
     {
         var key = new Nep17BalanceKey(balanceChanged.User, balanceChanged.Asset);
         using ScriptBuilder sb = new();
-        sb.EmitDynamicCall(balanceChanged.Asset, "balanceOf", balanceChanged.User);
+        sb.EmitDynamicCall(balanceChanged.Asset, "balanceOf", CallFlags.ReadOnly, balanceChanged.User);
         using ApplicationEngine engine = ApplicationEngine.Run(sb.ToArray(), snapshot, settings: _neoSystem.Settings, gas: 1700_0000);
 
         if (engine.State.HasFlag(VMState.FAULT) || engine.ResultStack.Count == 0)

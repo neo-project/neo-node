@@ -42,7 +42,8 @@ public partial class RecoveryMessage : ConsensusMessage
         ChangeViewMessages = reader.ReadSerializableArray<ChangeViewPayloadCompact>(byte.MaxValue).ToDictionary(p => p.ValidatorIndex);
         if (reader.ReadBoolean())
         {
-            PrepareRequestMessage = reader.ReadSerializable<PrepareRequest>();
+            PrepareRequestMessage = new PrepareRequest();
+            PrepareRequestMessage.Deserialize(ref reader);
         }
         else
         {

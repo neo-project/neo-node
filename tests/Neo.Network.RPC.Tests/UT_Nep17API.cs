@@ -12,6 +12,7 @@
 using Moq;
 using Neo.Extensions;
 using Neo.Json;
+using Neo.Network.RPC.Models;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
 using Neo.VM;
@@ -160,5 +161,27 @@ public class UT_Nep17API
 
         result = await nep17API.CreateTransferTxAsync(NativeContract.GAS.Hash, keyPair1, UInt160.Zero, new BigInteger(1_00000000), string.Empty, true);
         Assert.IsNotNull(result);
+    }
+
+    [TestMethod]
+    public async Task TestBalanceOf_Fault_Throws()
+    {
+        byte[] testScript = NativeContract.GAS.Hash.MakeScript("balanceOf", UInt160.Zero);
+        var fault = new RpcInvokeResult
+        {
+            Stack = [],
+            GasConsumed = 100,
+            Script = Convert.ToBase64String(testScript),
+            State = VMState.FAULT,
+            Exception = "insufficient gas"
+        };
+        rpcClientMock.Setup(p => p.RpcSendAsync("invokescript", It.Is<JToken[]>(j =>
+            Convert.FromBase64String(j[0].AsString()).SequenceEqual(testScript))))
+            .ReturnsAsync(fault.ToJson())
+            .Verifiable();
+
+        var ex = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
+            nep17API.BalanceOfAsync(NativeContract.GAS.Hash, UInt160.Zero));
+        StringAssert.Contains(ex.Message, "FAULT");
     }
 }

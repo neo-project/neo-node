@@ -58,11 +58,8 @@ public partial class RestServerPlugin : Plugin
             ConsoleHelper.Info($"browser with basic authentication enabled.");
             ConsoleHelper.Info($"Example: \"AllowOrigins\": [\"http://{_settings.BindAddress}:{_settings.Port}\"]");
         }
-        if (system.Settings.Network == _settings.Network)
-        {
-            NeoSystem = system;
-            LocalNode = system.LocalNode.Ask<LocalNode>(new LocalNode.GetInstance()).Result;
-        }
+        NeoSystem = system;
+        LocalNode = system.LocalNode.Ask<LocalNode>(new LocalNode.GetInstance()).Result;
         _server = new RestWebServer();
         _server.Start();
     }

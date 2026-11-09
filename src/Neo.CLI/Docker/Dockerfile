@@ -11,22 +11,27 @@ RUN apt-get update && apt-get install -y \
     sqlite3 \
     libsqlite3-dev \
     libunwind8-dev \
+    libleveldb-dev \
     screen \
+    dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /neo
-COPY prepare-node.sh .
-RUN chmod +x prepare-node.sh
+# CI may pre-stage release archives in this context; local builds download them in prepare-node.sh
+COPY . .
+RUN dos2unix prepare-node.sh start.sh && chmod +x prepare-node.sh start.sh
 
-ARG CLI_VERSION=v3.9.2
+ARG CLI_VERSION=v3.10.1
 ARG PLUGIN_VERSION=
+ARG GITHUB_REPO=neo-project/neo-node
+ENV NEO_CLI_DIR=neo-cli-${CLI_VERSION}
+ENV GITHUB_REPO=${GITHUB_REPO}
 RUN if [ -z "$PLUGIN_VERSION" ]; then \
         ./prepare-node.sh $CLI_VERSION; \
     else \
         ./prepare-node.sh $CLI_VERSION $PLUGIN_VERSION; \
-    fi
+    fi \
+    && rm -f neo-cli.*.tar.gz ApplicationLogs.zip RpcServer.zip TokensTracker.zip \
+    && chmod -R +x "${NEO_CLI_DIR}"
 
-RUN sed -i 's/"BindAddress":[^,]*/"BindAddress": "0.0.0.0"/' neo-cli/Plugins/RpcServer/RpcServer.json
-COPY start.sh .
-RUN chmod -R +x ./neo-cli
 ENTRYPOINT ["sh", "./start.sh"]

@@ -16,6 +16,7 @@ using Neo.SmartContract;
 using Neo.SmartContract.Manifest;
 using Neo.SmartContract.Native;
 using Neo.VM;
+using Neo.VM.Types;
 using Neo.Wallets;
 
 namespace Neo.Network.RPC;
@@ -47,6 +48,15 @@ public class ContractClient
     {
         byte[] script = scriptHash.MakeScript(operation, args);
         return rpcClient.InvokeScriptAsync(script);
+    }
+
+    protected static StackItem RequireHaltResult(RpcInvokeResult result, int minStackLength = 1)
+    {
+        if (result.State != VMState.HALT)
+            throw new InvalidOperationException($"Contract invoke faulted ({result.State}): {result.Exception}");
+        if (result.Stack is null || result.Stack.Length < minStackLength)
+            throw new InvalidOperationException("Contract invoke returned no result.");
+        return result.Stack[0];
     }
 
     /// <summary>

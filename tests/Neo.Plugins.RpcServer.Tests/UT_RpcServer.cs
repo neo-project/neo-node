@@ -46,7 +46,6 @@ public partial class UT_RpcServer
             SessionEnabled = true,
             SessionExpirationTime = TimeSpan.FromSeconds(0.3),
             MaxGasInvoke = 1500_0000_0000,
-            Network = TestProtocolSettings.SoleNode.Network,
         };
         _rpcServer = new RpcServer(_neoSystem, _rpcServerSettings);
         _walletAccount = _wallet.Import("KxuRSsHgJMb3AMSN6B9P3JHNGMFtxmuimqgR9MmXPcv3CLLfusTd");
@@ -92,7 +91,6 @@ public partial class UT_RpcServer
             SessionEnabled = true,
             SessionExpirationTime = TimeSpan.FromSeconds(0.3),
             MaxGasInvoke = 1500_0000_0000,
-            Network = TestProtocolSettings.SoleNode.Network,
             RpcUser = "testuser",
             RpcPass = "testpass",
         };
@@ -190,13 +188,20 @@ public partial class UT_RpcServer
     }
 
     [TestMethod]
-    public async Task TestProcessRequest_EmptyBatch()
+    public async Task TestProcessAsync_EmptyBatch()
     {
-        var emptyBatchJson = "[]";
-        var response = await SimulatePostRequest(emptyBatchJson);
+        var context = new DefaultHttpContext();
+        context.Request.Method = "POST";
+        context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes("[]"));
+        context.Response.Body = new MemoryStream();
+
+        await _rpcServer.ProcessAsync(context);
+        context.Response.Body.Position = 0;
+        var response = JToken.Parse(await new StreamReader(context.Response.Body).ReadToEndAsync());
 
         Assert.IsNotNull(response["error"]);
         Assert.AreEqual(RpcError.InvalidRequest.Code, response["error"]["code"].AsNumber());
+        Assert.IsNull(response["id"]);
     }
 
     [TestMethod]
@@ -236,6 +241,35 @@ public partial class UT_RpcServer
         Assert.IsNull(batchResults[3]["error"]);
         Assert.IsNotNull(batchResults[3]["result"]);
         Assert.AreEqual(4, batchResults[3]["id"].AsNumber());
+    }
+
+    [TestMethod]
+    public async Task TestProcessAsync_BatchSizeLimit()
+    {
+        _rpcServer.UpdateSettings(_rpcServerSettings with { MaxBatchSize = 2 });
+        const string item = """{"jsonrpc":"2.0","method":"getblockcount","params":[],"id":1}""";
+
+        async Task<JToken> PostBatchAsync(int count)
+        {
+            var context = new DefaultHttpContext();
+            context.Request.Method = "POST";
+            context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes($"[{string.Join(',', Enumerable.Repeat(item, count))}]"));
+            context.Response.Body = new MemoryStream();
+
+            await _rpcServer.ProcessAsync(context);
+            context.Response.Body.Position = 0;
+            return JToken.Parse(await new StreamReader(context.Response.Body).ReadToEndAsync());
+        }
+
+        var allowed = (JArray)await PostBatchAsync(2);
+        Assert.HasCount(2, allowed);
+        Assert.IsNotNull(allowed[0]["result"]);
+        Assert.IsNotNull(allowed[1]["result"]);
+
+        var rejected = await PostBatchAsync(3);
+        Assert.AreEqual(RpcError.InvalidRequest.Code, rejected["error"]["code"].AsNumber());
+        StringAssert.Contains(rejected["error"]["message"].AsString(), "maximum of 2");
+        Assert.IsNull(rejected["id"]);
     }
 
     [TestMethod]
@@ -407,7 +441,6 @@ public partial class UT_RpcServer
             .First();
 
         var settings = RpcServersSettings.Load(config);
-        Assert.AreEqual(860833102u, settings.Network);
         Assert.AreEqual(10332, settings.Port);
         Assert.AreEqual(IPAddress.Parse("127.0.0.1"), settings.BindAddress);
         Assert.AreEqual(string.Empty, settings.SslCert);
@@ -429,7 +462,8 @@ public partial class UT_RpcServer
         Assert.HasCount(1, settings.DisabledMethods);
         Assert.AreEqual("openwallet", settings.DisabledMethods[0]);
         Assert.AreEqual(40, settings.MaxConcurrentConnections);
-        Assert.AreEqual(5 * 1024 * 1024, settings.MaxRequestBodySize);
+        Assert.AreEqual(1 * 1024 * 1024, settings.MaxRequestBodySize);
+        Assert.AreEqual(10, settings.MaxBatchSize);
         Assert.AreEqual(50, settings.FindStoragePageSize);
     }
 
@@ -443,7 +477,6 @@ public partial class UT_RpcServer
 
         Assert.AreEqual(UnhandledExceptionPolicy.Ignore, settings.ExceptionPolicy);
         Assert.HasCount(1, settings.Servers);
-        Assert.AreEqual(860833102u, settings.Servers[0].Network);
     }
 
     [TestMethod]
@@ -467,5 +500,6 @@ public partial class UT_RpcServer
 
         Assert.AreEqual(RpcServersSettings.Default.MaxGasInvoke, settings.MaxGasInvoke);
         Assert.AreEqual(RpcServersSettings.Default.MaxFee, settings.MaxFee);
+        Assert.AreEqual(RpcServersSettings.Default.MaxBatchSize, settings.MaxBatchSize);
     }
 }

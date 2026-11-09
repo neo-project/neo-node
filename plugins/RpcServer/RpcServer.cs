@@ -155,7 +155,7 @@ public partial class RpcServer : IDisposable
         {
             builder.UseKestrel(options => options.Listen(settings.BindAddress, settings.Port, listenOptions =>
             {
-                // Default value is 5Mb
+                // Default value is 1Mb
                 options.Limits.MaxRequestBodySize = settings.MaxRequestBodySize;
                 options.Limits.MaxRequestLineSize = Math.Min(settings.MaxRequestBodySize, options.Limits.MaxRequestLineSize);
                 // Default value is 40
@@ -287,7 +287,11 @@ public partial class RpcServer : IDisposable
         {
             if (array.Count == 0)
             {
-                response = CreateErrorResponse(request["id"], RpcError.InvalidRequest);
+                response = CreateErrorResponse(null, RpcError.InvalidRequest);
+            }
+            else if (array.Count > settings.MaxBatchSize)
+            {
+                response = CreateErrorResponse(null, RpcError.InvalidRequest.WithData($"Batch size exceeds the maximum of {settings.MaxBatchSize}."));
             }
             else
             {

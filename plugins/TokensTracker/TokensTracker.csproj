@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Neo.Plugins.TokensTracker.Tests" />
     <ProjectReference Include="..\RpcServer\RpcServer.csproj" />
   </ItemGroup>
 

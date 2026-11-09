@@ -3,7 +3,6 @@
     "UnhandledExceptionPolicy": "Ignore",
     "Servers": [
       {
-        "Network": 860833102,
         "BindAddress": "127.0.0.1",
         "Port": 10332,
         "SslCert": "",
@@ -17,6 +16,9 @@
         "RequestHeadersTimeout": 15,
         "MaxGasInvoke": 20,
         "MaxFee": 0.1,
+        "MaxRequestBodySize": 1048576,
+        "MaxBatchSize": 10,
+        "MaxItemResponseSize": 102400,
         "MaxConcurrentConnections": 40,
         "MaxIteratorResultItems": 100,
         "MaxStackSize": 65535,
