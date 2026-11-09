@@ -289,8 +289,9 @@ internal partial class ConsensusService : UntypedActor
 
             VerifyResult result;
 
-            // Ensure transaction doesn't have on-chain conflicts.
-            if (neoSystem.ContainsConflictHash(tx.Hash, tx.Signers.Select(s => s.Account)))
+            // Same snapshot and trace window as OnPrepareRequestReceived. NeoSystem.ContainsConflictHash
+            // reads the live StoreView, which can move ahead of this consensus round.
+            if (NativeContract.Ledger.ContainsConflictHash(context.Snapshot, tx.Hash, tx.Signers.Select(s => s.Account), neoSystem.GetMaxTraceableBlocks()))
             {
                 result = VerifyResult.HasConflicts;
 
