@@ -327,10 +327,12 @@ public partial class RpcServer : IDisposable
 
             if (_methods.TryGetValue(method, out var rpcMethod))
             {
+                var returnType = rpcMethod.Delegate.Method.ReturnType;
                 response["result"] = ProcessParamsMethod(jsonParameters, rpcMethod) switch
                 {
                     JToken result => result,
                     Task<JToken> task => await task,
+                    null when typeof(JToken).IsAssignableFrom(returnType) => null,
                     _ => throw new NotSupportedException()
                 };
                 return response;
