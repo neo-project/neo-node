@@ -172,6 +172,57 @@ public class UT_Trie
     }
 
     [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void EmptyRootSurvivesCommitAndReload(bool fullState)
+    {
+        using var store = new MemoryStore();
+        using var snapshot = store.GetSnapshot();
+        var trie = new Trie(snapshot, null, fullState);
+        var emptyRoot = trie.Root.Hash;
+        trie.Commit();
+        snapshot.Commit();
+
+        using var reloaded = store.GetSnapshot();
+        var next = new Trie(reloaded, emptyRoot, fullState);
+        Assert.IsFalse(next.TryGetValue([1], out _));
+        Assert.IsEmpty(next.Find([]).ToArray());
+        Assert.IsFalse(next.Delete([1]));
+        next.Put([1], [2]);
+        next.Commit();
+        reloaded.Commit();
+
+        using var finalSnapshot = store.GetSnapshot();
+        CollectionAssert.AreEqual(new byte[] { 2 }, new Trie(finalSnapshot, next.Root.Hash, fullState)[new byte[] { 1 }]);
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void DeletedLastKeyCanBeReloaded(bool fullState)
+    {
+        using var store = new MemoryStore();
+        using var snapshot = store.GetSnapshot();
+        var trie = new Trie(snapshot, null, fullState);
+        trie.Put([1], [2]);
+        trie.Commit();
+        snapshot.Commit();
+
+        using var deletionSnapshot = store.GetSnapshot();
+        var deleting = new Trie(deletionSnapshot, trie.Root.Hash, fullState);
+        Assert.IsTrue(deleting.Delete([1]));
+        var emptyRoot = deleting.Root.Hash;
+        deleting.Commit();
+        deletionSnapshot.Commit();
+
+        using var reloaded = store.GetSnapshot();
+        var next = new Trie(reloaded, emptyRoot, fullState);
+        next.Put([3], [4]);
+        Assert.IsFalse(next.TryGetValue([1], out _));
+        CollectionAssert.AreEqual(new byte[] { 4 }, next[new byte[] { 3 }]);
+    }
+
+    [TestMethod]
     public void TestPutCantResolve()
     {
         var mpt = new Trie(_mptdb.GetSnapshot(), _root.Hash);
