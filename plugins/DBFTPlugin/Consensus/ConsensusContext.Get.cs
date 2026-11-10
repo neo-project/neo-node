@@ -40,7 +40,9 @@ partial class ConsensusContext
             ValidatorIndex = message.ValidatorIndex,
             OriginalViewNumber = message.ViewNumber,
             Timestamp = message.Timestamp,
-            InvocationScript = payload.Witness.InvocationScript
+            InvocationScript = payload.Witness.InvocationScript,
+            Reason = message.Reason,
+            RejectedHashes = message.RejectedHashes
         };
     }
 

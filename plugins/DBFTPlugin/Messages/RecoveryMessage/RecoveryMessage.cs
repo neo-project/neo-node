@@ -72,7 +72,9 @@ public partial class RecoveryMessage : ConsensusMessage
             BlockIndex = BlockIndex,
             ValidatorIndex = p.ValidatorIndex,
             ViewNumber = p.OriginalViewNumber,
-            Timestamp = p.Timestamp
+            Timestamp = p.Timestamp,
+            Reason = p.Reason,
+            RejectedHashes = p.RejectedHashes
         }, p.InvocationScript)).ToArray();
     }
 
