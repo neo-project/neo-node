@@ -98,6 +98,8 @@ internal static class DeferredRelayEngine
         UInt256 hash = tx.Hash;
         if (system.ContainsTransaction(hash) != ContainsTransactionType.NotExist)
             return false;
+        if (system.ContainsConflictHash(hash, tx.Signers.Select(s => s.Account)))
+            return false;
 
         byte[] key = hash.GetSpan().ToArray();
         if (store.Contains(key))
@@ -336,6 +338,13 @@ internal static class DeferredRelayEngine
         foreach ((byte[] key, Transaction tx) in candidates)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (system.ContainsTransaction(tx.Hash) != ContainsTransactionType.NotExist ||
+                system.ContainsConflictHash(tx.Hash, tx.Signers.Select(s => s.Account)))
+            {
+                toRemove.Add(key);
+                continue;
+            }
+
             if (DeferredRelayVerification.VerifyForOffer(system.Settings, snapshot, tx, verifyContext) != VerifyResult.Succeed)
                 toRemove.Add(key);
             else
