@@ -16,6 +16,7 @@ namespace Neo.Cryptography.MPTTrie;
 public partial class Trie
 {
     private const byte Prefix = 0xf0;
+    private static readonly UInt256 EmptyRootHash = new Node().Hash;
     private readonly bool _full;
     private Node _root;
     private readonly Cache _cache;
@@ -25,7 +26,7 @@ public partial class Trie
     {
         ArgumentNullException.ThrowIfNull(store);
         _cache = new Cache(store, Prefix);
-        _root = root is null ? new Node() : Node.NewHash(root);
+        _root = root is null || root.Equals(EmptyRootHash) ? new Node() : Node.NewHash(root);
         _full = fullState;
     }
 
