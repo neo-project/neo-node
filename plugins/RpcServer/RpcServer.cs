@@ -335,6 +335,7 @@ public partial class RpcServer : IDisposable
                 {
                     JToken result => result,
                     Task<JToken> task => await task,
+                    null => null,
                     _ => throw new NotSupportedException()
                 };
                 return response;
