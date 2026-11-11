@@ -136,7 +136,7 @@ public class RestServerSettings
     public static void Load(IConfigurationSection section) =>
         Current = new()
         {
-            BindAddress = IPAddress.Parse(section.GetSection(nameof(BindAddress)).Value ?? "0.0.0.0"),
+            BindAddress = IPAddress.Parse(section.GetValue(nameof(BindAddress), Default.BindAddress.ToString())),
             Port = section.GetValue(nameof(Port), Default.Port),
             KeepAliveTimeout = section.GetValue(nameof(KeepAliveTimeout), Default.KeepAliveTimeout),
             SslCertFile = section.GetValue(nameof(SslCertFile), Default.SslCertFile),
