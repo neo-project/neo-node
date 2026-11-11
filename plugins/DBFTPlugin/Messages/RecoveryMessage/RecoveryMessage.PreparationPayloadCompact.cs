@@ -29,6 +29,8 @@ partial class RecoveryMessage
         {
             ValidatorIndex = reader.ReadByte();
             InvocationScript = reader.ReadVarMemory(1024);
+            if (InvocationScript.IsEmpty)
+                throw new FormatException("Recovery compact invocation script cannot be empty.");
         }
 
         void ISerializable.Serialize(BinaryWriter writer)
