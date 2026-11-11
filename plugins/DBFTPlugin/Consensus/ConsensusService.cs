@@ -258,7 +258,20 @@ internal partial class ConsensusService : UntypedActor
 
     private bool ReverifyAndProcessPayload(ExtensiblePayload payload)
     {
-        RelayResult relayResult = blockchain.Ask<RelayResult>(new Reverify(new IInventory[] { payload })).Result;
+        if (payload.Witness is null) return false;
+
+        RelayResult relayResult;
+        try
+        {
+            // A failed blockchain actor may never reply. Do not stall consensus indefinitely.
+            relayResult = blockchain.Ask<RelayResult>(new Reverify(new IInventory[] { payload }), TimeSpan.FromSeconds(30))
+                .GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            DBFTPlugin.PluginLogger?.Warning("Recovery payload reverification failed: {Exception}", ex.ToString());
+            return false;
+        }
         if (relayResult.Result != VerifyResult.Succeed) return false;
         OnConsensusPayload(payload);
         return true;
