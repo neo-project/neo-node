@@ -461,6 +461,7 @@ public sealed class OracleService : Plugin
         var n = oracleNodes.Length;
         var m = n - (n - 1) / 3;
         var oracleSignContract = Contract.CreateMultiSigContract(m, oracleNodes);
+        var _ = SmartContract.Helper.IsMultiSigContract(oracleSignContract.Script, out var parameters);
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         var maxVUB = snapshot.GetMaxValidUntilBlockIncrement(settings);
         var validUntilBlock = requestTx.BlockIndex + maxVUB;
@@ -505,8 +506,8 @@ public sealed class OracleService : Plugin
         if (engine.Execute() != VMState.HALT) return null;
         tx.NetworkFee += engine.FeeConsumed;
 
-        var executionFactor = NativeContract.Policy.GetExecFeeFactor(engine);
-        var networkFee = executionFactor * SmartContract.Helper.MultiSignatureContractCost(m, n);
+        var executionFactor = NativeContract.Policy.GetExecFeeFactorWithDecimals(settings, snapshot, height);
+        var networkFee = SmartContract.Helper.MultiSignatureContractCost(settings, height + 1, executionFactor, parameters);
         tx.NetworkFee += networkFee;
 
         // Base size for transaction: includes const_header + signers + script + hashes + witnesses, except attributes

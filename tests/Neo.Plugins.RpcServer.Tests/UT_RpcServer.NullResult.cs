@@ -19,16 +19,16 @@ public partial class UT_RpcServer
     private class NullResultHandler
     {
         [RpcMethod]
-        public JToken? SyncNull() => null;
+        public JToken SyncNull() => null;
 
         [RpcMethod]
-        public Task<JToken?> AsyncNull() => Task.FromResult<JToken?>(null);
+        public Task<JToken> AsyncNull() => Task.FromResult<JToken>(null);
 
         [RpcMethod]
-        public JToken? SyncValue() => 42;
+        public JToken SyncValue() => 42;
 
         [RpcMethod]
-        public async Task<JToken?> AsyncYieldNull()
+        public async Task<JToken> AsyncYieldNull()
         {
             await Task.Yield();
             return null;
@@ -42,7 +42,7 @@ public partial class UT_RpcServer
         }
 
         [RpcMethod]
-        public JToken? NullWithParam(string? value = null) => value is null ? null : value;
+        public JToken NullWithParam(string value = null) => value is null ? null : value;
 
         [RpcMethod]
         public int Unsupported() => 1;
