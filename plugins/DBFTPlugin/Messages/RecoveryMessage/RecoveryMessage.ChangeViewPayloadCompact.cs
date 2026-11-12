@@ -35,6 +35,8 @@ partial class RecoveryMessage
             OriginalViewNumber = reader.ReadByte();
             Timestamp = reader.ReadUInt64();
             InvocationScript = reader.ReadVarMemory(1024);
+            if (InvocationScript.IsEmpty)
+                throw new FormatException("Recovery compact invocation script cannot be empty.");
         }
 
         void ISerializable.Serialize(BinaryWriter writer)
