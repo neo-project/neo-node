@@ -47,6 +47,7 @@ public sealed class OracleService : Plugin
     private Wallet wallet;
     private readonly ConcurrentDictionary<ulong, OracleTask> pendingQueue = new();
     internal readonly ConcurrentDictionary<ulong, DateTime> finishedCache = new();
+    private readonly ConcurrentDictionary<ulong, uint> deferredRequests = new();
     private Timer timer;
     internal CancellationTokenSource cancelSource = new();
     internal OracleStatus status = OracleStatus.Unstarted;
@@ -332,6 +333,7 @@ public sealed class OracleService : Plugin
         var oracleNodes = NativeContract.RoleManagement.GetDesignatedByRole(snapshot, Role.Oracle, height);
         foreach (var (requestId, request) in NativeContract.Oracle.GetRequestsByUrl(snapshot, req.Url))
         {
+            if (!CanRetryRequest(requestId, height)) continue;
             var result = Array.Empty<byte>();
             var responseCode = code;
             if (responseCode == OracleResponseCode.Success)
@@ -354,6 +356,15 @@ public sealed class OracleService : Plugin
                 Id = requestId,
                 Result = Array.Empty<byte>()
             }, oracleNodes, _system.Settings, true);
+
+            if (responseTx is null || backupTx is null)
+            {
+                // Keep the on-chain request eligible for retry when fees or oracle roles change.
+                DeferRequest(requestId, height);
+                PluginLogger?.Warning("Cannot build an Oracle response for request {RequestId} at height {Height}; retrying after the next block", requestId, height);
+                continue;
+            }
+            deferredRequests.TryRemove(requestId, out _);
 
             PluginLogger?.Information("Built response tx: {OriginalTxid}-({RequestId}) {ResponseTxHash}, responseCode:{ResponseCode}, result:{Result}, validUntilBlock:{ValidUntilBlock}, backupTx:{BackupTxHash}-{BackupValidUntilBlock}",
                 req.OriginalTxid, requestId, responseTx.Hash, responseCode, result.ToHexString(), responseTx.ValidUntilBlock, backupTx.Hash, backupTx.ValidUntilBlock);
@@ -390,7 +401,8 @@ public sealed class OracleService : Plugin
                     foreach (var (id, request) in NativeContract.Oracle.GetRequests(snapshot))
                     {
                         if (cancellation.IsCancellationRequested) break;
-                        if (!finishedCache.ContainsKey(id) && (!pendingQueue.TryGetValue(id, out OracleTask task) || task.Tx is null))
+                        if (!finishedCache.ContainsKey(id) && CanRetryRequest(id, NativeContract.Ledger.CurrentIndex(snapshot) + 1)
+                            && (!pendingQueue.TryGetValue(id, out OracleTask task) || task.Tx is null))
                             await ProcessRequestAsync(snapshot, request, cancellation);
                     }
                 }
@@ -426,7 +438,15 @@ public sealed class OracleService : Plugin
         {
             pendingQueue.TryRemove(onChainRequest, out _);
         }
+        foreach (var id in deferredRequests.Keys.Except(offChainRequests.Keys))
+            deferredRequests.TryRemove(id, out _);
     }
+
+    internal bool CanRetryRequest(ulong requestId, uint height)
+        => !deferredRequests.TryGetValue(requestId, out var deferredHeight) || deferredHeight != height;
+
+    internal void DeferRequest(ulong requestId, uint height)
+        => deferredRequests[requestId] = height;
 
     private async Task<(OracleResponseCode, string)> ProcessUrlAsync(string url, CancellationToken cancellation)
     {
@@ -459,8 +479,11 @@ public sealed class OracleService : Plugin
     {
         var requestTx = NativeContract.Ledger.GetTransactionState(snapshot, request.OriginalTxid);
         var n = oracleNodes.Length;
+        if (n == 0) return null;
         var m = n - (n - 1) / 3;
         var oracleSignContract = Contract.CreateMultiSigContract(m, oracleNodes);
+        if (66 * m > Witness.MaxInvocationScript || oracleSignContract.Script.Length > Witness.MaxVerificationScript)
+            return null;
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         var maxVUB = snapshot.GetMaxValidUntilBlockIncrement(settings);
         var validUntilBlock = requestTx.BlockIndex + maxVUB;
@@ -499,7 +522,7 @@ public sealed class OracleService : Plugin
         // Calculate network fee
 
         var oracleContract = NativeContract.ContractManagement.GetContract(snapshot, NativeContract.Oracle.Hash);
-        var engine = ApplicationEngine.Create(TriggerType.Verification, tx, snapshot.CloneCache(), settings: settings);
+        using var engine = ApplicationEngine.Create(TriggerType.Verification, tx, snapshot.CloneCache(), settings: settings);
         ContractMethodDescriptor md = oracleContract.Manifest.Abi.GetMethod(ContractBasicMethod.Verify, ContractBasicMethod.VerifyPCount);
         engine.LoadContract(oracleContract, md, CallFlags.None);
         if (engine.Execute() != VMState.HALT) return null;
@@ -529,6 +552,7 @@ public sealed class OracleService : Plugin
         }
         size += tx.Attributes.GetVarSize();
         tx.NetworkFee += size * feePerByte;
+        if (tx.NetworkFee > request.GasForResponse) return null;
 
         // Calcualte system fee
 

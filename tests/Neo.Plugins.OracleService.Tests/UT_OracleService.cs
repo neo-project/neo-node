@@ -176,6 +176,126 @@ public class UT_OracleService
     }
 
     [TestMethod]
+    [DataRow(1)]
+    [DataRow(8)]
+    [DataRow(9)]
+    [DataRow(22)]
+    [DataRow(23)]
+    [DataRow(32)]
+    public void ResponseBudgetNeverProducesNegativeSystemFee(int count)
+    {
+        using var snapshot = TestBlockchain.GetTestSnapshotCache();
+        var request = new OracleRequest
+        {
+            OriginalTxid = UInt256.Zero,
+            GasForResponse = 10_000_000,
+            Url = "https://example.invalid/test",
+            Filter = "",
+            CallbackContract = UInt160.Zero,
+            CallbackMethod = "callback",
+            UserData = []
+        };
+        snapshot.Add(NativeContract.Ledger.CreateStorageKey(11, request.OriginalTxid), new(new TransactionState
+        {
+            BlockIndex = 1,
+            Transaction = new() { Signers = [], Attributes = [], ValidUntilBlock = 1, Witnesses = [] }
+        }));
+        var nodes = Enumerable.Range(1, count)
+            .Select(i => new KeyPair(Enumerable.Repeat((byte)i, 32).ToArray()).PublicKey).ToArray();
+        foreach (bool backup in new[] { false, true })
+        {
+            var response = new OracleResponse
+            {
+                Id = 1,
+                Code = backup ? OracleResponseCode.ConsensusUnreachable : OracleResponseCode.Success,
+                Result = backup ? ReadOnlyMemory<byte>.Empty : new byte[] { 0 }
+            };
+            var tx = OracleService.CreateResponseTx(snapshot, request, response, nodes, TestUtils.settings, backup);
+            if (count >= 9)
+                Assert.IsNull(tx);
+            else
+            {
+                Assert.IsNotNull(tx);
+                Assert.IsTrue(tx.SystemFee >= 0);
+                _ = tx.ToArray().AsSerializable<Transaction>();
+            }
+        }
+
+        // Exact minimum budget and one datoshi below it, including the empty-result fallback.
+        request.GasForResponse = 100_000_000;
+        var empty = new OracleResponse { Id = 1, Code = OracleResponseCode.InsufficientFunds, Result = ReadOnlyMemory<byte>.Empty };
+        if (count >= 23)
+        {
+            Assert.IsNull(OracleService.CreateResponseTx(snapshot, request, empty, nodes, TestUtils.settings));
+            return;
+        }
+        var minimum = OracleService.CreateResponseTx(snapshot, request, empty, nodes, TestUtils.settings).NetworkFee;
+        request.GasForResponse = minimum;
+        var exact = OracleService.CreateResponseTx(snapshot, request, empty, nodes, TestUtils.settings);
+        Assert.IsNotNull(exact);
+        Assert.AreEqual(0L, exact.SystemFee);
+        _ = exact.ToArray().AsSerializable<Transaction>();
+        request.GasForResponse--;
+        Assert.IsNull(OracleService.CreateResponseTx(snapshot, request, empty, nodes, TestUtils.settings));
+
+        // A subsequent role change can make the original request affordable again.
+        request.GasForResponse = 10_000_000;
+        var recovered = OracleService.CreateResponseTx(snapshot, request, empty, [nodes[0]], TestUtils.settings, true);
+        Assert.IsNotNull(recovered);
+        _ = recovered.ToArray().AsSerializable<Transaction>();
+    }
+
+    [TestMethod]
+    public void DeferredRequestsRetryAfterStateChangesWithoutFinishing()
+    {
+        using var oracle = new OracleService();
+        oracle.DeferRequest(1, 100);
+        Assert.IsFalse(oracle.CanRetryRequest(1, 100));
+        Assert.IsTrue(oracle.CanRetryRequest(1, 101));
+        Assert.IsTrue(oracle.CanRetryRequest(2, 100));
+        Assert.IsFalse(oracle.finishedCache.ContainsKey(1));
+    }
+
+    [TestMethod]
+    public async Task UnaffordableResponseIsDeferredWithoutStoppingProcessing()
+    {
+        using var snapshot = TestBlockchain.GetTestSnapshotCache();
+        var request = new OracleRequest
+        {
+            OriginalTxid = UInt256.Zero,
+            GasForResponse = 10_000_000,
+            Url = "unsupported://example.invalid",
+            Filter = "",
+            CallbackContract = UInt160.Zero,
+            CallbackMethod = "callback",
+            UserData = []
+        };
+        snapshot.Add(NativeContract.Ledger.CreateStorageKey(11, request.OriginalTxid), new(new TransactionState
+        {
+            BlockIndex = 1,
+            Transaction = new() { Signers = [], Attributes = [], ValidUntilBlock = 1, Witnesses = [] }
+        }));
+        snapshot.Add(new KeyBuilder(NativeContract.Oracle.Id, 7).AddBigEndian(1ul), new(request));
+        var ids = new Neo.VM.Types.Array { 1 };
+        snapshot.Add(new KeyBuilder(NativeContract.Oracle.Id, 6).Add(Neo.Cryptography.Crypto.Hash160(request.Url.ToStrictUtf8Bytes())),
+            new(BinarySerializer.Serialize(ids, Neo.VM.ExecutionEngineLimits.Default)));
+        var nodes = new Neo.VM.Types.Array(Enumerable.Range(1, 9)
+            .Select(i => new KeyPair(Enumerable.Repeat((byte)i, 32).ToArray()).PublicKey)
+            .OrderBy(p => p).Select(p => (Neo.VM.Types.StackItem)(Neo.VM.Types.ByteString)p.EncodePoint(true)));
+        snapshot.Add(NativeContract.RoleManagement.CreateStorageKey((byte)Role.Oracle, 0u),
+            new(BinarySerializer.Serialize(nodes, Neo.VM.ExecutionEngineLimits.Default)));
+        using var oracle = new OracleService { _system = s_theNeoSystem };
+        var process = typeof(OracleService).GetMethod("ProcessRequestAsync",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        await (Task)process.Invoke(oracle, [snapshot, request, CancellationToken.None])!;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot) + 1;
+        Assert.IsFalse(oracle.CanRetryRequest(1, height));
+        Assert.IsTrue(oracle.CanRetryRequest(1, height + 1));
+        Assert.IsFalse(oracle.finishedCache.ContainsKey(1));
+        Assert.IsNotNull(NativeContract.Oracle.GetRequest(snapshot, 1));
+    }
+
+    [TestMethod]
     public async Task TestStartAfterStopUsesFreshCancellationSource()
     {
         ResetStore();
