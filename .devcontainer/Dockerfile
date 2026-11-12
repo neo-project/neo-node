@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0.101-noble
+FROM mcr.microsoft.com/dotnet/sdk:11.0.100-noble
 
 # Install required dependencies for LevelDB and SQLite
 RUN apt-get update && \

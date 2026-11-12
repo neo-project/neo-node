@@ -19,7 +19,7 @@ Currently, neo-cli and neo-gui are integrated into one repository. You can enter
 
 ## Prerequisites
 
-The `neo-cli` can run on Window, Linux or macOS that can install .NET 10.
+The `neo-cli` can run on Window, Linux or macOS that can install .NET 11.
 
 Install [.NET](https://dotnet.microsoft.com/download).
 
