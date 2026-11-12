@@ -23,9 +23,7 @@ public class RestServerSettingsTests
     public void Load_UsesDefaultAddressUnlessOverridden(string settingsJson, string expectedAddress)
     {
         var configuration = TestUtility.CreateConfigurationFromJson(settingsJson);
-
         RestServerSettings.Load(configuration.GetSection("PluginConfiguration"));
-
         Assert.AreEqual(IPAddress.Parse(expectedAddress), RestServerSettings.Current.BindAddress);
     }
 }
