@@ -226,7 +226,16 @@ partial class MainService
     {
         try
         {
-            var plugins = GetPluginListAsync().GetAwaiter().GetResult()?.ToArray() ?? [];
+            string[] plugins;
+            try
+            {
+                plugins = GetPluginListAsync().GetAwaiter().GetResult()?.ToArray() ?? [];
+            }
+            catch (HttpRequestException)
+            {
+                ConsoleHelper.Info("Warning: ", "Plugin catalog unavailable; showing installed plugins.");
+                plugins = [];
+            }
             var installedPlugins = Plugin.Plugins.ToList();
 
             var maxLength = installedPlugins.Count == 0 ? 0 : installedPlugins.Max(s => s.Name.Length);

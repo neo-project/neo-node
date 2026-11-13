@@ -100,7 +100,7 @@ class StateRoot : IVerifiable
 
     public bool Verify(ProtocolSettings settings, DataCache snapshot)
     {
-        return this.VerifyWitnesses(settings, snapshot, 2_00000000L);
+        return this.VerifyWitnesses(settings, snapshot, 2_00000000L, capGas: false);
     }
 
     public UInt160[] GetScriptHashesForVerifying(DataCache snapshot)

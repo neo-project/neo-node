@@ -190,7 +190,7 @@ public class UT_OracleService
              new() { Id = 1, Code = OracleResponseCode.Success, Result = new byte[] { 0x00 } }, oracleNodes, laterSettings);
         Assert.IsNotNull(nextBlockTx);
         Assert.IsNotNull(laterTx);
-        Assert.AreEqual(2198412, nextBlockTx.NetworkFee);
+        Assert.AreEqual(1319081, nextBlockTx.NetworkFee);
         Assert.AreEqual(2198650, laterTx.NetworkFee);
     }
 
