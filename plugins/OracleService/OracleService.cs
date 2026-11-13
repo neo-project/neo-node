@@ -505,8 +505,10 @@ public sealed class OracleService : Plugin
         if (engine.Execute() != VMState.HALT) return null;
         tx.NetworkFee += engine.FeeConsumed;
 
-        var executionFactor = NativeContract.Policy.GetExecFeeFactor(engine);
-        var networkFee = executionFactor * SmartContract.Helper.MultiSignatureContractCost(m, n);
+        if (!SmartContract.Helper.IsMultiSigContract(oracleSignContract.Script, out MultiSigContractParameters parameters))
+            throw new InvalidOperationException("Invalid oracle multisignature contract.");
+        var executionFactor = NativeContract.Policy.GetExecFeeFactorWithDecimals(settings, snapshot, height);
+        var networkFee = SmartContract.Helper.MultiSignatureContractCost(settings, height + 1, executionFactor, parameters);
         tx.NetworkFee += networkFee;
 
         // Base size for transaction: includes const_header + signers + script + hashes + witnesses, except attributes
