@@ -461,7 +461,7 @@ public sealed class OracleService : Plugin
         var n = oracleNodes.Length;
         var m = n - (n - 1) / 3;
         var oracleSignContract = Contract.CreateMultiSigContract(m, oracleNodes);
-        if (!SmartContract.Helper.IsMultiSigContract(oracleSignContract.Script, out MultiSigContractParameters parameters))
+        if (!SmartContract.Helper.IsMultiSigContract(oracleSignContract.Script, out var parameters))
             throw new InvalidOperationException("Invalid oracle multisignature contract.");
 
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
