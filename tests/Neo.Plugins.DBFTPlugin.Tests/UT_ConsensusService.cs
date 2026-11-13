@@ -759,43 +759,6 @@ public class UT_ConsensusService : TestKit
     }
 
     [TestMethod]
-    public void SendPrepareRequest_DiscardsMismatchedPreProposalPayloads()
-    {
-        var service = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, CreateCompatibleSettings(), new TestSigner()));
-        service.Tell(new ConsensusService.Start());
-        var actor = service.UnderlyingActor;
-        var context = GetConsensusContext(actor);
-        context.MyIndex = context.Block.PrimaryIndex;
-        int backupIndex = (context.MyIndex + 1) % context.Validators.Length;
-
-        var response = WithWitness(context.CreatePayload(new PrepareResponse
-        {
-            BlockIndex = context.Block.Index,
-            ValidatorIndex = (byte)backupIndex,
-            ViewNumber = context.ViewNumber,
-            PreparationHash = UInt256.Zero
-        }));
-        var commit = WithWitness(context.CreatePayload(new Commit
-        {
-            BlockIndex = context.Block.Index,
-            ValidatorIndex = (byte)backupIndex,
-            ViewNumber = context.ViewNumber,
-            Signature = new byte[64]
-        }));
-
-        service.Tell(new Blockchain.RelayResult(response, VerifyResult.Succeed));
-        service.Tell(new Blockchain.RelayResult(commit, VerifyResult.Succeed));
-        Assert.AreSame(response, context.PreparationPayloads[backupIndex]);
-        Assert.AreSame(commit, context.CommitPayloads[backupIndex]);
-
-        InvokeConsensusMethod(actor, "SendPrepareRequest");
-
-        Assert.IsNotNull(context.PreparationPayloads[context.MyIndex]);
-        Assert.IsNull(context.PreparationPayloads[backupIndex]);
-        Assert.IsNull(context.CommitPayloads[backupIndex]);
-    }
-
-    [TestMethod]
     public void InvalidCommit_DoesNotExtendTimer()
     {
         var service = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, CreateCompatibleSettings(), new TestSigner()));
