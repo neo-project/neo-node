@@ -80,7 +80,7 @@ internal static class DeferredRelayVerification
             {
                 netFeeDatoshi -= SignatureContractCost(settings, height + 1, execFeeFactor);
             }
-            else if (IsMultiSigContract(tx.Witnesses[i].VerificationScript.Span, out MultiSigContractParameters parameters) &&
+            else if (IsMultiSigContract(tx.Witnesses[i].VerificationScript.Span, out var parameters) &&
                      IsMultiSignatureInvocationScript(parameters.M, tx.Witnesses[i].InvocationScript, out _))
             {
                 netFeeDatoshi -= MultiSignatureContractCost(settings, height + 1, execFeeFactor, parameters);
