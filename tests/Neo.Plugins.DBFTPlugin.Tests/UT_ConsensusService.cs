@@ -762,8 +762,8 @@ public class UT_ConsensusService : TestKit
     public void InvalidCommit_DoesNotExtendTimer()
     {
         var service = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, CreateCompatibleSettings(), new TestSigner()));
-        service.Tell(new ConsensusService.Start());
         var actor = service.UnderlyingActor;
+        InvokeConsensusMethod(actor, "OnStart");
         var context = GetConsensusContext(actor);
         Assert.IsTrue(context.IsBackup);
 
