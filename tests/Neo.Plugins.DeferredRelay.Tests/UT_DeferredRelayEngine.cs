@@ -839,6 +839,23 @@ public class UT_DeferredRelayEngine
     }
 
     [TestMethod]
+    public void VerifyForOffer_RequiresFullWitnessVerificationFee()
+    {
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        var tx = CreateSignedTx(height + 1, nonce: 4500);
+        var settings = _system.Settings;
+        var execFeeFactor = NativeContract.Policy.GetExecFeeFactorWithDecimals(settings, snapshot, height);
+        var witnessFee = Neo.SmartContract.Helper.SignatureContractCost(settings, height + 1, execFeeFactor);
+        tx.NetworkFee = tx.Size * NativeContract.Policy.GetFeePerByte(snapshot) + witnessFee;
+        Assert.AreEqual(VerifyResult.Succeed, DeferredRelayVerification.VerifyForOffer(settings, snapshot, tx, new()));
+
+        tx.NetworkFee--;
+        Assert.AreEqual(VerifyResult.InsufficientFunds, DeferredRelayVerification.VerifyForOffer(settings, snapshot, tx, new()));
+        Assert.AreEqual(VerifyResult.InsufficientFunds, tx.VerifyStateDependent(settings, snapshot, new(), []));
+    }
+
+    [TestMethod]
     public void TryOffer_Rejects_WhenSenderHasNoGas()
     {
         var store = new MemoryStore();
