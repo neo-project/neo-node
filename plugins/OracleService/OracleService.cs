@@ -461,7 +461,9 @@ public sealed class OracleService : Plugin
         var n = oracleNodes.Length;
         var m = n - (n - 1) / 3;
         var oracleSignContract = Contract.CreateMultiSigContract(m, oracleNodes);
-        var _ = SmartContract.Helper.IsMultiSigContract(oracleSignContract.Script, out var parameters);
+        if (!SmartContract.Helper.IsMultiSigContract(oracleSignContract.Script, out MultiSigContractParameters parameters))
+            throw new InvalidOperationException("Invalid oracle multisignature contract.");
+
         uint height = NativeContract.Ledger.CurrentIndex(snapshot);
         var maxVUB = snapshot.GetMaxValidUntilBlockIncrement(settings);
         var validUntilBlock = requestTx.BlockIndex + maxVUB;
@@ -506,8 +508,6 @@ public sealed class OracleService : Plugin
         if (engine.Execute() != VMState.HALT) return null;
         tx.NetworkFee += engine.FeeConsumed;
 
-        if (!SmartContract.Helper.IsMultiSigContract(oracleSignContract.Script, out MultiSigContractParameters parameters))
-            throw new InvalidOperationException("Invalid oracle multisignature contract.");
         var executionFactor = NativeContract.Policy.GetExecFeeFactorWithDecimals(settings, snapshot, height);
         var networkFee = SmartContract.Helper.MultiSignatureContractCost(settings, height + 1, executionFactor, parameters);
         tx.NetworkFee += networkFee;
