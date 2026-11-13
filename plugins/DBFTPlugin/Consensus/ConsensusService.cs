@@ -215,7 +215,6 @@ internal partial class ConsensusService : UntypedActor
         DBFTPlugin.PluginLogger?.Information("Sending PrepareRequest: height={BlockIndex} view={ViewNumber}",
             context.Block.Index, context.ViewNumber);
         ExtensiblePayload prepareRequest = context.MakePrepareRequest();
-        ReconcilePreProposalPayloads(prepareRequest);
         localNode.Tell(new LocalNode.SendDirectly(prepareRequest));
 
         if (context.Validators.Length == 1)
