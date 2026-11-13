@@ -72,18 +72,18 @@ internal static class DeferredRelayVerification
         if (netFeeDatoshi < 0) return VerifyResult.InsufficientFunds;
 
         if (netFeeDatoshi > MaxVerificationGas) netFeeDatoshi = MaxVerificationGas;
-        var execFeeFactor = NativeContract.Policy.GetExecFeeFactor(settings, snapshot, height);
+        var execFeeFactor = NativeContract.Policy.GetExecFeeFactorWithDecimals(settings, snapshot, height);
         for (int i = 0; i < hashes.Length; i++)
         {
             if (IsSignatureContract(tx.Witnesses[i].VerificationScript.Span) &&
                 IsSingleSignatureInvocationScript(tx.Witnesses[i].InvocationScript, out _))
             {
-                netFeeDatoshi -= execFeeFactor * SignatureContractCost();
+                netFeeDatoshi -= SignatureContractCost(settings, height + 1, execFeeFactor);
             }
-            else if (IsMultiSigContract(tx.Witnesses[i].VerificationScript.Span, out int m, out int n) &&
-                     IsMultiSignatureInvocationScript(m, tx.Witnesses[i].InvocationScript, out _))
+            else if (IsMultiSigContract(tx.Witnesses[i].VerificationScript.Span, out var parameters) &&
+                     IsMultiSignatureInvocationScript(parameters.M, tx.Witnesses[i].InvocationScript, out _))
             {
-                netFeeDatoshi -= execFeeFactor * MultiSignatureContractCost(m, n);
+                netFeeDatoshi -= MultiSignatureContractCost(settings, height + 1, execFeeFactor, parameters);
             }
             else
             {
