@@ -125,7 +125,8 @@ public sealed partial class ConsensusContext : IDisposable, ISerializable
         _signer = signer;
         this.neoSystem = neoSystem;
         dbftSettings = settings;
-        InvalidTransactions = new InvalidCache(neoSystem.Settings.MemoryPoolMaxTransactions);
+        // Reserve room for a full ChangeView message in addition to mempool rejection entries.
+        InvalidTransactions = new InvalidCache(checked(neoSystem.Settings.MemoryPoolMaxTransactions + ushort.MaxValue));
 
         if (dbftSettings.IgnoreRecoveryLogs == false)
         {
@@ -214,6 +215,7 @@ public sealed partial class ConsensusContext : IDisposable, ISerializable
     {
         if (viewNumber == 0)
         {
+            InvalidTransactions.Clear();
             Snapshot?.Dispose();
             Snapshot = neoSystem.GetSnapshotCache();
             uint height = NativeContract.Ledger.CurrentIndex(Snapshot);

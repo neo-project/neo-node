@@ -25,6 +25,7 @@ internal partial class ConsensusService : UntypedActor
 {
     public class Start { }
     private class Timer { public uint Height; public byte ViewNumber; }
+    private sealed record TransactionsRemoved(UInt256[] Hashes);
 
     private readonly ConsensusContext context;
     private readonly IActorRef localNode;
@@ -53,6 +54,7 @@ internal partial class ConsensusService : UntypedActor
     private bool isRecovering = false;
     private readonly DbftSettings dbftSettings;
     private readonly NeoSystem neoSystem;
+    private readonly IActorRef self;
 
     public ConsensusService(NeoSystem neoSystem, DbftSettings settings, ISigner signer)
         : this(neoSystem, settings, new ConsensusContext(neoSystem, settings, signer)) { }
@@ -60,6 +62,7 @@ internal partial class ConsensusService : UntypedActor
     internal ConsensusService(NeoSystem neoSystem, DbftSettings settings, ConsensusContext context)
     {
         this.neoSystem = neoSystem;
+        self = Self;
         localNode = neoSystem.LocalNode;
         taskManager = neoSystem.TaskManager;
         blockchain = neoSystem.Blockchain;
@@ -78,8 +81,7 @@ internal partial class ConsensusService : UntypedActor
 
     private void MemPool_TransactionRemoved(object sender, TransactionRemovedEventArgs e)
     {
-        foreach (var tx in e.Transactions)
-            context.InvalidTransactions.Remove(tx.Hash);
+        self.Tell(new TransactionsRemoved(e.Transactions.Select(tx => tx.Hash).ToArray()));
     }
 
     private void OnPersistCompleted(Block block)
@@ -141,6 +143,10 @@ internal partial class ConsensusService : UntypedActor
             if (!started) return;
             switch (message)
             {
+                case TransactionsRemoved removed:
+                    foreach (var hash in removed.Hashes)
+                        context.InvalidTransactions.Remove(hash);
+                    break;
                 case Timer timer:
                     OnTimer(timer);
                     break;
@@ -377,6 +383,8 @@ internal partial class ConsensusService : UntypedActor
     {
         DBFTPlugin.PluginLogger?.Information("ConsensusService stopped");
         started = false;
+        neoSystem.MemPool.NewTransaction -= MemPool_NewTransaction;
+        neoSystem.MemPool.TransactionRemoved -= MemPool_TransactionRemoved;
         Context.System.EventStream.Unsubscribe(Self);
         context.Dispose();
         base.PostStop();
