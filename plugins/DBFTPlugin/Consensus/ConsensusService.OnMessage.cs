@@ -78,8 +78,24 @@ partial class ConsensusService
     {
         if (context.RequestSentOrReceived || context.NotAcceptingPayloadsDueToViewChanging) return;
         if (message.ValidatorIndex != context.Block.PrimaryIndex || message.ViewNumber != context.ViewNumber) return;
-        if (message.Version != context.Block.Version || message.PrevHash != context.Block.PrevHash) return;
-        if (message.TransactionHashes.Length > neoSystem.Settings.MaxTransactionsPerBlock) return;
+        if (message.Version != context.Block.Version)
+        {
+            DBFTPlugin.PluginLogger?.Warning("Invalid request: invalid version: {Version}", message.Version);
+            RequestChangeView(ChangeViewReason.BlockRejectedByPolicy);
+            return;
+        }
+        if (message.PrevHash != context.Block.PrevHash)
+        {
+            DBFTPlugin.PluginLogger?.Warning("Invalid request: invalid previous block hash: {PrevHash}", message.PrevHash);
+            RequestChangeView(ChangeViewReason.BlockRejectedByPolicy);
+            return;
+        }
+        if (message.TransactionHashes.Length > neoSystem.Settings.MaxTransactionsPerBlock)
+        {
+            DBFTPlugin.PluginLogger?.Warning("Invalid request: max transactions count increased: {TxCount}", message.TransactionHashes.Length);
+            RequestChangeView(ChangeViewReason.BlockRejectedByPolicy);
+            return;
+        }
 
         DBFTPlugin.PluginLogger?.Information("OnPrepareRequestReceived: height={BlockIndex} view={ViewNumber} index={ValidatorIndex} tx={TransactionHashesLength}",
             message.BlockIndex, message.ViewNumber, message.ValidatorIndex, message.TransactionHashes.Length);
@@ -87,12 +103,14 @@ partial class ConsensusService
             || message.Timestamp > TimeProvider.Current.UtcNow.AddMilliseconds(8 * context.TimePerBlock.TotalMilliseconds).ToTimestampMS())
         {
             DBFTPlugin.PluginLogger?.Warning("Timestamp incorrect: {Timestamp}", message.Timestamp);
+            RequestChangeView(ChangeViewReason.BlockRejectedByPolicy);
             return;
         }
 
         if (message.TransactionHashes.Any(p => NativeContract.Ledger.ContainsTransaction(context.Snapshot, p)))
         {
             DBFTPlugin.PluginLogger?.Warning("Invalid request: transaction already exists");
+            RequestChangeView(ChangeViewReason.BlockRejectedByPolicy);
             return;
         }
 
@@ -109,25 +127,7 @@ partial class ConsensusService
 
         context.Transactions = new Dictionary<UInt256, Transaction>();
         context.VerificationContext = new TransactionVerificationContext();
-        for (int i = 0; i < context.PreparationPayloads.Length; i++)
-        {
-            if (context.PreparationPayloads[i] != null)
-            {
-                if (!context.GetMessage<PrepareResponse>(context.PreparationPayloads[i]).PreparationHash.Equals(payload.Hash))
-                    context.PreparationPayloads[i] = null;
-            }
-        }
-
-        context.PreparationPayloads[message.ValidatorIndex] = payload;
-        byte[] hashData = context.EnsureHeader().GetSignData(neoSystem.Settings.Network);
-        for (int i = 0; i < context.CommitPayloads.Length; i++)
-        {
-            if (context.GetMessage(context.CommitPayloads[i])?.ViewNumber == context.ViewNumber)
-            {
-                if (!Crypto.VerifySignature(hashData, context.GetMessage<Commit>(context.CommitPayloads[i]).Signature.Span, context.Validators[i]))
-                    context.CommitPayloads[i] = null;
-            }
-        }
+        ReconcilePreProposalPayloads(payload);
 
         if (context.TransactionHashes.Length == 0)
         {
@@ -146,6 +146,7 @@ partial class ConsensusService
                 if (NativeContract.Ledger.ContainsConflictHash(context.Snapshot, hash, tx.Signers.Select(s => s.Account), mtb))
                 {
                     DBFTPlugin.PluginLogger?.Warning("Invalid request: transaction has on-chain conflict");
+                    RequestChangeView(ChangeViewReason.TxRejectedByPolicy, tx.Hash);
                     return;
                 }
 
@@ -159,6 +160,7 @@ partial class ConsensusService
                     if (NativeContract.Ledger.ContainsConflictHash(context.Snapshot, hash, tx.Signers.Select(s => s.Account), mtb))
                     {
                         DBFTPlugin.PluginLogger?.Warning("Invalid request: transaction has on-chain conflict");
+                        RequestChangeView(ChangeViewReason.TxRejectedByPolicy, tx.Hash);
                         return;
                     }
                     unverified.Add(tx);
@@ -175,6 +177,25 @@ partial class ConsensusService
         {
             UInt256[] hashes = context.TransactionHashes.Where(i => !context.Transactions.ContainsKey(i)).ToArray();
             taskManager.Tell(new TaskManager.RestartTasks(InvPayload.Create(InventoryType.TX, hashes)));
+        }
+    }
+
+    private void ReconcilePreProposalPayloads(ExtensiblePayload prepareRequest)
+    {
+        for (int i = 0; i < context.PreparationPayloads.Length; i++)
+        {
+            if (i == context.Block.PrimaryIndex || context.PreparationPayloads[i] == null) continue;
+            if (!context.GetMessage<PrepareResponse>(context.PreparationPayloads[i]).PreparationHash.Equals(prepareRequest.Hash))
+                context.PreparationPayloads[i] = null;
+        }
+
+        context.PreparationPayloads[context.Block.PrimaryIndex] = prepareRequest;
+        byte[] hashData = context.EnsureHeader().GetSignData(neoSystem.Settings.Network);
+        for (int i = 0; i < context.CommitPayloads.Length; i++)
+        {
+            if (context.GetMessage(context.CommitPayloads[i])?.ViewNumber != context.ViewNumber) continue;
+            if (!Crypto.VerifySignature(hashData, context.GetMessage<Commit>(context.CommitPayloads[i]).Signature.Span, context.Validators[i]))
+                context.CommitPayloads[i] = null;
         }
     }
 
@@ -245,6 +266,11 @@ partial class ConsensusService
 
         if (commit.ViewNumber == context.ViewNumber)
         {
+            byte[] hashData = context.EnsureHeader()?.GetSignData(neoSystem.Settings.Network);
+            if (hashData != null && !Crypto.VerifySignature(hashData, commit.Signature.Span, context.Validators[commit.ValidatorIndex]))
+                return;
+
+            existingCommitPayload = payload;
             // Timeout extension: commit has been received with success
             // around 4*15s/M=60.0s/5=12.0s ~ 80% block time (for M=5)
             ExtendTimerByFactor(4);
@@ -252,16 +278,8 @@ partial class ConsensusService
             DBFTPlugin.PluginLogger?.Information("OnCommitReceived: height={BlockIndex} view={ViewNumber} index={ValidatorIndex} committed={CountCommitted} failed={CountFailed}",
                 commit.BlockIndex, commit.ViewNumber, commit.ValidatorIndex, context.CountCommitted, context.CountFailed);
 
-            byte[] hashData = context.EnsureHeader()?.GetSignData(neoSystem.Settings.Network);
-            if (hashData == null)
-            {
-                existingCommitPayload = payload;
-            }
-            else if (Crypto.VerifySignature(hashData, commit.Signature.Span, context.Validators[commit.ValidatorIndex]))
-            {
-                existingCommitPayload = payload;
+            if (hashData != null)
                 CheckCommits();
-            }
             return;
         }
         else
