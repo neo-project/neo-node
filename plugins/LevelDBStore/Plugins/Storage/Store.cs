@@ -34,6 +34,11 @@ internal class Store : IStore, IEnumerable<KeyValuePair<byte[], byte[]>>
             CreateIfMissing = true,
             FilterPolicy = Native.leveldb_filterpolicy_create_bloom(15),
             CompressionLevel = CompressionType.SnappyCompression,
+            // --- I/O tuning for consensus nodes (defaults: 4MB write buffer ->
+            //     frequent L0 flush + compaction stalls saturating disk) ---
+            WriteBufferSize = 64 << 20,   // 4MB -> 64MB
+            MaxOpenFiles = 2000,          // default 1000
+            BlockSize = 16384,            // default 4096
         };
         _db = DB.Open(path, _options);
     }
