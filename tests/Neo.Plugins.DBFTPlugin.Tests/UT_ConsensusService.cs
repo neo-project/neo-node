@@ -443,6 +443,83 @@ public class UT_ConsensusService : TestKit
     }
 
     [TestMethod]
+    public void TestViewTimeoutRemainsPositiveAtHighViews()
+    {
+        var settings = CreateCompatibleSettings();
+        var service = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, settings, new TestSigner()));
+        var actor = service.UnderlyingActor;
+        InvokeConsensusMethod(actor, "InitializeConsensus", (byte)0);
+        var context = GetConsensusContext(actor);
+
+        foreach (byte view in new byte[] { 15, 16, 27, 30, 254 })
+        {
+            context.Reset(view);
+            InvokeConsensusMethod(actor, "RequestChangeView", ChangeViewReason.Timeout, null);
+            Assert.AreEqual(TimeSpan.FromHours(1), GetExpectedDelay(actor), $"view {view}");
+        }
+    }
+
+    [TestMethod]
+    public void TestViewTimeoutRetainsNormalBackoff()
+    {
+        var settings = CreateCompatibleSettings();
+        var service = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, settings, new TestSigner()));
+        var actor = service.UnderlyingActor;
+        InvokeConsensusMethod(actor, "InitializeConsensus", (byte)0);
+        var context = GetConsensusContext(actor);
+
+        InvokeConsensusMethod(actor, "RequestChangeView", ChangeViewReason.Timeout, null);
+        Assert.AreEqual(TimeSpan.FromMinutes(1), GetExpectedDelay(actor));
+
+        context.Reset(4);
+        InvokeConsensusMethod(actor, "RequestChangeView", ChangeViewReason.Timeout, null);
+        Assert.AreEqual(TimeSpan.FromMinutes(16), GetExpectedDelay(actor));
+    }
+
+    [TestMethod]
+    public void TestMaximumViewDoesNotWrapOrSendChangeView()
+    {
+        var settings = CreateCompatibleSettings();
+        var service = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, settings, new TestSigner()));
+        var actor = service.UnderlyingActor;
+        InvokeConsensusMethod(actor, "InitializeConsensus", (byte)0);
+        var context = GetConsensusContext(actor);
+        context.Reset(byte.MaxValue);
+
+        InvokeConsensusMethod(actor, "RequestChangeView", ChangeViewReason.Timeout, null);
+
+        Assert.AreEqual(byte.MaxValue, context.ViewNumber);
+        Assert.AreEqual(TimeSpan.FromHours(1), GetExpectedDelay(actor));
+        Assert.IsNull(context.ChangeViewPayloads[context.MyIndex]);
+        var invalidChangeView = new ChangeView { ViewNumber = byte.MaxValue, ValidatorIndex = 0 };
+        Assert.AreEqual(byte.MaxValue, invalidChangeView.NewViewNumber);
+        Assert.IsFalse(invalidChangeView.Verify(MockProtocolSettings.Default));
+    }
+
+    [TestMethod]
+    public void TestCommitResendTimeoutDoesNotOverflowWithLongBlockInterval()
+    {
+        var settings = CreateCompatibleSettings();
+        var service = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, settings, new TestSigner()));
+        var actor = service.UnderlyingActor;
+        InvokeConsensusMethod(actor, "InitializeConsensus", (byte)0);
+        var context = GetConsensusContext(actor);
+        context.MyIndex = (context.Block.PrimaryIndex + 1) % context.Validators.Length;
+        context.TimePerBlock = TimeSpan.FromMinutes(30);
+        context.CommitPayloads[context.MyIndex] = WithWitness(context.CreatePayload(new Commit
+        {
+            BlockIndex = context.Block.Index,
+            ValidatorIndex = (byte)context.MyIndex,
+            ViewNumber = context.ViewNumber,
+            Signature = new byte[64]
+        }));
+
+        InvokeConsensusMethod(actor, "OnTimer", CreateTimer(context.Block.Index, context.ViewNumber));
+
+        Assert.AreEqual(TimeSpan.FromHours(1), GetExpectedDelay(actor));
+    }
+
+    [TestMethod]
     public void TestConsensusServiceExecutesWarningAndLifecyclePaths()
     {
         var settings = CreateCompatibleSettings();
@@ -820,6 +897,13 @@ public class UT_ConsensusService : TestKit
     {
         return (bool)typeof(ConsensusService)
             .GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(actor)!;
+    }
+
+    private static TimeSpan GetExpectedDelay(ConsensusService actor)
+    {
+        return (TimeSpan)typeof(ConsensusService)
+            .GetField("expected_delay", BindingFlags.Instance | BindingFlags.NonPublic)!
             .GetValue(actor)!;
     }
 
