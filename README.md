@@ -19,9 +19,9 @@ Currently, neo-cli and neo-gui are integrated into one repository. You can enter
 
 ## Prerequisites
 
-You will need Window, Linux or macOS. Ubuntu LTS 14, 16 and 18 are supported.
+The `neo-cli` can run on Window, Linux or macOS that can install .NET 10.
 
-Install [.NET Core](https://www.microsoft.com/net/download/core).
+Install [.NET](https://dotnet.microsoft.com/download).
 
 On Linux, install the LevelDB and SQLite3 dev packages. E.g. on Ubuntu or Fedora:
 

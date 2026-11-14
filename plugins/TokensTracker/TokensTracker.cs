@@ -107,7 +107,16 @@ public class TokensTracker : Plugin
         ResetBatch();
         foreach (var tracker in trackers)
         {
-            tracker.OnPersist(system, block, snapshot, applicationExecutedList);
+            try
+            {
+                tracker.OnPersist(system, block, snapshot.CloneCache(), applicationExecutedList);
+            }
+            catch (Exception ex)
+            {
+                // Tracking is best-effort: a tracker failure must never propagate to
+                // Blockchain.Committing (persist thread) and crash the node.
+                PluginLogger?.Error(ex, "Error running {Tracker} OnPersist", tracker.GetType().Name);
+            }
         }
     }
 
@@ -115,7 +124,14 @@ public class TokensTracker : Plugin
     {
         foreach (var tracker in trackers)
         {
-            tracker.Commit();
+            try
+            {
+                tracker.Commit();
+            }
+            catch (Exception ex)
+            {
+                PluginLogger?.Error(ex, "Error committing {Tracker}", tracker.GetType().Name);
+            }
         }
     }
 }

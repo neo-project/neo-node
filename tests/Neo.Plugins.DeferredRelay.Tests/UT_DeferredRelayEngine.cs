@@ -839,6 +839,23 @@ public class UT_DeferredRelayEngine
     }
 
     [TestMethod]
+    public void VerifyForOffer_RequiresFullWitnessVerificationFee()
+    {
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        var tx = CreateSignedTx(height + 1, nonce: 4500);
+        var settings = _system.Settings;
+        var execFeeFactor = NativeContract.Policy.GetExecFeeFactorWithDecimals(settings, snapshot, height);
+        var witnessFee = Neo.SmartContract.Helper.SignatureContractCost(settings, height + 1, execFeeFactor);
+        tx.NetworkFee = tx.Size * NativeContract.Policy.GetFeePerByte(snapshot) + witnessFee;
+        Assert.AreEqual(VerifyResult.Succeed, DeferredRelayVerification.VerifyForOffer(settings, snapshot, tx, new()));
+
+        tx.NetworkFee--;
+        Assert.AreEqual(VerifyResult.InsufficientFunds, DeferredRelayVerification.VerifyForOffer(settings, snapshot, tx, new()));
+        Assert.AreEqual(VerifyResult.InsufficientFunds, tx.VerifyStateDependent(settings, snapshot, new(), []));
+    }
+
+    [TestMethod]
     public void TryOffer_Rejects_WhenSenderHasNoGas()
     {
         var store = new MemoryStore();
@@ -915,6 +932,124 @@ public class UT_DeferredRelayEngine
         DeferredRelayEngine.ProcessQueuedAsync(_system, store, settings, queueContext: queueContext).GetAwaiter().GetResult();
 
         Assert.IsFalse(store.Contains(key));
+    }
+
+    [TestMethod]
+    public void ProcessQueued_ConfirmedEntry_DoesNotConsumeRemainingSenderBalance()
+    {
+        var store = new MemoryStore();
+        var settings = EnabledSettings();
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
+
+        Transaction confirmed = null!;
+        Transaction pending = null!;
+        for (uint nonce = 1000; nonce < 2000; nonce++)
+        {
+            var first = CreateSignedTx(height + 1, nonce);
+            var second = CreateSignedTx(height + maxInc + 20, nonce + 5000);
+            if (first.Hash.GetSpan().SequenceCompareTo(second.Hash.GetSpan()) >= 0) continue;
+            confirmed = first;
+            pending = second;
+            break;
+        }
+        Assert.IsNotNull(confirmed);
+        Assert.IsNotNull(pending);
+
+        FundAccount(_account.ScriptHash, pending.SystemFee + pending.NetworkFee);
+        var commitSnapshot = _system.GetSnapshotCache();
+        var ledgerKey = new KeyBuilder(NativeContract.Ledger.Id, 11).Add(confirmed.Hash);
+        commitSnapshot.Add(ledgerKey, new StorageItem(new TransactionState
+        {
+            BlockIndex = height,
+            Transaction = confirmed,
+            State = VMState.HALT,
+        }));
+        commitSnapshot.Commit();
+        Assert.AreEqual(ContainsTransactionType.ExistsInLedger, _system.ContainsTransaction(confirmed.Hash));
+
+        byte[] confirmedKey = confirmed.Hash.GetSpan().ToArray();
+        byte[] pendingKey = pending.Hash.GetSpan().ToArray();
+        store.Put(confirmedKey, SerializeTx(confirmed));
+        store.Put(pendingKey, SerializeTx(pending));
+
+        DeferredRelayEngine.ProcessQueuedAsync(_system, store, settings).GetAwaiter().GetResult();
+
+        Assert.IsFalse(store.Contains(confirmedKey));
+        Assert.IsTrue(store.Contains(pendingKey), "The pending transaction still has enough GAS after the confirmed entry is removed");
+    }
+
+    [TestMethod]
+    public void ProcessQueued_OnChainConflict_DoesNotConsumeRelayCap()
+    {
+        var store = new MemoryStore();
+        var settings = EnabledSettings(max: 1u);
+        Assert.AreEqual(1u, settings.MaxRelayPerCycle);
+        uint height = NativeContract.Ledger.CurrentIndex(_system.StoreView);
+
+        Transaction conflicted = null!;
+        Transaction valid = null!;
+        for (uint nonce = 2000; nonce < 3000; nonce++)
+        {
+            var first = CreateSignedTx(height + 1, nonce);
+            var second = CreateSignedTx(height + 1, nonce + 5000);
+            if (first.Hash.GetSpan().SequenceCompareTo(second.Hash.GetSpan()) >= 0) continue;
+            conflicted = first;
+            valid = second;
+            break;
+        }
+        Assert.IsNotNull(conflicted);
+        Assert.IsNotNull(valid);
+
+        MarkOnChainConflict(conflicted, height);
+        byte[] conflictedKey = conflicted.Hash.GetSpan().ToArray();
+        store.Put(conflictedKey, SerializeTx(conflicted));
+        store.Put(valid.Hash.GetSpan().ToArray(), SerializeTx(valid));
+
+        var (probe, observed, locker) = SubscribeRelayResults();
+        try
+        {
+            DeferredRelayEngine.ProcessQueuedAsync(_system, store, settings).GetAwaiter().GetResult();
+            bool validAttempted = SpinWait.SpinUntil(() =>
+            {
+                lock (locker)
+                    return observed.Any(rr => rr.Inventory is Transaction tx && tx.Hash == valid.Hash);
+            }, TimeSpan.FromSeconds(5));
+
+            Assert.IsFalse(store.Contains(conflictedKey), "An on-chain conflict must be removed before relay attempts");
+            Assert.IsTrue(validAttempted, "The valid entry must receive the available relay attempt");
+        }
+        finally
+        {
+            _system.EnsureStopped(probe);
+        }
+    }
+
+    [TestMethod]
+    public void TryOffer_RejectsOnChainConflict()
+    {
+        var store = new MemoryStore();
+        var settings = EnabledSettings();
+        var snapshot = _system.StoreView;
+        uint height = NativeContract.Ledger.CurrentIndex(snapshot);
+        uint maxInc = snapshot.GetMaxValidUntilBlockIncrement(_system.Settings);
+        var tx = CreateSignedTx(height + maxInc + 20, nonce: 3000);
+        MarkOnChainConflict(tx, height);
+
+        Assert.IsFalse(DeferredRelayEngine.TryOffer(_system, store, settings, tx, VerifyResult.NotYetValid));
+        Assert.AreEqual(0, DeferredRelayEngine.CountEntries(store));
+    }
+
+    private void MarkOnChainConflict(Transaction tx, uint height)
+    {
+        var snapshot = _system.GetSnapshotCache();
+        var key = new KeyBuilder(NativeContract.Ledger.Id, 11).Add(tx.Hash);
+        snapshot.Add(key, new StorageItem(new TransactionState { BlockIndex = height }));
+        var signerKey = new KeyBuilder(NativeContract.Ledger.Id, 11).Add(tx.Hash).Add(_account.ScriptHash);
+        snapshot.Add(signerKey, new StorageItem(new TransactionState { BlockIndex = height }));
+        snapshot.Commit();
+        Assert.IsTrue(_system.ContainsConflictHash(tx.Hash, tx.Signers.Select(s => s.Account)));
     }
 
     [TestMethod]
