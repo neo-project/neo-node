@@ -28,8 +28,18 @@ public static class Options
         options.SetErrorIfExists(false);
         options.SetMaxOpenFiles(1000);
         options.SetParanoidChecks(false);
-        options.SetWriteBufferSize(4 << 20);
-        options.SetBlockBasedTableFactory(new BlockBasedTableOptions().SetBlockSize(4096));
+        // --- I/O tuning for consensus nodes (was: 4MB write buffer -> frequent
+        //     flush + L0 compaction stalls saturating disk) ---
+        options.SetWriteBufferSize(64 << 20);              // 4MB -> 64MB
+        options.SetMaxWriteBufferNumber(4);                // default 3
+        options.SetMinWriteBufferNumberToMerge(2);
+        options.SetMaxTotalWalSize(128 << 20);             // bound WAL growth
+        options.SetLevelCompactionDynamicLevelBytes(true); // dynamic level bytes: lower write amp
+        options.SetMaxBackgroundCompactions(3);            // parallel compaction
+        options.SetMaxBackgroundFlushes(1);                // parallel flush
+        options.SetBlockBasedTableFactory(new BlockBasedTableOptions()
+            .SetBlockSize(16384)                           // 4KB -> 16KB
+            .SetCacheIndexAndFilterBlocks(true));
         return options;
     }
 }
