@@ -41,7 +41,10 @@ class TestSnapshot : IStoreSnapshot
 
     public bool Contains(byte[] key) { throw new NotImplementedException(); }
 
-    public IEnumerable<(byte[] Key, byte[] Value)> Find(byte[]? keyPrefix = null, SeekDirection direction = SeekDirection.Forward, int skip = 0) { throw new NotImplementedException(); }
+    public IEnumerable<(byte[] Key, byte[] Value)> Find(byte[] keyPrefix = null, SeekDirection direction = SeekDirection.Forward, int skip = 0)
+    {
+        throw new NotImplementedException();
+    }
 
     public byte[] TryGet(byte[] key)
     {

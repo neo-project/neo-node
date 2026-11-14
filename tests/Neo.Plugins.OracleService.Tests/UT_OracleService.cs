@@ -13,10 +13,7 @@ using Neo.Cryptography.ECC;
 using Neo.Extensions;
 using Neo.Network.P2P.Payloads;
 using Neo.Plugins.OracleService.Protocols;
-using Neo.SmartContract;
 using Neo.SmartContract.Native;
-using Neo.Wallets;
-using System.Collections.Concurrent;
 using static Neo.Plugins.OracleService.Tests.TestBlockchain;
 
 namespace Neo.Plugins.OracleService.Tests;
@@ -159,6 +156,42 @@ public class UT_OracleService
         Assert.AreEqual(OracleResponseCode.InsufficientFunds, response.Code);
         Assert.AreEqual(2197650, tx.NetworkFee);
         Assert.AreEqual(7802350, tx.SystemFee);
+    }
+
+    [TestMethod]
+    public void TestCreateOracleResponseTxUsesNextBlockFeeRules()
+    {
+        var snapshotCache = TestBlockchain.GetTestSnapshotCache();
+        var index = NativeContract.Ledger.CurrentIndex(snapshotCache);
+        OracleRequest request = new()
+        {
+            OriginalTxid = UInt256.Zero,
+            GasForResponse = 100000000,
+            Url = "https://127.0.0.1/test",
+            Filter = "",
+            CallbackContract = UInt160.Zero,
+            CallbackMethod = "callback",
+            UserData = []
+        };
+
+        const byte TransactionPrefix = 11;
+        snapshotCache.Add(NativeContract.Ledger.CreateStorageKey(TransactionPrefix, request.OriginalTxid), new(new TransactionState()
+        {
+            BlockIndex = 1,
+            Transaction = new() { Signers = [], Attributes = [], ValidUntilBlock = 1, Witnesses = [] }
+        }));
+
+        ECPoint[] oracleNodes = [ECCurve.Secp256r1.G];
+        var nextBlockSettings = TestUtils.settings with { Hardforks = TestUtils.settings.Hardforks.SetItem(Hardfork.HF_Huyao, index + 1) };
+        var laterSettings = TestUtils.settings with { Hardforks = TestUtils.settings.Hardforks.SetItem(Hardfork.HF_Huyao, index + 2) };
+        var nextBlockTx = OracleService.CreateResponseTx(snapshotCache, request,
+            new() { Id = 1, Code = OracleResponseCode.Success, Result = new byte[] { 0x00 } }, oracleNodes, nextBlockSettings);
+        var laterTx = OracleService.CreateResponseTx(snapshotCache, request,
+             new() { Id = 1, Code = OracleResponseCode.Success, Result = new byte[] { 0x00 } }, oracleNodes, laterSettings);
+        Assert.IsNotNull(nextBlockTx);
+        Assert.IsNotNull(laterTx);
+        Assert.AreEqual(1319081, nextBlockTx.NetworkFee);
+        Assert.AreEqual(2198650, laterTx.NetworkFee);
     }
 
     [TestMethod]
