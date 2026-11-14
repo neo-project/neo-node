@@ -16,6 +16,7 @@ using Microsoft.Extensions.Configuration;
 using Neo.Cryptography.ECC;
 using Neo.Extensions;
 using Neo.Ledger;
+using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
 using Neo.Persistence.Providers;
@@ -24,6 +25,7 @@ using Neo.Plugins.DBFTPlugin.Messages;
 using Neo.Plugins.DBFTPlugin.Types;
 using Neo.Sign;
 using Neo.SmartContract;
+using Neo.SmartContract.Native;
 using Neo.VM;
 using System.Reflection;
 
@@ -474,6 +476,7 @@ public class UT_ConsensusService : TestKit
 
         InvokeConsensusMethod(actor, "OnConsensusPayload", invalidPayload);
 
+        // PrepareRequest with timestamp from future.
         var futurePrepareRequest = WithWitness(context.CreatePayload(new PrepareRequest
         {
             BlockIndex = context.Block.Index + 1,
@@ -507,6 +510,77 @@ public class UT_ConsensusService : TestKit
         InvokeConsensusMethod(actor, "OnConsensusPayload", invalidTimestampRequest);
 
         Assert.IsNull(context.PreparationPayloads[context.Block.PrimaryIndex]);
+        Assert.IsTrue(context.ViewChanging);
+        Assert.IsNotNull(context.ChangeViewPayloads[context.MyIndex]);
+
+        // PrepareRequest carrying transaction that is already on-chain.
+        InvokeConsensusMethod(actor, "InitializeConsensus", (byte)0);
+        Assert.IsFalse(context.ViewChanging);
+
+        var tx1 = new Transaction
+        {
+            Script = new byte[] { (byte)OpCode.PUSH1 },
+            Attributes = [],
+            Signers = [new Signer { Account = UInt160.Zero, Scopes = WitnessScope.None }],
+            Witnesses = [Witness.Empty],
+            ValidUntilBlock = context.Block.Index + 1
+        };
+        const byte prefixTransaction = 11;
+        var height = context.Block.Index - 1;
+        context.Snapshot.Add(new KeyBuilder(NativeContract.Ledger.Id, prefixTransaction).Add(tx1.Hash),
+            new StorageItem(new TransactionState { BlockIndex = height, Transaction = tx1 }));
+        Assert.IsTrue(NativeContract.Ledger.ContainsTransaction(context.Snapshot, tx1.Hash));
+
+        context = GetConsensusContext(actor);
+        var duplicatingTxRequest = WithWitness(context.CreatePayload(new PrepareRequest
+        {
+            BlockIndex = context.Block.Index,
+            ValidatorIndex = context.Block.PrimaryIndex,
+            ViewNumber = context.ViewNumber,
+            Version = context.Block.Version,
+            PrevHash = context.Block.PrevHash,
+            Timestamp = context.PrevHeader.Timestamp,
+            Nonce = 2,
+            TransactionHashes = [tx1.Hash]
+        }));
+
+        InvokeConsensusMethod(actor, "OnConsensusPayload", duplicatingTxRequest);
+
+        Assert.IsNull(context.PreparationPayloads[context.Block.PrimaryIndex]);
+        Assert.IsTrue(context.ViewChanging);
+        Assert.IsNotNull(context.ChangeViewPayloads[context.MyIndex]);
+
+        // PrepareRequest carrying transaction that has on-chain Conflicts record.
+        InvokeConsensusMethod(actor, "InitializeConsensus", (byte)0);
+        Assert.IsFalse(context.ViewChanging);
+
+        var tx2 = new Transaction
+        {
+            Script = new byte[] { (byte)OpCode.PUSH1 },
+            Attributes = [new Conflicts() { Hash = tx1.Hash }],
+            Signers = [new Signer { Account = UInt160.Zero, Scopes = WitnessScope.None }],
+            Witnesses = [Witness.Empty],
+            ValidUntilBlock = context.Block.Index + 2
+        };
+
+        context = GetConsensusContext(actor);
+        var conflictingTxRequest = WithWitness(context.CreatePayload(new PrepareRequest
+        {
+            BlockIndex = context.Block.Index,
+            ValidatorIndex = context.Block.PrimaryIndex,
+            ViewNumber = context.ViewNumber,
+            Version = context.Block.Version,
+            PrevHash = context.Block.PrevHash,
+            Timestamp = context.PrevHeader.Timestamp,
+            Nonce = 2,
+            TransactionHashes = [tx2.Hash]
+        }));
+
+        InvokeConsensusMethod(actor, "OnConsensusPayload", duplicatingTxRequest);
+
+        Assert.IsNull(context.PreparationPayloads[context.Block.PrimaryIndex]);
+        Assert.IsTrue(context.ViewChanging);
+        Assert.IsNotNull(context.ChangeViewPayloads[context.MyIndex]);
 
         var existingCommit = WithWitness(context.CreatePayload(new Commit
         {
@@ -682,6 +756,50 @@ public class UT_ConsensusService : TestKit
         Assert.IsTrue(context.RequestSentOrReceived);
         Assert.IsNotNull(context.Transactions);
         CollectionAssert.AreEqual(new[] { UInt256.Zero }, context.TransactionHashes);
+    }
+
+    [TestMethod]
+    public void InvalidCommit_DoesNotExtendTimer()
+    {
+        var service = ActorOfAsTestActorRef<ConsensusService>(ConsensusService.Props(neoSystem, CreateCompatibleSettings(), new TestSigner()));
+        var actor = service.UnderlyingActor;
+        InvokeConsensusMethod(actor, "OnStart");
+        var context = GetConsensusContext(actor);
+        Assert.IsTrue(context.IsBackup);
+
+        var request = WithWitness(context.CreatePayload(new PrepareRequest
+        {
+            BlockIndex = context.Block.Index,
+            ValidatorIndex = context.Block.PrimaryIndex,
+            ViewNumber = context.ViewNumber,
+            Version = context.Block.Version,
+            PrevHash = context.Block.PrevHash,
+            Timestamp = Math.Max(context.PrevHeader.Timestamp + 1, TimeProvider.Current.UtcNow.ToTimestampMS()),
+            Nonce = 123,
+            TransactionHashes = []
+        }));
+        service.Tell(new Blockchain.RelayResult(request, VerifyResult.Succeed));
+        Assert.IsNotNull(context.EnsureHeader());
+        Assert.IsFalse(context.CommitSent);
+
+        var delayField = typeof(ConsensusService).GetField("expected_delay", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var delayBefore = (TimeSpan)delayField.GetValue(actor)!;
+        for (byte attempt = 1; attempt <= 3; attempt++)
+        {
+            var signature = new byte[64];
+            signature[0] = attempt;
+            var commit = WithWitness(context.CreatePayload(new Commit
+            {
+                BlockIndex = context.Block.Index,
+                ValidatorIndex = context.Block.PrimaryIndex,
+                ViewNumber = context.ViewNumber,
+                Signature = signature
+            }));
+            service.Tell(new Blockchain.RelayResult(commit, VerifyResult.Succeed));
+            Assert.IsNull(context.CommitPayloads[context.Block.PrimaryIndex]);
+        }
+
+        Assert.AreEqual(delayBefore, (TimeSpan)delayField.GetValue(actor)!);
     }
 
     private static ConsensusContext GetConsensusContext(ConsensusService actor)
