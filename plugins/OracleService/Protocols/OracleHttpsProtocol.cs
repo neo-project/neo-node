@@ -20,10 +20,15 @@ namespace Neo.Plugins.OracleService.Protocols;
 
 class OracleHttpsProtocol : IOracleProtocol
 {
-    private readonly HttpClient client = new(new HttpClientHandler() { AllowAutoRedirect = false });
+    private readonly HttpClient client;
 
-    public OracleHttpsProtocol()
+    public OracleHttpsProtocol() : this(new HttpClientHandler() { AllowAutoRedirect = false })
     {
+    }
+
+    internal OracleHttpsProtocol(HttpMessageHandler handler)
+    {
+        client = new HttpClient(handler);
         CustomAttributeData attribute = Assembly.GetExecutingAssembly().CustomAttributes.First(p => p.AttributeType == typeof(AssemblyInformationalVersionAttribute));
         string version = (string)attribute.ConstructorArguments[0].Value;
         client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("NeoOracleService", version));
@@ -58,7 +63,7 @@ class OracleHttpsProtocol : IOracleProtocol
                     if (entry.IsInternal())
                         return (OracleResponseCode.Forbidden, null);
                 }
-                message = await client.GetAsync(uri, HttpCompletionOption.ResponseContentRead, cancellation);
+                message = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, cancellation);
                 if (message.Headers.Location is not null)
                 {
                     if (!TryResolveHttpsRedirect(uri, message.Headers.Location, out var next))
@@ -78,6 +83,8 @@ class OracleHttpsProtocol : IOracleProtocol
         }
         if (message is null)
             return (OracleResponseCode.Timeout, null);
+
+        using var _ = message;
         if (message.StatusCode == HttpStatusCode.NotFound)
             return (OracleResponseCode.NotFound, null);
         if (message.StatusCode == HttpStatusCode.Forbidden)
@@ -90,8 +97,9 @@ class OracleHttpsProtocol : IOracleProtocol
             return (OracleResponseCode.ResponseTooLarge, null);
 
         byte[] buffer = new byte[OracleResponse.MaxResultSize + 1];
-        var stream = message.Content.ReadAsStream(cancellation);
-        var read = await stream.ReadAsync(buffer, cancellation);
+        int read;
+        await using (var stream = await message.Content.ReadAsStreamAsync(cancellation))
+            read = await ReadUpToAsync(stream, buffer, cancellation);
 
         if (read > OracleResponse.MaxResultSize)
             return (OracleResponseCode.ResponseTooLarge, null);
@@ -101,6 +109,22 @@ class OracleHttpsProtocol : IOracleProtocol
             return (OracleResponseCode.Error, null);
 
         return (OracleResponseCode.Success, buffer.ToStrictUtf8String(0, read));
+    }
+
+    /// <summary>
+    /// Reads from the stream until the buffer is full or EOF is reached.
+    /// A result equal to the buffer length means the stream may contain more data.
+    /// </summary>
+    internal static async Task<int> ReadUpToAsync(Stream stream, byte[] buffer, CancellationToken cancellation)
+    {
+        int total = 0;
+        while (total < buffer.Length)
+        {
+            int read = await stream.ReadAsync(buffer.AsMemory(total), cancellation);
+            if (read == 0) break;
+            total += read;
+        }
+        return total;
     }
 
     internal static bool IsSupportedContentType(HttpContentHeaders headers, IEnumerable<string> allowed)
