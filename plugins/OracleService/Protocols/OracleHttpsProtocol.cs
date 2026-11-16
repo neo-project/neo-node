@@ -130,7 +130,7 @@ class OracleHttpsProtocol : IOracleProtocol
     internal static bool IsSupportedContentType(HttpContentHeaders headers, IEnumerable<string> allowed)
     {
         var mediaType = headers.ContentType?.MediaType;
-        return !string.IsNullOrEmpty(mediaType) && allowed.Contains(mediaType);
+        return !string.IsNullOrEmpty(mediaType) && allowed.Contains(mediaType, StringComparer.OrdinalIgnoreCase);
     }
 
     internal static Encoding GetEncoding(HttpContentHeaders headers)
