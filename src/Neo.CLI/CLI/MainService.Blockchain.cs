@@ -112,7 +112,7 @@ partial class MainService
             ConsoleHelper.Info("", "       FeePerByte: ", $"{tx.Transaction.FeePerByte} datoshi");
             ConsoleHelper.Info("", "       NetworkFee: ", $"{tx.Transaction.NetworkFee} datoshi");
             ConsoleHelper.Info("", "        SystemFee: ", $"{tx.Transaction.SystemFee} datoshi");
-            ConsoleHelper.Info("", "           Script: ", $"{Convert.ToBase64String(tx.Transaction.Script.Span)}");
+            ConsoleHelper.Info("", "           Script: ", $"{Convert.ToBase64String(((ReadOnlyMemory<byte>)tx.Transaction.Script).Span)}");
             ConsoleHelper.Info("", "          Version: ", $"{tx.Transaction.Version}");
             ConsoleHelper.Info("", "       BlockIndex: ", $"{block.Index}");
             ConsoleHelper.Info("", "        BlockHash: ", $"{block.Hash}");
