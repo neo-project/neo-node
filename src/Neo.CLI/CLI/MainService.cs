@@ -500,7 +500,7 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         try
         {
             var tx = CurrentWallet!.MakeTransaction(snapshot, script, account, signers, maxGas: datoshi);
-            ConsoleHelper.Info("Invoking script with: ", $"'{Convert.ToBase64String(tx.Script.Span)}'");
+            ConsoleHelper.Info("Invoking script with: ", $"'{Convert.ToBase64String(((ReadOnlyMemory<byte>)tx.Script).Span)}'");
             using (var engine = ApplicationEngine.Run(tx.Script, snapshot, container: tx, settings: NeoSystem.Settings, gas: datoshi))
             {
                 PrintExecutionOutput(engine, true);
