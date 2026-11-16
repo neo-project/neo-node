@@ -51,6 +51,11 @@ class OracleHttpsProtocol : IOracleProtocol
     {
         OracleService.PluginLogger?.Debug("Request: {Uri}", uri.AbsoluteUri);
 
+        // HttpClient.Timeout stops applying once the headers are received, so enforce it over the whole exchange.
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
+        timeout.CancelAfter(OracleSettings.Default.Https.Timeout);
+        cancellation = timeout.Token;
+
         HttpResponseMessage message;
         try
         {
@@ -98,8 +103,15 @@ class OracleHttpsProtocol : IOracleProtocol
 
         byte[] buffer = new byte[OracleResponse.MaxResultSize + 1];
         int read;
-        await using (var stream = await message.Content.ReadAsStreamAsync(cancellation))
+        try
+        {
+            await using var stream = await message.Content.ReadAsStreamAsync(cancellation);
             read = await ReadUpToAsync(stream, buffer, cancellation);
+        }
+        catch (OperationCanceledException)
+        {
+            return (OracleResponseCode.Timeout, null);
+        }
 
         if (read > OracleResponse.MaxResultSize)
             return (OracleResponseCode.ResponseTooLarge, null);

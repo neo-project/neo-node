@@ -27,7 +27,7 @@ public class UT_OracleHttpsProtocol
     public static void ClassInit(TestContext _)
     {
         var section = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string> { ["Oracle:AllowPrivateHost"] = "true" })
+            .AddInMemoryCollection(new Dictionary<string, string> { ["Oracle:AllowPrivateHost"] = "true", ["Oracle:Https:Timeout"] = "500" })
             .Build().GetSection("Oracle");
         OracleSettings.Load(section);
     }
@@ -177,7 +177,7 @@ public class UT_OracleHttpsProtocol
     }
 
     [TestMethod]
-    public async Task ProcessAsync_CancelledWhileReading_PropagatesCancellationAndDisposes()
+    public async Task ProcessAsync_CancelledWhileReading_ReturnsTimeoutAndDisposes()
     {
         using var cts = new CancellationTokenSource();
         var stream = new FakeStream([], onRead: async token =>
@@ -186,8 +186,21 @@ public class UT_OracleHttpsProtocol
             await Task.Delay(Timeout.Infinite, token);
         });
         TrackedResponse response = null!;
-        await Assert.ThrowsAsync<OperationCanceledException>(
-            () => RunAsync(_ => response = CreateResponse(stream), cts.Token));
+        var (code, _) = await RunAsync(_ => response = CreateResponse(stream), cts.Token);
+        Assert.AreEqual(OracleResponseCode.Timeout, code);
+        Assert.IsTrue(response.Disposed);
+        Assert.IsTrue(stream.Disposed);
+    }
+
+    [TestMethod]
+    public async Task ProcessAsync_StalledBody_TimesOutAfterHttpsTimeout()
+    {
+        var stream = new FakeStream([], onRead: token => Task.Delay(Timeout.Infinite, token));
+        TrackedResponse response = null!;
+        var (code, result) = await RunAsync(_ => response = CreateResponse(stream));
+        Assert.AreEqual(OracleResponseCode.Timeout, code);
+        Assert.IsNull(result);
+        Assert.AreEqual(1, stream.ReadCalls);
         Assert.IsTrue(response.Disposed);
         Assert.IsTrue(stream.Disposed);
     }
