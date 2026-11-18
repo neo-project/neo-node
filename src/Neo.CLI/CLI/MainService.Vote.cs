@@ -81,7 +81,7 @@ partial class MainService
         try
         {
             var tx = CurrentWallet!.MakeTransaction(snapshot, script, account, signers, maxGas: testGas);
-            ConsoleHelper.Info("Invoking script with: ", $"'{Convert.ToBase64String(((ReadOnlyMemory<byte>)tx.Script).Span)}'");
+            ConsoleHelper.Info("Invoking script with: ", $"'{tx.Script.ToBase64String()}'");
             using (var engine = ApplicationEngine.Run(tx.Script, snapshot, container: tx, settings: NeoSystem.Settings, gas: testGas))
             {
                 PrintExecutionOutput(engine, true);

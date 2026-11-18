@@ -9,6 +9,7 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+using Neo.Extensions;
 using Neo.Network.P2P.Payloads;
 using Neo.Network.P2P.Payloads.Conditions;
 using Neo.SmartContract;
@@ -68,7 +69,7 @@ public static partial class RestServerUtility
             tx.Hash,
             tx.Sender,
             // Transaction.Script is a Neo.VM.Script. Emit the same Base64 bytes as RPC ToJson.
-            Script = Convert.ToBase64String(((ReadOnlyMemory<byte>)tx.Script).Span),
+            Script = tx.Script.ToBase64String(),
             tx.FeePerByte,
             tx.NetworkFee,
             tx.SystemFee,
@@ -317,7 +318,7 @@ public static partial class RestServerUtility
         {
             Checksum = nef.CheckSum,
             nef.Compiler,
-            Script = (ReadOnlyMemory<byte>)nef.Script,
+            Script = nef.Script.ToBase64String(),
             nef.Source,
             Tokens = nef.Tokens.Select(s => MethodTokenToJToken(s, serializer)),
         }, serializer);

@@ -10,6 +10,7 @@
 // modifications are permitted.
 
 using Neo.ConsoleService;
+using Neo.Extensions;
 using Neo.Network.P2P.Payloads;
 using Neo.SmartContract;
 using Neo.SmartContract.Native;
@@ -112,7 +113,7 @@ partial class MainService
             ConsoleHelper.Info("", "       FeePerByte: ", $"{tx.Transaction.FeePerByte} datoshi");
             ConsoleHelper.Info("", "       NetworkFee: ", $"{tx.Transaction.NetworkFee} datoshi");
             ConsoleHelper.Info("", "        SystemFee: ", $"{tx.Transaction.SystemFee} datoshi");
-            ConsoleHelper.Info("", "           Script: ", $"{Convert.ToBase64String(((ReadOnlyMemory<byte>)tx.Transaction.Script).Span)}");
+            ConsoleHelper.Info("", "           Script: ", $"{tx.Transaction.Script.ToBase64String()}");
             ConsoleHelper.Info("", "          Version: ", $"{tx.Transaction.Version}");
             ConsoleHelper.Info("", "       BlockIndex: ", $"{block.Index}");
             ConsoleHelper.Info("", "        BlockHash: ", $"{block.Hash}");
@@ -294,7 +295,7 @@ partial class MainService
 
             ConsoleHelper.Info("", "-------------", "Script", "-------------");
             ConsoleHelper.Info();
-            ConsoleHelper.Info($"  {Convert.ToBase64String(((ReadOnlyMemory<byte>)contract.Nef.Script).Span)}");
+            ConsoleHelper.Info($"  {contract.Nef.Script.ToBase64String()}");
             ConsoleHelper.Info();
             ConsoleHelper.Info("", "--------------------------------");
         }
