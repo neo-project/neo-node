@@ -317,7 +317,7 @@ public static partial class RestServerUtility
         {
             Checksum = nef.CheckSum,
             nef.Compiler,
-            nef.Script,
+            Script = (ReadOnlyMemory<byte>)nef.Script,
             nef.Source,
             Tokens = nef.Tokens.Select(s => MethodTokenToJToken(s, serializer)),
         }, serializer);

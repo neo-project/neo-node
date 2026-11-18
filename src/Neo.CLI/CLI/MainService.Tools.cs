@@ -488,7 +488,7 @@ partial class MainService
             script = new Script(nef.Script, false);
         }
         catch { return null; }
-        string? result = ScriptsToOpCode(Convert.ToBase64String(nef.Script.ToArray()));
+        string? result = ScriptsToOpCode(Convert.ToBase64String(((ReadOnlyMemory<byte>)nef.Script).Span));
         if (result == null)
             return null;
         string prefix = $"\r\n# Compiler: {nef.Compiler}";

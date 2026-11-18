@@ -294,7 +294,7 @@ partial class MainService
 
             ConsoleHelper.Info("", "-------------", "Script", "-------------");
             ConsoleHelper.Info();
-            ConsoleHelper.Info($"  {Convert.ToBase64String(contract.Nef.Script.Span)}");
+            ConsoleHelper.Info($"  {Convert.ToBase64String(((ReadOnlyMemory<byte>)contract.Nef.Script).Span)}");
             ConsoleHelper.Info();
             ConsoleHelper.Info("", "--------------------------------");
         }
