@@ -43,6 +43,8 @@ internal static class Helper
     {
         try
         {
+            // Script doesn't expose whether it was constructed in strict mode.
+            // Validate all instructions before checking the ABI offsets.
             SmartContract.Helper.Check(new Script(script, true), abi);
         }
         catch (Exception e)
