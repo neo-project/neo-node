@@ -136,18 +136,61 @@ public static partial class RestServerUtility
 
     public static JToken StackItemToJToken(StackItem item, IList<(StackItem, JToken?)>? context, global::Newtonsoft.Json.JsonSerializer serializer)
     {
-        JToken? o = null;
-        switch (item)
+        const int maxDepth = 64;
+        const int maxItems = 10_000;
+        var remaining = maxItems;
+        var sizes = new Dictionary<StackItem, int>(ReferenceEqualityComparer.Instance);
+        return ConvertItem(item, context ?? new List<(StackItem, JToken?)>(), serializer, sizes, ref remaining, 0);
+
+        static JToken ConvertItem(StackItem item, IList<(StackItem, JToken?)> context,
+            global::Newtonsoft.Json.JsonSerializer serializer, Dictionary<StackItem, int> sizes,
+            ref int remaining, int depth)
         {
-            case Struct @struct:
-                if (context is null)
-                    context = new List<(StackItem, JToken?)>();
-                else
-                    (_, o) = context.FirstOrDefault(f => ReferenceEquals(f.Item1, item));
-                if (o is null)
+            if (depth > maxDepth)
+                throw new InvalidOperationException("Stack item nesting exceeds the supported depth.");
+
+            var compound = item is Struct or Array or Map;
+            var index = -1;
+            if (compound)
+            {
+                for (var i = 0; i < context.Count; i++)
                 {
-                    context.Add((item, o));
-                    var a = @struct.Select(s => StackItemToJToken(s, context, serializer));
+                    if (ReferenceEquals(context[i].Item1, item))
+                    {
+                        index = i;
+                        break;
+                    }
+                }
+                if (index >= 0)
+                {
+                    var cached = context[index].Item2
+                        ?? throw new InvalidOperationException("Cyclic stack item cannot be converted to JSON.");
+                    var size = sizes.TryGetValue(item, out var knownSize)
+                        ? knownSize : cached is JContainer container ? 1 + container.Descendants().Count() : 1;
+                    if (remaining < size)
+                        throw new InvalidOperationException("Stack item result exceeds the supported size.");
+                    remaining -= size;
+                    return cached;
+                }
+            }
+
+            if (remaining == 0)
+                throw new InvalidOperationException("Stack item result exceeds the supported size.");
+            var start = remaining--;
+            if (compound)
+            {
+                index = context.Count;
+                context.Add((item, null));
+            }
+
+            JToken? o = null;
+            switch (item)
+            {
+            case Struct @struct:
+                {
+                    var a = new List<JToken>(@struct.Count);
+                    foreach (var child in @struct)
+                        a.Add(ConvertItem(child, context, serializer, sizes, ref remaining, depth + 1));
                     o = JToken.FromObject(new
                     {
                         Type = StackItemType.Struct.ToString(),
@@ -156,14 +199,10 @@ public static partial class RestServerUtility
                 }
                 break;
             case Array array:
-                if (context is null)
-                    context = new List<(StackItem, JToken?)>();
-                else
-                    (_, o) = context.FirstOrDefault(f => ReferenceEquals(f.Item1, item));
-                if (o is null)
                 {
-                    context.Add((item, o));
-                    var a = array.Select(s => StackItemToJToken(s, context, serializer));
+                    var a = new List<JToken>(array.Count);
+                    foreach (var child in array)
+                        a.Add(ConvertItem(child, context, serializer, sizes, ref remaining, depth + 1));
                     o = JToken.FromObject(new
                     {
                         Type = StackItemType.Array.ToString(),
@@ -172,17 +211,12 @@ public static partial class RestServerUtility
                 }
                 break;
             case Map map:
-                if (context is null)
-                    context = new List<(StackItem, JToken?)>();
-                else
-                    (_, o) = context.FirstOrDefault(f => ReferenceEquals(f.Item1, item));
-                if (o is null)
                 {
-                    context.Add((item, o));
-                    var kvp = map.Select(s =>
-                        new KeyValuePair<JToken, JToken>(
-                            StackItemToJToken(s.Key, context, serializer),
-                            StackItemToJToken(s.Value, context, serializer)));
+                    var kvp = new List<KeyValuePair<JToken, JToken>>(map.Count);
+                    foreach (var entry in map)
+                        kvp.Add(new(
+                            ConvertItem(entry.Key, context, serializer, sizes, ref remaining, depth + 1),
+                            ConvertItem(entry.Value, context, serializer, sizes, ref remaining, depth + 1)));
                     o = JToken.FromObject(new
                     {
                         Type = StackItemType.Map.ToString(),
@@ -242,8 +276,14 @@ public static partial class RestServerUtility
                 break;
             default:
                 throw new NotSupportedException($"StackItemType({item.Type}) is not supported to JSON.");
+            }
+            if (compound)
+            {
+                context[index] = (item!, o);
+                sizes[item!] = start - remaining;
+            }
+            return o;
         }
-        return o;
     }
 
     public static InvokeParams ContractInvokeParametersFromJToken(JToken token)
