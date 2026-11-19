@@ -371,6 +371,30 @@ public partial class UT_RpcServer
     }
 
     [TestMethod]
+    public void TestIteratorSessions_EvictOldestAtCapacity()
+    {
+        using var rpcServer = new RpcServer(_neoSystem, _rpcServerSettings with
+        {
+            MaxSessions = 2,
+            SessionExpirationTime = TimeSpan.FromMinutes(1)
+        });
+
+        var responses = Enumerable.Range(0, 3)
+            .Select(_ => (JObject)rpcServer.InvokeFunction(s_neoHash, "getAllCandidates"))
+            .ToArray();
+        var firstSessionId = responses[0]["session"].AsParameter<Guid>();
+        var firstIteratorId = responses[0]["stack"][0]["id"].AsParameter<Guid>();
+        Assert.ThrowsExactly<RpcException>(() => rpcServer.TraverseIterator(firstSessionId, firstIteratorId, 1));
+
+        foreach (var response in responses.Skip(1))
+        {
+            var sessionId = response["session"].AsParameter<Guid>();
+            var iteratorId = response["stack"][0]["id"].AsParameter<Guid>();
+            Assert.IsEmpty((JArray)rpcServer.TraverseIterator(sessionId, iteratorId, 1));
+        }
+    }
+
+    [TestMethod]
     public void TestTraverseIterator()
     {
         // GetAllCandidates that should return 0 candidates

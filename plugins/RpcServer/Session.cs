@@ -20,6 +20,7 @@ namespace Neo.Plugins.RpcServer;
 
 class Session : IDisposable
 {
+    public readonly Guid Id = Guid.NewGuid();
     public readonly StoreCache Snapshot;
     public readonly ApplicationEngine Engine;
     public readonly Dictionary<Guid, IIterator> Iterators = new();

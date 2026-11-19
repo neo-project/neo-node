@@ -10,6 +10,7 @@
 // modifications are permitted.
 
 using Neo.Extensions;
+using Neo.IO.Caching;
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
@@ -26,11 +27,18 @@ namespace Neo.Plugins.RpcServer;
 
 partial class RpcServer
 {
-    private readonly Dictionary<Guid, Session> sessions = new();
+    private sealed class SessionCache(int maxCapacity) : FIFOCache<Guid, Session>(maxCapacity)
+    {
+        protected override Guid GetKeyForItem(Session session) => session.Id;
+    }
+
+    private SessionCache sessions = null!;
     private Timer? timer;
 
     private void Initialize_SmartContract()
     {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(settings.MaxSessions);
+        sessions = new(settings.MaxSessions);
         if (settings.SessionEnabled)
             timer = new(OnTimer, null, settings.SessionExpirationTime, settings.SessionExpirationTime);
     }
@@ -38,29 +46,20 @@ partial class RpcServer
     internal void Dispose_SmartContract()
     {
         timer?.Dispose();
-        Session[] toBeDestroyed;
         lock (sessions)
         {
-            toBeDestroyed = sessions.Values.ToArray();
             sessions.Clear();
         }
-        foreach (Session session in toBeDestroyed)
-            session.Dispose();
     }
 
     internal void OnTimer(object? state)
     {
-        List<(Guid Id, Session Session)> toBeDestroyed = new();
         lock (sessions)
         {
-            foreach (var (id, session) in sessions)
+            foreach (var session in sessions)
                 if (DateTime.UtcNow >= session.StartTime + settings.SessionExpirationTime)
-                    toBeDestroyed.Add((id, session));
-            foreach (var (id, _) in toBeDestroyed)
-                sessions.Remove(id);
+                    sessions.Remove(session.Id);
         }
-        foreach (var (_, session) in toBeDestroyed)
-            session.Dispose();
     }
 
     private JObject GetInvokeResult(byte[] script, Signer[]? signers = null, Witness[]? witnesses = null, bool useDiagnostic = false)
@@ -122,12 +121,11 @@ partial class RpcServer
         }
         else
         {
-            Guid id = Guid.NewGuid();
-            json["session"] = id.ToString();
             lock (sessions)
             {
-                sessions.Add(id, session);
+                sessions.Add(session);
             }
+            json["session"] = session.Id.ToString();
         }
         return json;
     }
@@ -364,18 +362,17 @@ partial class RpcServer
         Result.True_Or(() => count <= settings.MaxIteratorResultItems,
             RpcError.InvalidParams.WithData($"Invalid iterator items count {nameof(count)}"));
 
-        Session session;
         lock (sessions)
         {
-            session = Result.Ok_Or(() => sessions[sessionId], RpcError.UnknownSession);
+            Session session = Result.Ok_Or(() => sessions[sessionId], RpcError.UnknownSession);
             session.ResetExpiration();
-        }
 
-        var iterator = Result.Ok_Or(() => session.Iterators[iteratorId], RpcError.UnknownIterator);
-        var json = new JArray();
-        while (count-- > 0 && iterator.Next())
-            json.Add(iterator.Value(out _).ToJson());
-        return json;
+            var iterator = Result.Ok_Or(() => session.Iterators[iteratorId], RpcError.UnknownIterator);
+            var json = new JArray();
+            while (count-- > 0 && iterator.Next())
+                json.Add(iterator.Value(out _).ToJson());
+            return json;
+        }
     }
 
     /// <summary>
@@ -402,14 +399,10 @@ partial class RpcServer
     {
         settings.SessionEnabled.True_Or(RpcError.SessionsDisabled);
 
-        Session? session = null;
-        bool result;
         lock (sessions)
         {
-            result = Result.Ok_Or(() => sessions.Remove(sessionId, out session), RpcError.UnknownSession);
+            return Result.Ok_Or(() => sessions.Remove(sessionId), RpcError.UnknownSession);
         }
-        if (result) session?.Dispose();
-        return result;
     }
 
     /// <summary>
