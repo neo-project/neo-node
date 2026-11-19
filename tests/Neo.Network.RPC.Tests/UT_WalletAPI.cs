@@ -99,7 +99,7 @@ public class UT_WalletAPI
         rpcClientMock.Setup(p => p.RpcSendAsync("sendrawtransaction", It.IsAny<JToken>())).ReturnsAsync(json);
 
         var tranaction = await walletAPI.ClaimGasAsync(keyPair1.Export(), false);
-        Assert.AreEqual(testScript.ToHexString(), tranaction.Script.Span.ToHexString());
+        Assert.AreEqual(testScript.ToHexString(), ((ReadOnlyMemory<byte>)tranaction.Script).Span.ToHexString());
     }
 
     [TestMethod]
@@ -117,7 +117,7 @@ public class UT_WalletAPI
         rpcClientMock.Setup(p => p.RpcSendAsync("sendrawtransaction", It.IsAny<JToken>())).ReturnsAsync(json);
 
         var tranaction = await walletAPI.TransferAsync(NativeContract.GAS.Hash.ToString(), keyPair1.Export(), UInt160.Zero.ToAddress(client.protocolSettings.AddressVersion), 100, null, true);
-        Assert.AreEqual(testScript.ToHexString(), tranaction.Script.Span.ToHexString());
+        Assert.AreEqual(testScript.ToHexString(), ((ReadOnlyMemory<byte>)tranaction.Script).Span.ToHexString());
     }
 
     [TestMethod]
@@ -140,7 +140,7 @@ public class UT_WalletAPI
         rpcClientMock.Setup(p => p.RpcSendAsync("sendrawtransaction", It.IsAny<JToken>())).ReturnsAsync(json);
 
         var tranaction = await walletAPI.TransferAsync(NativeContract.GAS.Hash, 1, new[] { keyPair1.PublicKey }, new[] { keyPair1 }, UInt160.Zero, NativeContract.GAS.Factor * 100, null, true);
-        Assert.AreEqual(testScript.ToHexString(), tranaction.Script.Span.ToHexString());
+        Assert.AreEqual(testScript.ToHexString(), ((ReadOnlyMemory<byte>)tranaction.Script).Span.ToHexString());
 
         try
         {
@@ -158,7 +158,7 @@ public class UT_WalletAPI
         UT_TransactionManager.MockInvokeScript(rpcClientMock, testScript, new ContractParameter { Type = ContractParameterType.Integer, Value = new BigInteger(1_10000000) });
 
         tranaction = await walletAPI.TransferAsync(NativeContract.GAS.Hash, 1, new[] { keyPair1.PublicKey }, new[] { keyPair1 }, UInt160.Zero, NativeContract.GAS.Factor * 100, string.Empty, true);
-        Assert.AreEqual(testScript.ToHexString(), tranaction.Script.Span.ToHexString());
+        Assert.AreEqual(testScript.ToHexString(), ((ReadOnlyMemory<byte>)tranaction.Script).Span.ToHexString());
     }
 
     [TestMethod]
