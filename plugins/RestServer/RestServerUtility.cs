@@ -186,96 +186,96 @@ public static partial class RestServerUtility
             JToken? o = null;
             switch (item)
             {
-            case Struct @struct:
-                {
-                    var a = new List<JToken>(@struct.Count);
-                    foreach (var child in @struct)
-                        a.Add(ConvertItem(child, context, serializer, sizes, ref remaining, depth + 1));
+                case Struct @struct:
+                    {
+                        var a = new List<JToken>(@struct.Count);
+                        foreach (var child in @struct)
+                            a.Add(ConvertItem(child, context, serializer, sizes, ref remaining, depth + 1));
+                        o = JToken.FromObject(new
+                        {
+                            Type = StackItemType.Struct.ToString(),
+                            Value = JArray.FromObject(a),
+                        }, serializer);
+                    }
+                    break;
+                case Array array:
+                    {
+                        var a = new List<JToken>(array.Count);
+                        foreach (var child in array)
+                            a.Add(ConvertItem(child, context, serializer, sizes, ref remaining, depth + 1));
+                        o = JToken.FromObject(new
+                        {
+                            Type = StackItemType.Array.ToString(),
+                            Value = JArray.FromObject(a, serializer),
+                        }, serializer);
+                    }
+                    break;
+                case Map map:
+                    {
+                        var kvp = new List<KeyValuePair<JToken, JToken>>(map.Count);
+                        foreach (var entry in map)
+                            kvp.Add(new(
+                                ConvertItem(entry.Key, context, serializer, sizes, ref remaining, depth + 1),
+                                ConvertItem(entry.Value, context, serializer, sizes, ref remaining, depth + 1)));
+                        o = JToken.FromObject(new
+                        {
+                            Type = StackItemType.Map.ToString(),
+                            Value = JArray.FromObject(kvp, serializer),
+                        }, serializer);
+                    }
+                    break;
+                case Boolean:
                     o = JToken.FromObject(new
                     {
-                        Type = StackItemType.Struct.ToString(),
-                        Value = JArray.FromObject(a),
+                        Type = StackItemType.Boolean.ToString(),
+                        Value = item.GetBoolean(),
                     }, serializer);
-                }
-                break;
-            case Array array:
-                {
-                    var a = new List<JToken>(array.Count);
-                    foreach (var child in array)
-                        a.Add(ConvertItem(child, context, serializer, sizes, ref remaining, depth + 1));
+                    break;
+                case Buffer:
                     o = JToken.FromObject(new
                     {
-                        Type = StackItemType.Array.ToString(),
-                        Value = JArray.FromObject(a, serializer),
+                        Type = StackItemType.Buffer.ToString(),
+                        Value = Convert.ToBase64String(item.GetSpan()),
                     }, serializer);
-                }
-                break;
-            case Map map:
-                {
-                    var kvp = new List<KeyValuePair<JToken, JToken>>(map.Count);
-                    foreach (var entry in map)
-                        kvp.Add(new(
-                            ConvertItem(entry.Key, context, serializer, sizes, ref remaining, depth + 1),
-                            ConvertItem(entry.Value, context, serializer, sizes, ref remaining, depth + 1)));
+                    break;
+                case ByteString:
                     o = JToken.FromObject(new
                     {
-                        Type = StackItemType.Map.ToString(),
-                        Value = JArray.FromObject(kvp, serializer),
+                        Type = StackItemType.ByteString.ToString(),
+                        Value = Convert.ToBase64String(item.GetSpan()),
                     }, serializer);
-                }
-                break;
-            case Boolean:
-                o = JToken.FromObject(new
-                {
-                    Type = StackItemType.Boolean.ToString(),
-                    Value = item.GetBoolean(),
-                }, serializer);
-                break;
-            case Buffer:
-                o = JToken.FromObject(new
-                {
-                    Type = StackItemType.Buffer.ToString(),
-                    Value = Convert.ToBase64String(item.GetSpan()),
-                }, serializer);
-                break;
-            case ByteString:
-                o = JToken.FromObject(new
-                {
-                    Type = StackItemType.ByteString.ToString(),
-                    Value = Convert.ToBase64String(item.GetSpan()),
-                }, serializer);
-                break;
-            case Integer:
-                o = JToken.FromObject(new
-                {
-                    Type = StackItemType.Integer.ToString(),
-                    Value = item.GetInteger(),
-                }, serializer);
-                break;
-            case InteropInterface:
-                o = JToken.FromObject(new
-                {
-                    Type = StackItemType.InteropInterface.ToString(),
-                    Value = Convert.ToBase64String(item.GetSpan()),
-                });
-                break;
-            case Pointer pointer:
-                o = JToken.FromObject(new
-                {
-                    Type = StackItemType.Pointer.ToString(),
-                    Value = pointer.Position,
-                }, serializer);
-                break;
-            case Null:
-            case null:
-                o = JToken.FromObject(new
-                {
-                    Type = StackItemType.Any.ToString(),
-                    Value = JValue.CreateNull(),
-                }, serializer);
-                break;
-            default:
-                throw new NotSupportedException($"StackItemType({item.Type}) is not supported to JSON.");
+                    break;
+                case Integer:
+                    o = JToken.FromObject(new
+                    {
+                        Type = StackItemType.Integer.ToString(),
+                        Value = item.GetInteger(),
+                    }, serializer);
+                    break;
+                case InteropInterface:
+                    o = JToken.FromObject(new
+                    {
+                        Type = StackItemType.InteropInterface.ToString(),
+                        Value = Convert.ToBase64String(item.GetSpan()),
+                    });
+                    break;
+                case Pointer pointer:
+                    o = JToken.FromObject(new
+                    {
+                        Type = StackItemType.Pointer.ToString(),
+                        Value = pointer.Position,
+                    }, serializer);
+                    break;
+                case Null:
+                case null:
+                    o = JToken.FromObject(new
+                    {
+                        Type = StackItemType.Any.ToString(),
+                        Value = JValue.CreateNull(),
+                    }, serializer);
+                    break;
+                default:
+                    throw new NotSupportedException($"StackItemType({item.Type}) is not supported to JSON.");
             }
             if (compound)
             {
