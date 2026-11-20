@@ -401,6 +401,31 @@ public partial class UT_RpcServer
     }
 
     [TestMethod]
+    public void TestIteratorSessions_TraversalDoesNotExtendExpiration()
+    {
+        using var rpcServer = new RpcServer(_neoSystem, _rpcServerSettings with
+        {
+            MaxSessions = 1,
+            SessionExpirationTime = TimeSpan.FromSeconds(1)
+        });
+
+        var response = (JObject)rpcServer.InvokeFunction(s_neoHash, "getAllCandidates");
+        var sessionId = response["session"].AsParameter<Guid>();
+        var iteratorId = response["stack"][0]["id"].AsParameter<Guid>();
+
+        Thread.Sleep(300);
+        Assert.IsEmpty((JArray)rpcServer.TraverseIterator(sessionId, iteratorId, 1));
+        Thread.Sleep(750);
+        rpcServer.OnTimer(null);
+
+        var ex = Assert.ThrowsExactly<RpcException>(() => rpcServer.TraverseIterator(sessionId, iteratorId, 1));
+        Assert.AreEqual(RpcError.UnknownSession.Code, ex.HResult);
+
+        var replacement = (JObject)rpcServer.InvokeFunction(s_neoHash, "getAllCandidates");
+        Assert.IsNotNull(replacement["session"]);
+    }
+
+    [TestMethod]
     public void TestTraverseIterator()
     {
         // GetAllCandidates that should return 0 candidates

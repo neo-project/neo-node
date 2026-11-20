@@ -375,7 +375,6 @@ partial class RpcServer
         lock (sessions)
         {
             Session session = Result.Ok_Or(() => sessions[sessionId], RpcError.UnknownSession);
-            session.ResetExpiration();
 
             var iterator = Result.Ok_Or(() => session.Iterators[iteratorId], RpcError.UnknownIterator);
             var json = new JArray();

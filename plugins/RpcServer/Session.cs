@@ -24,7 +24,7 @@ class Session : IDisposable
     public readonly StoreCache Snapshot;
     public readonly ApplicationEngine Engine;
     public readonly Dictionary<Guid, IIterator> Iterators = new();
-    public DateTime StartTime;
+    public readonly DateTime StartTime;
 
     public Session(NeoSystem system, byte[] script, Signer[]? signers, Witness[]? witnesses, long datoshi, Diagnostic? diagnostic)
     {
@@ -43,11 +43,6 @@ class Session : IDisposable
             Witnesses = witnesses ?? []
         };
         Engine = ApplicationEngine.Run(script, Snapshot, container: tx, settings: system.Settings, gas: datoshi, diagnostic: diagnostic);
-        ResetExpiration();
-    }
-
-    public void ResetExpiration()
-    {
         StartTime = DateTime.UtcNow;
     }
 
