@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk" InitialTargets="DownloadNativeLibs">
+<Project Sdk="Microsoft.NET.Sdk" InitialTargets="DownloadNativeLibs">
 
   <PropertyGroup>
     <BuildInParallel>false</BuildInParallel>
@@ -28,6 +28,12 @@
       <Visible>false</Visible>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="LevelDBStore.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
