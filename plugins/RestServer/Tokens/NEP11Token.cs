@@ -106,7 +106,7 @@ internal class NEP11Token
             if (results[0].GetInterface<object>() is IIterator iterator)
             {
                 while (iterator.Next())
-                    yield return iterator.Value().GetSpan().ToArray();
+                    yield return iterator.Value(out _).GetSpan().ToArray();
             }
         }
     }
@@ -131,7 +131,7 @@ internal class NEP11Token
                 {
                     var lstOwners = new List<UInt160>();
                     while (iterator.Next())
-                        lstOwners.Add(new UInt160(iterator.Value().GetSpan()));
+                        lstOwners.Add(new UInt160(iterator.Value(out _).GetSpan()));
                     return lstOwners.ToArray();
                 }
             }
@@ -148,7 +148,7 @@ internal class NEP11Token
             if (results[0].GetInterface<object>() is IIterator iterator)
             {
                 while (iterator.Next())
-                    yield return iterator.Value().GetSpan().ToArray();
+                    yield return iterator.Value(out _).GetSpan().ToArray();
             }
         }
     }

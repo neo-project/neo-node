@@ -36,7 +36,7 @@ internal partial class InvokeContractDialog : Form
     {
         this.tx = tx;
         tabControl1.SelectedTab = tabPage2;
-        textBox6.Text = tx.Script.Span.ToHexString();
+        textBox6.Text = ((ReadOnlyMemory<byte>)tx.Script).Span.ToHexString();
         textBox6.ReadOnly = true;
     }
 

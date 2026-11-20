@@ -25,7 +25,7 @@ partial class MainService
         var currentIndex = NativeContract.Ledger.CurrentIndex(NeoSystem.StoreView);
         NativeContract.Contracts.ToList().ForEach(contract =>
         {
-            var active = contract.IsActive(NeoSystem.Settings, currentIndex) ? "" : " not active yet";
+            var active = contract.IsActive(NeoSystem.Settings, NeoSystem.StoreView, currentIndex) ? "" : " not active yet";
             ConsoleHelper.Info($"\t{contract.Name,-20}", $"{contract.Hash}{active}");
         });
     }
