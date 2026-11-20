@@ -82,6 +82,32 @@ public class UT_OracleHttpsProtocol
     }
 
     [TestMethod]
+    [DataRow("application/json", true)]
+    [DataRow("Application/JSON", true)]
+    [DataRow("APPLICATION/JSON", true)]
+    [DataRow("aPpLiCaTiOn/JsOn", true)]
+    [DataRow("application/json; charset=utf-8", true)]
+    [DataRow("Application/JSON; charset=utf-8", true)]
+    [DataRow("text/html", false)]
+    [DataRow("application/xml", false)]
+    [DataRow("application/jsonp", false)]
+    [DataRow("application/json-seq", false)]
+    public void IsSupportedContentType_MediaTypeIsCaseInsensitive(string contentType, bool expected)
+    {
+        using var message = new HttpResponseMessage();
+        message.Content.Headers.ContentType = MediaTypeHeaderValue.Parse(contentType);
+        Assert.AreEqual(expected, OracleHttpsProtocol.IsSupportedContentType(message.Content.Headers, ["application/json"]));
+    }
+
+    [TestMethod]
+    public void IsSupportedContentType_UppercaseConfiguration_AcceptsLowercaseResponse()
+    {
+        using var message = new HttpResponseMessage();
+        message.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+        Assert.IsTrue(OracleHttpsProtocol.IsSupportedContentType(message.Content.Headers, ["APPLICATION/JSON"]));
+    }
+
+    [TestMethod]
     public void GetEncoding_DefaultsToUtf8_WhenCharsetMissing()
     {
         using var message = new HttpResponseMessage();
