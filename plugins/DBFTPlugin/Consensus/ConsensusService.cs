@@ -23,8 +23,6 @@ namespace Neo.Plugins.DBFTPlugin.Consensus;
 
 internal partial class ConsensusService : UntypedActor
 {
-    private static readonly TimeSpan MaxViewTimeout = TimeSpan.FromHours(1);
-
     public class Start { }
     private class Timer { public uint Height; public byte ViewNumber; }
 
@@ -269,10 +267,10 @@ internal partial class ConsensusService : UntypedActor
 
     private TimeSpan GetViewTimeout(int viewNumber)
     {
-        // Keep the exponential backoff while preventing integer shift wraparound,
-        // TimeSpan overflow, and delays beyond the scheduler's timer range.
+        // A maximum timeout could be added in the future if needed.
+        // Limit the shift to avoid overflow and delays beyond the scheduler's timer range.
         double milliseconds = context.TimePerBlock.TotalMilliseconds * (1L << Math.Min(viewNumber + 1, 20));
-        return TimeSpan.FromMilliseconds(Math.Min(milliseconds, MaxViewTimeout.TotalMilliseconds));
+        return TimeSpan.FromMilliseconds(milliseconds);
     }
 
     private bool ReverifyAndProcessPayload(ExtensiblePayload payload)

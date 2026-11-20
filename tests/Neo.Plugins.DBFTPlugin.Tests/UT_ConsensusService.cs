@@ -455,7 +455,8 @@ public class UT_ConsensusService : TestKit
         {
             context.Reset(view);
             InvokeConsensusMethod(actor, "RequestChangeView", ChangeViewReason.Timeout, null);
-            Assert.AreEqual(TimeSpan.FromHours(1), GetExpectedDelay(actor), $"view {view}");
+            var expected = TimeSpan.FromMilliseconds(context.TimePerBlock.TotalMilliseconds * (1L << Math.Min(view + 2, 20)));
+            Assert.AreEqual(expected, GetExpectedDelay(actor), $"view {view}");
         }
     }
 
@@ -489,7 +490,7 @@ public class UT_ConsensusService : TestKit
         InvokeConsensusMethod(actor, "RequestChangeView", ChangeViewReason.Timeout, null);
 
         Assert.AreEqual(byte.MaxValue, context.ViewNumber);
-        Assert.AreEqual(TimeSpan.FromHours(1), GetExpectedDelay(actor));
+        Assert.AreEqual(TimeSpan.FromMilliseconds(context.TimePerBlock.TotalMilliseconds * (1L << 20)), GetExpectedDelay(actor));
         Assert.IsNull(context.ChangeViewPayloads[context.MyIndex]);
         var invalidChangeView = new ChangeView { ViewNumber = byte.MaxValue, ValidatorIndex = 0 };
         Assert.AreEqual(byte.MaxValue, invalidChangeView.NewViewNumber);
