@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <PackageId>Neo.Plugins.Storage.RocksDBStore</PackageId>
@@ -8,6 +8,12 @@
 
   <ItemGroup>
     <PackageReference Include="rocksdb" Version="11.8.1.4423" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="RocksDBStore.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
