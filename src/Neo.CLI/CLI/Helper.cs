@@ -10,6 +10,7 @@
 // modifications are permitted.
 
 using Neo.SmartContract.Manifest;
+using Neo.VM;
 
 namespace Neo.CLI;
 
@@ -31,6 +32,18 @@ internal static class Helper
         try
         {
             SmartContract.Helper.Check(script.ToArray(), abi);
+        }
+        catch (Exception e)
+        {
+            throw new FormatException($"Contract script validation failed. The provided script or manifest format is invalid and cannot be processed. Please verify the script bytecode and manifest are correctly formatted and compatible. Original error: {e.Message}", e);
+        }
+    }
+
+    public static void IsScriptValid(this Script script, ContractAbi abi)
+    {
+        try
+        {
+            SmartContract.Helper.Check(script.IsStrictMode ? script : new Script(script, true), abi);
         }
         catch (Exception e)
         {
