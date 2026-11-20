@@ -10,7 +10,6 @@
 // modifications are permitted.
 
 using Neo.Extensions;
-using Neo.IO.Caching;
 using Neo.Json;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
@@ -27,18 +26,12 @@ namespace Neo.Plugins.RpcServer;
 
 partial class RpcServer
 {
-    private sealed class SessionCache(int maxCapacity) : FIFOCache<Guid, Session>(maxCapacity)
-    {
-        protected override Guid GetKeyForItem(Session session) => session.Id;
-    }
-
-    private SessionCache sessions = null!;
+    private readonly Dictionary<Guid, Session> sessions = new();
     private Timer? timer;
 
     private void Initialize_SmartContract()
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(settings.MaxSessions);
-        sessions = new(settings.MaxSessions);
         if (settings.SessionEnabled)
             timer = new(OnTimer, null, settings.SessionExpirationTime, settings.SessionExpirationTime);
     }
@@ -46,20 +39,29 @@ partial class RpcServer
     internal void Dispose_SmartContract()
     {
         timer?.Dispose();
+        Session[] toBeDestroyed;
         lock (sessions)
         {
+            toBeDestroyed = sessions.Values.ToArray();
             sessions.Clear();
         }
+        foreach (var session in toBeDestroyed)
+            session.Dispose();
     }
 
     internal void OnTimer(object? state)
     {
+        List<Session> toBeDestroyed = new();
         lock (sessions)
         {
-            foreach (var session in sessions)
+            foreach (var session in sessions.Values)
                 if (DateTime.UtcNow >= session.StartTime + settings.SessionExpirationTime)
-                    sessions.Remove(session.Id);
+                    toBeDestroyed.Add(session);
+            foreach (var session in toBeDestroyed)
+                sessions.Remove(session.Id);
         }
+        foreach (var session in toBeDestroyed)
+            session.Dispose();
     }
 
     private JObject GetInvokeResult(byte[] script, Signer[]? signers = null, Witness[]? witnesses = null, bool useDiagnostic = false)
@@ -121,9 +123,17 @@ partial class RpcServer
         }
         else
         {
+            bool accepted;
             lock (sessions)
             {
-                sessions.Add(session);
+                accepted = sessions.Count < settings.MaxSessions;
+                if (accepted)
+                    sessions.Add(session.Id, session);
+            }
+            if (!accepted)
+            {
+                session.Dispose();
+                throw new RpcException(RpcError.SessionCapReached);
             }
             json["session"] = session.Id.ToString();
         }
@@ -399,10 +409,14 @@ partial class RpcServer
     {
         settings.SessionEnabled.True_Or(RpcError.SessionsDisabled);
 
+        Session? session;
+        bool removed;
         lock (sessions)
         {
-            return Result.Ok_Or(() => sessions.Remove(sessionId), RpcError.UnknownSession);
+            removed = sessions.Remove(sessionId, out session);
         }
+        if (removed) session?.Dispose();
+        return removed;
     }
 
     /// <summary>
