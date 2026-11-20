@@ -77,7 +77,7 @@ partial class TestUtils
         {
             Id = 0x43000000,
             Nef = nef,
-            Hash = nef.Script.Span.ToScriptHash(),
+            Hash = nef.Script.ToScriptHash(),
             Manifest = CreateManifest(method, ContractParameterType.Any, Enumerable.Repeat(ContractParameterType.Any, parametersCount).ToArray())
         };
     }
