@@ -74,7 +74,6 @@ public class RpcError
     public static readonly RpcError UnsupportedState = new(-606, "Old state not supported");
     public static readonly RpcError InvalidProof = new(-607, "Invalid state proof");
     public static readonly RpcError ExecutionFailed = new(-608, "Contract execution failed");
-    public static readonly RpcError SessionCapReached = new(-609, "State iterator session capacity reached");
 
     #endregion
 

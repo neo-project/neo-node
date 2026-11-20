@@ -133,7 +133,7 @@ partial class RpcServer
             if (!accepted)
             {
                 session.Dispose();
-                throw new RpcException(RpcError.SessionCapReached);
+                throw new RpcException(RpcError.AccessDenied.WithData("State iterator session capacity reached."));
             }
             json["session"] = session.Id.ToString();
         }

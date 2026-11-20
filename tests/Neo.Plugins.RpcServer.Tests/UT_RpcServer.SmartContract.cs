@@ -383,7 +383,8 @@ public partial class UT_RpcServer
             .Select(_ => (JObject)rpcServer.InvokeFunction(s_neoHash, "getAllCandidates"))
             .ToArray();
         var ex = Assert.ThrowsExactly<RpcException>(() => rpcServer.InvokeFunction(s_neoHash, "getAllCandidates"));
-        Assert.AreEqual(RpcError.SessionCapReached.Code, ex.HResult);
+        Assert.AreEqual(RpcError.AccessDenied.Code, ex.HResult);
+        Assert.Contains("State iterator session capacity reached", ex.Message);
 
         foreach (var response in responses)
         {
