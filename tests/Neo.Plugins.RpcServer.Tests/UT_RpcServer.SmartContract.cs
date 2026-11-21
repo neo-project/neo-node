@@ -175,6 +175,24 @@ public partial class UT_RpcServer
     }
 
     [TestMethod]
+    public void TestInvokeScriptSharesResultStackSizeBudget()
+    {
+        using var scriptBuilder = new ScriptBuilder();
+        scriptBuilder.EmitPush(new byte[80]);
+        scriptBuilder.Emit(OpCode.DUP);
+
+        var settings = RpcServersSettings.Default with { MaxItemResponseSize = 150 };
+        var rpcServer = new RpcServer(_neoSystem, settings);
+        var result = (JObject)rpcServer.InvokeScript(scriptBuilder.ToArray());
+        var stack = (JArray)result["stack"];
+
+        Assert.AreEqual(nameof(VMState.HALT), result["state"].AsString());
+        Assert.HasCount(2, stack);
+        Assert.AreEqual(nameof(ByteString), stack[0]["type"].AsString());
+        Assert.AreEqual("error: Max size reached.", stack[1].AsString());
+    }
+
+    [TestMethod]
     public void TestInvokeFunction_FaultState()
     {
         // Attempt to call a non-existent method

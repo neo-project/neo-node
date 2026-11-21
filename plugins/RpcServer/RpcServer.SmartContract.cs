@@ -74,15 +74,8 @@ partial class RpcServer
             // Gas consumed in the unit of datoshi, 1 GAS = 10^8 datoshi
             json["gasconsumed"] = session.Engine.FeeConsumed.ToString();
             json["exception"] = GetExceptionMessage(session.Engine.FaultException);
-            json["notifications"] = new JArray(session.Engine.Notifications.Select(n =>
-            {
-                return new JObject()
-                {
-                    ["eventname"] = n.EventName,
-                    ["contract"] = n.ScriptHash.ToString(),
-                    ["state"] = ToJson(n.State, session, settings.MaxItemResponseSize),
-                };
-            }));
+            var resultSerializer = new InvokeResultJsonSerializer(session, settings.MaxItemResponseSize);
+            json["notifications"] = resultSerializer.Notifications(session.Engine.Notifications);
             if (useDiagnostic)
             {
                 var diagnostic = (Diagnostic)session.Engine.Diagnostic!;
@@ -93,19 +86,7 @@ partial class RpcServer
                     ["storagechanges"] = ToJson(session.Engine.SnapshotCache.GetChangeSet())
                 };
             }
-            var stack = new JArray();
-            foreach (var item in session.Engine.ResultStack)
-            {
-                try
-                {
-                    stack.Add(ToJson(item, session, settings.MaxItemResponseSize));
-                }
-                catch (Exception ex)
-                {
-                    stack.Add("error: " + ex.Message);
-                }
-            }
-            json["stack"] = stack;
+            json["stack"] = resultSerializer.ResultStack(session.Engine.ResultStack);
             if (session.Engine.State != VMState.FAULT)
             {
                 ProcessInvokeWithWallet(json, script, signers);
@@ -171,19 +152,6 @@ partial class RpcServer
             });
         }
         return array;
-    }
-
-    private JObject ToJson(StackItem item, Session session, int maxItemResponseSize)
-    {
-        var json = item.ToJson(maxItemResponseSize);
-        if (item is InteropInterface interopInterface && interopInterface.GetInterface<object>() is IIterator iterator)
-        {
-            Guid id = Guid.NewGuid();
-            session.Iterators.Add(id, iterator);
-            json["interface"] = nameof(IIterator);
-            json["id"] = id.ToString();
-        }
-        return json;
     }
 
     /// <summary>
