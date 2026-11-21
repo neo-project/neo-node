@@ -1,0 +1,7 @@
+{
+  "PluginConfiguration": {
+    "WriteBufferSize": 67108864,
+    "MaxOpenFiles": 2000,
+    "BlockSize": 16384
+  }
+}
