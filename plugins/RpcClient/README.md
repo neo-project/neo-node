@@ -206,7 +206,7 @@ RpcClient is a client-side library that communicates with Neo nodes running the 
 
 ## Requirements
 
-- .NET 10.0 or higher
+- .NET 11.0 or higher
 - Access to a Neo N3 blockchain node via RPC
 
 ## License
