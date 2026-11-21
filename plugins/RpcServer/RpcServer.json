@@ -24,6 +24,7 @@
         "MaxStackSize": 65535,
         "DisabledMethods": [ "openwallet" ],
         "SessionEnabled": false,
+        "MaxSessions": 100,
         "SessionExpirationTime": 60,
         "FindStoragePageSize": 50
       }

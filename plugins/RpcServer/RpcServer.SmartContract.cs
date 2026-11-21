@@ -31,6 +31,7 @@ partial class RpcServer
 
     private void Initialize_SmartContract()
     {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(settings.MaxSessions);
         if (settings.SessionEnabled)
             timer = new(OnTimer, null, settings.SessionExpirationTime, settings.SessionExpirationTime);
     }
@@ -44,22 +45,22 @@ partial class RpcServer
             toBeDestroyed = sessions.Values.ToArray();
             sessions.Clear();
         }
-        foreach (Session session in toBeDestroyed)
+        foreach (var session in toBeDestroyed)
             session.Dispose();
     }
 
     internal void OnTimer(object? state)
     {
-        List<(Guid Id, Session Session)> toBeDestroyed = new();
+        List<Session> toBeDestroyed = new();
         lock (sessions)
         {
-            foreach (var (id, session) in sessions)
+            foreach (var session in sessions.Values)
                 if (DateTime.UtcNow >= session.StartTime + settings.SessionExpirationTime)
-                    toBeDestroyed.Add((id, session));
-            foreach (var (id, _) in toBeDestroyed)
-                sessions.Remove(id);
+                    toBeDestroyed.Add(session);
+            foreach (var session in toBeDestroyed)
+                sessions.Remove(session.Id);
         }
-        foreach (var (_, session) in toBeDestroyed)
+        foreach (var session in toBeDestroyed)
             session.Dispose();
     }
 
@@ -122,12 +123,19 @@ partial class RpcServer
         }
         else
         {
-            Guid id = Guid.NewGuid();
-            json["session"] = id.ToString();
+            bool accepted;
             lock (sessions)
             {
-                sessions.Add(id, session);
+                accepted = sessions.Count < settings.MaxSessions;
+                if (accepted)
+                    sessions.Add(session.Id, session);
             }
+            if (!accepted)
+            {
+                session.Dispose();
+                throw new RpcException(RpcError.AccessDenied.WithData("State iterator session capacity reached."));
+            }
+            json["session"] = session.Id.ToString();
         }
         return json;
     }
@@ -364,18 +372,16 @@ partial class RpcServer
         Result.True_Or(() => count <= settings.MaxIteratorResultItems,
             RpcError.InvalidParams.WithData($"Invalid iterator items count {nameof(count)}"));
 
-        Session session;
         lock (sessions)
         {
-            session = Result.Ok_Or(() => sessions[sessionId], RpcError.UnknownSession);
-            session.ResetExpiration();
-        }
+            Session session = Result.Ok_Or(() => sessions[sessionId], RpcError.UnknownSession);
 
-        var iterator = Result.Ok_Or(() => session.Iterators[iteratorId], RpcError.UnknownIterator);
-        var json = new JArray();
-        while (count-- > 0 && iterator.Next())
-            json.Add(iterator.Value(out _).ToJson());
-        return json;
+            var iterator = Result.Ok_Or(() => session.Iterators[iteratorId], RpcError.UnknownIterator);
+            var json = new JArray();
+            while (count-- > 0 && iterator.Next())
+                json.Add(iterator.Value(out _).ToJson());
+            return json;
+        }
     }
 
     /// <summary>
@@ -402,14 +408,14 @@ partial class RpcServer
     {
         settings.SessionEnabled.True_Or(RpcError.SessionsDisabled);
 
-        Session? session = null;
-        bool result;
+        Session? session;
+        bool removed;
         lock (sessions)
         {
-            result = Result.Ok_Or(() => sessions.Remove(sessionId, out session), RpcError.UnknownSession);
+            removed = sessions.Remove(sessionId, out session);
         }
-        if (result) session?.Dispose();
-        return result;
+        if (removed) session?.Dispose();
+        return removed;
     }
 
     /// <summary>
