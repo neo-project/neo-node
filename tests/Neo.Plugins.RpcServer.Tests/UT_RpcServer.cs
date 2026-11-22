@@ -21,6 +21,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Reflection;
 using System.Text;
+using System.Text.Json.Nodes;
 
 namespace Neo.Plugins.RpcServer.Tests;
 
@@ -190,18 +191,7 @@ public partial class UT_RpcServer
     [TestMethod]
     public async Task TestProcessAsync_EmptyBatch()
     {
-        var context = new DefaultHttpContext();
-        context.Request.Method = "POST";
-        context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes("[]"));
-        context.Response.Body = new MemoryStream();
-
-        await _rpcServer.ProcessAsync(context);
-        context.Response.Body.Position = 0;
-        var response = JToken.Parse(await new StreamReader(context.Response.Body).ReadToEndAsync());
-
-        Assert.IsNotNull(response["error"]);
-        Assert.AreEqual(RpcError.InvalidRequest.Code, response["error"]["code"].AsNumber());
-        Assert.IsNull(response["id"]);
+        AssertInvalidRequest(JsonNode.Parse(await ProcessRawAsync("[]")));
     }
 
     [TestMethod]

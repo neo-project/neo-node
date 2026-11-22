@@ -295,14 +295,14 @@ public partial class RpcServer : IDisposable
             }
             else
             {
-                var tasks = array.Select(p => ProcessRequestAsync(context, (JObject?)p));
+                var tasks = array.Select(p => ProcessRequestAsync(context, p as JObject));
                 var results = await Task.WhenAll(tasks);
                 response = results.Where(p => p != null).ToArray();
             }
         }
         else
         {
-            response = await ProcessRequestAsync(context, (JObject)request);
+            response = await ProcessRequestAsync(context, request as JObject);
         }
 
         if (response == null || (response as JArray)?.Count == 0) return;
