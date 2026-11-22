@@ -246,6 +246,7 @@ public partial class RpcServer : IDisposable
         if (context.Request.Method != HttpMethodGet && context.Request.Method != HttpMethodPost) return;
 
         JToken? request = null;
+        bool postParsed = false;
         if (context.Request.Method == HttpMethodGet)
         {
             string? jsonrpc = context.Request.Query["jsonrpc"];
@@ -274,12 +275,13 @@ public partial class RpcServer : IDisposable
             try
             {
                 request = JToken.Parse(await reader.ReadToEndAsync(), MaxParamsDepth);
+                postParsed = true;
             }
             catch (FormatException) { }
         }
 
         JToken? response;
-        if (request == null)
+        if (request is null && !postParsed)
         {
             response = CreateErrorResponse(null, RpcError.BadRequest);
         }

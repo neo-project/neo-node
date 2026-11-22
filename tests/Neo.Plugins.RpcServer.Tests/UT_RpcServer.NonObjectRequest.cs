@@ -49,6 +49,7 @@ public partial class UT_RpcServer
     [DataRow("true")]
     [DataRow("false")]
     [DataRow("\"hello\"")]
+    [DataRow("null")]
     public async Task TestProcessAsync_NonObjectSingleRequest(string body)
     {
         AssertInvalidRequest(JsonNode.Parse(await ProcessRawAsync(body)));
@@ -65,9 +66,11 @@ public partial class UT_RpcServer
     }
 
     [TestMethod]
-    public async Task TestProcessAsync_BatchWithInvalidAndValidItems()
+    [DataRow("42")]
+    [DataRow("[42]")]
+    public async Task TestProcessAsync_BatchWithInvalidAndValidItems(string invalidItem)
     {
-        var response = await ProcessRawAsync("""[42, {"jsonrpc":"2.0","method":"getblockcount","params":[],"id":7}]""");
+        var response = await ProcessRawAsync($$"""[{{invalidItem}}, {"jsonrpc":"2.0","method":"getblockcount","params":[],"id":7}]""");
         var array = Assert.IsInstanceOfType<JsonArray>(JsonNode.Parse(response));
         Assert.AreEqual(2, array.Count);
         AssertInvalidRequest(array[0]);
@@ -110,14 +113,6 @@ public partial class UT_RpcServer
     public async Task TestProcessAsync_MalformedJsonIsBadRequest()
     {
         var response = JsonNode.Parse(await ProcessRawAsync("{\"jsonrpc\":"));
-        AssertResponse("""{"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"Bad request"}}""", response);
-    }
-
-    [TestMethod]
-    public async Task TestProcessAsync_NullLiteralIsBadRequest()
-    {
-        // Documented current behavior: JSON literal "null" parses to a null token and is treated like a parse error.
-        var response = JsonNode.Parse(await ProcessRawAsync("null"));
         AssertResponse("""{"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"Bad request"}}""", response);
     }
 
