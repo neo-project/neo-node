@@ -32,8 +32,8 @@ public sealed class LevelDBStoreSettings
     public int WriteBufferSize { get; }
 
     /// <summary>
-    /// Number of table files LevelDB may keep open at the same time. The default of 1000 forces
-    /// repeated open/close on a database with many SST files.
+    /// Number of table files LevelDB may keep open at the same time. The plugin defaults to 2000
+    /// to reduce repeated open/close on databases with many SST files.
     /// </summary>
     public int MaxOpenFiles { get; }
 
