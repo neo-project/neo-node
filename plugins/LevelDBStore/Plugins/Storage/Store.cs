@@ -29,11 +29,15 @@ internal class Store : IStore, IEnumerable<KeyValuePair<byte[], byte[]>>
 
     public Store(string path)
     {
+        var settings = LevelDBStoreSettings.Default;
         _options = new Options
         {
             CreateIfMissing = true,
             FilterPolicy = Native.leveldb_filterpolicy_create_bloom(15),
             CompressionLevel = CompressionType.SnappyCompression,
+            WriteBufferSize = settings.WriteBufferSize,
+            MaxOpenFiles = settings.MaxOpenFiles,
+            BlockSize = settings.BlockSize,
         };
         _db = DB.Open(path, _options);
     }

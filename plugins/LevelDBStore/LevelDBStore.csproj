@@ -30,4 +30,10 @@
     </Content>
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="LevelDBStore.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
