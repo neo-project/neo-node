@@ -25,7 +25,7 @@ internal class Store : IStore
 
     public Store(string path)
     {
-        _db = RocksDb.Open(Options.Default, Path.GetFullPath(path));
+        _db = RocksDb.Open(Options.CreateDbOptions(), Path.GetFullPath(path));
     }
 
     public void Dispose()
