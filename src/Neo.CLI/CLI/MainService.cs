@@ -339,8 +339,7 @@ public partial class MainService : ConsoleServiceBase, IWalletProvider
         bool verifyImport = !(options.NoVerify ?? false);
 
         Utility.LogLevel = options.Verbose;
-        var protocol = ProtocolSettings.Load("config.json");
-        CustomProtocolSettings(options, protocol);
+        var protocol = LoadProtocolSettings(options);
         CustomApplicationSettings(options, Settings.Default);
         if (!string.IsNullOrEmpty(Settings.Default.Logger.Path) && Settings.Default.Logger.Active)
         {

@@ -17,6 +17,43 @@ namespace Neo.CLI.Tests;
 public class UT_MainService_CommandLine
 {
     [TestMethod]
+    public void TestCommandLineConfigSelectsProtocolSettings()
+    {
+        var previousDirectory = Directory.GetCurrentDirectory();
+        var previousProtocol = ProtocolSettings.Custom;
+        var directory = Path.Combine(Path.GetTempPath(), $"neo-cli-config-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+
+        try
+        {
+            File.WriteAllText(Path.Combine(directory, "config.json"), """
+                { "ProtocolConfiguration": { "Network": 111 } }
+                """);
+            var customConfig = Path.Combine(directory, "custom.json");
+            File.WriteAllText(customConfig, """
+                { "ProtocolConfiguration": { "Network": 222 } }
+                """);
+            Directory.SetCurrentDirectory(directory);
+
+            var method = typeof(MainService).GetMethod("LoadProtocolSettings", BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.IsNotNull(method);
+
+            var defaultProtocol = (ProtocolSettings)method.Invoke(null, [new CommandLineOptions()])!;
+            Assert.AreEqual(111u, defaultProtocol.Network);
+
+            var selectedProtocol = (ProtocolSettings)method.Invoke(null, [new CommandLineOptions { Config = customConfig }])!;
+            Assert.AreEqual(222u, selectedProtocol.Network);
+            Assert.AreSame(selectedProtocol, ProtocolSettings.Custom);
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(previousDirectory);
+            ProtocolSettings.Custom = previousProtocol;
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [TestMethod]
     public void TestDefaultPluginDownloadUrlUsesNeoNodeReleases()
     {
         Assert.AreEqual(new Uri("https://api.github.com/repos/neo-project/neo-node/releases"), new PluginsSettings().DownloadUrl);
