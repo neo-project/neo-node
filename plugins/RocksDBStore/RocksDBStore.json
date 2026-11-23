@@ -1,0 +1,14 @@
+{
+  "PluginConfiguration": {
+    "WriteBufferSize": 67108864,
+    "MaxWriteBufferNumber": 4,
+    "MinWriteBufferNumberToMerge": 2,
+    "MaxTotalWalSize": 536870912,
+    "EnableDynamicLevelBytes": true,
+    "MaxBackgroundCompactions": 3,
+    "MaxBackgroundFlushes": 1,
+    "BlockSize": 16384,
+    "CacheIndexAndFilterBlocks": true,
+    "BlockCacheSize": 134217728
+  }
+}

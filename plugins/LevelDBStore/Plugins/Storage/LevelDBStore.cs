@@ -17,10 +17,16 @@ namespace Neo.Plugins.Storage;
 public class LevelDBStore : Plugin, IStoreProvider
 {
     public override string Description => "Uses LevelDB to store the blockchain data";
+    public override string ConfigFile => System.IO.Path.Combine(RootPath, "LevelDBStore.json");
 
     public LevelDBStore()
     {
         StoreFactory.RegisterProvider(this);
+    }
+
+    protected override void Configure()
+    {
+        LevelDBStoreSettings.Load(GetConfiguration());
     }
 
     public IStore GetStore(string? path)
