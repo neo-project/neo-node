@@ -441,6 +441,7 @@ public partial class UT_RpcServer
         Assert.IsTrue(settings.EnableCors);
         Assert.AreEqual(20_00000000, settings.MaxGasInvoke);
         Assert.AreEqual(TimeSpan.FromSeconds(60), settings.SessionExpirationTime);
+        Assert.AreEqual(100, settings.MaxSessions);
         Assert.IsFalse(settings.SessionEnabled);
         Assert.IsTrue(settings.EnableCors);
         Assert.IsEmpty(settings.AllowOrigins);
