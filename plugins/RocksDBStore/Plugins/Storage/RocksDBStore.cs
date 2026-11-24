@@ -16,10 +16,16 @@ namespace Neo.Plugins.Storage;
 public class RocksDBStore : Plugin, IStoreProvider
 {
     public override string Description => "Uses RocksDBStore to store the blockchain data";
+    public override string ConfigFile => System.IO.Path.Combine(RootPath, "RocksDBStore.json");
 
     public RocksDBStore()
     {
         StoreFactory.RegisterProvider(this);
+    }
+
+    protected override void Configure()
+    {
+        RocksDBStoreSettings.Load(GetConfiguration());
     }
 
     /// <summary>
