@@ -68,6 +68,7 @@ public record RpcServersSettings
     public int MaxStackSize { get; init; } = ushort.MaxValue;
     public string[] DisabledMethods { get; init; } = [];
     public bool SessionEnabled { get; init; } = false;
+    public int MaxSessions { get; init; } = 100;
     public TimeSpan SessionExpirationTime { get; init; } = TimeSpan.FromSeconds(60);
     public int FindStoragePageSize { get; init; } = 50;
 
@@ -99,6 +100,7 @@ public record RpcServersSettings
             MaxRequestBodySize = section.GetValue("MaxRequestBodySize", @default.MaxRequestBodySize),
             MaxBatchSize = section.GetValue(nameof(MaxBatchSize), @default.MaxBatchSize),
             SessionEnabled = section.GetValue("SessionEnabled", @default.SessionEnabled),
+            MaxSessions = section.GetValue(nameof(MaxSessions), @default.MaxSessions),
             SessionExpirationTime = TimeSpan.FromSeconds(section.GetValue("SessionExpirationTime", (long)@default.SessionExpirationTime.TotalSeconds)),
             FindStoragePageSize = section.GetValue("FindStoragePageSize", @default.FindStoragePageSize)
         };
