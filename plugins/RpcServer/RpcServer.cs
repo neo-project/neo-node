@@ -246,6 +246,7 @@ public partial class RpcServer : IDisposable
         if (context.Request.Method != HttpMethodGet && context.Request.Method != HttpMethodPost) return;
 
         JToken? request = null;
+        bool postParsed = false;
         if (context.Request.Method == HttpMethodGet)
         {
             string? jsonrpc = context.Request.Query["jsonrpc"];
@@ -274,12 +275,13 @@ public partial class RpcServer : IDisposable
             try
             {
                 request = JToken.Parse(await reader.ReadToEndAsync(), MaxParamsDepth);
+                postParsed = true;
             }
             catch (FormatException) { }
         }
 
         JToken? response;
-        if (request == null)
+        if (request is null && !postParsed)
         {
             response = CreateErrorResponse(null, RpcError.BadRequest);
         }
@@ -295,14 +297,14 @@ public partial class RpcServer : IDisposable
             }
             else
             {
-                var tasks = array.Select(p => ProcessRequestAsync(context, (JObject?)p));
+                var tasks = array.Select(p => ProcessRequestAsync(context, p as JObject));
                 var results = await Task.WhenAll(tasks);
                 response = results.Where(p => p != null).ToArray();
             }
         }
         else
         {
-            response = await ProcessRequestAsync(context, (JObject)request);
+            response = await ProcessRequestAsync(context, request as JObject);
         }
 
         if (response == null || (response as JArray)?.Count == 0) return;
