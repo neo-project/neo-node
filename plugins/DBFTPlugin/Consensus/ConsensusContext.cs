@@ -215,7 +215,6 @@ public sealed partial class ConsensusContext : IDisposable, ISerializable
     {
         if (viewNumber == 0)
         {
-            InvalidTransactions.Clear();
             Snapshot?.Dispose();
             Snapshot = neoSystem.GetSnapshotCache();
             uint height = NativeContract.Ledger.CurrentIndex(Snapshot);
