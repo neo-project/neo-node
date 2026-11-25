@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Mvc;
 using Neo.Network.P2P.Payloads;
 using Neo.Plugins.RestServer.Exceptions;
 using Neo.Plugins.RestServer.Extensions;
+using Neo.Plugins.RestServer.Helpers;
 using Neo.Plugins.RestServer.Models.Blockchain;
 using Neo.Plugins.RestServer.Models.Error;
 using Neo.SmartContract.Native;
@@ -39,7 +40,7 @@ public class LedgerController : ControllerBase
     #region Accounts
 
     /// <summary>
-    /// Gets all the accounts that hold gas on the blockchain.
+    /// Gets a bounded page of GAS accounts in storage-key order.
     /// </summary>
     /// <returns>An array of account details object.</returns>
     /// <response code="200">Successful</response>
@@ -52,19 +53,16 @@ public class LedgerController : ControllerBase
         [FromQuery(Name = "size")]
         int take = 50)
     {
-        if (skip < 1 || take < 1 || take > RestServerSettings.Current.MaxPageSize)
-            throw new InvalidParameterRangeException();
+        var offset = EnumerationPage.GetOffset(skip, take);
         var accounts = NativeContract.GAS.ListAccounts(_neoSystem.StoreView, _neoSystem.Settings);
-        if (accounts.Any() == false)
-            return NoContent();
-        var accountsList = accounts.OrderByDescending(o => o.Balance).Skip((skip - 1) * take).Take(take);
-        if (accountsList.Any() == false)
+        var accountsList = accounts.Skip(offset).Take(take).ToArray();
+        if (accountsList.Length == 0)
             return NoContent();
         return Ok(accountsList);
     }
 
     /// <summary>
-    /// Get all the accounts that hold neo on the blockchain.
+    /// Gets a bounded page of NEO accounts in storage-key order.
     /// </summary>
     /// <returns>An array of account details object.</returns>
     /// <response code="200">Successful</response>
@@ -77,13 +75,10 @@ public class LedgerController : ControllerBase
         [FromQuery(Name = "size")]
         int take = 50)
     {
-        if (skip < 1 || take < 1 || take > RestServerSettings.Current.MaxPageSize)
-            throw new InvalidParameterRangeException();
+        var offset = EnumerationPage.GetOffset(skip, take);
         var accounts = NativeContract.NEO.ListAccounts(_neoSystem.StoreView, _neoSystem.Settings);
-        if (accounts.Any() == false)
-            return NoContent();
-        var accountsList = accounts.OrderByDescending(o => o.Balance).Skip((skip - 1) * take).Take(take);
-        if (accountsList.Any() == false)
+        var accountsList = accounts.Skip(offset).Take(take).ToArray();
+        if (accountsList.Length == 0)
             return NoContent();
         return Ok(accountsList);
     }

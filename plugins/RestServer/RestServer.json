@@ -17,6 +17,8 @@
     "EnableForwardedHeaders": false,
     "EnableSwagger": true,
     "MaxPageSize": 50,
+    "MaxEnumerationItems": 1000,
+    "MaxBalanceContracts": 5,
     "MaxConcurrentConnections": 40,
     "MaxGasInvoke": 200000000,
     "EnableRateLimiting": true,

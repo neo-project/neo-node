@@ -214,9 +214,11 @@ public class TokensController : ControllerBase
     #endregion
 
     /// <summary>
-    /// Gets every single NEP17/NEP11 on the blockchain's balance by ScriptHash
+    /// Gets balances for a bounded page of deployed contracts in storage-key order.
     /// </summary>
     /// <param name="addressOrScripthash"></param>
+    /// <param name="page" example="1">Page of deployed contracts</param>
+    /// <param name="size" example="5">Number of contracts to inspect</param>
     /// <returns>Token Balance Object.</returns>
     /// <response code="200">Successful</response>
     /// <response code="400">An error occurred. See Response for details.</response>
@@ -224,12 +226,16 @@ public class TokensController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TokenBalanceModel))]
     public IActionResult GetBalances(
         [FromRoute(Name = "address")]
-        UInt160 addressOrScripthash)
+        UInt160 addressOrScripthash,
+        [FromQuery] int page = 1,
+        [FromQuery] int size = 5)
     {
+        var offset = EnumerationPage.GetOffset(page, size, RestServerSettings.Current.MaxBalanceContracts);
         var tokenList = NativeContract.ContractManagement.ListContracts(_neoSystem.StoreView);
         var validContracts = tokenList
-            .Where(w => ContractHelper.IsNep17Supported(w) || ContractHelper.IsNep11Supported(w))
-            .OrderBy(o => o.Id);
+            .Skip(offset)
+            .Take(size)
+            .Where(w => ContractHelper.IsNep17Supported(w) || ContractHelper.IsNep11Supported(w));
         var listResults = new List<TokenBalanceModel>();
         foreach (var contract in validContracts)
         {

@@ -69,7 +69,7 @@ public static partial class RestServerUtility
             tx.Hash,
             tx.Sender,
             // Transaction.Script is a Neo.VM.Script. Emit the same Base64 bytes as RPC ToJson.
-            Script = tx.Script.ToBase64String(),
+            Script = Convert.ToBase64String(((ReadOnlyMemory<byte>)tx.Script).Span),
             tx.FeePerByte,
             tx.NetworkFee,
             tx.SystemFee,
@@ -318,7 +318,7 @@ public static partial class RestServerUtility
         {
             Checksum = nef.CheckSum,
             nef.Compiler,
-            Script = nef.Script.ToBase64String(),
+            Script = Convert.ToBase64String(((ReadOnlyMemory<byte>)nef.Script).Span),
             nef.Source,
             Tokens = nef.Tokens.Select(s => MethodTokenToJToken(s, serializer)),
         }, serializer);
