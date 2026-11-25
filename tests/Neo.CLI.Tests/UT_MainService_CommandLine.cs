@@ -44,6 +44,12 @@ public class UT_MainService_CommandLine
             var selectedProtocol = (ProtocolSettings)method.Invoke(null, [new CommandLineOptions { Config = customConfig }])!;
             Assert.AreEqual(222u, selectedProtocol.Network);
             Assert.AreSame(selectedProtocol, ProtocolSettings.Custom);
+
+            var missingConfig = Path.Combine(directory, "missing.json");
+            var exception = Assert.ThrowsExactly<TargetInvocationException>(() =>
+                method.Invoke(null, [new CommandLineOptions { Config = missingConfig }]));
+            Assert.IsInstanceOfType(exception.InnerException, typeof(FileNotFoundException));
+            Assert.AreEqual(missingConfig, ((FileNotFoundException)exception.InnerException!).FileName);
         }
         finally
         {
