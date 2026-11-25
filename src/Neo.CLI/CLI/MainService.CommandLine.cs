@@ -57,13 +57,12 @@ public partial class MainService
         Start(options);
     }
 
-    private static void CustomProtocolSettings(CommandLineOptions options, ProtocolSettings settings)
+    private static ProtocolSettings LoadProtocolSettings(CommandLineOptions options)
     {
-        // if specified config, then load the config and check the network
-        if (!string.IsNullOrEmpty(options.Config))
-        {
-            ProtocolSettings.Custom = ProtocolSettings.Load(options.Config);
-        }
+        if (!string.IsNullOrEmpty(options.Config) && !File.Exists(options.Config))
+            throw new FileNotFoundException($"Configuration file '{options.Config}' was not found.", options.Config);
+
+        return ProtocolSettings.Load(string.IsNullOrEmpty(options.Config) ? "config.json" : options.Config);
     }
 
     private static void CustomApplicationSettings(CommandLineOptions options, Settings settings)
