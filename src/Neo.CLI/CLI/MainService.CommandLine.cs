@@ -59,6 +59,9 @@ public partial class MainService
 
     private static ProtocolSettings LoadProtocolSettings(CommandLineOptions options)
     {
+        if (!string.IsNullOrEmpty(options.Config) && !File.Exists(options.Config))
+            throw new FileNotFoundException($"Configuration file '{options.Config}' was not found.", options.Config);
+
         return ProtocolSettings.Load(string.IsNullOrEmpty(options.Config) ? "config.json" : options.Config);
     }
 
