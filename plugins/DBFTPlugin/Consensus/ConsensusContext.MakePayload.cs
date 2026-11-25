@@ -14,6 +14,7 @@ using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
 using Neo.Plugins.DBFTPlugin.Messages;
 using Neo.Plugins.DBFTPlugin.Types;
+using Neo.SmartContract.Native;
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 
@@ -106,8 +107,10 @@ partial class ConsensusContext
     public ExtensiblePayload MakePrepareRequest()
     {
         var maxTransactionsPerBlock = neoSystem.Settings.MaxTransactionsPerBlock;
+        var committeeAddress = NativeContract.NEO.GetCommitteeAddress(Snapshot);
+        var sortedTransactions = neoSystem.MemPool.GetSortedVerifiedTransactions();
         // Limit Speaker proposal to the limit `MaxTransactionsPerBlock` or all available transactions of the mempool
-        EnsureMaxBlockLimitation(neoSystem.MemPool.GetSortedVerifiedTransactions((int)maxTransactionsPerBlock));
+        EnsureMaxBlockLimitation(SelectTransactionsForBlock(sortedTransactions, committeeAddress, (int)maxTransactionsPerBlock));
         Block.Header.Timestamp = Math.Max(TimeProvider.Current.UtcNow.ToTimestampMS(), PrevHeader.Timestamp + 1);
         Block.Header.Nonce = GetNonce();
         return PreparationPayloads[MyIndex] = MakeSignedPayload(new PrepareRequest
@@ -118,6 +121,15 @@ partial class ConsensusContext
             Nonce = Block.Nonce,
             TransactionHashes = TransactionHashes
         });
+    }
+
+    internal static Transaction[] SelectTransactionsForBlock(Transaction[] sortedTransactions, UInt160 committeeAddress, int count)
+    {
+        // Preserve the mempool's fee order within each group, including its tie breakers.
+        return sortedTransactions
+            .OrderByDescending(tx => tx.Signers.Any(signer => signer.Account == committeeAddress))
+            .Take(count)
+            .ToArray();
     }
 
     public ExtensiblePayload MakeRecoveryRequest()
