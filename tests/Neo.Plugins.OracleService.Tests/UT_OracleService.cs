@@ -13,7 +13,9 @@ using Neo.Cryptography.ECC;
 using Neo.Extensions;
 using Neo.Network.P2P.Payloads;
 using Neo.Plugins.OracleService.Protocols;
+using Neo.SmartContract;
 using Neo.SmartContract.Native;
+using Neo.Wallets;
 using static Neo.Plugins.OracleService.Tests.TestBlockchain;
 
 namespace Neo.Plugins.OracleService.Tests;
