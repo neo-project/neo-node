@@ -10,12 +10,25 @@
 // modifications are permitted.
 
 using System.Net;
+using Microsoft.Extensions.Configuration;
 
 namespace Neo.Plugins.RestServer.Tests;
 
 [TestClass]
 public class RestServerSettingsTests
 {
+    [TestMethod]
+    public void ShippedConfiguration_DisablesCorsByDefault()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "RestServer.json"))
+            .Build();
+
+        RestServerSettings.Load(configuration.GetSection("PluginConfiguration"));
+
+        Assert.IsFalse(RestServerSettings.Current.EnableCors);
+    }
+
     [TestMethod]
     [DataRow("{}", "127.0.0.1")]
     [DataRow("{ \"Port\": 1234 }", "127.0.0.1")]
