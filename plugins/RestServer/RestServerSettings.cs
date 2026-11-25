@@ -42,6 +42,7 @@ public class RestServerSettings
     public uint MaxPageSize { get; init; }
     public int MaxEnumerationItems { get; init; }
     public int MaxBalanceContracts { get; init; }
+    public int MaxEnumerationResponseBytes { get; init; }
     public long MaxConcurrentConnections { get; init; }
     public long MaxGasInvoke { get; init; }
     // Rate limiting settings
@@ -76,6 +77,7 @@ public class RestServerSettings
         MaxPageSize = 50u,
         MaxEnumerationItems = 1000,
         MaxBalanceContracts = 5,
+        MaxEnumerationResponseBytes = 1_048_576,
         MaxConcurrentConnections = 40L,
         MaxGasInvoke = 0_200000000L,
         // Default rate limiting settings
@@ -159,6 +161,7 @@ public class RestServerSettings
             MaxPageSize = section.GetValue(nameof(MaxPageSize), Default.MaxPageSize),
             MaxEnumerationItems = section.GetValue(nameof(MaxEnumerationItems), Default.MaxEnumerationItems),
             MaxBalanceContracts = section.GetValue(nameof(MaxBalanceContracts), Default.MaxBalanceContracts),
+            MaxEnumerationResponseBytes = Math.Clamp(section.GetValue(nameof(MaxEnumerationResponseBytes), Default.MaxEnumerationResponseBytes), 1, 8_388_608),
             MaxConcurrentConnections = section.GetValue(nameof(MaxConcurrentConnections), Default.MaxConcurrentConnections),
             MaxGasInvoke = section.GetValue(nameof(MaxGasInvoke), Default.MaxGasInvoke),
             // Load rate limiting settings

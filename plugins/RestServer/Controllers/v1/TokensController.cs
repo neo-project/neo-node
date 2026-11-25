@@ -224,6 +224,7 @@ public class TokensController : ControllerBase
     /// <response code="400">An error occurred. See Response for details.</response>
     [HttpGet("balanceof/{address:required}", Name = "GetAllTokensBalanceOf")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TokenBalanceModel))]
+    [ProducesResponseType(StatusCodes.Status413PayloadTooLarge, Type = typeof(ErrorModel))]
     public IActionResult GetBalances(
         [FromRoute(Name = "address")]
         UInt160 addressOrScripthash,
@@ -273,6 +274,6 @@ public class TokensController : ControllerBase
             {
             }
         }
-        return Ok(listResults);
+        return EnumerationPage.BoundedResult(listResults);
     }
 }

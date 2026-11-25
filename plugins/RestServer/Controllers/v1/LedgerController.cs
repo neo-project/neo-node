@@ -47,6 +47,7 @@ public class LedgerController : ControllerBase
     /// <response code="400">An error occurred. See Response for details.</response>
     [HttpGet("gas/accounts", Name = "GetGasAccounts")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AccountDetails[]))]
+    [ProducesResponseType(StatusCodes.Status413PayloadTooLarge, Type = typeof(ErrorModel))]
     public IActionResult ShowGasAccounts(
         [FromQuery(Name = "page")]
         int skip = 1,
@@ -58,7 +59,7 @@ public class LedgerController : ControllerBase
         var accountsList = accounts.Skip(offset).Take(take).ToArray();
         if (accountsList.Length == 0)
             return NoContent();
-        return Ok(accountsList);
+        return EnumerationPage.BoundedResult(accountsList);
     }
 
     /// <summary>
@@ -69,6 +70,7 @@ public class LedgerController : ControllerBase
     /// <response code="400">An error occurred. See Response for details.</response>
     [HttpGet("neo/accounts", Name = "GetNeoAccounts")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AccountDetails[]))]
+    [ProducesResponseType(StatusCodes.Status413PayloadTooLarge, Type = typeof(ErrorModel))]
     public IActionResult ShowNeoAccounts(
         [FromQuery(Name = "page")]
         int skip = 1,
@@ -80,7 +82,7 @@ public class LedgerController : ControllerBase
         var accountsList = accounts.Skip(offset).Take(take).ToArray();
         if (accountsList.Length == 0)
             return NoContent();
-        return Ok(accountsList);
+        return EnumerationPage.BoundedResult(accountsList);
     }
 
     #endregion

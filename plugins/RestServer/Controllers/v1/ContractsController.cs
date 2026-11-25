@@ -94,6 +94,7 @@ public class ContractsController : ControllerBase
     /// <response code="400">An error occurred. See Response for details.</response>
     [HttpGet("{hash:required}/storage", Name = "GetContractStorage")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(KeyValuePair<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>>[]))]
+    [ProducesResponseType(StatusCodes.Status413PayloadTooLarge, Type = typeof(ErrorModel))]
     public IActionResult GetContractStorage(
         [FromRoute(Name = "hash")]
         UInt160 scriptHash,
@@ -106,7 +107,7 @@ public class ContractsController : ControllerBase
         var contract = NativeContract.ContractManagement.GetContract(_neoSystem.StoreView, scriptHash)
             ?? throw new ContractNotFoundException(scriptHash);
         var contractStorage = contract.FindStorage(_neoSystem.StoreView, skip: offset).Take(size);
-        return Ok(contractStorage.Select(s => new KeyValuePair<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>>(s.Key.Key, s.Value.Value)).ToArray());
+        return EnumerationPage.BoundedResult(contractStorage.Select(s => new KeyValuePair<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>>(s.Key.Key, s.Value.Value)));
     }
 
     /// <summary>

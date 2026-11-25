@@ -1,3 +1,9 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Neo.Plugins.RestServer.Models.Error;
+using Newtonsoft.Json;
+using System.Text;
+
 namespace Neo.Plugins.RestServer.Helpers;
 
 internal static class EnumerationPage
@@ -10,5 +16,54 @@ internal static class EnumerationPage
             throw new Exceptions.InvalidParameterRangeException();
 
         return (int)(end - size);
+    }
+
+    public static IActionResult BoundedResult<T>(IEnumerable<T> items)
+    {
+        try
+        {
+            using var stream = new LimitedMemoryStream(RestServerSettings.Current.MaxEnumerationResponseBytes);
+            using var textWriter = new StreamWriter(stream, new UTF8Encoding(false), leaveOpen: true);
+            using var jsonWriter = new JsonTextWriter(textWriter) { CloseOutput = false };
+            JsonSerializer.Create(RestServerSettings.Current.JsonSerializerSettings).Serialize(jsonWriter, items);
+            jsonWriter.Flush();
+            return new FileContentResult(stream.ToArray(), "application/json");
+        }
+        catch (ResponseSizeLimitExceededException)
+        {
+            return new ObjectResult(new ErrorModel { Name = "ResponseTooLarge", Message = "The response exceeds MaxEnumerationResponseBytes." })
+            {
+                StatusCode = StatusCodes.Status413PayloadTooLarge
+            };
+        }
+    }
+
+    private sealed class ResponseSizeLimitExceededException : IOException { }
+
+    private sealed class LimitedMemoryStream(int limit) : MemoryStream
+    {
+        private void Check(int count)
+        {
+            if (Length + count > limit)
+                throw new ResponseSizeLimitExceededException();
+        }
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            Check(count);
+            base.Write(buffer, offset, count);
+        }
+
+        public override void Write(ReadOnlySpan<byte> buffer)
+        {
+            Check(buffer.Length);
+            base.Write(buffer);
+        }
+
+        public override void WriteByte(byte value)
+        {
+            Check(1);
+            base.WriteByte(value);
+        }
     }
 }
