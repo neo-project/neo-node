@@ -18,9 +18,10 @@ using Neo.VM.Types;
 
 namespace Neo.Plugins.RpcServer;
 
-internal sealed class InvokeResultJsonSerializer(Session session, int maxSize)
+internal sealed class InvokeResultJsonSerializer(Session session, int maxItemSize, int maxStackSize, int maxNotificationsSize)
 {
-    private int remainingSize = maxSize;
+    private int remainingStackSize = maxStackSize;
+    private int remainingNotificationsSize = maxNotificationsSize;
 
     public JArray Notifications(IEnumerable<NotifyEventArgs> notifications)
     {
@@ -31,7 +32,7 @@ internal sealed class InvokeResultJsonSerializer(Session session, int maxSize)
             {
                 ["eventname"] = notification.EventName,
                 ["contract"] = notification.ScriptHash.ToString(),
-                ["state"] = ToJson(notification.State)
+                ["state"] = ToJson(notification.State, ref remainingNotificationsSize)
             });
         }
         return result;
@@ -44,7 +45,7 @@ internal sealed class InvokeResultJsonSerializer(Session session, int maxSize)
         {
             try
             {
-                result.Add(ToJson(item));
+                result.Add(ToJson(item, ref remainingStackSize));
             }
             catch (Exception ex)
             {
@@ -54,13 +55,16 @@ internal sealed class InvokeResultJsonSerializer(Session session, int maxSize)
         return result;
     }
 
-    private JObject ToJson(StackItem item)
+    private JObject ToJson(StackItem item, ref int remainingSize)
     {
         if (remainingSize <= 0)
             throw new InvalidOperationException("Max size reached.");
 
-        // Reuse Neo's recursive serializer with one budget for the entire invoke result.
-        var json = item.ToJson(null, ref remainingSize);
+        // Only commit the aggregate budget after a successful serialization.
+        var itemBudget = Math.Min(maxItemSize, remainingSize);
+        var available = itemBudget;
+        var json = item.ToJson(null, ref available);
+        remainingSize -= itemBudget - available;
         if (item is InteropInterface interopInterface && interopInterface.GetInterface<object>() is IIterator iterator)
         {
             Guid id = Guid.NewGuid();

@@ -75,7 +75,8 @@ partial class RpcServer
             // Gas consumed in the unit of datoshi, 1 GAS = 10^8 datoshi
             json["gasconsumed"] = session.Engine.FeeConsumed.ToString();
             json["exception"] = GetExceptionMessage(session.Engine.FaultException);
-            var resultSerializer = new InvokeResultJsonSerializer(session, settings.MaxItemResponseSize);
+            var resultSerializer = new InvokeResultJsonSerializer(session, settings.MaxItemResponseSize,
+                settings.MaxResultStackSize, settings.MaxNotificationsSize);
             json["notifications"] = resultSerializer.Notifications(session.Engine.Notifications);
             if (useDiagnostic)
             {

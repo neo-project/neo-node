@@ -40,6 +40,10 @@ public record RpcServersSettings
     public int MaxRequestBodySize { get; init; } = 1 * 1024 * 1024;
     public int MaxBatchSize { get; init; } = 10;
     public int MaxItemResponseSize { get; init; } = Transaction.MaxTransactionSize;
+    /// <summary>Optional aggregate size limit for invoke result stack items.</summary>
+    public int MaxResultStackSize { get; init; } = int.MaxValue;
+    /// <summary>Optional aggregate size limit for invoke notification states.</summary>
+    public int MaxNotificationsSize { get; init; } = int.MaxValue;
     public string RpcUser { get; init; } = string.Empty;
     public string RpcPass { get; init; } = string.Empty;
     public bool EnableCors { get; init; } = true;
@@ -94,6 +98,8 @@ public record RpcServersSettings
             MaxFee = GetGasAmount(section, "MaxFee", @default.MaxFee),
             MaxIteratorResultItems = section.GetValue("MaxIteratorResultItems", @default.MaxIteratorResultItems),
             MaxItemResponseSize = section.GetValue("MaxItemResponseSize", @default.MaxItemResponseSize),
+            MaxResultStackSize = section.GetValue(nameof(MaxResultStackSize), @default.MaxResultStackSize),
+            MaxNotificationsSize = section.GetValue(nameof(MaxNotificationsSize), @default.MaxNotificationsSize),
             MaxStackSize = section.GetValue("MaxStackSize", @default.MaxStackSize),
             DisabledMethods = GetStrings(section, "DisabledMethods"),
             MaxConcurrentConnections = section.GetValue("MaxConcurrentConnections", @default.MaxConcurrentConnections),

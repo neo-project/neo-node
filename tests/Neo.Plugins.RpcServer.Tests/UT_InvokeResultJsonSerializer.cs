@@ -20,36 +20,36 @@ namespace Neo.Plugins.RpcServer.Tests;
 public partial class UT_RpcServer
 {
     [TestMethod]
-    public void TestInvokeResultJsonSerializerSharesBudgetAcrossStackItems()
+    public void TestInvokeResultJsonSerializerPreservesPerItemLimit()
     {
         using var scriptBuilder = new ScriptBuilder();
         scriptBuilder.EmitPush(new byte[80]);
         scriptBuilder.Emit(OpCode.DUP);
         using var session = new Session(_neoSystem, scriptBuilder.ToArray(), null, null, _rpcServerSettings.MaxGasInvoke, null);
 
-        var serializer = new InvokeResultJsonSerializer(session, 150);
+        var serializer = new InvokeResultJsonSerializer(session, 150, int.MaxValue, int.MaxValue);
         var stack = serializer.ResultStack(session.Engine.ResultStack);
 
         Assert.HasCount(2, stack);
         Assert.AreEqual(nameof(ByteString), stack[0]["type"].AsString());
-        Assert.AreEqual("error: Max size reached.", stack[1].AsString());
+        Assert.AreEqual(nameof(ByteString), stack[1]["type"].AsString());
     }
 
     [TestMethod]
-    public void TestInvokeResultJsonSerializerSharesBudgetBetweenNotificationsAndStack()
+    public void TestInvokeResultJsonSerializerKeepsNotificationsAndStackSeparate()
     {
         using var scriptBuilder = new ScriptBuilder();
         scriptBuilder.EmitPush(new byte[80]);
         using var session = new Session(_neoSystem, scriptBuilder.ToArray(), null, null, _rpcServerSettings.MaxGasInvoke, null);
         var notification = new NotifyEventArgs(null, UInt160.Zero, "test", new VMArray([new ByteString(new byte[40])]));
 
-        var serializer = new InvokeResultJsonSerializer(session, 150);
+        var serializer = new InvokeResultJsonSerializer(session, 150, 150, 150);
         var notifications = serializer.Notifications([notification]);
         var stack = serializer.ResultStack(session.Engine.ResultStack);
 
         Assert.HasCount(1, notifications);
         Assert.AreEqual("test", notifications[0]["eventname"].AsString());
-        Assert.AreEqual("error: Max size reached.", stack[0].AsString());
+        Assert.AreEqual(nameof(ByteString), stack[0]["type"].AsString());
     }
 
     [TestMethod]
@@ -60,8 +60,26 @@ public partial class UT_RpcServer
         using var session = new Session(_neoSystem, scriptBuilder.ToArray(), null, null, _rpcServerSettings.MaxGasInvoke, null);
         var notification = new NotifyEventArgs(null, UInt160.Zero, "test", new VMArray([new ByteString(new byte[40])]));
 
-        var serializer = new InvokeResultJsonSerializer(session, 150);
+        var serializer = new InvokeResultJsonSerializer(session, 150, int.MaxValue, 150);
 
         Assert.ThrowsExactly<InvalidOperationException>(() => serializer.Notifications([notification, notification]));
+    }
+
+    [TestMethod]
+    public void TestInvokeResultJsonSerializerFailedItemDoesNotConsumeStackBudget()
+    {
+        using var scriptBuilder = new ScriptBuilder();
+        scriptBuilder.EmitPush(new byte[60]);
+        scriptBuilder.EmitPush(new byte[80]);
+        scriptBuilder.EmitPush(1);
+        using var session = new Session(_neoSystem, scriptBuilder.ToArray(), null, null, _rpcServerSettings.MaxGasInvoke, null);
+
+        var serializer = new InvokeResultJsonSerializer(session, 150, 150, int.MaxValue);
+        var stack = serializer.ResultStack(session.Engine.ResultStack);
+
+        Assert.HasCount(3, stack);
+        Assert.AreEqual(nameof(ByteString), stack[0]["type"].AsString());
+        Assert.AreEqual("error: Max size reached.", stack[1].AsString());
+        Assert.AreEqual(nameof(Integer), stack[2]["type"].AsString());
     }
 }
