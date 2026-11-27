@@ -9,7 +9,7 @@
     "EnableBasicAuthentication": false,
     "RestUser": "",
     "RestPass": "",
-    "EnableCors": true,
+    "EnableCors": false,
     "AllowOrigins": [],
     "DisableControllers": [],
     "EnableCompression": true,
