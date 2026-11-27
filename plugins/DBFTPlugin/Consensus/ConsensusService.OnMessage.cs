@@ -370,6 +370,8 @@ partial class ConsensusService
 
             if (!shouldSendRecovery) return;
         }
-        localNode.Tell(new LocalNode.SendDirectly(context.MakeRecoveryMessage()));
+        var recovery = context.MakeRecoveryMessage();
+        if (recovery is not null)
+            localNode.Tell(new LocalNode.SendDirectly(recovery));
     }
 }

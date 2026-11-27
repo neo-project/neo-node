@@ -48,7 +48,9 @@ partial class ConsensusService
 
             DBFTPlugin.PluginLogger?.Information("Sending PrepareResponse height={Index} view={ViewNumber}",
                 context.Block.Index, context.ViewNumber);
-            localNode.Tell(new LocalNode.SendDirectly(context.MakePrepareResponse()));
+            var response = context.MakePrepareResponse();
+            if (response is not null)
+                localNode.Tell(new LocalNode.SendDirectly(response));
             CheckPreparations();
         }
         return true;
@@ -80,7 +82,11 @@ partial class ConsensusService
                 // Communicate the network about my agreement to move to `viewNumber`
                 // if my last change view payload, `message`, has NewViewNumber lower than current view to change
                 if (message is null || message.NewViewNumber < viewNumber)
-                    localNode.Tell(new LocalNode.SendDirectly(context.MakeChangeView(ChangeViewReason.ChangeAgreement)));
+                {
+                    var changeView = context.MakeChangeView(ChangeViewReason.ChangeAgreement);
+                    if (changeView is not null)
+                        localNode.Tell(new LocalNode.SendDirectly(changeView));
+                }
             }
             InitializeConsensus(viewNumber);
         }
@@ -91,7 +97,8 @@ partial class ConsensusService
         if (context.PreparationPayloads.Count(p => p != null) >= context.M
             && context.TransactionHashes.All(p => context.Transactions.ContainsKey(p)))
         {
-            ExtensiblePayload payload = context.MakeCommit();
+            var payload = context.MakeCommit();
+            if (payload is null) return;
             DBFTPlugin.PluginLogger?.Information("Sending Commit: height={BlockIndex} view={ViewNumber}", context.Block.Index, context.ViewNumber);
             context.Save();
             localNode.Tell(new LocalNode.SendDirectly(payload));
