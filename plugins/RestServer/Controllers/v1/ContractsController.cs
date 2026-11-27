@@ -87,21 +87,27 @@ public class ContractsController : ControllerBase
     /// Get a smart contract's storage.
     /// </summary>
     /// <param name="scriptHash" example="0xed7cc6f5f2dd842d384f254bc0c2d58fb69a4761">ScriptHash</param>
+    /// <param name="page" example="1">Page in storage-key order</param>
+    /// <param name="size" example="50">Page size</param>
     /// <returns>An array of the Key (Base64) Value (Base64) Pairs objects.</returns>
     /// <response code="200">Successful</response>
     /// <response code="400">An error occurred. See Response for details.</response>
     [HttpGet("{hash:required}/storage", Name = "GetContractStorage")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(KeyValuePair<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>>[]))]
+    [ProducesResponseType(StatusCodes.Status413PayloadTooLarge, Type = typeof(ErrorModel))]
     public IActionResult GetContractStorage(
         [FromRoute(Name = "hash")]
-        UInt160 scriptHash)
+        UInt160 scriptHash,
+        [FromQuery] int page = 1,
+        [FromQuery] int size = 50)
     {
+        var offset = EnumerationPage.GetOffset(page, size);
         if (NativeContract.IsNative(scriptHash))
             return NoContent();
         var contract = NativeContract.ContractManagement.GetContract(_neoSystem.StoreView, scriptHash)
             ?? throw new ContractNotFoundException(scriptHash);
-        var contractStorage = contract.FindStorage(_neoSystem.StoreView);
-        return Ok(contractStorage.Select(s => new KeyValuePair<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>>(s.Key.Key, s.Value.Value)));
+        var contractStorage = contract.FindStorage(_neoSystem.StoreView, skip: offset).Take(size);
+        return EnumerationPage.BoundedResult(contractStorage.Select(s => new KeyValuePair<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>>(s.Key.Key, s.Value.Value)));
     }
 
     /// <summary>

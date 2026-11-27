@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Mvc;
 using Neo.Network.P2P.Payloads;
 using Neo.Plugins.RestServer.Exceptions;
 using Neo.Plugins.RestServer.Extensions;
+using Neo.Plugins.RestServer.Helpers;
 using Neo.Plugins.RestServer.Models.Blockchain;
 using Neo.Plugins.RestServer.Models.Error;
 using Neo.SmartContract.Native;
@@ -39,53 +40,49 @@ public class LedgerController : ControllerBase
     #region Accounts
 
     /// <summary>
-    /// Gets all the accounts that hold gas on the blockchain.
+    /// Gets a bounded page of GAS accounts in storage-key order.
     /// </summary>
     /// <returns>An array of account details object.</returns>
     /// <response code="200">Successful</response>
     /// <response code="400">An error occurred. See Response for details.</response>
     [HttpGet("gas/accounts", Name = "GetGasAccounts")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AccountDetails[]))]
+    [ProducesResponseType(StatusCodes.Status413PayloadTooLarge, Type = typeof(ErrorModel))]
     public IActionResult ShowGasAccounts(
         [FromQuery(Name = "page")]
         int skip = 1,
         [FromQuery(Name = "size")]
         int take = 50)
     {
-        if (skip < 1 || take < 1 || take > RestServerSettings.Current.MaxPageSize)
-            throw new InvalidParameterRangeException();
+        var offset = EnumerationPage.GetOffset(skip, take);
         var accounts = NativeContract.GAS.ListAccounts(_neoSystem.StoreView, _neoSystem.Settings);
-        if (accounts.Any() == false)
+        var accountsList = accounts.Skip(offset).Take(take).ToArray();
+        if (accountsList.Length == 0)
             return NoContent();
-        var accountsList = accounts.OrderByDescending(o => o.Balance).Skip((skip - 1) * take).Take(take);
-        if (accountsList.Any() == false)
-            return NoContent();
-        return Ok(accountsList);
+        return EnumerationPage.BoundedResult(accountsList);
     }
 
     /// <summary>
-    /// Get all the accounts that hold neo on the blockchain.
+    /// Gets a bounded page of NEO accounts in storage-key order.
     /// </summary>
     /// <returns>An array of account details object.</returns>
     /// <response code="200">Successful</response>
     /// <response code="400">An error occurred. See Response for details.</response>
     [HttpGet("neo/accounts", Name = "GetNeoAccounts")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AccountDetails[]))]
+    [ProducesResponseType(StatusCodes.Status413PayloadTooLarge, Type = typeof(ErrorModel))]
     public IActionResult ShowNeoAccounts(
         [FromQuery(Name = "page")]
         int skip = 1,
         [FromQuery(Name = "size")]
         int take = 50)
     {
-        if (skip < 1 || take < 1 || take > RestServerSettings.Current.MaxPageSize)
-            throw new InvalidParameterRangeException();
+        var offset = EnumerationPage.GetOffset(skip, take);
         var accounts = NativeContract.NEO.ListAccounts(_neoSystem.StoreView, _neoSystem.Settings);
-        if (accounts.Any() == false)
+        var accountsList = accounts.Skip(offset).Take(take).ToArray();
+        if (accountsList.Length == 0)
             return NoContent();
-        var accountsList = accounts.OrderByDescending(o => o.Balance).Skip((skip - 1) * take).Take(take);
-        if (accountsList.Any() == false)
-            return NoContent();
-        return Ok(accountsList);
+        return EnumerationPage.BoundedResult(accountsList);
     }
 
     #endregion
