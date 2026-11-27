@@ -25,6 +25,7 @@ internal partial class ConsensusService : UntypedActor
 {
     public class Start { }
     private class Timer { public uint Height; public byte ViewNumber; }
+    private sealed record TransactionsRemoved(UInt256[] Hashes);
 
     private readonly ConsensusContext context;
     private readonly IActorRef localNode;
@@ -53,6 +54,7 @@ internal partial class ConsensusService : UntypedActor
     private bool isRecovering = false;
     private readonly DbftSettings dbftSettings;
     private readonly NeoSystem neoSystem;
+    private readonly IActorRef self;
 
     public ConsensusService(NeoSystem neoSystem, DbftSettings settings, ISigner signer)
         : this(neoSystem, settings, new ConsensusContext(neoSystem, settings, signer)) { }
@@ -60,6 +62,7 @@ internal partial class ConsensusService : UntypedActor
     internal ConsensusService(NeoSystem neoSystem, DbftSettings settings, ConsensusContext context)
     {
         this.neoSystem = neoSystem;
+        self = Self;
         localNode = neoSystem.LocalNode;
         taskManager = neoSystem.TaskManager;
         blockchain = neoSystem.Blockchain;
@@ -78,8 +81,7 @@ internal partial class ConsensusService : UntypedActor
 
     private void MemPool_TransactionRemoved(object sender, TransactionRemovedEventArgs e)
     {
-        foreach (var tx in e.Transactions)
-            context.InvalidTransactions.Remove(tx.Hash);
+        self.Tell(new TransactionsRemoved(e.Transactions.Select(tx => tx.Hash).ToArray()));
     }
 
     private void OnPersistCompleted(Block block)
@@ -141,6 +143,10 @@ internal partial class ConsensusService : UntypedActor
             if (!started) return;
             switch (message)
             {
+                case TransactionsRemoved removed:
+                    foreach (var hash in removed.Hashes)
+                        context.InvalidTransactions.Remove(hash);
+                    break;
                 case Timer timer:
                     OnTimer(timer);
                     break;
@@ -194,7 +200,9 @@ internal partial class ConsensusService : UntypedActor
             {
                 // Re-send commit periodically by sending recover message in case of a network issue.
                 DBFTPlugin.PluginLogger?.Information("Sending RecoveryMessage to resend Commit");
-                localNode.Tell(new LocalNode.SendDirectly(context.MakeRecoveryMessage()));
+                var recovery = context.MakeRecoveryMessage();
+                if (recovery is not null)
+                    localNode.Tell(new LocalNode.SendDirectly(recovery));
                 ChangeTimer(GetViewTimeout(0));
             }
             else
@@ -215,12 +223,14 @@ internal partial class ConsensusService : UntypedActor
     {
         DBFTPlugin.PluginLogger?.Information("Sending PrepareRequest: height={BlockIndex} view={ViewNumber}",
             context.Block.Index, context.ViewNumber);
-        localNode.Tell(new LocalNode.SendDirectly(context.MakePrepareRequest()));
+        var request = context.MakePrepareRequest();
+        if (request is not null)
+            localNode.Tell(new LocalNode.SendDirectly(request));
 
-        if (context.Validators.Length == 1)
+        if (request is not null && context.Validators.Length == 1)
             CheckPreparations();
 
-        if (context.TransactionHashes.Length > 0)
+        if (request is not null && context.TransactionHashes.Length > 0)
         {
             foreach (InvPayload payload in InvPayload.CreateGroup(InventoryType.TX, context.TransactionHashes))
                 localNode.Tell(Message.Create(MessageCommand.Inv, payload));
@@ -232,7 +242,9 @@ internal partial class ConsensusService : UntypedActor
     {
         DBFTPlugin.PluginLogger?.Information("Sending RecoveryRequest: height={BlockIndex} view={ViewNumber} committed={CountCommitted} failed={CountFailed}",
             context.Block.Index, context.ViewNumber, context.CountCommitted, context.CountFailed);
-        localNode.Tell(new LocalNode.SendDirectly(context.MakeRecoveryRequest()));
+        var request = context.MakeRecoveryRequest();
+        if (request is not null)
+            localNode.Tell(new LocalNode.SendDirectly(request));
     }
 
     private void RequestChangeView(ChangeViewReason reason, UInt256 rejectedHash = null)
@@ -260,7 +272,9 @@ internal partial class ConsensusService : UntypedActor
         {
             DBFTPlugin.PluginLogger?.Information("Sending ChangeView: height={BlockIndex} view={ViewNumber} newView={NewViewNumber} committed={CountCommitted} failed={CountFailed} reason={Reason}",
                 context.Block.Index, context.ViewNumber, expectedView, context.CountCommitted, context.CountFailed, reason);
-            localNode.Tell(new LocalNode.SendDirectly(context.MakeChangeView(reason, rejectedHash)));
+            var changeView = context.MakeChangeView(reason, rejectedHash);
+            if (changeView is not null)
+                localNode.Tell(new LocalNode.SendDirectly(changeView));
             CheckExpectedView(expectedView);
         }
     }
@@ -393,6 +407,8 @@ internal partial class ConsensusService : UntypedActor
     {
         DBFTPlugin.PluginLogger?.Information("ConsensusService stopped");
         started = false;
+        neoSystem.MemPool.NewTransaction -= MemPool_NewTransaction;
+        neoSystem.MemPool.TransactionRemoved -= MemPool_TransactionRemoved;
         Context.System.EventStream.Unsubscribe(Self);
         context.Dispose();
         base.PostStop();
