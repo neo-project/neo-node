@@ -61,8 +61,11 @@ public partial class UT_RpcServer
         var notification = new NotifyEventArgs(null, UInt160.Zero, "test", new VMArray([new ByteString(new byte[40])]));
 
         var serializer = new InvokeResultJsonSerializer(session, 150, int.MaxValue, 150);
+        var notifications = serializer.Notifications([notification, notification]);
 
-        Assert.ThrowsExactly<InvalidOperationException>(() => serializer.Notifications([notification, notification]));
+        Assert.HasCount(2, notifications);
+        Assert.AreEqual("test", notifications[0]["eventname"].AsString());
+        Assert.AreEqual("error: Max size reached.", notifications[1].AsString());
     }
 
     [TestMethod]

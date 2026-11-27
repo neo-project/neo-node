@@ -28,12 +28,19 @@ internal sealed class InvokeResultJsonSerializer(Session session, int maxItemSiz
         JArray result = [];
         foreach (var notification in notifications)
         {
-            result.Add(new JObject
+            try
             {
-                ["eventname"] = notification.EventName,
-                ["contract"] = notification.ScriptHash.ToString(),
-                ["state"] = ToJson(notification.State, ref remainingNotificationsSize)
-            });
+                result.Add(new JObject
+                {
+                    ["eventname"] = notification.EventName,
+                    ["contract"] = notification.ScriptHash.ToString(),
+                    ["state"] = ToJson(notification.State, ref remainingNotificationsSize)
+                });
+            }
+            catch (Exception ex)
+            {
+                result.Add("error: " + ex.Message);
+            }
         }
         return result;
     }
