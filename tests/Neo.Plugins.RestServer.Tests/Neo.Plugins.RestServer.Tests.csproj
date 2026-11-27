@@ -19,4 +19,8 @@
     <ProjectReference Include="..\..\plugins\RestServer\RestServer.csproj" />
   </ItemGroup>
 
-</Project> 
+  <ItemGroup>
+    <None Include="..\..\plugins\RestServer\RestServer.json" Link="RestServer.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
