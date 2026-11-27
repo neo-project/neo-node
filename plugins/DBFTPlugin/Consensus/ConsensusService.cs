@@ -200,7 +200,9 @@ internal partial class ConsensusService : UntypedActor
             {
                 // Re-send commit periodically by sending recover message in case of a network issue.
                 DBFTPlugin.PluginLogger?.Information("Sending RecoveryMessage to resend Commit");
-                localNode.Tell(new LocalNode.SendDirectly(context.MakeRecoveryMessage()));
+                var recovery = context.MakeRecoveryMessage();
+                if (recovery is not null)
+                    localNode.Tell(new LocalNode.SendDirectly(recovery));
                 ChangeTimer(GetViewTimeout(0));
             }
             else
@@ -221,12 +223,14 @@ internal partial class ConsensusService : UntypedActor
     {
         DBFTPlugin.PluginLogger?.Information("Sending PrepareRequest: height={BlockIndex} view={ViewNumber}",
             context.Block.Index, context.ViewNumber);
-        localNode.Tell(new LocalNode.SendDirectly(context.MakePrepareRequest()));
+        var request = context.MakePrepareRequest();
+        if (request is not null)
+            localNode.Tell(new LocalNode.SendDirectly(request));
 
-        if (context.Validators.Length == 1)
+        if (request is not null && context.Validators.Length == 1)
             CheckPreparations();
 
-        if (context.TransactionHashes.Length > 0)
+        if (request is not null && context.TransactionHashes.Length > 0)
         {
             foreach (InvPayload payload in InvPayload.CreateGroup(InventoryType.TX, context.TransactionHashes))
                 localNode.Tell(Message.Create(MessageCommand.Inv, payload));
@@ -238,7 +242,9 @@ internal partial class ConsensusService : UntypedActor
     {
         DBFTPlugin.PluginLogger?.Information("Sending RecoveryRequest: height={BlockIndex} view={ViewNumber} committed={CountCommitted} failed={CountFailed}",
             context.Block.Index, context.ViewNumber, context.CountCommitted, context.CountFailed);
-        localNode.Tell(new LocalNode.SendDirectly(context.MakeRecoveryRequest()));
+        var request = context.MakeRecoveryRequest();
+        if (request is not null)
+            localNode.Tell(new LocalNode.SendDirectly(request));
     }
 
     private void RequestChangeView(ChangeViewReason reason, UInt256 rejectedHash = null)
@@ -266,7 +272,9 @@ internal partial class ConsensusService : UntypedActor
         {
             DBFTPlugin.PluginLogger?.Information("Sending ChangeView: height={BlockIndex} view={ViewNumber} newView={NewViewNumber} committed={CountCommitted} failed={CountFailed} reason={Reason}",
                 context.Block.Index, context.ViewNumber, expectedView, context.CountCommitted, context.CountFailed, reason);
-            localNode.Tell(new LocalNode.SendDirectly(context.MakeChangeView(reason, rejectedHash)));
+            var changeView = context.MakeChangeView(reason, rejectedHash);
+            if (changeView is not null)
+                localNode.Tell(new LocalNode.SendDirectly(changeView));
             CheckExpectedView(expectedView);
         }
     }
