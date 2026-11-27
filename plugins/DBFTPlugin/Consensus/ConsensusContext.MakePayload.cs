@@ -9,11 +9,14 @@
 // Redistribution and use in source and binary forms with or without
 // modifications are permitted.
 
+#nullable enable annotations
+
 using Neo.Extensions;
 using Neo.Ledger;
 using Neo.Network.P2P.Payloads;
 using Neo.Plugins.DBFTPlugin.Messages;
 using Neo.Plugins.DBFTPlugin.Types;
+using Neo.Sign;
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 
@@ -21,49 +24,66 @@ namespace Neo.Plugins.DBFTPlugin.Consensus;
 
 partial class ConsensusContext
 {
-    public ExtensiblePayload MakeChangeView(ChangeViewReason reason, params UInt256[] rejectedHashes)
+    public ExtensiblePayload? MakeChangeView(ChangeViewReason reason, params UInt256[] rejectedHashes)
     {
-        return ChangeViewPayloads[MyIndex] = MakeSignedPayload(new ChangeView
+        var payload = MakeSignedPayload(new ChangeView
         {
             Timestamp = TimeProvider.Current.UtcNow.ToTimestampMS(),
             Reason = reason,
             RejectedHashes = rejectedHashes
         });
+        if (payload is not null)
+            ChangeViewPayloads[MyIndex] = payload;
+        return payload;
     }
 
-    public ExtensiblePayload MakeCommit()
+    public ExtensiblePayload? MakeCommit()
     {
         if (CommitPayloads[MyIndex] is not null)
             return CommitPayloads[MyIndex];
 
         var block = EnsureHeader();
-        CommitPayloads[MyIndex] = MakeSignedPayload(new Commit
+        ReadOnlyMemory<byte> signature;
+        try
         {
-            Signature = _signer.SignBlock(block, _myPublicKey, neoSystem.Settings.Network)
+            signature = _signer.SignBlock(block, _myPublicKey, neoSystem.Settings.Network);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or SignException)
+        {
+            DBFTPlugin.PluginLogger?.Error(ex, "Failed to sign consensus block");
+            return null;
+        }
+        var payload = MakeSignedPayload(new Commit
+        {
+            Signature = signature
         });
-        return CommitPayloads[MyIndex];
+        if (payload is not null)
+            CommitPayloads[MyIndex] = payload;
+        return payload;
     }
 
-    private ExtensiblePayload MakeSignedPayload(ConsensusMessage message)
+    private ExtensiblePayload? MakeSignedPayload(ConsensusMessage message)
     {
         message.BlockIndex = Block.Index;
         message.ValidatorIndex = (byte)MyIndex;
         message.ViewNumber = ViewNumber;
         ExtensiblePayload payload = CreatePayload(message, null);
-        SignPayload(payload);
-        return payload;
+        return SignPayload(payload) ? payload : null;
     }
 
-    private void SignPayload(ExtensiblePayload payload)
+    private bool SignPayload(ExtensiblePayload payload)
     {
         try
         {
             payload.Witness = _signer.SignExtensiblePayload(payload, Snapshot, neoSystem.Settings.Network);
+            if (payload.Witness is not null) return true;
+            DBFTPlugin.PluginLogger?.Error("Consensus signer returned no witness");
+            return false;
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex) when (ex is InvalidOperationException or SignException)
         {
-            DBFTPlugin.PluginLogger?.Information("Error signing payload {Exception}", ex.ToString());
-            return;
+            DBFTPlugin.PluginLogger?.Error(ex, "Failed to sign consensus payload");
+            return false;
         }
     }
 
@@ -103,14 +123,14 @@ partial class ConsensusContext
         TransactionHashes = hashes.ToArray();
     }
 
-    public ExtensiblePayload MakePrepareRequest()
+    public ExtensiblePayload? MakePrepareRequest()
     {
         var maxTransactionsPerBlock = neoSystem.Settings.MaxTransactionsPerBlock;
         // Limit Speaker proposal to the limit `MaxTransactionsPerBlock` or all available transactions of the mempool
         EnsureMaxBlockLimitation(neoSystem.MemPool.GetSortedVerifiedTransactions((int)maxTransactionsPerBlock));
         Block.Header.Timestamp = Math.Max(TimeProvider.Current.UtcNow.ToTimestampMS(), PrevHeader.Timestamp + 1);
         Block.Header.Nonce = GetNonce();
-        return PreparationPayloads[MyIndex] = MakeSignedPayload(new PrepareRequest
+        var payload = MakeSignedPayload(new PrepareRequest
         {
             Version = Block.Version,
             PrevHash = Block.PrevHash,
@@ -118,9 +138,12 @@ partial class ConsensusContext
             Nonce = Block.Nonce,
             TransactionHashes = TransactionHashes
         });
+        if (payload is not null)
+            PreparationPayloads[MyIndex] = payload;
+        return payload;
     }
 
-    public ExtensiblePayload MakeRecoveryRequest()
+    public ExtensiblePayload? MakeRecoveryRequest()
     {
         return MakeSignedPayload(new RecoveryRequest
         {
@@ -128,7 +151,7 @@ partial class ConsensusContext
         });
     }
 
-    public ExtensiblePayload MakeRecoveryMessage()
+    public ExtensiblePayload? MakeRecoveryMessage()
     {
         PrepareRequest prepareRequestMessage = null;
         if (TransactionHashes != null)
@@ -147,34 +170,37 @@ partial class ConsensusContext
         }
         return MakeSignedPayload(new RecoveryMessage
         {
-            ChangeViewMessages = LastChangeViewPayloads.Where(p => p != null)
+            ChangeViewMessages = LastChangeViewPayloads.Where(p => p?.Witness is not null)
                 .Select(p => GetChangeViewPayloadCompact(p))
                 .Take(M)
                 .ToDictionary(p => p.ValidatorIndex),
             PrepareRequestMessage = prepareRequestMessage,
             // We only need a PreparationHash set if we don't have the PrepareRequest information.
             PreparationHash = TransactionHashes == null
-                ? PreparationPayloads.Where(p => p != null)
+                ? PreparationPayloads.Where(p => p?.Witness is not null)
                     .GroupBy(p => GetMessage<PrepareResponse>(p).PreparationHash, (k, g) => new { Hash = k, Count = g.Count() })
                     .OrderByDescending(p => p.Count)
                     .Select(p => p.Hash)
                     .FirstOrDefault()
                 : null,
-            PreparationMessages = PreparationPayloads.Where(p => p != null)
+            PreparationMessages = PreparationPayloads.Where(p => p?.Witness is not null)
                 .Select(p => GetPreparationPayloadCompact(p))
                 .ToDictionary(p => p.ValidatorIndex),
             CommitMessages = CommitSent
-                ? CommitPayloads.Where(p => p != null).Select(p => GetCommitPayloadCompact(p)).ToDictionary(p => p.ValidatorIndex)
+                ? CommitPayloads.Where(p => p?.Witness is not null).Select(p => GetCommitPayloadCompact(p)).ToDictionary(p => p.ValidatorIndex)
                 : new Dictionary<byte, RecoveryMessage.CommitPayloadCompact>()
         });
     }
 
-    public ExtensiblePayload MakePrepareResponse()
+    public ExtensiblePayload? MakePrepareResponse()
     {
-        return PreparationPayloads[MyIndex] = MakeSignedPayload(new PrepareResponse
+        var payload = MakeSignedPayload(new PrepareResponse
         {
             PreparationHash = PreparationPayloads[Block.PrimaryIndex].Hash
         });
+        if (payload is not null)
+            PreparationPayloads[MyIndex] = payload;
+        return payload;
     }
 
     // Related to issue https://github.com/neo-project/neo/issues/3431
