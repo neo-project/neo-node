@@ -88,6 +88,39 @@ public class UT_ConsensusService : TestKit
     }
 
     [TestMethod]
+    public void InvalidTransactionsRetainExistingEntriesAfterFullChangeView()
+    {
+        using var context = new ConsensusContext(neoSystem, MockBlockchain.CreateDefaultSettings(), testWallet);
+        var originalHash = UInt256.Zero;
+        context.InvalidTransactions.Add(new ConsensusContext.InvalidTxCacheItem(originalHash, new HashSet<ECPoint>()));
+        int count = neoSystem.Settings.MemoryPoolMaxTransactions + ushort.MaxValue;
+        for (int i = 1; i < count; i++)
+        {
+            var bytes = new byte[32];
+            BitConverter.GetBytes(i).CopyTo(bytes, 0);
+            context.InvalidTransactions.Add(new ConsensusContext.InvalidTxCacheItem(new UInt256(bytes), new HashSet<ECPoint>()));
+        }
+        Assert.AreEqual(count, context.InvalidTransactions.Count);
+        Assert.IsTrue(context.InvalidTransactions.TryGet(originalHash, out _));
+    }
+
+    [TestMethod]
+    public void InvalidTransactionsSurviveViewChangesAndNewBlocks()
+    {
+        using var context = new ConsensusContext(neoSystem, MockBlockchain.CreateDefaultSettings(), testWallet);
+        context.Reset(0);
+        context.InvalidTransactions.Add(new ConsensusContext.InvalidTxCacheItem(UInt256.Zero,
+            context.Validators.Take(context.F + 1).ToHashSet()));
+        context.Reset(1);
+        Assert.IsTrue(context.InvalidTransactions.TryGet(UInt256.Zero, out var rejected));
+        Assert.IsTrue(rejected.Value.Count > context.F);
+        context.Reset(0);
+        Assert.IsTrue(context.InvalidTransactions.TryGet(UInt256.Zero, out _));
+        context.Reset(0);
+        Assert.IsTrue(context.InvalidTransactions.TryGet(UInt256.Zero, out _));
+    }
+
+    [TestMethod]
     public void TestConsensusServiceCreation()
     {
         // Arrange
