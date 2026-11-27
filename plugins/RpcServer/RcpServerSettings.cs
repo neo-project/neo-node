@@ -40,9 +40,13 @@ public record RpcServersSettings
     public int MaxRequestBodySize { get; init; } = 1 * 1024 * 1024;
     public int MaxBatchSize { get; init; } = 10;
     public int MaxItemResponseSize { get; init; } = Transaction.MaxTransactionSize;
-    /// <summary>Optional aggregate size limit for invoke result stack items.</summary>
+    /// <summary>
+    /// Optional aggregate size limit for invoke result stack items.
+    /// </summary>
     public int MaxResultStackSize { get; init; } = int.MaxValue;
-    /// <summary>Optional aggregate size limit for invoke notification states.</summary>
+    /// <summary>
+    /// Optional aggregate size limit for invoke notification states.
+    /// </summary>
     public int MaxNotificationsSize { get; init; } = int.MaxValue;
     public string RpcUser { get; init; } = string.Empty;
     public string RpcPass { get; init; } = string.Empty;
