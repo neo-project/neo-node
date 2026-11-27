@@ -65,7 +65,7 @@ This test suite provides complete coverage of the DBFT consensus protocol, inclu
 ## 🚀 Running the Tests
 
 ### Prerequisites
-- .NET 10.0 or later
+- .NET 11.0 or later
 - Neo project dependencies
 - MSTest Framework
 - Akka.NET TestKit (MSTest version)
